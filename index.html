@@ -161,7 +161,7 @@
     font-size: 12.5px;
     color: #9fc6ff;
   }
-  .stage .stageDate { color: #707688; }
+  .stage .stageDate { color: #707688; white-space: nowrap; }
 
   .meta { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
   .tag { font-size: 11px; color: #9aa0ae; background: #2a2d35; border-radius: 6px; padding: 2px 7px; }
@@ -169,7 +169,6 @@
   .tag.cat-Купить { color: #ffffff; }
   .tag.cat-Личное { color: #ffd95e; }
   .dates { font-size: 10.5px; color: #707688; white-space: nowrap; }
-  .stage .stageDate { white-space: nowrap; }
   .due { font-size: 11px; border-radius: 6px; padding: 2px 7px; background: #2a2d35; color: #9aa0ae; }
   .due.overdue { background: #e53e3e26; color: #ff8b8b; }
   .due.today   { background: #f0b05226; color: #ffc97d; }
@@ -328,43 +327,6 @@ const DONE_DELAY = 2.5 * 60 * 60 * 1000; // 2,5 часа до «опускани
 let tasks = [];
 try { tasks = JSON.parse(localStorage.getItem(LS)) || []; } catch(e) {}
 tasks.forEach(t => { if (t.cat === 'Дом') t.cat = 'Купить'; });
-
-// первичное наполнение из заметок Алексея (добавится один раз)
-const SEED = [
-  ['Найти ИБП (закупка идёт)'],
-  ['Розетки для принтеров (от Жени ответ через день-2)'],
-  ['Камеры разобрать в проге и функционале'],
-  ['Телевизоры тест (написать инструкцию по подключению)'],
-  ['Ожидать приезда Земли Дмитрия'],
-  ['Закупки через Белокур'],
-  ['1с изучать'],
-  ['Маркировка всей техники'],
-  ['Сетевая папка (уточнить можно ли)'],
-  ['Телефон подключить Марии и Татьяне'],
-  ['Сплиттер в стойке найти (к Жене вопрос)'],
-  ['Уточнить по неймингу/нумерации помещений для структуры в 1С'],
-  ['Аудит компов в офисе, до конца промаркировать всю технику — включая инвентарники'],
-  ['Шаблон для нумерации мест от Олега'],
-  ['Уточни по смете — закупались ли тебе тросы с замками для фиксации техники на местах'],
-  ['Создать заявки через Артёма на сетевую папку и на телефоны'],
-  ['Уточнить по креплениям для телеков 65"', true],
-  ['Юля с 1с', true],
-  ['Заранее настроить и проверить принтеры А3', true],
-];
-if (!localStorage.getItem(LS + '_seeded')) {
-  const now = Date.now();
-  SEED.forEach(([title, done], i) => {
-    if (!tasks.some(t => t.title === title)) {
-      tasks.push({
-        id: now + i, title, cat: null, due: null, done: !!done,
-        created: now - i * 1000,
-        completedAt: done ? now - i : null
-      });
-    }
-  });
-  localStorage.setItem(LS + '_seeded', '1');
-  localStorage.setItem(LS, JSON.stringify(tasks));
-}
 
 // миграция: ручной порядок (pos)
 if (tasks.some(t => t.pos === undefined)) {
@@ -859,7 +821,6 @@ $('applyBtn').onclick = () => {
   if (!del_confirm_io()) return;
   tasks = data.tasks;
   if (data.state) state = Object.assign({ filter: 'все', showDone: true }, data.state);
-  localStorage.setItem(LS + '_seeded', '1');
   save(); render();
   $('ioPanel').classList.remove('open');
   ioMsg('Импортировано ✓');
