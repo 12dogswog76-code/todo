@@ -150,6 +150,13 @@
     to   { opacity: 1; transform: none; }
   }
 
+  /* подсветка только что добавленной задачи: 3 моргания красным */
+  .task.flash { animation: flashRed .7s ease-in-out 3; }
+  @keyframes flashRed {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 24px 7px #e53e3eaa; border-color: #e53e3e; }
+  }
+
   .dragh {
     cursor: grab; color: #4a5060; font-size: 15px; line-height: 1;
     padding: 6px 2px; touch-action: none; user-select: none;
@@ -332,6 +339,18 @@
   }
   #guideClose:hover { background: #ff5252; }
 
+  .bmbtn {
+    display: inline-block; background: #e53e3e; color: #fff !important;
+    padding: 9px 20px; border-radius: 10px; font-weight: 600;
+    text-decoration: none; font-size: 14px; cursor: grab;
+  }
+  .bmcopy {
+    background: #ececf0; border: none; border-radius: 6px;
+    padding: 3px 10px; cursor: pointer; font-size: 12.5px; color: #333;
+  }
+  .bmcopy:hover { background: #e0e0e6; }
+  #bmMsg { color: #2f9e63; font-size: 12.5px; }
+
   /* --- Предложение включить уведомления --- */
   #askNotif {
     position: fixed; inset: 0; background: #000000aa;
@@ -478,6 +497,11 @@
       <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
     </ul>
 
+    <h3>⚡ Кнопка «В задачи» — задача из любого текста</h3>
+    <p>Выделил текст на любой странице (тему письма, название товара, что угодно) → клик по закладке → текст стал задачей здесь. Установка: включи панель закладок (<b>Ctrl+Shift+B</b>) и перетащи на неё эту кнопку:</p>
+    <p style="text-align:center"><a id="bmLink" class="bmbtn" href="#">⚡ В задачи</a></p>
+    <p>Не получается перетащить — <button id="bmCopy" class="bmcopy">скопировать код</button> и вставь его в поле «URL» новой закладки (Ctrl+Shift+O → ⋮ → «Добавить закладку»). <span id="bmMsg"></span></p>
+
     <h3>☁ Синхронизация между устройствами</h3>
     <p>Чтобы список был одинаковым на телефоне, компе и ноуте, нужно бесплатное облако-хранилище. Мы используем <b>jsonbin.io</b>:</p>
     <ol>
@@ -532,7 +556,7 @@ if (tasks.some(t => t.pos === undefined)) {
   legacy.forEach((t, i) => { if (t.pos === undefined) t.pos = i; });
 }
 
-let state = { filter: 'все', showDone: true, sortColor: false };
+let state = { filter: 'все', showDone: true, sortColor: false, catsOpen: false };
 try { Object.assign(state, JSON.parse(localStorage.getItem(LS+'_ui')) || {}); } catch(e) {}
 if (state.filter === 'Дом') state.filter = 'Купить';
 
@@ -801,15 +825,31 @@ function render() {
 
   const isArc = state.filter === 'архив';
   const cats = ['все', 'Работа', 'Купить', 'Личное', 'ПК', 'без категории', 'архив'];
+  const FILTER_ICON = { 'Работа': SYNERGY_MINI + ' ', 'Купить': '💰 ', 'Личное': '😐 ', 'ПК': '🖥️ ', 'архив': '🗃 ' };
   const f = $('filters');
   f.innerHTML = '';
-  cats.forEach(c => {
+  // свёрнутый список категорий
+  const tgl = document.createElement('span');
+  tgl.className = 'chip' + (state.catsOpen ? ' on' : '');
+  tgl.innerHTML = '🏷 категории ' + (state.catsOpen ? '▴' : '▾');
+  tgl.onclick = () => { state.catsOpen = !state.catsOpen; save(); render(); };
+  f.appendChild(tgl);
+  if (state.catsOpen) {
+    cats.forEach(c => {
+      const el = document.createElement('span');
+      el.className = 'chip' + (state.filter === c ? ' on' : '');
+      el.innerHTML = (FILTER_ICON[c] || '') + c;
+      el.onclick = () => { state.filter = c; state.catsOpen = false; save(); render(); };
+      f.appendChild(el);
+    });
+  } else if (state.filter !== 'все') {
     const el = document.createElement('span');
-    el.className = 'chip' + (state.filter === c ? ' on' : '');
-    el.textContent = c === 'архив' ? '🗃 архив' : c;
-    el.onclick = () => { state.filter = c; save(); render(); };
+    el.className = 'chip on';
+    el.innerHTML = (FILTER_ICON[state.filter] || '') + state.filter;
+    el.title = 'Текущий фильтр — нажми, чтобы сбросить';
+    el.onclick = () => { state.filter = 'все'; save(); render(); };
     f.appendChild(el);
-  });
+  }
   const clrSort = document.createElement('span');
   clrSort.className = 'chip' + (state.sortColor ? ' on' : '');
   clrSort.textContent = '🎨 по цвету';
@@ -1576,6 +1616,18 @@ $('askLater').onclick = () => {
   $('askNotif').classList.remove('open');
 };
 
+/* --- Кнопка-закладка «В задачи» --- */
+const BM_CODE = "javascript:(()=>{const s=(window.getSelection()+'').trim();const t=s||prompt('Текст задачи:','');if(t)window.open('https://alextask.ru/?add='+encodeURIComponent(t.slice(0,300)),'alextask')})()";
+$('bmLink').setAttribute('href', BM_CODE);
+$('bmLink').onclick = e => {
+  e.preventDefault();
+  $('bmMsg').textContent = 'Эту кнопку нужно не нажимать, а перетащить мышкой на панель закладок 🙂';
+};
+$('bmCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(BM_CODE); $('bmMsg').textContent = 'Код скопирован ✓'; }
+  catch(e) { $('bmMsg').textContent = BM_CODE; }
+};
+
 /* --- Гайд --- */
 function openGuide() { $('guideOverlay').classList.add('open'); }
 function closeGuide() {
@@ -1594,13 +1646,15 @@ if (!localStorage.getItem(LS + '_guide') && !sync) {
   setTimeout(maybeAskNotif, 1500);
 }
 
-// быстрое добавление по ссылке: alextask.ru/?add=Текст задачи (для кнопки-закладки из почты)
+// быстрое добавление по ссылке: alextask.ru/?add=Текст задачи (кнопка-закладка «В задачи»)
+let flashId = null;
 (function() {
   const addT = new URLSearchParams(location.search).get('add');
   if (!addT || !addT.trim()) return;
   const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
+  flashId = Date.now();
   tasks.push({
-    id: Date.now(),
+    id: flashId,
     title: addT.trim().slice(0, 300),
     cat: 'Работа',
     done: false,
@@ -1614,6 +1668,23 @@ if (!localStorage.getItem(LS + '_guide') && !sync) {
 })();
 
 render();
+
+// подсветить и сразу открыть на редактирование задачу, добавленную по ссылке
+if (flashId) {
+  const el = document.querySelector('.task[data-id="' + flashId + '"]');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('flash');
+    setTimeout(() => {
+      const fe = document.querySelector('.task[data-id="' + flashId + '"]');
+      if (fe) {
+        fe.classList.add('flash');
+        const b = fe.querySelector('.body');
+        if (b) b.click();
+      }
+    }, 300);
+  }
+}
 syncUI();
 notifLabel();
 $('taskInput').focus();
