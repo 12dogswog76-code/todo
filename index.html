@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0b0d">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Мои дела</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(180deg, #0b0b0d 0%, #2e3138 70%, #41454e 100%);
+    background-attachment: fixed;
+    color: #e8eaf0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; }
+
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+  .stats { color: #9aa0ae; font-size: 13px; margin-bottom: 18px; }
+
+  #cloudDot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: #5a6070; margin-left: 6px; vertical-align: middle;
+  }
+  #cloudDot.cloud-ok { background: #4caf7d; }
+  #cloudDot.cloud-err { background: #e53e3e; }
+  #cloudDot.cloud-sync { background: #f0b052; }
+
+  /* --- Quick add --- */
+  .addbox {
+    background: #1c1e24cc;
+    border: 1px solid #33363e;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  .addrow { display: flex; gap: 8px; }
+  #taskInput {
+    flex: 1;
+    background: #121317;
+    border: 1px solid #33363e;
+    border-radius: 10px;
+    color: #e8eaf0;
+    font-size: 15px;
+    padding: 11px 14px;
+    outline: none;
+    min-width: 0;
+  }
+  #taskInput:focus { border-color: #e53e3e; }
+  #addBtn {
+    background: #e53e3e;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 0 20px;
+    transition: background .15s;
+  }
+  #addBtn:hover { background: #ff5252; }
+
+  .options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+  .chip {
+    background: transparent;
+    border: 1px solid #424650;
+    border-radius: 999px;
+    color: #aab0c0;
+    cursor: pointer;
+    font-size: 12.5px;
+    padding: 5px 12px;
+    transition: all .12s;
+    user-select: none;
+  }
+  .chip:hover { border-color: #e53e3e; }
+  .chip.on { background: #e53e3e22; border-color: #e53e3e; color: #ff9d9d; }
+
+  .pill {
+    background: transparent; border: 1px solid #424650; border-radius: 999px;
+    color: #aab0c0; font-size: 12.5px; padding: 4px 10px; outline: none; color-scheme: dark;
+  }
+  .pill:focus, .pill.on { border-color: #e53e3e; color: #ff9d9d; }
+  #stageInput { width: 150px; }
+
+  /* дата/время с видимой иконкой (на Android пустые поля иначе невидимы) */
+  .pill.ico { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+  .pill.ico input {
+    background: transparent; border: none; outline: none;
+    color: #aab0c0; font-size: 12.5px; padding: 0;
+    color-scheme: dark; font-family: inherit;
+  }
+  .pill.ico input[type=date] { min-width: 100px; }
+  .pill.ico input[type=time] { min-width: 58px; }
+  .pill.ico.on, .pill.ico:focus-within { border-color: #e53e3e; }
+  .pill.ico.on input { color: #ff9d9d; }
+
+  /* --- Filters --- */
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; align-items: center; }
+  .filters .spacer { flex: 1; }
+  #toggleDone {
+    background: none; border: none; color: #9aa0ae; cursor: pointer;
+    font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px;
+  }
+
+  /* --- List --- */
+  .task {
+    position: relative;
+    background: #1c1e24cc;
+    border: 1px solid #33363e;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px 12px 14px;
+    margin-bottom: 8px;
+    transition: opacity .15s;
+  }
+  .task.done { opacity: .55; }
+  .task.done .title { text-decoration: line-through; }
+  .task.parked { opacity: .4; }
+
+  /* анимация появления и перемещения задач */
+  .task.appear { animation: slideIn .3s ease; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .check {
+    width: 23px; height: 23px; min-width: 23px;
+    border: 2px solid #5a6070;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: transparent;
+    font-size: 15px;
+    font-weight: 700;
+    transition: all .15s;
+  }
+  .check:hover { border-color: #4caf7d; color: #4caf7d55; }
+  .task.done .check { background: #4caf7d; border-color: #4caf7d; color: #fff; }
+
+  .emoji { font-size: 17px; min-width: 22px; text-align: center; line-height: 1; }
+
+  .body { flex: 1; min-width: 0; cursor: pointer; }
+  .title { font-size: 15px; line-height: 1.35; word-wrap: break-word; color: #ffffff; }
+  .task.cat-Работа .title { color: #ff6b6b; }
+  .task.cat-Личное .title { color: #ffd95e; }
+  .task.cat-Купить .title { color: #ffffff; }
+  .task.cat-ПК .title { color: #7fb8ff; }
+  .tag.cat-ПК { color: #7fb8ff; }
+  .title a, .stage a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .title a:hover, .stage a:hover { opacity: .8; }
+
+  .stage {
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: #9fc6ff;
+  }
+  .stage .stageDate { color: #707688; }
+
+  .meta { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
+  .tag { font-size: 11px; color: #9aa0ae; background: #2a2d35; border-radius: 6px; padding: 2px 7px; }
+  .tag.cat-Работа { color: #ff6b6b; }
+  .tag.cat-Купить { color: #ffffff; }
+  .tag.cat-Личное { color: #ffd95e; }
+  .dates { font-size: 10.5px; color: #707688; white-space: nowrap; }
+  .stage .stageDate { white-space: nowrap; }
+  .due { font-size: 11px; border-radius: 6px; padding: 2px 7px; background: #2a2d35; color: #9aa0ae; }
+  .due.overdue { background: #e53e3e26; color: #ff8b8b; }
+  .due.today   { background: #f0b05226; color: #ffc97d; }
+  .due.timer   { color: #8fd6a8; background: #4caf7d1c; }
+
+  .clr {
+    background: none; border: none; cursor: pointer;
+    font-size: 15px; line-height: 1; padding: 4px 5px; border-radius: 6px;
+  }
+  .clr:hover { background: #2a2d35; }
+
+  .palette {
+    position: absolute; right: 64px; top: 50%; transform: translateY(-50%);
+    background: #22252c; border: 1px solid #424650; border-radius: 10px;
+    padding: 7px 9px; display: flex; gap: 7px; align-items: center;
+    z-index: 5; box-shadow: 0 4px 16px #000a;
+  }
+  .pdot {
+    width: 21px; height: 21px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: transform .1s;
+  }
+  .pdot:hover { transform: scale(1.2); }
+  .pdot.sel { border-color: #fff; }
+  .pdot.auto { border: 2px dashed #8a90a0; }
+  .pdot.auto.sel { border: 2px dashed #fff; }
+
+  .moves { display: flex; flex-direction: column; gap: 2px; }
+  .mv {
+    background: none; border: none; color: #5a6070; cursor: pointer;
+    font-size: 11px; line-height: 1; padding: 3px 5px; border-radius: 5px;
+  }
+  .mv:hover { color: #e8eaf0; background: #2a2d35; }
+
+  .del {
+    background: none; border: none; color: #5a6070; cursor: pointer;
+    font-size: 18px; padding: 4px 6px; border-radius: 6px;
+  }
+  .del:hover { color: #ff5252; background: #e53e3e18; }
+  .del.confirm {
+    color: #fff; background: #e53e3e;
+    font-size: 12px; font-weight: 600; white-space: nowrap;
+  }
+
+  .empty { text-align: center; color: #777d8a; padding: 40px 0; font-size: 14px; }
+
+  .editInput {
+    width: 100%;
+    background: #121317; border: 1px solid #e53e3e; border-radius: 8px;
+    color: #e8eaf0; font-size: 15px; padding: 6px 10px; outline: none;
+  }
+  .hint { color: #777d8a; font-size: 11.5px; margin-top: 8px; }
+  .editPanel { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+
+  /* --- Экспорт / импорт / облако --- */
+  .iobar { display: flex; gap: 14px; margin-top: 22px; justify-content: center; flex-wrap: wrap; }
+  .iobar button {
+    background: none; border: none; color: #777d8a; cursor: pointer;
+    font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px;
+  }
+  .iobar button:hover { color: #aab0c0; }
+  #ioPanel, #syncPanel {
+    display: none; margin-top: 10px; background: #1c1e24; border: 1px solid #33363e;
+    border-radius: 12px; padding: 12px;
+  }
+  #ioPanel.open, #syncPanel.open { display: block; }
+  #ioText {
+    width: 100%; height: 90px; background: #121317; border: 1px solid #33363e;
+    border-radius: 8px; color: #aab0c0; font-size: 11px; padding: 8px; outline: none;
+    resize: vertical; font-family: monospace;
+  }
+  .iorow { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .iorow button, .iorow label {
+    background: #2a2d35; border: none; border-radius: 8px; color: #c9cfdc;
+    cursor: pointer; font-size: 12.5px; padding: 7px 14px;
+  }
+  .iorow button:hover, .iorow label:hover { background: #353945; }
+  .iorow .danger { background: #e53e3e; color: #fff; }
+  #ioMsg { color: #8fd6a8; font-size: 12px; margin-top: 6px; }
+
+  /* --- Мобильная адаптация --- */
+  @media (max-width: 500px) {
+    body { padding: 12px 8px 50px; }
+    .task { padding: 10px 6px 10px 10px; gap: 7px; }
+    .check { width: 27px; height: 27px; min-width: 27px; }
+    .mv { font-size: 14px; padding: 6px 7px; }
+    .clr { font-size: 17px; padding: 6px; }
+    .del { font-size: 20px; padding: 6px 8px; }
+    .title { font-size: 15.5px; }
+    #addBtn { padding: 0 16px; }
+    #stageInput { width: 130px; }
+    .palette { right: 50px; }
+    .pill.ico input[type=date] { min-width: 108px; }
+    .pill.ico input[type=time] { min-width: 64px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Мои дела <span id="cloudDot" title="облако не подключено"></span></h1>
+  <div class="stats" id="stats"></div>
+
+  <div class="addbox">
+    <div class="addrow">
+      <input id="taskInput" type="text" placeholder="Что нужно сделать? Enter — и готово" autofocus>
+      <button id="addBtn">＋</button>
+    </div>
+    <div class="options">
+      <span class="chip cat" data-cat="Работа"><svg viewBox="0 0 100 100" width="13" height="13" style="vertical-align:-2px"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg> Работа</span>
+      <span class="chip cat" data-cat="Купить">💰 Купить</span>
+      <span class="chip cat" data-cat="Личное">😐 Личное</span>
+      <span class="chip cat" data-cat="ПК">🖥️ ПК</span>
+      <input id="stageInput" type="text" class="pill" placeholder="этап (на чём сейчас)" title="Этап (необязательно)">
+      <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
+      <label class="pill ico" title="Время дедлайна — включает таймер (необязательно)">⏰<input id="timeInput" type="time"></label>
+    </div>
+    <div class="hint">Этап и дедлайн — по желанию. Дата + время = таймер. Ссылка: просто вставь URL — покажется коротко; или выдели слово и вставь ссылку (Ctrl+V) — слово станет кликабельным. Клик по задаче — редактировать.</div>
+  </div>
+
+  <div class="filters" id="filters"></div>
+  <div id="list"></div>
+
+  <div class="iobar">
+    <button id="exportBtn">⇪ экспорт данных</button>
+    <button id="importBtn">⇩ импорт данных</button>
+    <button id="syncBtn">☁ облако</button>
+  </div>
+  <div id="ioPanel">
+    <textarea id="ioText" placeholder="Сюда вставь код с другого устройства…"></textarea>
+    <div class="iorow">
+      <button id="copyBtn">Скопировать код</button>
+      <button id="dlBtn">Скачать файлом</button>
+      <label for="fileInput">Загрузить из файла</label>
+      <input type="file" id="fileInput" accept=".json,.txt" style="display:none">
+      <button id="applyBtn" class="danger">Импортировать (заменит список)</button>
+    </div>
+    <div id="ioMsg"></div>
+  </div>
+
+  <div id="syncPanel">
+    <div id="syncInfo" class="hint" style="margin-top:0"></div>
+    <input id="syncKey" type="text" class="editInput" style="margin-top:8px" placeholder="Master Key (первое устройство) или код подключения (остальные)">
+    <div class="iorow">
+      <button id="syncConnect">Подключить</button>
+      <button id="syncCopyCode" style="display:none">Скопировать код подключения</button>
+      <button id="syncNow" style="display:none">Синхронизировать сейчас</button>
+      <button id="syncOff" class="danger" style="display:none">Отключить облако</button>
+    </div>
+    <div id="syncMsg" class="hint"></div>
+  </div>
+</div>
+
+<script>
+const LS = 'alexey_todo_v1';
+const DONE_DELAY = 2.5 * 60 * 60 * 1000; // 2,5 часа до «опускания» выполненных
+
+let tasks = [];
+try { tasks = JSON.parse(localStorage.getItem(LS)) || []; } catch(e) {}
+tasks.forEach(t => { if (t.cat === 'Дом') t.cat = 'Купить'; });
+
+// первичное наполнение из заметок Алексея (добавится один раз)
+const SEED = [
+  ['Найти ИБП (закупка идёт)'],
+  ['Розетки для принтеров (от Жени ответ через день-2)'],
+  ['Камеры разобрать в проге и функционале'],
+  ['Телевизоры тест (написать инструкцию по подключению)'],
+  ['Ожидать приезда Земли Дмитрия'],
+  ['Закупки через Белокур'],
+  ['1с изучать'],
+  ['Маркировка всей техники'],
+  ['Сетевая папка (уточнить можно ли)'],
+  ['Телефон подключить Марии и Татьяне'],
+  ['Сплиттер в стойке найти (к Жене вопрос)'],
+  ['Уточнить по неймингу/нумерации помещений для структуры в 1С'],
+  ['Аудит компов в офисе, до конца промаркировать всю технику — включая инвентарники'],
+  ['Шаблон для нумерации мест от Олега'],
+  ['Уточни по смете — закупались ли тебе тросы с замками для фиксации техники на местах'],
+  ['Создать заявки через Артёма на сетевую папку и на телефоны'],
+  ['Уточнить по креплениям для телеков 65"', true],
+  ['Юля с 1с', true],
+  ['Заранее настроить и проверить принтеры А3', true],
+];
+if (!localStorage.getItem(LS + '_seeded')) {
+  const now = Date.now();
+  SEED.forEach(([title, done], i) => {
+    if (!tasks.some(t => t.title === title)) {
+      tasks.push({
+        id: now + i, title, cat: null, due: null, done: !!done,
+        created: now - i * 1000,
+        completedAt: done ? now - i : null
+      });
+    }
+  });
+  localStorage.setItem(LS + '_seeded', '1');
+  localStorage.setItem(LS, JSON.stringify(tasks));
+}
+
+// миграция: ручной порядок (pos)
+if (tasks.some(t => t.pos === undefined)) {
+  const legacy = tasks.slice().sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (b.created || 0) - (a.created || 0);
+  });
+  legacy.forEach((t, i) => { if (t.pos === undefined) t.pos = i; });
+}
+
+let state = { filter: 'все', showDone: true };
+try { Object.assign(state, JSON.parse(localStorage.getItem(LS+'_ui')) || {}); } catch(e) {}
+if (state.filter === 'Дом') state.filter = 'Купить';
+
+// облачная синхронизация (jsonbin.io)
+let sync = null;
+try { sync = JSON.parse(localStorage.getItem(LS+'_sync')); } catch(e) {}
+let tombstones = []; // память об удалённых задачах, чтобы они не «воскресали» при слиянии
+try { tombstones = JSON.parse(localStorage.getItem(LS+'_tomb')) || []; } catch(e) {}
+
+const SYNERGY_LOGO = '<svg viewBox="0 0 100 100" width="19" height="19" style="display:block"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg>';
+const CAT_EMOJI = { 'Работа': SYNERGY_LOGO, 'Купить': '💰', 'Личное': '😐', 'ПК': '🖥️' };
+const CAT_COLOR = { 'Работа': '#ff6b6b', 'Личное': '#ffd95e', 'ПК': '#7fb8ff' };
+const PALETTE = [null, '#ffffff', '#ff6b6b', '#ffd95e', '#7fb8ff', '#8fd6a8'];
+function effColor(t) {
+  return t.color || CAT_COLOR[t.cat] || '#ffffff';
+}
+
+let pickedCat = null;
+const $ = id => document.getElementById(id);
+
+function closePalettes() {
+  document.querySelectorAll('.palette').forEach(p => p.remove());
+}
+document.addEventListener('click', closePalettes);
+
+function save() {
+  localStorage.setItem(LS, JSON.stringify(tasks));
+  localStorage.setItem(LS+'_ui', JSON.stringify(state));
+  localStorage.setItem(LS+'_tomb', JSON.stringify(tombstones));
+  scheduleSync();
+}
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtD(ts) {
+  const d = new Date(ts);
+  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+}
+function fmtDT(ts) {
+  const d = new Date(ts);
+  return fmtD(ts) + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function linkify(s) {
+  let h = esc(s);
+  h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  h = h.replace(/(^|[^"'>=])(https?:\/\/[^\s<]+)/g, (m, pre, url) => {
+    const host = url.replace(/^https?:\/\//, '').split(/[\/?#]/)[0];
+    return pre + '<a href="' + url + '" target="_blank" rel="noopener">' + host + ' ↗</a>';
+  });
+  return h;
+}
+function attachLinkPaste(input) {
+  input.addEventListener('paste', e => {
+    const txt = ((e.clipboardData || window.clipboardData).getData('text') || '').trim();
+    if (!/^https?:\/\/\S+$/.test(txt)) return;
+    const s = input.selectionStart, en = input.selectionEnd;
+    if (s === en) return;
+    e.preventDefault();
+    const md = '[' + input.value.slice(s, en) + '](' + txt + ')';
+    input.value = input.value.slice(0, s) + md + input.value.slice(en);
+    input.setSelectionRange(s + md.length, s + md.length);
+  });
+}
+function deadlineOf(t) {
+  if (!t.due) return null;
+  return new Date(t.due + 'T' + (t.dueTime || '23:59'));
+}
+function dueClass(t) {
+  if (!t.due || t.done) return '';
+  const dl = deadlineOf(t);
+  if (dl - new Date() < 0) return 'overdue';
+  if (t.due === todayStr()) return 'today';
+  return '';
+}
+function countdown(t) {
+  const dl = deadlineOf(t);
+  let diff = dl - new Date();
+  const past = diff < 0;
+  diff = Math.abs(diff);
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor(diff % 86400000 / 3600000);
+  const m = Math.floor(diff % 3600000 / 60000);
+  let parts = [];
+  if (d) parts.push(d + 'д');
+  if (h) parts.push(h + 'ч');
+  if (m || parts.length === 0) parts.push(m + 'м');
+  const s = parts.join(' ');
+  return past ? 'просрочено на ' + s : 'осталось ' + s;
+}
+function isParked(t) {
+  return t.done && t.completedAt && (Date.now() - t.completedAt > DONE_DELAY);
+}
+function cmp(a, b) {
+  const pa = isParked(a), pb = isParked(b);
+  if (pa !== pb) return pa ? 1 : -1;
+  if (pa && pb) return (b.completedAt || 0) - (a.completedAt || 0);
+  return (a.pos || 0) - (b.pos || 0);
+}
+
+function addTask() {
+  const text = $('taskInput').value.trim();
+  if (!text) return;
+  const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
+  tasks.push({
+    id: Date.now(),
+    title: text,
+    cat: pickedCat,
+    stage: $('stageInput').value.trim() || null,
+    stageAt: $('stageInput').value.trim() ? Date.now() : null,
+    due: $('dateInput').value || null,
+    dueTime: $('timeInput').value || null,
+    done: false,
+    created: Date.now(),
+    updatedAt: null,
+    mod: Date.now(),
+    pos: minPos - 1
+  });
+  ['taskInput','stageInput','dateInput','timeInput'].forEach(i => {
+    $(i).value = '';
+    $(i).classList.remove('on');
+    if ($(i).parentElement && $(i).parentElement.classList.contains('ico')) {
+      $(i).parentElement.classList.remove('on');
+    }
+  });
+  pickedCat = null;
+  document.querySelectorAll('.chip.cat').forEach(c => c.classList.remove('on'));
+  save(); render();
+  $('taskInput').focus();
+}
+
+function moveTask(t, dir, shown) {
+  const movable = shown.filter(x => !isParked(x));
+  const i = movable.indexOf(t);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= movable.length) return;
+  const other = movable[j];
+  const tmp = t.pos; t.pos = other.pos; other.pos = tmp;
+  t.mod = Date.now(); other.mod = Date.now();
+  save(); render();
+}
+
+function render() {
+  // запоминаем позиции для анимации перемещения (FLIP)
+  const oldPos = {};
+  document.querySelectorAll('#list .task').forEach(el => {
+    oldPos[el.dataset.id] = el.getBoundingClientRect().top;
+  });
+  const hadAny = Object.keys(oldPos).length > 0;
+
+  const active = tasks.filter(t => !t.done).length;
+  const od = tasks.filter(t => dueClass(t) === 'overdue').length;
+  $('stats').textContent = active === 0 && tasks.length > 0
+    ? 'Всё сделано 🎉'
+    : `Активных: ${active}` + (od ? ` · просрочено: ${od}` : '');
+
+  const cats = ['все', 'Работа', 'Купить', 'Личное', 'ПК', 'без категории'];
+  const f = $('filters');
+  f.innerHTML = '';
+  cats.forEach(c => {
+    const el = document.createElement('span');
+    el.className = 'chip' + (state.filter === c ? ' on' : '');
+    el.textContent = c;
+    el.onclick = () => { state.filter = c; save(); render(); };
+    f.appendChild(el);
+  });
+  const sp = document.createElement('span'); sp.className = 'spacer'; f.appendChild(sp);
+  const tg = document.createElement('button');
+  tg.id = 'toggleDone';
+  tg.textContent = state.showDone ? 'скрыть выполненные' : 'показать выполненные';
+  tg.onclick = () => { state.showDone = !state.showDone; save(); render(); };
+  f.appendChild(tg);
+
+  const list = $('list');
+  list.innerHTML = '';
+  let shown = tasks.slice().sort(cmp).filter(t => {
+    if (!state.showDone && t.done) return false;
+    if (state.filter === 'все') return true;
+    if (state.filter === 'без категории') return !t.cat;
+    return t.cat === state.filter;
+  });
+
+  if (shown.length === 0) {
+    list.innerHTML = '<div class="empty">' + (tasks.length === 0
+      ? 'Пока пусто. Добавь первое дело ↑' : 'Здесь ничего нет') + '</div>';
+    return;
+  }
+
+  shown.forEach(t => {
+    const row = document.createElement('div');
+    row.dataset.id = t.id;
+    row.className = 'task ' + (t.done ? 'done ' : '') + (isParked(t) ? 'parked ' : '') + (t.cat ? 'cat-' + t.cat : '');
+
+    const ch = document.createElement('div');
+    ch.className = 'check'; ch.textContent = '✓';
+    ch.title = t.done ? 'Вернуть в работу' : 'Отметить выполненной';
+    ch.onclick = () => {
+      t.done = !t.done;
+      t.completedAt = t.done ? Date.now() : null;
+      t.mod = Date.now();
+      save(); render();
+    };
+    row.appendChild(ch);
+
+    if (t.cat && CAT_EMOJI[t.cat]) {
+      const em = document.createElement('div');
+      em.className = 'emoji';
+      em.innerHTML = CAT_EMOJI[t.cat];
+      row.appendChild(em);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'body';
+    const title = document.createElement('div');
+    title.className = 'title'; title.innerHTML = linkify(t.title);
+    if (t.color) title.style.color = t.color;
+    body.appendChild(title);
+
+    if (t.stage) {
+      const stg = document.createElement('div');
+      stg.className = 'stage';
+      stg.innerHTML = '↳ ' + linkify(t.stage) +
+        (t.stageAt ? ' <span class="stageDate">· ' + fmtDT(t.stageAt) + '</span>' : '');
+      body.appendChild(stg);
+    }
+
+    const meta = document.createElement('div'); meta.className = 'meta';
+    if (t.cat) {
+      const tag = document.createElement('span');
+      tag.className = 'tag cat-' + t.cat; tag.textContent = t.cat;
+      meta.appendChild(tag);
+    }
+    if (t.due && !t.done) {
+      const d = document.createElement('span');
+      const cls = dueClass(t);
+      d.className = 'due ' + (cls || 'timer');
+      d.textContent = '⏳ ' + countdown(t);
+      meta.appendChild(d);
+    }
+    const dAdd = document.createElement('span');
+    dAdd.className = 'dates';
+    dAdd.textContent = 'доб. ' + fmtDT(t.created);
+    meta.appendChild(dAdd);
+    if (t.updatedAt) {
+      const dUpd = document.createElement('span');
+      dUpd.className = 'dates';
+      dUpd.textContent = 'изм. ' + fmtDT(t.updatedAt);
+      meta.appendChild(dUpd);
+    }
+    body.appendChild(meta);
+
+    body.onclick = (ev) => {
+      if (ev.target.closest('a')) return;
+      if (body.querySelector('.editInput')) return;
+      const inp = document.createElement('input');
+      inp.className = 'editInput'; inp.value = t.title;
+      attachLinkPaste(inp);
+      title.replaceWith(inp);
+
+      const panel = document.createElement('div');
+      panel.className = 'editPanel';
+
+      const stEl = document.createElement('input');
+      stEl.type = 'text'; stEl.placeholder = 'этап (на чём сейчас)';
+      stEl.className = 'pill'; stEl.style.width = '160px';
+      stEl.value = t.stage || '';
+      attachLinkPaste(stEl);
+
+      const grab = () => {
+        const newTitle = inp.value.trim();
+        const newStage = stEl.value.trim() || null;
+        let changed = false;
+        if (newTitle && newTitle !== t.title) { t.title = newTitle; changed = true; }
+        if (newStage !== (t.stage || null)) { t.stage = newStage; t.stageAt = newStage ? Date.now() : null; changed = true; }
+        if (changed) { t.updatedAt = Date.now(); t.mod = Date.now(); }
+      };
+
+      ['Работа', 'Купить', 'Личное', 'ПК'].forEach(c => {
+        const chEl = document.createElement('span');
+        chEl.className = 'chip' + (t.cat === c ? ' on' : '');
+        chEl.textContent = c;
+        chEl.onmousedown = e => {
+          e.preventDefault(); e.stopPropagation();
+          t.cat = (t.cat === c ? null : c);
+          t.updatedAt = Date.now(); t.mod = Date.now();
+          grab();
+          save(); render();
+        };
+        panel.appendChild(chEl);
+      });
+
+      stEl.onmousedown = e => e.stopPropagation();
+      stEl.onclick = e => e.stopPropagation();
+      stEl.onkeydown = e => {
+        if (e.key === 'Enter') { grab(); save(); render(); }
+        if (e.key === 'Escape') render();
+      };
+      panel.appendChild(stEl);
+
+      const dEl = document.createElement('input');
+      dEl.type = 'date'; dEl.value = t.due || '';
+      const tmEl = document.createElement('input');
+      tmEl.type = 'time'; tmEl.value = t.dueTime || '';
+      const dWrap = document.createElement('label');
+      dWrap.className = 'pill ico' + (t.due ? ' on' : '');
+      dWrap.append('📅', dEl);
+      const tmWrap = document.createElement('label');
+      tmWrap.className = 'pill ico' + (t.dueTime ? ' on' : '');
+      tmWrap.append('⏰', tmEl);
+      [dEl, tmEl, dWrap, tmWrap].forEach(el => {
+        el.onmousedown = e => e.stopPropagation();
+        el.onclick = e => e.stopPropagation();
+      });
+      dEl.onchange = () => {
+        t.due = dEl.value || null;
+        t.updatedAt = Date.now(); t.mod = Date.now();
+        grab(); save(); render();
+      };
+      tmEl.onchange = () => {
+        t.dueTime = tmEl.value || null;
+        t.updatedAt = Date.now(); t.mod = Date.now();
+        grab(); save(); render();
+      };
+      panel.appendChild(dWrap);
+      panel.appendChild(tmWrap);
+      body.appendChild(panel);
+
+      inp.focus(); inp.select();
+      const finish = ok => {
+        if (ok) grab();
+        save(); render();
+      };
+      inp.onkeydown = e => {
+        if (e.key === 'Enter') finish(true);
+        if (e.key === 'Escape') finish(false);
+      };
+      const blurGuard = e => {
+        if (e.relatedTarget && body.contains(e.relatedTarget)) return;
+        finish(true);
+      };
+      inp.onblur = blurGuard;
+      stEl.onblur = blurGuard;
+      dEl.onblur = blurGuard;
+      tmEl.onblur = blurGuard;
+    };
+    row.appendChild(body);
+
+    if (!isParked(t)) {
+      const clr = document.createElement('button');
+      clr.className = 'clr';
+      clr.textContent = '●';
+      clr.style.color = effColor(t);
+      clr.title = 'Цвет задачи';
+      clr.onclick = (e) => {
+        e.stopPropagation();
+        const existed = row.querySelector('.palette');
+        closePalettes();
+        if (existed) return;
+        const pal = document.createElement('div');
+        pal.className = 'palette';
+        pal.onclick = ev => ev.stopPropagation();
+        PALETTE.forEach(c => {
+          const dot = document.createElement('div');
+          dot.className = 'pdot'
+            + (c === null ? ' auto' : '')
+            + ((t.color || null) === c ? ' sel' : '');
+          dot.style.background = c === null ? (CAT_COLOR[t.cat] || '#ffffff') : c;
+          dot.title = c === null ? 'Цвет категории (авто)' : c;
+          dot.onclick = ev => {
+            ev.stopPropagation();
+            t.color = c;
+            t.mod = Date.now();
+            save(); render();
+          };
+          pal.appendChild(dot);
+        });
+        row.appendChild(pal);
+      };
+      row.appendChild(clr);
+
+      const mv = document.createElement('div');
+      mv.className = 'moves';
+      const up = document.createElement('button');
+      up.className = 'mv'; up.textContent = '▲'; up.title = 'Поднять';
+      up.onclick = () => moveTask(t, -1, shown);
+      const dn = document.createElement('button');
+      dn.className = 'mv'; dn.textContent = '▼'; dn.title = 'Опустить';
+      dn.onclick = () => moveTask(t, 1, shown);
+      mv.append(up, dn);
+      row.appendChild(mv);
+    }
+
+    const del = document.createElement('button');
+    del.className = 'del'; del.textContent = '✕'; del.title = 'Удалить';
+    del.onclick = () => {
+      if (del.dataset.confirm) {
+        tasks = tasks.filter(x => x.id !== t.id);
+        tombstones.push({ id: t.id, at: Date.now() });
+        save(); render();
+        return;
+      }
+      del.dataset.confirm = '1';
+      del.textContent = 'точно?';
+      del.classList.add('confirm');
+      setTimeout(() => {
+        if (!del.isConnected) return;
+        delete del.dataset.confirm;
+        del.textContent = '✕';
+        del.classList.remove('confirm');
+      }, 3000);
+    };
+    row.appendChild(del);
+
+    list.appendChild(row);
+  });
+
+  // FLIP: плавно перемещаем строки на новые места
+  if (hadAny) {
+    list.querySelectorAll('.task').forEach(el => {
+      const o = oldPos[el.dataset.id];
+      if (o === undefined) { el.classList.add('appear'); return; }
+      const n = el.getBoundingClientRect().top;
+      const d = o - n;
+      if (d) {
+        el.style.transition = 'none';
+        el.style.transform = 'translateY(' + d + 'px)';
+        el.getBoundingClientRect(); // принудительный reflow
+        el.style.transition = 'transform .35s cubic-bezier(.2,.8,.2,1)';
+        el.style.transform = '';
+        el.addEventListener('transitionend', () => { el.style.transition = ''; }, { once: true });
+      }
+    });
+  }
+}
+
+/* --- Экспорт / импорт --- */
+function ioMsg(s) { $('ioMsg').textContent = s; setTimeout(() => { $('ioMsg').textContent = ''; }, 4000); }
+function exportStr() { return JSON.stringify({ v: 1, tasks, state }); }
+
+$('exportBtn').onclick = () => {
+  $('ioPanel').classList.add('open');
+  $('syncPanel').classList.remove('open');
+  $('ioText').value = exportStr();
+  $('ioText').select();
+};
+$('importBtn').onclick = () => {
+  $('ioPanel').classList.add('open');
+  $('syncPanel').classList.remove('open');
+  $('ioText').value = '';
+  $('ioText').focus();
+};
+$('copyBtn').onclick = async () => {
+  $('ioText').value = exportStr();
+  $('ioText').select();
+  try { await navigator.clipboard.writeText($('ioText').value); ioMsg('Скопировано в буфер ✓'); }
+  catch(e) { document.execCommand('copy'); ioMsg('Скопировано ✓'); }
+};
+$('dlBtn').onclick = () => {
+  const blob = new Blob([exportStr()], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'moi-dela-' + todayStr() + '.json';
+  a.click();
+  ioMsg('Файл скачан ✓');
+};
+$('fileInput').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { $('ioText').value = r.result; ioMsg('Файл загружен — жми «Импортировать»'); };
+  r.readAsText(f);
+};
+$('applyBtn').onclick = () => {
+  let data;
+  try { data = JSON.parse($('ioText').value); } catch(e) { ioMsg('Это не похоже на код экспорта'); return; }
+  if (!data || !Array.isArray(data.tasks)) { ioMsg('В коде нет задач'); return; }
+  if (!del_confirm_io()) return;
+  tasks = data.tasks;
+  if (data.state) state = Object.assign({ filter: 'все', showDone: true }, data.state);
+  localStorage.setItem(LS + '_seeded', '1');
+  save(); render();
+  $('ioPanel').classList.remove('open');
+  ioMsg('Импортировано ✓');
+};
+let ioConfirmArmed = false;
+function del_confirm_io() {
+  if (ioConfirmArmed) { ioConfirmArmed = false; return true; }
+  ioConfirmArmed = true;
+  ioMsg('Текущий список будет заменён. Нажми «Импортировать» ещё раз для подтверждения.');
+  setTimeout(() => { ioConfirmArmed = false; }, 5000);
+  return false;
+}
+
+/* --- Облако (jsonbin.io) --- */
+const JB = 'https://api.jsonbin.io/v3/b';
+let pushTimer = null;
+
+function setCloud(cls, tip) {
+  const d = $('cloudDot');
+  d.className = cls || '';
+  d.title = tip || 'облако не подключено';
+}
+function syncMsg(s) { $('syncMsg').textContent = s; }
+function syncPayload() { return { v: 1, tasks, tomb: tombstones, t: Date.now() }; }
+
+function syncUI() {
+  const on = !!(sync && sync.key && sync.bin);
+  $('syncCopyCode').style.display = on ? '' : 'none';
+  $('syncNow').style.display = on ? '' : 'none';
+  $('syncOff').style.display = on ? '' : 'none';
+  $('syncKey').style.display = on ? 'none' : '';
+  $('syncConnect').style.display = on ? 'none' : '';
+  $('syncInfo').textContent = on
+    ? 'Облако подключено ✓ Скопируй код подключения и вставь его в этой же панели на других устройствах.'
+    : 'Через jsonbin.io: на первом устройстве вставь Master Key (jsonbin.io → API Keys), на остальных — код подключения с первого устройства.';
+}
+
+function scheduleSync() {
+  if (!sync) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(cloudPush, 1500);
+}
+
+async function cloudPush() {
+  if (!sync) return;
+  setCloud('cloud-sync', 'отправка…');
+  try {
+    const r = await fetch(JB + '/' + sync.bin, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.key },
+      body: JSON.stringify(syncPayload())
+    });
+    if (!r.ok) throw new Error(r.status);
+    setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0,5));
+  } catch(e) {
+    setCloud('cloud-err', 'нет связи с облаком — изменения сохранены локально');
+  }
+}
+
+function mergeData(remote) {
+  const rT = (remote && remote.tasks) || [];
+  const rTomb = (remote && remote.tomb) || [];
+  const tombMap = {};
+  tombstones.concat(rTomb).forEach(x => {
+    tombMap[x.id] = Math.max(tombMap[x.id] || 0, x.at || 0);
+  });
+  const byId = {};
+  tasks.concat(rT).forEach(t => {
+    const m = t.mod || t.created || 0;
+    if (tombMap[t.id] && tombMap[t.id] >= m) return; // задача удалена позже, чем менялась
+    const ex = byId[t.id];
+    if (!ex || (ex.mod || ex.created || 0) < m) byId[t.id] = t;
+  });
+  tasks = Object.values(byId);
+  tombstones = Object.keys(tombMap).map(id => ({ id: +id, at: tombMap[id] }));
+}
+
+async function cloudPull() {
+  if (!sync) return;
+  setCloud('cloud-sync', 'загрузка…');
+  try {
+    const r = await fetch(JB + '/' + sync.bin + '/latest', {
+      headers: { 'X-Master-Key': sync.key }
+    });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const before = JSON.stringify(tasks) + JSON.stringify(tombstones);
+    mergeData(data.record);
+    const after = JSON.stringify(tasks) + JSON.stringify(tombstones);
+    localStorage.setItem(LS, JSON.stringify(tasks));
+    localStorage.setItem(LS + '_tomb', JSON.stringify(tombstones));
+    if (before !== after && !document.querySelector('.editInput')) render();
+    const remoteStr = JSON.stringify((data.record && data.record.tasks) || []);
+    if (JSON.stringify(tasks) !== remoteStr) scheduleSync();
+    setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0,5));
+  } catch(e) {
+    setCloud('cloud-err', 'нет связи с облаком');
+  }
+}
+
+$('syncBtn').onclick = () => {
+  $('syncPanel').classList.toggle('open');
+  $('ioPanel').classList.remove('open');
+  syncUI();
+};
+$('syncConnect').onclick = async () => {
+  const v = $('syncKey').value.trim();
+  if (!v) { syncMsg('Вставь ключ или код.'); return; }
+  let conf = null;
+  if (v[0] === '{') {
+    try { const o = JSON.parse(v); if (o.k && o.b) conf = { key: o.k, bin: o.b }; } catch(e) {}
+  }
+  if (!conf && !v.startsWith('$')) {
+    try { const o = JSON.parse(atob(v)); if (o.k && o.b) conf = { key: o.k, bin: o.b }; } catch(e) {}
+  }
+  if (conf) {
+    sync = conf;
+    localStorage.setItem(LS + '_sync', JSON.stringify(sync));
+    syncUI(); syncMsg('Подключаюсь…');
+    await cloudPull(); render();
+    syncMsg('Готово ✓ Данные объединены с облаком.');
+    return;
+  }
+  // это Master Key — создаём хранилище
+  syncMsg('Создаю облачное хранилище…');
+  try {
+    const r = await fetch(JB, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': v, 'X-Bin-Name': 'moi-dela' },
+      body: JSON.stringify(syncPayload())
+    });
+    const data = await r.json();
+    if (!r.ok || !data.metadata || !data.metadata.id) throw new Error(data.message || ('код ' + r.status));
+    sync = { key: v, bin: data.metadata.id };
+    localStorage.setItem(LS + '_sync', JSON.stringify(sync));
+    syncUI(); setCloud('cloud-ok', 'подключено');
+    syncMsg('Готово ✓ Жми «Скопировать код подключения» и вставь его на других устройствах.');
+  } catch(e) {
+    syncMsg('Не получилось: ' + e.message + '. Проверь Master Key и интернет.');
+  }
+};
+$('syncCopyCode').onclick = async () => {
+  const code = btoa(JSON.stringify({ k: sync.key, b: sync.bin }));
+  try { await navigator.clipboard.writeText(code); syncMsg('Код скопирован ✓ Вставь его на другом устройстве в этой же панели.'); }
+  catch(e) {
+    $('syncKey').style.display = '';
+    $('syncKey').value = code;
+    $('syncKey').select();
+    syncMsg('Скопируй код вручную (Ctrl+C).');
+  }
+};
+$('syncNow').onclick = async () => { await cloudPull(); syncMsg('Синхронизировано ✓'); };
+$('syncOff').onclick = () => {
+  if (!$('syncOff').dataset.c) {
+    $('syncOff').dataset.c = '1';
+    $('syncOff').textContent = 'точно отключить?';
+    setTimeout(() => { delete $('syncOff').dataset.c; $('syncOff').textContent = 'Отключить облако'; }, 3000);
+    return;
+  }
+  sync = null;
+  localStorage.removeItem(LS + '_sync');
+  setCloud('', '');
+  syncUI(); syncMsg('Облако отключено. Данные остались и тут, и в облаке.');
+};
+
+document.querySelectorAll('.chip.cat').forEach(c => {
+  c.onclick = () => {
+    const was = c.classList.contains('on');
+    document.querySelectorAll('.chip.cat').forEach(x => x.classList.remove('on'));
+    pickedCat = was ? null : c.dataset.cat;
+    if (!was) c.classList.add('on');
+  };
+});
+['dateInput','timeInput'].forEach(i => {
+  $(i).onchange = e => {
+    e.target.parentElement.classList.toggle('on', !!e.target.value);
+  };
+});
+$('addBtn').onclick = addTask;
+$('taskInput').onkeydown = e => { if (e.key === 'Enter') addTask(); };
+attachLinkPaste($('taskInput'));
+attachLinkPaste($('stageInput'));
+
+render();
+syncUI();
+$('taskInput').focus();
+if (sync) cloudPull();
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && sync) cloudPull();
+});
+
+setInterval(() => {
+  if (!document.querySelector('.editInput')) render();
+}, 60000);
+setInterval(() => {
+  if (sync && !document.hidden && !document.querySelector('.editInput')) cloudPull();
+}, 180000);
+</script>
+</body>
+</html>
