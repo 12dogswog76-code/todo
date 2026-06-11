@@ -1594,6 +1594,25 @@ if (!localStorage.getItem(LS + '_guide') && !sync) {
   setTimeout(maybeAskNotif, 1500);
 }
 
+// быстрое добавление по ссылке: alextask.ru/?add=Текст задачи (для кнопки-закладки из почты)
+(function() {
+  const addT = new URLSearchParams(location.search).get('add');
+  if (!addT || !addT.trim()) return;
+  const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
+  tasks.push({
+    id: Date.now(),
+    title: addT.trim().slice(0, 300),
+    cat: 'Работа',
+    done: false,
+    created: Date.now(),
+    updatedAt: null,
+    mod: Date.now(),
+    pos: minPos - 1
+  });
+  save();
+  history.replaceState({}, '', location.pathname); // чистим URL, чтобы при обновлении не задвоилось
+})();
+
 render();
 syncUI();
 notifLabel();
