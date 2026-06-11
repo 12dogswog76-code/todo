@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#0b0b0d">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>Мои дела</title>
 <style>
   :root { color-scheme: dark; }
@@ -490,6 +492,9 @@
 
     <h3>🔔 Уведомления</h3>
     <p>Кнопка «уведомления» внизу — браузер предупредит за 30 минут до дедлайна и в момент истечения. Работает, пока вкладка с сайтом открыта (можно в фоне).</p>
+
+    <h3>📱 Как приложение</h3>
+    <p>Сайт можно установить: в Chrome на компе — значок установки в адресной строке, на Android — меню ⋮ → «Установить приложение». Появится иконка, открывается в своём окне, работает даже без интернета.</p>
 
     <h3>Без облака: экспорт / импорт</h3>
     <p>Не хочешь заводить облако — переноси данные вручную: <b>«⇪ экспорт»</b> → «Скопировать код» на одном устройстве, <b>«⇩ импорт»</b> → вставить код → «Импортировать» на другом. Тем же экспортом удобно делать резервную копию в файл.</p>
@@ -1470,7 +1475,7 @@ attachLinkPaste($('taskInput'));
 attachLinkPaste($('stageInput'));
 
 /* --- Уведомления --- */
-const NOTIF_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E";
+const NOTIF_ICON = 'icon.svg';
 let notifOn = localStorage.getItem(LS + '_notif') === '1';
 let notified = {};
 try { notified = JSON.parse(localStorage.getItem(LS + '_notified')) || {}; } catch(e) {}
@@ -1578,7 +1583,7 @@ function closeGuide() {
   localStorage.setItem(LS + '_guide', '1');
   maybeAskNotif(); // после гайда предлагаем включить уведомления
 }
-$('guideBtn').onclick = () => { $('guideOverlay').classList.add('open'); };
+$('guideBtn').onclick = openGuide;
 $('guideClose').onclick = closeGuide;
 $('guideOverlay').onclick = e => { if (e.target === $('guideOverlay')) closeGuide(); };
 // первый визит без облака — показываем гайд
