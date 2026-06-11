@@ -37,7 +37,7 @@
     border: 1px solid #33363e;
     border-radius: 14px;
     padding: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
   .addrow { display: flex; gap: 8px; }
   #taskInput {
@@ -86,6 +86,7 @@
   }
   .pill:focus, .pill.on { border-color: #e53e3e; color: #ff9d9d; }
   #stageInput { width: 150px; }
+  select.pill { background: #1c1e24; cursor: pointer; }
 
   /* дата/время с видимой иконкой (на Android пустые поля иначе невидимы) */
   .pill.ico { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
@@ -98,6 +99,20 @@
   .pill.ico input[type=time] { min-width: 58px; }
   .pill.ico.on, .pill.ico:focus-within { border-color: #e53e3e; }
   .pill.ico.on input { color: #ff9d9d; }
+
+  /* --- Поиск --- */
+  #searchInput {
+    width: 100%;
+    background: #1c1e24cc;
+    border: 1px solid #33363e;
+    border-radius: 10px;
+    color: #e8eaf0;
+    font-size: 13.5px;
+    padding: 9px 13px;
+    outline: none;
+    margin-bottom: 12px;
+  }
+  #searchInput:focus { border-color: #e53e3e; }
 
   /* --- Filters --- */
   .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; align-items: center; }
@@ -115,8 +130,8 @@
     border-radius: 12px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 12px 12px 14px;
+    gap: 8px;
+    padding: 12px 12px 12px 12px;
     margin-bottom: 8px;
     transition: opacity .15s;
   }
@@ -124,6 +139,7 @@
   .task.done .title { text-decoration: line-through; }
   .task.parked { opacity: .4; }
   .task.pinned { border-color: #f0b05266; }
+  .task.dragging { z-index: 10; opacity: .85; box-shadow: 0 8px 24px #000c; }
 
   /* анимация появления и перемещения задач */
   .task.appear { animation: slideIn .3s ease; }
@@ -131,6 +147,13 @@
     from { opacity: 0; transform: translateY(-8px); }
     to   { opacity: 1; transform: none; }
   }
+
+  .dragh {
+    cursor: grab; color: #4a5060; font-size: 15px; line-height: 1;
+    padding: 6px 2px; touch-action: none; user-select: none;
+  }
+  .dragh:hover { color: #9aa0ae; }
+  .dragh:active { cursor: grabbing; }
 
   .check {
     width: 23px; height: 23px; min-width: 23px;
@@ -164,6 +187,20 @@
     color: #9fc6ff;
   }
   .stage .stageDate { color: #707688; white-space: nowrap; }
+
+  /* --- Чек-листы --- */
+  .checks { margin-top: 5px; }
+  .citem { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #c9cfdc; margin: 3px 0; }
+  .cbox {
+    width: 15px; height: 15px; min-width: 15px;
+    border: 1.5px solid #5a6070; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: transparent;
+  }
+  .citem.cdone .cbox { background: #4caf7d; border-color: #4caf7d; color: #fff; }
+  .citem.cdone .ctext { text-decoration: line-through; color: #707688; }
+  .cdel { background: none; border: none; color: #4a5060; cursor: pointer; font-size: 12px; padding: 0 3px; }
+  .cdel:hover { color: #ff5252; }
 
   .meta { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
   .tag { font-size: 11px; color: #9aa0ae; background: #2a2d35; border-radius: 6px; padding: 2px 7px; }
@@ -232,18 +269,18 @@
   .hint { color: #777d8a; font-size: 11.5px; margin-top: 8px; }
   .editPanel { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
 
-  /* --- Экспорт / импорт / облако --- */
+  /* --- Экспорт / импорт / облако / статистика --- */
   .iobar { display: flex; gap: 14px; margin-top: 22px; justify-content: center; flex-wrap: wrap; }
   .iobar button {
     background: none; border: none; color: #777d8a; cursor: pointer;
     font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px;
   }
   .iobar button:hover { color: #aab0c0; }
-  #ioPanel, #syncPanel {
+  #ioPanel, #syncPanel, #statsPanel {
     display: none; margin-top: 10px; background: #1c1e24; border: 1px solid #33363e;
     border-radius: 12px; padding: 12px;
   }
-  #ioPanel.open, #syncPanel.open { display: block; }
+  #ioPanel.open, #syncPanel.open, #statsPanel.open { display: block; }
   #ioText {
     width: 100%; height: 90px; background: #121317; border: 1px solid #33363e;
     border-radius: 8px; color: #aab0c0; font-size: 11px; padding: 8px; outline: none;
@@ -257,6 +294,14 @@
   .iorow button:hover, .iorow label:hover { background: #353945; }
   .iorow .danger { background: #e53e3e; color: #fff; }
   #ioMsg { color: #8fd6a8; font-size: 12px; margin-top: 6px; }
+
+  .statgrid { display: flex; gap: 10px; flex-wrap: wrap; }
+  .statbox {
+    background: #121317; border: 1px solid #33363e; border-radius: 10px;
+    padding: 10px 14px; min-width: 92px; text-align: center; flex: 1;
+  }
+  .statnum { font-size: 20px; font-weight: 700; color: #fff; }
+  .statlbl { font-size: 11px; color: #9aa0ae; margin-top: 2px; }
 
   /* --- Гайд --- */
   #guideOverlay {
@@ -285,6 +330,31 @@
   }
   #guideClose:hover { background: #ff5252; }
 
+  /* --- Предложение включить уведомления --- */
+  #askNotif {
+    position: fixed; inset: 0; background: #000000aa;
+    display: none; align-items: center; justify-content: center;
+    z-index: 60; padding: 16px;
+  }
+  #askNotif.open { display: flex; }
+  #askCard {
+    background: #ffffff; color: #1c1e24;
+    border-radius: 18px; max-width: 380px; width: 100%;
+    padding: 20px 22px; text-align: center;
+    box-shadow: 0 10px 40px #000c;
+  }
+  #askCard h2 { font-size: 16.5px; margin-bottom: 8px; color: #111; }
+  #askCard p { font-size: 13.5px; line-height: 1.5; color: #333; }
+  .askrow { display: flex; gap: 8px; margin-top: 14px; }
+  .askrow button {
+    flex: 1; border: none; border-radius: 10px; cursor: pointer;
+    font-size: 14px; font-weight: 600; padding: 10px;
+  }
+  #askYes { background: #e53e3e; color: #fff; }
+  #askYes:hover { background: #ff5252; }
+  #askLater { background: #ececf0; color: #444; }
+  #askLater:hover { background: #e0e0e6; }
+
   .footer { text-align: center; margin-top: 18px; }
   .footer a {
     color: #5a6070; font-size: 12px;
@@ -295,18 +365,20 @@
   /* --- Мобильная адаптация --- */
   @media (max-width: 500px) {
     body { padding: 12px 8px 50px; }
-    .task { padding: 10px 6px 10px 10px; gap: 7px; }
+    .task { padding: 10px 6px 10px 8px; gap: 6px; }
     .check { width: 27px; height: 27px; min-width: 27px; }
     .mv { font-size: 14px; padding: 6px 7px; }
     .clr { font-size: 17px; padding: 6px; }
     .pin { font-size: 16px; padding: 6px 5px; }
     .del { font-size: 20px; padding: 6px 8px; }
+    .dragh { font-size: 17px; padding: 8px 3px; }
     .title { font-size: 15.5px; }
     #addBtn { padding: 0 16px; }
     #stageInput { width: 130px; }
     .palette { right: 50px; }
     .pill.ico input[type=date] { min-width: 108px; }
     .pill.ico input[type=time] { min-width: 64px; }
+    .cbox { width: 18px; height: 18px; min-width: 18px; }
   }
 </style>
 </head>
@@ -328,9 +400,17 @@
       <input id="stageInput" type="text" class="pill" placeholder="этап (на чём сейчас)" title="Этап (необязательно)">
       <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
       <label class="pill ico" title="Время дедлайна — включает таймер (необязательно)">⏰<input id="timeInput" type="time"></label>
+      <select id="repInput" class="pill" title="Повторять задачу">
+        <option value="">без повтора</option>
+        <option value="d">🔁 каждый день</option>
+        <option value="w">🔁 каждую неделю</option>
+        <option value="m">🔁 каждый месяц</option>
+      </select>
     </div>
-    <div class="hint">Этап и дедлайн — по желанию. Дата + время = таймер (время без даты = сегодня). Ссылка: просто вставь URL — покажется коротко; или выдели слово и вставь ссылку (Ctrl+V). Клик по задаче — редактировать. 📌 — закрепить сверху.</div>
+    <div class="hint">Этап, дедлайн и повтор — по желанию. Дата + время = таймер (время без даты = сегодня). Клик по задаче — редактировать (там же чек-лист). ⠿ — перетащить, 📌 — закрепить. Ссылку просто вставь в текст.</div>
   </div>
+
+  <input id="searchInput" type="text" placeholder="🔍 поиск по задачам, этапам и чек-листам">
 
   <div class="filters" id="filters"></div>
   <div id="list"></div>
@@ -339,6 +419,7 @@
     <button id="exportBtn">⇪ экспорт данных</button>
     <button id="importBtn">⇩ импорт данных</button>
     <button id="syncBtn">☁ облако</button>
+    <button id="statsBtn">📊 статистика</button>
     <button id="notifBtn">🔕 уведомления: выкл</button>
     <button id="guideBtn">❔ как пользоваться</button>
   </div>
@@ -366,6 +447,11 @@
     <div id="syncMsg" class="hint"></div>
   </div>
 
+  <div id="statsPanel">
+    <div class="statgrid" id="statGrid"></div>
+    <div class="hint" id="statStreak"></div>
+  </div>
+
   <div class="footer">
     <a href="https://t.me/zerowpoint" target="_blank" rel="noopener">автор — @zerowpoint</a>
   </div>
@@ -378,10 +464,15 @@
 
     <h3>Основы</h3>
     <ul>
-      <li>Напиши задачу и нажми <b>Enter</b> — готово. Категория, этап и дедлайн — по желанию.</li>
-      <li><b>Клик по задаче</b> — редактировать текст, категорию, этап и дедлайн.</li>
+      <li>Напиши задачу и нажми <b>Enter</b> — готово. Категория, этап, дедлайн и повтор — по желанию.</li>
+      <li><b>Клик по задаче</b> — редактировать текст, категорию, этап, дедлайн и чек-лист подпунктов.</li>
       <li>Дата + время = таймер обратного отсчёта (время без даты = сегодня). Просроченное подсветится красным.</li>
-      <li>✓ — выполнено (опустится вниз через 2,5 часа) · 📌 — закрепить сверху · ● — цвет · ▲▼ — порядок · ✕ — удалить.</li>
+      <li>✓ — выполнено (опустится вниз через 2,5 часа, через неделю уедет в архив) · 📌 — закрепить · ● — цвет · ⠿ — перетащить · ▲▼ — порядок · ✕ — удалить.</li>
+      <li>🔁 Повторяющаяся задача после выполнения сама создастся на следующий срок (каждый день / неделю / месяц).</li>
+      <li>☑ Чек-лист: открой задачу кликом, в поле «+ подпункт» жми Enter — подпункты с галочками появятся прямо в задаче, со счётчиком «☑ 2/5».</li>
+      <li>🔍 Поиск ищет по названиям, этапам и чек-листам. Фильтр «🗃 архив» — выполненные старше недели.</li>
+      <li>🎨 Чип «по цвету» в фильтрах группирует задачи по цветам. Цвет задаче задаётся кнопкой ●.</li>
+      <li>📊 «Статистика» внизу — сколько выполнено сегодня / за неделю / за месяц и серия дней подряд 🔥.</li>
       <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
     </ul>
 
@@ -397,6 +488,9 @@
     <p>⚠️ Важно: Master Key вставляется только один раз на первом устройстве. На все остальные — только код подключения, иначе создастся новое пустое хранилище. Код подключения — это «ключ» от твоих задач, не делись им с чужими.</p>
     <p>Дальше всё само: изменения улетают в облако через пару секунд, другие устройства подтягивают их при открытии и каждые 3 минуты. Точка возле заголовка: зелёная — всё ок, красная — нет связи (данные не теряются).</p>
 
+    <h3>🔔 Уведомления</h3>
+    <p>Кнопка «уведомления» внизу — браузер предупредит за 30 минут до дедлайна и в момент истечения. Работает, пока вкладка с сайтом открыта (можно в фоне).</p>
+
     <h3>Без облака: экспорт / импорт</h3>
     <p>Не хочешь заводить облако — переноси данные вручную: <b>«⇪ экспорт»</b> → «Скопировать код» на одном устройстве, <b>«⇩ импорт»</b> → вставить код → «Импортировать» на другом. Тем же экспортом удобно делать резервную копию в файл.</p>
 
@@ -404,9 +498,21 @@
   </div>
 </div>
 
+<div id="askNotif">
+  <div id="askCard">
+    <h2>🔔 Включить уведомления?</h2>
+    <p>Сайт предупредит за 30 минут до дедлайна и в момент, когда время выйдет. Работает на компе и телефоне, пока вкладка открыта.</p>
+    <div class="askrow">
+      <button id="askYes">Включить</button>
+      <button id="askLater">Позже</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const LS = 'alexey_todo_v1';
 const DONE_DELAY = 2.5 * 60 * 60 * 1000; // 2,5 часа до «опускания» выполненных
+const ARCHIVE_AFTER = 7 * 24 * 60 * 60 * 1000; // через неделю выполненные уезжают в архив
 
 let tasks = [];
 try { tasks = JSON.parse(localStorage.getItem(LS)) || []; } catch(e) {}
@@ -421,9 +527,11 @@ if (tasks.some(t => t.pos === undefined)) {
   legacy.forEach((t, i) => { if (t.pos === undefined) t.pos = i; });
 }
 
-let state = { filter: 'все', showDone: true };
+let state = { filter: 'все', showDone: true, sortColor: false };
 try { Object.assign(state, JSON.parse(localStorage.getItem(LS+'_ui')) || {}); } catch(e) {}
 if (state.filter === 'Дом') state.filter = 'Купить';
+
+let searchQ = '';
 
 // облачная синхронизация (jsonbin.io)
 let sync = null;
@@ -432,11 +540,24 @@ let tombstones = []; // память об удалённых задачах, ч�
 try { tombstones = JSON.parse(localStorage.getItem(LS+'_tomb')) || []; } catch(e) {}
 
 const SYNERGY_LOGO = '<svg viewBox="0 0 100 100" width="19" height="19" style="display:block"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg>';
+const SYNERGY_MINI = '<svg viewBox="0 0 100 100" width="12" height="12" style="vertical-align:-1px"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg>';
 const CAT_EMOJI = { 'Работа': SYNERGY_LOGO, 'Купить': '💰', 'Личное': '😐', 'ПК': '🖥️' };
+const CAT_CHIP = {
+  'Работа': SYNERGY_MINI + ' Работа',
+  'Купить': '💰 Купить',
+  'Личное': '😐 Личное',
+  'ПК': '🖥️ ПК'
+};
 const CAT_COLOR = { 'Работа': '#ff6b6b', 'Личное': '#ffd95e', 'ПК': '#7fb8ff' };
 const PALETTE = [null, '#ffffff', '#ff6b6b', '#ffd95e', '#7fb8ff', '#8fd6a8'];
+const COLOR_ORDER = ['#ff6b6b', '#ffd95e', '#ffffff', '#7fb8ff', '#8fd6a8'];
+const REP_NAME = { d: 'каждый день', w: 'каждую неделю', m: 'каждый месяц' };
 function effColor(t) {
   return t.color || CAT_COLOR[t.cat] || '#ffffff';
+}
+function colorRank(t) {
+  const i = COLOR_ORDER.indexOf(effColor(t));
+  return i === -1 ? COLOR_ORDER.length : i;
 }
 
 let pickedCat = null;
@@ -519,13 +640,52 @@ function countdown(t) {
 function isParked(t) {
   return t.done && t.completedAt && (Date.now() - t.completedAt > DONE_DELAY);
 }
+function isArchived(t) {
+  return t.done && t.completedAt && (Date.now() - t.completedAt > ARCHIVE_AFTER);
+}
 function cmp(a, b) {
   const pa = isParked(a), pb = isParked(b);
   if (pa !== pb) return pa ? 1 : -1;
   if (pa && pb) return (b.completedAt || 0) - (a.completedAt || 0);
   const na = !!a.pinned, nb = !!b.pinned;
   if (na !== nb) return na ? -1 : 1;
+  if (state.sortColor) {
+    const ca = colorRank(a), cb = colorRank(b);
+    if (ca !== cb) return ca - cb;
+  }
   return (a.pos || 0) - (b.pos || 0);
+}
+// следующая дата для повторяющейся задачи
+function nextDue(due, rep) {
+  const d = new Date(due + 'T00:00');
+  const today = new Date(todayStr() + 'T00:00');
+  do {
+    if (rep === 'd') d.setDate(d.getDate() + 1);
+    else if (rep === 'w') d.setDate(d.getDate() + 7);
+    else d.setMonth(d.getMonth() + 1);
+  } while (d <= today);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function spawnRepeat(t) {
+  if (!t.repeat || !t.due) return;
+  const minPos = tasks.length ? Math.min(...tasks.map(x => x.pos || 0)) : 0;
+  tasks.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    title: t.title,
+    cat: t.cat,
+    stage: t.stage, stageAt: t.stageAt,
+    due: nextDue(t.due, t.repeat),
+    dueTime: t.dueTime,
+    repeat: t.repeat,
+    checks: (t.checks || []).map(c => ({ t: c.t, d: false })),
+    color: t.color,
+    pinned: t.pinned,
+    done: false,
+    created: Date.now(),
+    updatedAt: null,
+    mod: Date.now(),
+    pos: minPos - 1
+  });
 }
 
 function addTask() {
@@ -540,13 +700,14 @@ function addTask() {
     stageAt: $('stageInput').value.trim() ? Date.now() : null,
     due: $('dateInput').value || ($('timeInput').value ? todayStr() : null), // время без даты = сегодня
     dueTime: $('timeInput').value || null,
+    repeat: $('repInput').value || null,
     done: false,
     created: Date.now(),
     updatedAt: null,
     mod: Date.now(),
     pos: minPos - 1
   });
-  ['taskInput','stageInput','dateInput','timeInput'].forEach(i => {
+  ['taskInput','stageInput','dateInput','timeInput','repInput'].forEach(i => {
     $(i).value = '';
     $(i).classList.remove('on');
     if ($(i).parentElement && $(i).parentElement.classList.contains('ico')) {
@@ -570,6 +731,55 @@ function moveTask(t, dir, shown) {
   save(); render();
 }
 
+// перетаскивание за ⠿
+function startDrag(e, t, row, shown) {
+  e.preventDefault();
+  const group = shown.filter(x => !isParked(x) && !!x.pinned === !!t.pinned);
+  if (group.length < 2) return;
+  const rows = group.map(x => document.querySelector('.task[data-id="' + x.id + '"]')).filter(Boolean);
+  const centers = rows.map(r => { const rc = r.getBoundingClientRect(); return rc.top + rc.height / 2; });
+  const myIdx = group.indexOf(t);
+  const startY = e.clientY;
+  row.classList.add('dragging');
+  const move = ev => {
+    row.style.transition = 'none';
+    row.style.transform = 'translateY(' + (ev.clientY - startY) + 'px)';
+  };
+  const up = ev => {
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', up);
+    document.removeEventListener('pointercancel', up);
+    row.classList.remove('dragging');
+    row.style.transform = ''; row.style.transition = '';
+    const myCenter = centers[myIdx] + (ev.clientY - startY);
+    let target = 0;
+    centers.forEach((c, i) => { if (i !== myIdx && myCenter > c) target++; });
+    if (target !== myIdx) {
+      const order = group.slice();
+      order.splice(myIdx, 1);
+      order.splice(target, 0, t);
+      const poss = group.map(x => x.pos).sort((a, b) => a - b);
+      order.forEach((x, i) => {
+        if (x.pos !== poss[i]) { x.pos = poss[i]; x.mod = Date.now(); }
+      });
+      save();
+    }
+    render();
+  };
+  document.addEventListener('pointermove', move);
+  document.addEventListener('pointerup', up);
+  document.addEventListener('pointercancel', up);
+}
+
+function matchSearch(t) {
+  const q = searchQ.trim().toLowerCase();
+  if (!q) return true;
+  if (t.title.toLowerCase().includes(q)) return true;
+  if (t.stage && t.stage.toLowerCase().includes(q)) return true;
+  if (t.checks && t.checks.some(c => c.t.toLowerCase().includes(q))) return true;
+  return false;
+}
+
 function render() {
   // запоминаем позиции для анимации перемещения (FLIP)
   const oldPos = {};
@@ -584,35 +794,49 @@ function render() {
     ? 'Всё сделано 🎉'
     : `Активных: ${active}` + (od ? ` · просрочено: ${od}` : '');
 
-  const cats = ['все', 'Работа', 'Купить', 'Личное', 'ПК', 'без категории'];
+  const isArc = state.filter === 'архив';
+  const cats = ['все', 'Работа', 'Купить', 'Личное', 'ПК', 'без категории', 'архив'];
   const f = $('filters');
   f.innerHTML = '';
   cats.forEach(c => {
     const el = document.createElement('span');
     el.className = 'chip' + (state.filter === c ? ' on' : '');
-    el.textContent = c;
+    el.textContent = c === 'архив' ? '🗃 архив' : c;
     el.onclick = () => { state.filter = c; save(); render(); };
     f.appendChild(el);
   });
+  const clrSort = document.createElement('span');
+  clrSort.className = 'chip' + (state.sortColor ? ' on' : '');
+  clrSort.textContent = '🎨 по цвету';
+  clrSort.title = 'Сортировать задачи по цвету';
+  clrSort.onclick = () => { state.sortColor = !state.sortColor; save(); render(); };
+  f.appendChild(clrSort);
   const sp = document.createElement('span'); sp.className = 'spacer'; f.appendChild(sp);
-  const tg = document.createElement('button');
-  tg.id = 'toggleDone';
-  tg.textContent = state.showDone ? 'скрыть выполненные' : 'показать выполненные';
-  tg.onclick = () => { state.showDone = !state.showDone; save(); render(); };
-  f.appendChild(tg);
+  if (!isArc) {
+    const tg = document.createElement('button');
+    tg.id = 'toggleDone';
+    tg.textContent = state.showDone ? 'скрыть выполненные' : 'показать выполненные';
+    tg.onclick = () => { state.showDone = !state.showDone; save(); render(); };
+    f.appendChild(tg);
+  }
 
   const list = $('list');
   list.innerHTML = '';
   let shown = tasks.slice().sort(cmp).filter(t => {
+    if (!matchSearch(t)) return false;
+    if (isArc) return isArchived(t);
+    if (isArchived(t)) return false;
     if (!state.showDone && t.done) return false;
     if (state.filter === 'все') return true;
     if (state.filter === 'без категории') return !t.cat;
     return t.cat === state.filter;
   });
+  if (isArc) shown.sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
 
   if (shown.length === 0) {
     list.innerHTML = '<div class="empty">' + (tasks.length === 0
-      ? 'Пока пусто. Добавь первое дело ↑' : 'Здесь ничего нет') + '</div>';
+      ? 'Пока пусто. Добавь первое дело ↑'
+      : (searchQ ? 'Ничего не нашлось' : (isArc ? 'Архив пуст' : 'Здесь ничего нет'))) + '</div>';
     return;
   }
 
@@ -621,6 +845,13 @@ function render() {
     row.dataset.id = t.id;
     row.className = 'task ' + (t.done ? 'done ' : '') + (isParked(t) ? 'parked ' : '') + (t.pinned ? 'pinned ' : '') + (t.cat ? 'cat-' + t.cat : '');
 
+    if (!isParked(t) && !state.sortColor) {
+      const dh = document.createElement('div');
+      dh.className = 'dragh'; dh.textContent = '⠿'; dh.title = 'Перетащить';
+      dh.onpointerdown = e => startDrag(e, t, row, shown);
+      row.appendChild(dh);
+    }
+
     const ch = document.createElement('div');
     ch.className = 'check'; ch.textContent = '✓';
     ch.title = t.done ? 'Вернуть в работу' : 'Отметить выполненной';
@@ -628,6 +859,7 @@ function render() {
       t.done = !t.done;
       t.completedAt = t.done ? Date.now() : null;
       t.mod = Date.now();
+      if (t.done) spawnRepeat(t); // повторяющаяся задача создаётся на следующий срок
       save(); render();
     };
     row.appendChild(ch);
@@ -654,11 +886,53 @@ function render() {
       body.appendChild(stg);
     }
 
+    // чек-лист
+    if (t.checks && t.checks.length) {
+      const cw = document.createElement('div');
+      cw.className = 'checks';
+      t.checks.forEach((c, ci) => {
+        const ci_el = document.createElement('div');
+        ci_el.className = 'citem' + (c.d ? ' cdone' : '');
+        const cb = document.createElement('div');
+        cb.className = 'cbox'; cb.textContent = '✓';
+        cb.onclick = e => {
+          e.stopPropagation();
+          c.d = !c.d;
+          t.mod = Date.now();
+          save(); render();
+        };
+        const ct = document.createElement('span');
+        ct.className = 'ctext'; ct.innerHTML = linkify(c.t);
+        const cd = document.createElement('button');
+        cd.className = 'cdel'; cd.textContent = '✕'; cd.title = 'Удалить подпункт';
+        cd.onclick = e => {
+          e.stopPropagation();
+          t.checks.splice(ci, 1);
+          t.mod = Date.now();
+          save(); render();
+        };
+        ci_el.append(cb, ct, cd);
+        cw.appendChild(ci_el);
+      });
+      body.appendChild(cw);
+    }
+
     const meta = document.createElement('div'); meta.className = 'meta';
     if (t.cat) {
       const tag = document.createElement('span');
       tag.className = 'tag cat-' + t.cat; tag.textContent = t.cat;
       meta.appendChild(tag);
+    }
+    if (t.repeat) {
+      const rp = document.createElement('span');
+      rp.className = 'tag'; rp.textContent = '🔁 ' + REP_NAME[t.repeat];
+      meta.appendChild(rp);
+    }
+    if (t.checks && t.checks.length) {
+      const cc = document.createElement('span');
+      cc.className = 'tag';
+      cc.textContent = '☑ ' + t.checks.filter(c => c.d).length + '/' + t.checks.length;
+      meta.appendChild(cc);
     }
     if (t.due && !t.done) {
       const d = document.createElement('span');
@@ -708,7 +982,7 @@ function render() {
       ['Работа', 'Купить', 'Личное', 'ПК'].forEach(c => {
         const chEl = document.createElement('span');
         chEl.className = 'chip' + (t.cat === c ? ' on' : '');
-        chEl.textContent = c;
+        chEl.innerHTML = CAT_CHIP[c];
         chEl.onmousedown = e => {
           e.preventDefault(); e.stopPropagation();
           t.cat = (t.cat === c ? null : c);
@@ -754,6 +1028,42 @@ function render() {
       };
       panel.appendChild(dWrap);
       panel.appendChild(tmWrap);
+
+      // повтор
+      const repEl = document.createElement('select');
+      repEl.className = 'pill';
+      repEl.innerHTML = '<option value="">без повтора</option><option value="d">🔁 каждый день</option><option value="w">🔁 каждую неделю</option><option value="m">🔁 каждый месяц</option>';
+      repEl.value = t.repeat || '';
+      repEl.onmousedown = e => e.stopPropagation();
+      repEl.onclick = e => e.stopPropagation();
+      repEl.onchange = () => {
+        t.repeat = repEl.value || null;
+        if (t.repeat && !t.due) t.due = todayStr();
+        t.updatedAt = Date.now(); t.mod = Date.now();
+        grab(); save(); render();
+      };
+      panel.appendChild(repEl);
+
+      // добавление подпункта чек-листа
+      const ckEl = document.createElement('input');
+      ckEl.type = 'text'; ckEl.placeholder = '+ подпункт (Enter)';
+      ckEl.className = 'pill'; ckEl.style.width = '150px';
+      ckEl.onmousedown = e => e.stopPropagation();
+      ckEl.onclick = e => e.stopPropagation();
+      ckEl.onkeydown = e => {
+        if (e.key === 'Enter' && ckEl.value.trim()) {
+          if (!t.checks) t.checks = [];
+          t.checks.push({ t: ckEl.value.trim(), d: false });
+          t.updatedAt = Date.now(); t.mod = Date.now();
+          grab(); save();
+          const id = t.id;
+          render();
+          const nb = document.querySelector('.task[data-id="' + id + '"] .body');
+          if (nb) nb.click(); // оставляем редактор открытым для следующего подпункта
+        }
+        if (e.key === 'Escape') render();
+      };
+      panel.appendChild(ckEl);
       body.appendChild(panel);
 
       inp.focus(); inp.select();
@@ -773,6 +1083,8 @@ function render() {
       stEl.onblur = blurGuard;
       dEl.onblur = blurGuard;
       tmEl.onblur = blurGuard;
+      repEl.onblur = blurGuard;
+      ckEl.onblur = blurGuard;
     };
     row.appendChild(body);
 
@@ -876,19 +1188,71 @@ function render() {
   }
 }
 
+/* --- Поиск --- */
+$('searchInput').oninput = () => {
+  searchQ = $('searchInput').value;
+  render();
+};
+
+/* --- Статистика --- */
+function dayKey(ts) { return new Date(ts).toDateString(); }
+function fillStats() {
+  const now = Date.now();
+  const day = 86400000;
+  const doneT = tasks.filter(t => t.done && t.completedAt);
+  const today = doneT.filter(t => dayKey(t.completedAt) === dayKey(now)).length;
+  const w = doneT.filter(t => now - t.completedAt < 7 * day).length;
+  const m = doneT.filter(t => now - t.completedAt < 30 * day).length;
+  const total = doneT.length;
+  // серия: подряд идущие дни (заканчивая сегодня/вчера), в каждый из которых что-то выполнено
+  const days = new Set(doneT.map(t => dayKey(t.completedAt)));
+  let streak = 0;
+  let d = new Date();
+  if (!days.has(d.toDateString())) d.setDate(d.getDate() - 1);
+  while (days.has(d.toDateString())) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  const boxes = [
+    [today, 'сегодня'],
+    [w, 'за 7 дней'],
+    [m, 'за 30 дней'],
+    [total, 'всего'],
+    [streak + (streak ? '🔥' : ''), 'дней подряд']
+  ];
+  $('statGrid').innerHTML = boxes.map(b =>
+    '<div class="statbox"><div class="statnum">' + b[0] + '</div><div class="statlbl">' + b[1] + '</div></div>'
+  ).join('');
+  const od = tasks.filter(t => dueClass(t) === 'overdue').length;
+  $('statStreak').textContent = od
+    ? 'Сейчас просрочено: ' + od + '. Разберись с ними — и серия не прервётся.'
+    : 'Просроченных нет. Так держать!';
+}
+
+function closePanels(except) {
+  ['ioPanel', 'syncPanel', 'statsPanel'].forEach(p => {
+    if (p !== except) $(p).classList.remove('open');
+  });
+}
+$('statsBtn').onclick = () => {
+  closePanels('statsPanel');
+  $('statsPanel').classList.toggle('open');
+  if ($('statsPanel').classList.contains('open')) fillStats();
+};
+
 /* --- Экспорт / импорт --- */
 function ioMsg(s) { $('ioMsg').textContent = s; setTimeout(() => { $('ioMsg').textContent = ''; }, 4000); }
 function exportStr() { return JSON.stringify({ v: 1, tasks, state }); }
 
 $('exportBtn').onclick = () => {
+  closePanels('ioPanel');
   $('ioPanel').classList.add('open');
-  $('syncPanel').classList.remove('open');
   $('ioText').value = exportStr();
   $('ioText').select();
 };
 $('importBtn').onclick = () => {
+  closePanels('ioPanel');
   $('ioPanel').classList.add('open');
-  $('syncPanel').classList.remove('open');
   $('ioText').value = '';
   $('ioText').focus();
 };
@@ -919,7 +1283,7 @@ $('applyBtn').onclick = () => {
   if (!data || !Array.isArray(data.tasks)) { ioMsg('В коде нет задач'); return; }
   if (!del_confirm_io()) return;
   tasks = data.tasks;
-  if (data.state) state = Object.assign({ filter: 'все', showDone: true }, data.state);
+  if (data.state) state = Object.assign({ filter: 'все', showDone: true, sortColor: false }, data.state);
   save(); render();
   $('ioPanel').classList.remove('open');
   ioMsg('Импортировано ✓');
@@ -1021,8 +1385,9 @@ async function cloudPull() {
 }
 
 $('syncBtn').onclick = () => {
-  $('syncPanel').classList.toggle('open');
-  $('ioPanel').classList.remove('open');
+  const was = $('syncPanel').classList.contains('open');
+  closePanels('syncPanel');
+  $('syncPanel').classList.toggle('open', !was);
   syncUI();
 };
 $('syncConnect').onclick = async () => {
@@ -1098,6 +1463,7 @@ document.querySelectorAll('.chip.cat').forEach(c => {
     e.target.parentElement.classList.toggle('on', !!e.target.value);
   };
 });
+$('repInput').onchange = e => e.target.classList.toggle('on', !!e.target.value);
 $('addBtn').onclick = addTask;
 $('taskInput').onkeydown = e => { if (e.key === 'Enter') addTask(); };
 attachLinkPaste($('taskInput'));
@@ -1144,7 +1510,7 @@ $('notifBtn').onclick = async () => {
     if (p === 'granted') {
       notifOn = true;
       localStorage.setItem(LS + '_notif', '1');
-      showNotif('Уведомления включены ✓', 'Сообщу, когда у задачи истечёт таймер. Держи вкладку открытой.');
+      showNotif('Уведомления включены ✓', 'Предупрежу за 30 минут до дедлайна и в момент истечения. Держи вкладку открытой.');
     }
   } else {
     notifOn = false;
@@ -1160,32 +1526,68 @@ function checkDeadlines() {
   tasks.forEach(t => {
     if (t.done || !t.due) return;
     const dl = deadlineOf(t).getTime();
+    const pre = dl - 30 * 60000;
+    // за 30 минут до дедлайна
+    if (now >= pre && now < dl && !notified['p' + t.id]) {
+      notified['p' + t.id] = now;
+      changed = true;
+      showNotif('⏳ Через 30 минут', t.title);
+    }
+    // в момент истечения
     if (dl <= now && !notified[t.id]) {
       notified[t.id] = now;
       changed = true;
       showNotif('⏰ Время вышло', t.title);
     }
-    if (dl > now && notified[t.id]) { // дедлайн перенесли вперёд — сможем уведомить снова
-      delete notified[t.id];
-      changed = true;
-    }
+    // дедлайн перенесли вперёд — сможем уведомить снова
+    if (dl > now && notified[t.id]) { delete notified[t.id]; changed = true; }
+    if (pre > now && notified['p' + t.id]) { delete notified['p' + t.id]; changed = true; }
   });
   if (changed) localStorage.setItem(LS + '_notified', JSON.stringify(notified));
 }
 setInterval(checkDeadlines, 30000);
 setTimeout(checkDeadlines, 4000); // первая проверка после загрузки и подтяжки облака
 
+/* --- Предложение включить уведомления (один раз) --- */
+function maybeAskNotif() {
+  if (localStorage.getItem(LS + '_notifAsked')) return;
+  if (!('Notification' in window)) return;
+  if (notifOn || Notification.permission === 'denied') return;
+  $('askNotif').classList.add('open');
+}
+$('askYes').onclick = async () => {
+  localStorage.setItem(LS + '_notifAsked', '1');
+  $('askNotif').classList.remove('open');
+  const p = await Notification.requestPermission();
+  if (p === 'granted') {
+    notifOn = true;
+    localStorage.setItem(LS + '_notif', '1');
+    showNotif('Уведомления включены ✓', 'Предупрежу за 30 минут до дедлайна и в момент истечения.');
+  }
+  notifLabel();
+};
+$('askLater').onclick = () => {
+  localStorage.setItem(LS + '_notifAsked', '1');
+  $('askNotif').classList.remove('open');
+};
+
 /* --- Гайд --- */
 function openGuide() { $('guideOverlay').classList.add('open'); }
 function closeGuide() {
   $('guideOverlay').classList.remove('open');
   localStorage.setItem(LS + '_guide', '1');
+  maybeAskNotif(); // после гайда предлагаем включить уведомления
 }
-$('guideBtn').onclick = openGuide;
+$('guideBtn').onclick = () => { $('guideOverlay').classList.add('open'); };
 $('guideClose').onclick = closeGuide;
 $('guideOverlay').onclick = e => { if (e.target === $('guideOverlay')) closeGuide(); };
 // первый визит без облака — показываем гайд
-if (!localStorage.getItem(LS + '_guide') && !sync) openGuide();
+if (!localStorage.getItem(LS + '_guide') && !sync) {
+  openGuide();
+} else {
+  // гайд уже видели (или облако подключено) — предложим уведомления при первом заходе
+  setTimeout(maybeAskNotif, 1500);
+}
 
 render();
 syncUI();
