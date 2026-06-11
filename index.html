@@ -329,7 +329,7 @@
       <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
       <label class="pill ico" title="Время дедлайна — включает таймер (необязательно)">⏰<input id="timeInput" type="time"></label>
     </div>
-    <div class="hint">Этап и дедлайн — по желанию. Дата + время = таймер. Ссылка: просто вставь URL — покажется коротко; или выдели слово и вставь ссылку (Ctrl+V) — слово станет кликабельным. Клик по задаче — редактировать. 📌 — закрепить сверху.</div>
+    <div class="hint">Этап и дедлайн — по желанию. Дата + время = таймер (время без даты = сегодня). Ссылка: просто вставь URL — покажется коротко; или выдели слово и вставь ссылку (Ctrl+V). Клик по задаче — редактировать. 📌 — закрепить сверху.</div>
   </div>
 
   <div class="filters" id="filters"></div>
@@ -339,6 +339,7 @@
     <button id="exportBtn">⇪ экспорт данных</button>
     <button id="importBtn">⇩ импорт данных</button>
     <button id="syncBtn">☁ облако</button>
+    <button id="notifBtn">🔕 уведомления: выкл</button>
     <button id="guideBtn">❔ как пользоваться</button>
   </div>
   <div id="ioPanel">
@@ -379,7 +380,7 @@
     <ul>
       <li>Напиши задачу и нажми <b>Enter</b> — готово. Категория, этап и дедлайн — по желанию.</li>
       <li><b>Клик по задаче</b> — редактировать текст, категорию, этап и дедлайн.</li>
-      <li>Дата + время = таймер обратного отсчёта. Просроченное подсветится красным.</li>
+      <li>Дата + время = таймер обратного отсчёта (время без даты = сегодня). Просроченное подсветится красным.</li>
       <li>✓ — выполнено (опустится вниз через 2,5 часа) · 📌 — закрепить сверху · ● — цвет · ▲▼ — порядок · ✕ — удалить.</li>
       <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
     </ul>
@@ -537,7 +538,7 @@ function addTask() {
     cat: pickedCat,
     stage: $('stageInput').value.trim() || null,
     stageAt: $('stageInput').value.trim() ? Date.now() : null,
-    due: $('dateInput').value || null,
+    due: $('dateInput').value || ($('timeInput').value ? todayStr() : null), // время без даты = сегодня
     dueTime: $('timeInput').value || null,
     done: false,
     created: Date.now(),
@@ -747,6 +748,7 @@ function render() {
       };
       tmEl.onchange = () => {
         t.dueTime = tmEl.value || null;
+        if (t.dueTime && !t.due) t.due = todayStr(); // время без даты = сегодня
         t.updatedAt = Date.now(); t.mod = Date.now();
         grab(); save(); render();
       };
@@ -1101,6 +1103,78 @@ $('taskInput').onkeydown = e => { if (e.key === 'Enter') addTask(); };
 attachLinkPaste($('taskInput'));
 attachLinkPaste($('stageInput'));
 
+/* --- Уведомления --- */
+const NOTIF_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E";
+let notifOn = localStorage.getItem(LS + '_notif') === '1';
+let notified = {};
+try { notified = JSON.parse(localStorage.getItem(LS + '_notified')) || {}; } catch(e) {}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+function notifLabel() {
+  const b = $('notifBtn');
+  if (!('Notification' in window)) { b.style.display = 'none'; return; }
+  if (Notification.permission === 'denied') {
+    b.textContent = '🔕 уведомления заблокированы в браузере';
+    return;
+  }
+  b.textContent = (notifOn && Notification.permission === 'granted')
+    ? '🔔 уведомления: вкл'
+    : '🔕 уведомления: выкл';
+}
+
+async function showNotif(title, body) {
+  try {
+    const reg = navigator.serviceWorker ? await navigator.serviceWorker.getRegistration() : null;
+    if (reg && reg.showNotification) {
+      reg.showNotification(title, { body, icon: NOTIF_ICON, badge: NOTIF_ICON });
+      return;
+    }
+  } catch(e) {}
+  try { new Notification(title, { body, icon: NOTIF_ICON }); } catch(e) {}
+}
+
+$('notifBtn').onclick = async () => {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'denied') { notifLabel(); return; }
+  if (!notifOn || Notification.permission !== 'granted') {
+    const p = await Notification.requestPermission();
+    if (p === 'granted') {
+      notifOn = true;
+      localStorage.setItem(LS + '_notif', '1');
+      showNotif('Уведомления включены ✓', 'Сообщу, когда у задачи истечёт таймер. Держи вкладку открытой.');
+    }
+  } else {
+    notifOn = false;
+    localStorage.setItem(LS + '_notif', '');
+  }
+  notifLabel();
+};
+
+function checkDeadlines() {
+  if (!notifOn || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = Date.now();
+  let changed = false;
+  tasks.forEach(t => {
+    if (t.done || !t.due) return;
+    const dl = deadlineOf(t).getTime();
+    if (dl <= now && !notified[t.id]) {
+      notified[t.id] = now;
+      changed = true;
+      showNotif('⏰ Время вышло', t.title);
+    }
+    if (dl > now && notified[t.id]) { // дедлайн перенесли вперёд — сможем уведомить снова
+      delete notified[t.id];
+      changed = true;
+    }
+  });
+  if (changed) localStorage.setItem(LS + '_notified', JSON.stringify(notified));
+}
+setInterval(checkDeadlines, 30000);
+setTimeout(checkDeadlines, 4000); // первая проверка после загрузки и подтяжки облака
+
 /* --- Гайд --- */
 function openGuide() { $('guideOverlay').classList.add('open'); }
 function closeGuide() {
@@ -1115,6 +1189,7 @@ if (!localStorage.getItem(LS + '_guide') && !sync) openGuide();
 
 render();
 syncUI();
+notifLabel();
 $('taskInput').focus();
 if (sync) cloudPull();
 
