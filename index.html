@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0b0b0d">
 <meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <title>Мои дела</title>
 <style>
   :root { color-scheme: dark; }
@@ -122,6 +123,7 @@
   .task.done { opacity: .55; }
   .task.done .title { text-decoration: line-through; }
   .task.parked { opacity: .4; }
+  .task.pinned { border-color: #f0b05266; }
 
   /* анимация появления и перемещения задач */
   .task.appear { animation: slideIn .3s ease; }
@@ -179,6 +181,14 @@
     font-size: 15px; line-height: 1; padding: 4px 5px; border-radius: 6px;
   }
   .clr:hover { background: #2a2d35; }
+
+  .pin {
+    background: none; border: none; cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 4px 4px; border-radius: 6px;
+    opacity: .3; filter: grayscale(1);
+  }
+  .pin:hover { background: #2a2d35; opacity: .7; }
+  .task.pinned .pin { opacity: 1; filter: none; }
 
   .palette {
     position: absolute; right: 64px; top: 50%; transform: translateY(-50%);
@@ -248,6 +258,40 @@
   .iorow .danger { background: #e53e3e; color: #fff; }
   #ioMsg { color: #8fd6a8; font-size: 12px; margin-top: 6px; }
 
+  /* --- Гайд --- */
+  #guideOverlay {
+    position: fixed; inset: 0; background: #000000aa;
+    display: none; align-items: center; justify-content: center;
+    z-index: 50; padding: 16px;
+  }
+  #guideOverlay.open { display: flex; }
+  #guideCard {
+    background: #ffffff; color: #1c1e24;
+    border-radius: 18px; max-width: 540px; width: 100%;
+    max-height: 85vh; overflow-y: auto;
+    padding: 22px 24px;
+    box-shadow: 0 10px 40px #000c;
+  }
+  #guideCard h2 { font-size: 18px; margin-bottom: 10px; color: #111; }
+  #guideCard h3 { font-size: 14.5px; margin: 16px 0 6px; color: #111; }
+  #guideCard p { font-size: 13.5px; line-height: 1.55; color: #333; margin: 6px 0; }
+  #guideCard ul, #guideCard ol { padding-left: 20px; margin: 6px 0; }
+  #guideCard li { font-size: 13.5px; line-height: 1.55; color: #333; margin: 3px 0; }
+  #guideClose {
+    display: block; width: 100%; margin-top: 16px;
+    background: #e53e3e; border: none; border-radius: 10px;
+    color: #fff; cursor: pointer; font-size: 14.5px; font-weight: 600;
+    padding: 11px;
+  }
+  #guideClose:hover { background: #ff5252; }
+
+  .footer { text-align: center; margin-top: 18px; }
+  .footer a {
+    color: #5a6070; font-size: 12px;
+    text-decoration: none;
+  }
+  .footer a:hover { color: #9aa0ae; text-decoration: underline; }
+
   /* --- Мобильная адаптация --- */
   @media (max-width: 500px) {
     body { padding: 12px 8px 50px; }
@@ -255,6 +299,7 @@
     .check { width: 27px; height: 27px; min-width: 27px; }
     .mv { font-size: 14px; padding: 6px 7px; }
     .clr { font-size: 17px; padding: 6px; }
+    .pin { font-size: 16px; padding: 6px 5px; }
     .del { font-size: 20px; padding: 6px 8px; }
     .title { font-size: 15.5px; }
     #addBtn { padding: 0 16px; }
@@ -284,7 +329,7 @@
       <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
       <label class="pill ico" title="Время дедлайна — включает таймер (необязательно)">⏰<input id="timeInput" type="time"></label>
     </div>
-    <div class="hint">Этап и дедлайн — по желанию. Дата + время = таймер. Ссылка: просто вставь URL — покажется коротко; или выдели слово и вставь ссылку (Ctrl+V) — слово станет кликабельным. Клик по задаче — редактировать.</div>
+    <div class="hint">Этап и дедлайн — по желанию. Дата + время = таймер. Ссылка: просто вставь URL — покажется коротко; или выдели слово и вставь ссылку (Ctrl+V) — слово станет кликабельным. Клик по задаче — редактировать. 📌 — закрепить сверху.</div>
   </div>
 
   <div class="filters" id="filters"></div>
@@ -294,6 +339,7 @@
     <button id="exportBtn">⇪ экспорт данных</button>
     <button id="importBtn">⇩ импорт данных</button>
     <button id="syncBtn">☁ облако</button>
+    <button id="guideBtn">❔ как пользоваться</button>
   </div>
   <div id="ioPanel">
     <textarea id="ioText" placeholder="Сюда вставь код с другого устройства…"></textarea>
@@ -317,6 +363,43 @@
       <button id="syncOff" class="danger" style="display:none">Отключить облако</button>
     </div>
     <div id="syncMsg" class="hint"></div>
+  </div>
+
+  <div class="footer">
+    <a href="https://t.me/zerowpoint" target="_blank" rel="noopener">автор — @zerowpoint</a>
+  </div>
+</div>
+
+<div id="guideOverlay">
+  <div id="guideCard">
+    <h2>🗂️ Как это работает</h2>
+    <p>Это простой список дел. Все данные хранятся <b>в твоём браузере</b> — никто, кроме тебя, их не видит. Регистрация не нужна.</p>
+
+    <h3>Основы</h3>
+    <ul>
+      <li>Напиши задачу и нажми <b>Enter</b> — готово. Категория, этап и дедлайн — по желанию.</li>
+      <li><b>Клик по задаче</b> — редактировать текст, категорию, этап и дедлайн.</li>
+      <li>Дата + время = таймер обратного отсчёта. Просроченное подсветится красным.</li>
+      <li>✓ — выполнено (опустится вниз через 2,5 часа) · 📌 — закрепить сверху · ● — цвет · ▲▼ — порядок · ✕ — удалить.</li>
+      <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
+    </ul>
+
+    <h3>☁ Синхронизация между устройствами</h3>
+    <p>Чтобы список был одинаковым на телефоне, компе и ноуте, нужно бесплатное облако-хранилище. Мы используем <b>jsonbin.io</b>:</p>
+    <ol>
+      <li>Зарегистрируйся на <b>jsonbin.io</b> (нужна только почта, карта не нужна).</li>
+      <li>В кабинете открой <b>API Keys</b> и скопируй <b>Master Key</b>.</li>
+      <li>Здесь внизу нажми <b>«☁ облако»</b>, вставь Master Key → «Подключить». Это делается <b>один раз, только на первом устройстве</b>.</li>
+      <li>Нажми <b>«Скопировать код подключения»</b> и перешли его себе (например, в Telegram «Избранное»).</li>
+      <li>На остальных устройствах: «☁ облако» → вставь этот <b>код</b> → «Подключить».</li>
+    </ol>
+    <p>⚠️ Важно: Master Key вставляется только один раз на первом устройстве. На все остальные — только код подключения, иначе создастся новое пустое хранилище. Код подключения — это «ключ» от твоих задач, не делись им с чужими.</p>
+    <p>Дальше всё само: изменения улетают в облако через пару секунд, другие устройства подтягивают их при открытии и каждые 3 минуты. Точка возле заголовка: зелёная — всё ок, красная — нет связи (данные не теряются).</p>
+
+    <h3>Без облака: экспорт / импорт</h3>
+    <p>Не хочешь заводить облако — переноси данные вручную: <b>«⇪ экспорт»</b> → «Скопировать код» на одном устройстве, <b>«⇩ импорт»</b> → вставить код → «Импортировать» на другом. Тем же экспортом удобно делать резервную копию в файл.</p>
+
+    <button id="guideClose">Понятно, погнали 👍</button>
   </div>
 </div>
 
@@ -439,6 +522,8 @@ function cmp(a, b) {
   const pa = isParked(a), pb = isParked(b);
   if (pa !== pb) return pa ? 1 : -1;
   if (pa && pb) return (b.completedAt || 0) - (a.completedAt || 0);
+  const na = !!a.pinned, nb = !!b.pinned;
+  if (na !== nb) return na ? -1 : 1;
   return (a.pos || 0) - (b.pos || 0);
 }
 
@@ -474,7 +559,7 @@ function addTask() {
 }
 
 function moveTask(t, dir, shown) {
-  const movable = shown.filter(x => !isParked(x));
+  const movable = shown.filter(x => !isParked(x) && !!x.pinned === !!t.pinned);
   const i = movable.indexOf(t);
   const j = i + dir;
   if (i < 0 || j < 0 || j >= movable.length) return;
@@ -533,7 +618,7 @@ function render() {
   shown.forEach(t => {
     const row = document.createElement('div');
     row.dataset.id = t.id;
-    row.className = 'task ' + (t.done ? 'done ' : '') + (isParked(t) ? 'parked ' : '') + (t.cat ? 'cat-' + t.cat : '');
+    row.className = 'task ' + (t.done ? 'done ' : '') + (isParked(t) ? 'parked ' : '') + (t.pinned ? 'pinned ' : '') + (t.cat ? 'cat-' + t.cat : '');
 
     const ch = document.createElement('div');
     ch.className = 'check'; ch.textContent = '✓';
@@ -690,6 +775,18 @@ function render() {
     row.appendChild(body);
 
     if (!isParked(t)) {
+      const pin = document.createElement('button');
+      pin.className = 'pin';
+      pin.textContent = '📌';
+      pin.title = t.pinned ? 'Открепить' : 'Закрепить сверху';
+      pin.onclick = (e) => {
+        e.stopPropagation();
+        t.pinned = !t.pinned;
+        t.mod = Date.now();
+        save(); render();
+      };
+      row.appendChild(pin);
+
       const clr = document.createElement('button');
       clr.className = 'clr';
       clr.textContent = '●';
@@ -1003,6 +1100,18 @@ $('addBtn').onclick = addTask;
 $('taskInput').onkeydown = e => { if (e.key === 'Enter') addTask(); };
 attachLinkPaste($('taskInput'));
 attachLinkPaste($('stageInput'));
+
+/* --- Гайд --- */
+function openGuide() { $('guideOverlay').classList.add('open'); }
+function closeGuide() {
+  $('guideOverlay').classList.remove('open');
+  localStorage.setItem(LS + '_guide', '1');
+}
+$('guideBtn').onclick = openGuide;
+$('guideClose').onclick = closeGuide;
+$('guideOverlay').onclick = e => { if (e.target === $('guideOverlay')) closeGuide(); };
+// первый визит без облака — показываем гайд
+if (!localStorage.getItem(LS + '_guide') && !sync) openGuide();
 
 render();
 syncUI();
