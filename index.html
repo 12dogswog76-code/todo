@@ -1842,7 +1842,7 @@ function renderCatChips() {
   });
   const plus = document.createElement('span');
   plus.className = 'chip' + ($('catMgr').classList.contains('open') ? ' on' : '');
-  plus.textContent = '+ Категории';
+  plus.textContent = '➕ Категории';
   plus.title = 'Добавить или удалить категории';
   plus.onclick = () => {
     $('catMgr').classList.toggle('open');
