@@ -92,6 +92,11 @@
   .pill:focus, .pill.on { border-color: #e53e3e; color: #ff9d9d; }
   #stageInput { width: 150px; }
   select.pill { background: #1c1e24; cursor: pointer; }
+  /* выпадающие списки: текст обычного цвета, активность показывает только рамка */
+  select.pill, select.pill.on, select.pill:focus { color: #e8eaf0; }
+  body.light select.pill, body.light select.pill.on, body.light select.pill:focus {
+    color: #1c1e24; background: #fff;
+  }
 
   /* дата/время с видимой иконкой (на Android пустые поля иначе невидимы) */
   .pill.ico { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
@@ -1052,7 +1057,8 @@ function render() {
   colorSel.className = 'pill';
   colorSel.title = 'Показать только один цвет';
   colorSel.innerHTML = '<option value="">Все цвета</option>' +
-    COLORS.map(c => '<option value="' + c[0] + '">' + c[1] + '</option>').join('');
+    COLORS.map(c => '<option value="' + c[0] + '" style="color:' + themedColor(c[0]) + '">' + c[1] + '</option>').join('');
+  if (state.colorF) colorSel.style.color = themedColor(state.colorF); // выбранный цвет виден прямо на кнопке
   colorSel.value = state.colorF || '';
   colorSel.classList.toggle('on', !!colorSel.value);
   colorSel.onchange = () => { state.colorF = colorSel.value; save(); render(); };
@@ -1752,8 +1758,8 @@ const EMOJIS = '😀 😁 😂 🤣 😊 😍 😎 🤓 🤔 🤨 😐 😏 😴
 let cmEmoji = '😀';
 let emojiGridBuilt = false;
 
-// иконки с github.com/xandemon/developer-icons (v7.0.1, грузятся с CDN)
-const DEV_ICONS = ['windows','apple-dark','android','linux','ubuntu','chrome','firefox','edge','safari','opera','brave','vivaldi','tor','microsoft','google','outlook','gmail','onedrive','telegram','whatsapp','discord','skype','slack','messenger','vk','youtube','tiktok','instagram','facebook','x-dark','reddit','pinterest','linkedin','twitter','bluesky','mastodon','threads-dark','github-dark','gitlab','git','bitbucket','vscode','sublime','atom','neovim','vim','docker','kubernetes','terraform','ansible','jenkins','powershell','bash','python','javascript','typescript','java','c','c-plus-plus','c-sharp','go','rust-dark','ruby','php','swift','kotlin','dart','lua','r','scala','html5','css3','sass','tailwindcss','bootstrap5','reactjs','vuejs','angular','sveltejs','nextjs','nuxtjs','nodejs','deno','bunjs','electron','flutter','jquery','wordpress','laravel','django','flask-dark','spring','rails','mysql','postgresql','mongodb','redis','mariadb','oracle','microsoft-sql-server','clickhouse','elastic','kafka','grafana','json','markdown','npm','webpack','vitejs','eslint','prettier','figma','photoshop','lightroom','indesign','xd','canva','sketch','miro','notion','jira','atlassian','postman','swagger','openai','chatgpt','claude-ai','anthropic','copilot','deepseek','bard','hugging-face','aws','azure','google-cloud','cloudflare','firebase','supabase','vercel-dark','netlify','heroku','digitalocean','ec2','nginx','apache','graphql','prisma','stream','pwa','webassembly','arc','zen','internet-explorer','mozilla','redhat','homebrew','wine'];
+// иконки с github.com/xandemon/developer-icons (v7.0.1) — полный набор репозитория, грузятся с CDN
+const DEV_ICONS = ['android','angular','ansible','ansible-wordmark','anthropic','anthropic-basic-dark','anthropic-basic-light','apache','apple-dark','apple-light','appwrite','arc','astro','atlassian','atom','auth0','avajs','aws','axiom','axure','azure','babel','backbonejs','bard','bash','bing','biome','bitbucket','bitnami','blueprintjs','bluesky','bootstrap4','bootstrap5','brave','bulmaui','bunjs','c','c-plus-plus','c-sharp','cakephp','canva','cassandradb','chakraui','chatgpt','chrome','chromium','circleci','claude-ai','clerk','clickhouse','clojure','cloudflare','cloudinary','codefresh','codeigniter','convex','copilot','crystal','css','css3','cypress','dart','datadog','deepseek','deepseek-wordmark','deno','deno-fresh','developer-icons','digitalocean','discord','django','dlang','docker','doctrine','docusaurus','dovetail','ec2','edge','elastic','electron','elementui','elixir','ember','erlang','esbuild','eslint','expressjs-dark','expressjs-light','facebook','fast-api','faunadb','figma','firebase','firefox','flask-dark','flask-light','flutter','flyio','framer-dark','framer-light','gatsby','git','github-copilot','github-dark','github-light','gitlab','gmail','go','google','google-cloud','google-wordmark','grafana','grafbase','graphite','graphql','gridsome','gruntjs','gulp','hashnode','haskell','headlessui','heroku','hexo','hhvm','homebrew','hotjar','html5','hugging-face','hyper2','i18next','indesign','insomnia','instagram','internet-explorer','invision','ionic','jamstack','java','javascript','jenkins','jest','jira','jquery','jslint','json','k6','kafka','kibana','kotlin','kubernetes','laravel','lerna-dark','lerna-light','less','lightroom','linkedin','linux','lit','liveblocks','logrocket','lokalise','lua','lunacy','mariadb','marionette','markdown','mastodon','materialui','messenger','meta','microsoft','microsoft-sql-server','microsoft-sql-server-2','miro','mochajs','mongodb','mozilla','mysql','neovim','nestjs','netlify','netlify2','nextjs','nextjs-wordmark','nim','nodejs','notion','npm','npm-wordmark','numpy','nuxtjs','nx','ocaml','onedrive','openai','opera','oracle','outlook','pandacss','photoshop','php','pinia','pinterest','pixijs','playwright','pnpm-dark','pnpm-dark-wordmark','pnpm-light','pnpm-light-wordmark','postgresql','postman','powershell','preact','presto','prettier','prisma','pugjs','pulumi','pulumi-dark-wordmark','pulumi-light-wordmark','pwa','python','pytorch','pytorch3d','qwik','r','radixui','rails','railway','react-query','reactjs','reactrouter','reddit','reddit-wordmark','redhat','redis','redux','redux-saga','remix-dark','remix-dark-wordmark','remix-light','remix-light-wordmark','render','resend','rollup','ruby','rust-dark','rust-light','safari','sass','scala','semanticui','serverless','shadcnui','shopware','sketch','sketch2','skype','slack','solidity','solidjs','spring','storyblok','storybook','stream','stylelint','sublime','supabase','sveltejs','swagger','swift','symfony-dark','symfony-light','tailwindcss','telegram','tensorflow','terraform','threads-dark','threads-light','threejs-dark','threejs-light','tiktok','tinyhttp','tor','tRPC','twitter','typescript','ubuntu','unjs','upwork','upwork-basic','upwork-wordmark','vagrant','vercel-dark','vercel-dark-wordmark','vercel-light','vercel-light-wordmark','vim','visualbasic','vitejs','vitest','vivaldi','vk','vscode','vuejs','webassembly','webpack','webrtc','whatsapp','wordpress','x-dark','x-light','xamarin','xd','yoga','youtube','youtube-wordmark','zen','zod'];
 
 function pickIcon(val, html, cell) {
   cmEmoji = val;
@@ -1770,6 +1776,13 @@ function buildEmojiGrid() {
   const g = $('emojiGrid');
   g.innerHTML = '<div class="emtabs"><span class="emtab on" data-t="dev">💻 Иконки</span><span class="emtab" data-t="emo">😀 Эмодзи</span></div><div class="egrid" id="gridDev"></div><div class="egrid" id="gridEmo" style="display:none"></div>';
   const gd = $('gridDev'), ge = $('gridEmo');
+  // лого Синергии — первой иконкой
+  const syn = document.createElement('span');
+  syn.className = 'em';
+  syn.title = 'Синергия';
+  syn.innerHTML = SYNERGY_LOGO.replace('width="19" height="19" style="display:block"', 'width="22" height="22"');
+  syn.onclick = () => pickIcon('__syn', SYNERGY_MINI, syn);
+  gd.appendChild(syn);
   DEV_ICONS.forEach(n => {
     const cell = document.createElement('span');
     cell.className = 'em';
