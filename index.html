@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0b0b0d">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Мои дела</title>
@@ -278,6 +278,40 @@
   .hint { color: #777d8a; font-size: 11.5px; margin-top: 8px; }
   .editPanel { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
 
+  /* --- Менеджер категорий --- */
+  #catMgr {
+    display: none; margin-top: 10px; background: #121317;
+    border: 1px solid #33363e; border-radius: 10px; padding: 10px;
+  }
+  #catMgr.open { display: block; }
+  .cmrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  #cmEmojiBtn { font-size: 16px; padding: 4px 10px; }
+  #emojiGrid {
+    display: none; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+    gap: 2px; max-height: 170px; overflow-y: auto;
+    margin-top: 8px; background: #1c1e24; border: 1px solid #2c3038;
+    border-radius: 8px; padding: 6px;
+  }
+  #emojiGrid.open { display: grid; }
+  .em {
+    font-size: 19px; text-align: center; cursor: pointer;
+    padding: 4px 0; border-radius: 6px; user-select: none;
+  }
+  .em:hover { background: #2a2d35; }
+  .em.sel { background: #e53e3e33; outline: 1px solid #e53e3e; }
+  #cmList { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .cmitem {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1c1e24; border: 1px solid #2c3038; border-radius: 999px;
+    padding: 4px 6px 4px 12px; font-size: 12.5px; color: #c9cfdc;
+  }
+  .cmdel {
+    background: none; border: none; color: #5a6070; cursor: pointer;
+    font-size: 13px; padding: 1px 5px; border-radius: 999px;
+  }
+  .cmdel:hover { color: #fff; background: #e53e3e; }
+  .cmdel.confirm { color: #fff; background: #e53e3e; font-size: 10.5px; }
+
   /* --- Экспорт / импорт / облако / статистика --- */
   .iobar { display: flex; gap: 14px; margin-top: 22px; justify-content: center; flex-wrap: wrap; }
   .iobar button {
@@ -414,10 +448,7 @@
       <button id="addBtn">＋</button>
     </div>
     <div class="options">
-      <span class="chip cat" data-cat="Работа"><svg viewBox="0 0 100 100" width="13" height="13" style="vertical-align:-2px"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg> Работа</span>
-      <span class="chip cat" data-cat="Купить">💰 Купить</span>
-      <span class="chip cat" data-cat="Личное">😐 Личное</span>
-      <span class="chip cat" data-cat="ПК">🖥️ ПК</span>
+      <span id="catChips" style="display:contents"></span>
       <input id="stageInput" type="text" class="pill" placeholder="этап (на чём сейчас)" title="Этап (необязательно)">
       <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
       <label class="pill ico" title="Время дедлайна — включает таймер (необязательно)">⏰<input id="timeInput" type="time"></label>
@@ -429,6 +460,17 @@
       </select>
     </div>
     <div class="hint">Этап, дедлайн и повтор — по желанию. Дата + время = таймер (время без даты = сегодня). Клик по задаче — редактировать (там же чек-лист). ⠿ — перетащить, 📌 — закрепить. Ссылку просто вставь в текст.</div>
+
+    <div id="catMgr">
+      <div class="cmrow">
+        <button id="cmEmojiBtn" class="chip" title="Выбрать эмодзи">🏷</button>
+        <input id="cmName" type="text" class="pill" placeholder="название категории" maxlength="20">
+        <button id="cmAdd" class="chip">＋ добавить</button>
+      </div>
+      <div id="emojiGrid"></div>
+      <div id="cmList"></div>
+      <div class="hint">Эмодзи отображаются системные — на разных устройствах могут немного отличаться по стилю.</div>
+    </div>
   </div>
 
   <input id="searchInput" type="text" placeholder="🔍 поиск по задачам, этапам и чек-листам">
@@ -494,6 +536,7 @@
       <li>☑ Чек-лист: открой задачу кликом, в поле «+ подпункт» жми Enter — подпункты с галочками появятся прямо в задаче, со счётчиком «☑ 2/5».</li>
       <li>🔍 Поиск ищет по названиям, этапам и чек-листам. Фильтр «🗃 архив» — выполненные старше недели.</li>
       <li>🎨 Чип «по цвету» в фильтрах группирует задачи по цветам. Цвет задаче задаётся кнопкой ●.</li>
+      <li>🏷 Свои категории: кнопка «✎ категории» рядом с чипами — задай название, выбери эмодзи из палитры, удаляй ненужные. Категории синхронизируются между устройствами.</li>
       <li>📊 «Статистика» внизу — сколько выполнено сегодня / за неделю / за месяц и серия дней подряд 🔥.</li>
       <li>🪟 «Поверх окон» внизу (Chrome на компе) — мини-список, который висит поверх всех программ: отмечай и добавляй задачи, не переключаясь.</li>
       <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
@@ -572,13 +615,36 @@ try { tombstones = JSON.parse(localStorage.getItem(LS+'_tomb')) || []; } catch(e
 
 const SYNERGY_LOGO = '<svg viewBox="0 0 100 100" width="19" height="19" style="display:block"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg>';
 const SYNERGY_MINI = '<svg viewBox="0 0 100 100" width="12" height="12" style="vertical-align:-1px"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg>';
-const CAT_EMOJI = { 'Работа': SYNERGY_LOGO, 'Купить': '💰', 'Личное': '😐', 'ПК': '🖥️' };
-const CAT_CHIP = {
-  'Работа': SYNERGY_MINI + ' Работа',
-  'Купить': '💰 Купить',
-  'Личное': '😐 Личное',
-  'ПК': '🖥️ ПК'
-};
+// категории: редактируемый список, синхронизируется через облако
+const DEFAULT_CATS = [
+  { n: 'Работа', e: '__syn' },
+  { n: 'Купить', e: '💰' },
+  { n: 'Личное', e: '😐' },
+  { n: 'ПК', e: '🖥️' }
+];
+let catList = null;
+try { catList = JSON.parse(localStorage.getItem(LS + '_cats')); } catch(e) {}
+if (!Array.isArray(catList) || !catList.length) catList = DEFAULT_CATS.slice();
+let catsMod = parseInt(localStorage.getItem(LS + '_catsMod') || '0', 10);
+
+function allCatNames() { return catList.map(c => c.n); }
+function catEmojiHTML(n, mini) {
+  const c = catList.find(x => x.n === n);
+  if (!c || !c.e) return '';
+  if (c.e === '__syn') return mini ? SYNERGY_MINI : SYNERGY_LOGO;
+  return c.e;
+}
+function catChipHTML(n) {
+  const e = catEmojiHTML(n, true);
+  return (e ? e + ' ' : '') + esc(n);
+}
+function saveCats() {
+  catsMod = Date.now();
+  localStorage.setItem(LS + '_cats', JSON.stringify(catList));
+  localStorage.setItem(LS + '_catsMod', String(catsMod));
+  scheduleSync();
+}
+
 const CAT_COLOR = { 'Работа': '#ff6b6b', 'Личное': '#ffd95e', 'ПК': '#7fb8ff' };
 const PALETTE = [null, '#ffffff', '#ff6b6b', '#ffd95e', '#7fb8ff', '#8fd6a8'];
 const COLOR_ORDER = ['#ff6b6b', '#ffd95e', '#ffffff', '#7fb8ff', '#8fd6a8'];
@@ -746,7 +812,7 @@ function addTask() {
     }
   });
   pickedCat = null;
-  document.querySelectorAll('.chip.cat').forEach(c => c.classList.remove('on'));
+  renderCatChips();
   save(); render();
   $('taskInput').focus();
 }
@@ -826,8 +892,8 @@ function render() {
     : `Активных: ${active}` + (od ? ` · просрочено: ${od}` : '');
 
   const isArc = state.filter === 'архив';
-  const cats = ['все', 'Работа', 'Купить', 'Личное', 'ПК', 'без категории', 'архив'];
-  const FILTER_ICON = { 'Работа': SYNERGY_MINI + ' ', 'Купить': '💰 ', 'Личное': '😐 ', 'ПК': '🖥️ ', 'архив': '🗃 ' };
+  const cats = ['все'].concat(allCatNames(), ['без категории', 'архив']);
+  const fIcon = c => c === 'архив' ? '🗃 ' : (catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '');
   const f = $('filters');
   f.innerHTML = '';
   // свёрнутый список категорий
@@ -840,14 +906,14 @@ function render() {
     cats.forEach(c => {
       const el = document.createElement('span');
       el.className = 'chip' + (state.filter === c ? ' on' : '');
-      el.innerHTML = (FILTER_ICON[c] || '') + c;
+      el.innerHTML = fIcon(c) + esc(c);
       el.onclick = () => { state.filter = c; state.catsOpen = false; save(); render(); };
       f.appendChild(el);
     });
   } else if (state.filter !== 'все') {
     const el = document.createElement('span');
     el.className = 'chip on';
-    el.innerHTML = (FILTER_ICON[state.filter] || '') + state.filter;
+    el.innerHTML = fIcon(state.filter) + esc(state.filter);
     el.title = 'Текущий фильтр — нажми, чтобы сбросить';
     el.onclick = () => { state.filter = 'все'; save(); render(); };
     f.appendChild(el);
@@ -911,10 +977,11 @@ function render() {
     };
     row.appendChild(ch);
 
-    if (t.cat && CAT_EMOJI[t.cat]) {
+    const catEm = t.cat ? catEmojiHTML(t.cat, false) : '';
+    if (catEm) {
       const em = document.createElement('div');
       em.className = 'emoji';
-      em.innerHTML = CAT_EMOJI[t.cat];
+      em.innerHTML = catEm;
       row.appendChild(em);
     }
 
@@ -1026,10 +1093,10 @@ function render() {
         if (changed) { t.updatedAt = Date.now(); t.mod = Date.now(); }
       };
 
-      ['Работа', 'Купить', 'Личное', 'ПК'].forEach(c => {
+      allCatNames().forEach(c => {
         const chEl = document.createElement('span');
         chEl.className = 'chip' + (t.cat === c ? ' on' : '');
-        chEl.innerHTML = CAT_CHIP[c];
+        chEl.innerHTML = catChipHTML(c);
         chEl.onmousedown = e => {
           e.preventDefault(); e.stopPropagation();
           t.cat = (t.cat === c ? null : c);
@@ -1356,7 +1423,7 @@ function setCloud(cls, tip) {
   d.title = tip || 'облако не подключено';
 }
 function syncMsg(s) { $('syncMsg').textContent = s; }
-function syncPayload() { return { v: 1, tasks, tomb: tombstones, t: Date.now() }; }
+function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, t: Date.now() }; }
 
 function syncUI() {
   const on = !!(sync && sync.key && sync.bin);
@@ -1408,6 +1475,14 @@ function mergeData(remote) {
   });
   tasks = Object.values(byId);
   tombstones = Object.keys(tombMap).map(id => ({ id: +id, at: tombMap[id] }));
+  // категории: побеждает более свежий список
+  if (remote && Array.isArray(remote.cats) && (remote.catsMod || 0) > catsMod) {
+    catList = remote.cats;
+    catsMod = remote.catsMod || Date.now();
+    localStorage.setItem(LS + '_cats', JSON.stringify(catList));
+    localStorage.setItem(LS + '_catsMod', String(catsMod));
+    if (typeof renderCatChips === 'function') { try { renderCatChips(); renderCatMgr(); } catch(e) {} }
+  }
 }
 
 async function cloudPull() {
@@ -1499,14 +1574,107 @@ $('syncOff').onclick = () => {
   syncUI(); syncMsg('Облако отключено. Данные остались и тут, и в облаке.');
 };
 
-document.querySelectorAll('.chip.cat').forEach(c => {
-  c.onclick = () => {
-    const was = c.classList.contains('on');
-    document.querySelectorAll('.chip.cat').forEach(x => x.classList.remove('on'));
-    pickedCat = was ? null : c.dataset.cat;
-    if (!was) c.classList.add('on');
+/* --- Чипы категорий в панели добавления + менеджер категорий --- */
+function renderCatChips() {
+  const box = $('catChips');
+  box.innerHTML = '';
+  allCatNames().forEach(n => {
+    const c = document.createElement('span');
+    c.className = 'chip cat' + (pickedCat === n ? ' on' : '');
+    c.dataset.cat = n;
+    c.innerHTML = catChipHTML(n);
+    c.onclick = () => {
+      const was = pickedCat === n;
+      pickedCat = was ? null : n;
+      renderCatChips();
+    };
+    box.appendChild(c);
+  });
+  const plus = document.createElement('span');
+  plus.className = 'chip' + ($('catMgr').classList.contains('open') ? ' on' : '');
+  plus.textContent = '✎ категории';
+  plus.title = 'Добавить или удалить категории';
+  plus.onclick = () => {
+    $('catMgr').classList.toggle('open');
+    renderCatChips();
+    renderCatMgr();
   };
-});
+  box.appendChild(plus);
+}
+
+const EMOJIS = '😀 😁 😂 🤣 😊 😍 😎 🤓 🤔 🤨 😐 😏 😴 🤯 🥳 😤 😡 🥶 😱 🙃 🤝 👍 👎 👊 ✌️ 🤞 👋 💪 🙏 ✍️ 👀 🧠 ❤️ 🧡 💛 💚 💙 💜 🖤 🔥 ⭐ ✨ ⚡ 💥 💯 ✅ ❌ ⚠️ ❗ ❓ 💬 🏠 🏢 🏫 🏥 🏪 🏦 🚗 🚕 🚌 🚲 ✈️ 🚀 ⏰ ⏳ 📅 📆 🗓️ 💻 🖥️ ⌨️ 🖱️ 🖨️ 📱 ☎️ 📞 📡 📷 🎥 📺 🎮 🎧 🎵 🎤 💡 🔌 🔋 🛠️ 🔧 🔨 ⚙️ 🧰 🪛 🪚 📦 📁 🗂️ 📂 📋 📌 📍 ✂️ 📏 ✏️ 🖊️ 📝 📄 📑 📊 📈 📉 💰 💸 💳 🪙 💵 🛒 🛍️ 🎁 🍔 🍕 🍣 ☕ 🍺 🥤 🏋️ ⚽ 🏀 🎯 🎲 ♟️ 🧩 🧹 🧺 🧼 🐶 🐱 🐾 🌳 🌹 🌞 🌙 ❄️ ☔ 🌈 🎓 📚 🔑 🔒 🔓 🚪 🧾 🗑️ 🚩 🏁 🎖️ 🏆'.split(' ');
+let cmEmoji = '🏷';
+let emojiGridBuilt = false;
+
+function buildEmojiGrid() {
+  if (emojiGridBuilt) return;
+  emojiGridBuilt = true;
+  const g = $('emojiGrid');
+  EMOJIS.forEach(e => {
+    const cell = document.createElement('span');
+    cell.className = 'em';
+    cell.textContent = e;
+    cell.onclick = () => {
+      cmEmoji = e;
+      $('cmEmojiBtn').textContent = e;
+      g.querySelectorAll('.em.sel').forEach(x => x.classList.remove('sel'));
+      cell.classList.add('sel');
+      $('emojiGrid').classList.remove('open');
+      $('cmName').focus();
+    };
+    g.appendChild(cell);
+  });
+}
+$('cmEmojiBtn').onclick = () => {
+  buildEmojiGrid();
+  $('emojiGrid').classList.toggle('open');
+};
+
+function renderCatMgr() {
+  const l = $('cmList');
+  l.innerHTML = '';
+  catList.forEach(c => {
+    const it = document.createElement('span');
+    it.className = 'cmitem';
+    const lbl = document.createElement('span');
+    lbl.innerHTML = catChipHTML(c.n);
+    const del = document.createElement('button');
+    del.className = 'cmdel'; del.textContent = '✕'; del.title = 'Удалить категорию';
+    del.onclick = () => {
+      if (!del.dataset.c) {
+        del.dataset.c = '1'; del.textContent = 'точно?'; del.classList.add('confirm');
+        setTimeout(() => {
+          if (!del.isConnected) return;
+          delete del.dataset.c; del.textContent = '✕'; del.classList.remove('confirm');
+        }, 3000);
+        return;
+      }
+      catList = catList.filter(x => x.n !== c.n);
+      // задачи этой категории становятся «без категории»
+      tasks.forEach(t => { if (t.cat === c.n) { t.cat = null; t.mod = Date.now(); } });
+      if (state.filter === c.n) state.filter = 'все';
+      if (pickedCat === c.n) pickedCat = null;
+      saveCats(); save();
+      renderCatChips(); renderCatMgr(); render();
+    };
+    it.append(lbl, del);
+    l.appendChild(it);
+  });
+}
+$('cmAdd').onclick = () => {
+  const n = $('cmName').value.trim();
+  if (!n) { $('cmName').focus(); return; }
+  if (allCatNames().some(x => x.toLowerCase() === n.toLowerCase())) {
+    $('cmName').value = ''; $('cmName').placeholder = 'такая уже есть'; return;
+  }
+  catList.push({ n: n, e: cmEmoji });
+  $('cmName').value = ''; $('cmName').placeholder = 'название категории';
+  cmEmoji = '🏷'; $('cmEmojiBtn').textContent = '🏷';
+  saveCats();
+  renderCatChips(); renderCatMgr(); render();
+};
+$('cmName').onkeydown = e => { if (e.key === 'Enter') $('cmAdd').onclick(); };
+renderCatChips();
 ['dateInput','timeInput'].forEach(i => {
   $(i).onchange = e => {
     e.target.parentElement.classList.toggle('on', !!e.target.value);
@@ -1635,8 +1803,13 @@ const PIP_CSS = [
   '.ptit a:hover { opacity:.8; }',
   '.pdue { font-size:10px; color:#8fd6a8; white-space:nowrap; }',
   '.pdue.over { color:#ff8b8b; }',
-  '.pempty { color:#777d8a; text-align:center; padding:20px 0; font-size:12.5px; }'
+  '.pempty { color:#777d8a; text-align:center; padding:20px 0; font-size:12.5px; }',
+  '#pipCats { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }',
+  '.pchip { font-size:11px; color:#aab0c0; border:1px solid #424650; border-radius:999px; padding:3px 9px; cursor:pointer; user-select:none; }',
+  '.pchip.on { background:#e53e3e22; border-color:#e53e3e; color:#ff9d9d; }'
 ].join('\n');
+
+let pipCat = localStorage.getItem(LS + '_pipCat') || 'все';
 
 async function togglePip() {
   if (!window.documentPictureInPicture) return;
@@ -1648,14 +1821,15 @@ async function togglePip() {
   const st = d.createElement('style');
   st.textContent = PIP_CSS;
   d.head.appendChild(st);
-  d.body.innerHTML = '<input id="pipInput" placeholder="+ задача (Enter)"><div id="pipList"></div>';
+  d.body.innerHTML = '<div id="pipCats"></div><input id="pipInput" placeholder="+ задача (Enter)"><div id="pipList"></div>';
   const inp = d.getElementById('pipInput');
   inp.onkeydown = e => {
     if (e.key === 'Enter' && inp.value.trim()) {
       const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
       tasks.push({
-        id: Date.now(), title: inp.value.trim(), cat: null, done: false,
-        created: Date.now(), updatedAt: null, mod: Date.now(), pos: minPos - 1
+        id: Date.now(), title: inp.value.trim(),
+        cat: (pipCat !== 'все' && allCatNames().includes(pipCat)) ? pipCat : null, // в выбранную категорию
+        done: false, created: Date.now(), updatedAt: null, mod: Date.now(), pos: minPos - 1
       });
       inp.value = '';
       save(); render();
@@ -1670,9 +1844,28 @@ function pipRender() {
   const d = pipWin.document;
   const list = d.getElementById('pipList');
   if (!list) return;
+
+  // фильтр категорий в мини-окне
+  const pc = d.getElementById('pipCats');
+  if (pc) {
+    pc.innerHTML = '';
+    if (!allCatNames().includes(pipCat) && pipCat !== 'все') pipCat = 'все';
+    ['все'].concat(allCatNames()).forEach(c => {
+      const ch = d.createElement('span');
+      ch.className = 'pchip' + (pipCat === c ? ' on' : '');
+      ch.innerHTML = c === 'все' ? 'все' : ((catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '') + esc(c));
+      ch.onclick = () => {
+        pipCat = c;
+        localStorage.setItem(LS + '_pipCat', pipCat);
+        pipRender();
+      };
+      pc.appendChild(ch);
+    });
+  }
+
   list.innerHTML = '';
-  const act = tasks.slice().sort(cmp).filter(t => !t.done);
-  if (!act.length) { list.innerHTML = '<div class="pempty">Всё сделано 🎉</div>'; return; }
+  const act = tasks.slice().sort(cmp).filter(t => !t.done && (pipCat === 'все' || t.cat === pipCat));
+  if (!act.length) { list.innerHTML = '<div class="pempty">Здесь пусто 🎉</div>'; return; }
   act.forEach(t => {
     const row = d.createElement('div'); row.className = 'pt';
     const c = d.createElement('div'); c.className = 'pc'; c.textContent = '✓';
