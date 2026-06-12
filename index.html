@@ -366,8 +366,16 @@
   }
   .cmedit:hover, .cmedit.on { color: #fff; background: #5b7cfa; }
 
+  /* --- Жизненный цикл --- */
+  #lifePanel { margin-top: 24px; text-align: center; }
+  #lifePanel .hint { margin-top: 0; }
+  .lcrow {
+    display: flex; gap: 8px; justify-content: center;
+    align-items: center; flex-wrap: wrap; margin-top: 8px;
+  }
+
   /* --- Экспорт / импорт / облако / статистика --- */
-  .iobar { display: flex; gap: 14px; margin-top: 22px; justify-content: center; flex-wrap: wrap; }
+  .iobar { display: flex; gap: 14px; margin-top: 16px; justify-content: center; flex-wrap: wrap; }
   .iobar button {
     background: none; border: none; color: #777d8a; cursor: pointer;
     font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px;
@@ -468,6 +476,50 @@
   #askYes:hover { background: #ff5252; }
   #askLater { background: #ececf0; color: #444; }
   #askLater:hover { background: #e0e0e6; }
+
+  /* --- Приветствие --- */
+  #welcome {
+    position: fixed; inset: 0; background: #000000aa;
+    display: none; align-items: center; justify-content: center;
+    z-index: 70; padding: 16px;
+  }
+  #welcome.open { display: flex; }
+  .wcard {
+    background: #ffffff; color: #1c1e24;
+    border-radius: 18px; max-width: 420px; width: 100%;
+    padding: 22px 24px; text-align: center;
+    box-shadow: 0 10px 40px #000c;
+  }
+  .wcard h2 { font-size: 19px; margin-bottom: 8px; color: #111; }
+  .wcard p { font-size: 13.5px; line-height: 1.55; color: #333; margin: 6px 0; }
+  #wYes { background: #e53e3e; color: #fff; }
+  #wYes:hover { background: #ff5252; }
+  #wLater { background: #ececf0; color: #444; }
+  #wLater:hover { background: #e0e0e6; }
+
+  /* гайд сбоку (онбординг на десктопе): не блокирует сайт */
+  #guideOverlay.dock { display: block; background: transparent; pointer-events: none; padding: 0; }
+  #guideOverlay.dock #guideCard {
+    pointer-events: auto; position: fixed;
+    left: 14px; top: 14px; bottom: 14px;
+    width: 340px; max-width: 85vw; max-height: none;
+    box-shadow: 0 8px 30px #0009;
+  }
+  body { transition: padding-left .25s ease; }
+  body.dockOpen { padding-left: 368px; }
+  @media (max-width: 999px) { body.dockOpen { padding-left: 16px; } }
+
+  /* подсветка кнопки гайда после закрытия */
+  .topbar button.pulse {
+    border-color: #e53e3e; color: #fff;
+    animation: pulseRed 1s ease-in-out 6;
+  }
+  @keyframes pulseRed {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 14px 4px #e53e3eaa; }
+  }
+  .gbub { font-size: 12px; color: #ff9d9d; align-self: center; animation: slideIn .3s ease; }
+  body.light .gbub { color: #d32f2f; }
 
   .footer { text-align: center; margin-top: 18px; }
   .footer a {
@@ -599,12 +651,21 @@
   <div class="filters" id="filters"></div>
   <div id="list"></div>
 
+  <div id="lifePanel">
+    <div class="hint">Жизненный цикл выполненной задачи: остаётся на месте → опускается вниз списка → уезжает в архив 🗃</div>
+    <div class="lcrow">
+      <span class="hint" style="margin:0">Вниз списка через:</span>
+      <select id="lifeDown" class="pill"></select>
+      <span class="hint" style="margin:0">В архив через:</span>
+      <select id="lifeArc" class="pill"></select>
+    </div>
+  </div>
+
   <div class="iobar">
     <button id="exportBtn">⇪ Экспорт данных</button>
     <button id="importBtn">⇩ Импорт данных</button>
     <button id="syncBtn">☁ Облако</button>
-    <button id="statsBtn">📊 Статистика</button>
-    <button id="lifeBtn">⏳ Жизненный цикл</button>
+    <button id="statsBtn">▦ Статистика</button>
   </div>
   <div id="ioPanel">
     <textarea id="ioText" placeholder="Сюда вставь код с другого устройства…"></textarea>
@@ -635,15 +696,6 @@
     <div class="hint" id="statStreak"></div>
   </div>
 
-  <div id="lifePanel">
-    <div class="hint" style="margin-top:0">Жизненный цикл выполненной задачи: сначала остаётся на месте → опускается вниз списка → уезжает в архив 🗃.</div>
-    <div class="iorow" style="align-items:center">
-      <span class="hint" style="margin:0">Вниз списка через:</span>
-      <select id="lifeDown" class="pill"></select>
-      <span class="hint" style="margin:0">В архив через:</span>
-      <select id="lifeArc" class="pill"></select>
-    </div>
-  </div>
 
   <div class="footer">
     <a href="https://t.me/zerowpoint" target="_blank" rel="noopener">автор — @zerowpoint</a>
@@ -721,6 +773,18 @@
     <div class="askrow">
       <button id="askYes">Включить</button>
       <button id="askLater">Позже</button>
+    </div>
+  </div>
+</div>
+
+<div id="welcome">
+  <div class="wcard">
+    <h2>👋 Привет!</h2>
+    <p>Это «Мои дела» — быстрый список задач: категории, дедлайны с таймерами, чек-листы и синхронизация между устройствами. Всё хранится у тебя, без регистрации.</p>
+    <p>Включить уведомления? Предупредим за 30 минут до дедлайна и в момент, когда время выйдет.</p>
+    <div class="askrow">
+      <button id="wYes">🔔 Включить</button>
+      <button id="wLater">Позже</button>
     </div>
   </div>
 </div>
@@ -1674,7 +1738,7 @@ function fillStats() {
 }
 
 function closePanels(except) {
-  ['ioPanel', 'syncPanel', 'statsPanel', 'lifePanel'].forEach(p => {
+  ['ioPanel', 'syncPanel', 'statsPanel'].forEach(p => {
     if (p !== except) $(p).classList.remove('open');
   });
 }
@@ -1702,11 +1766,6 @@ if ($('lifeDown').selectedIndex < 0) $('lifeDown').value = '150';
 if ($('lifeArc').selectedIndex < 0) $('lifeArc').value = '10080';
 $('lifeDown').onchange = () => { life.down = parseInt($('lifeDown').value, 10) || 0; saveLife(); render(); };
 $('lifeArc').onchange = () => { life.arc = parseInt($('lifeArc').value, 10); saveLife(); render(); };
-$('lifeBtn').onclick = () => {
-  const was = $('lifePanel').classList.contains('open');
-  closePanels('lifePanel');
-  $('lifePanel').classList.toggle('open', !was);
-};
 
 /* --- Экспорт / импорт --- */
 function ioMsg(s) { $('ioMsg').textContent = s; setTimeout(() => { $('ioMsg').textContent = ''; }, 4000); }
@@ -2544,18 +2603,65 @@ $('bmCopy').onclick = async () => {
 };
 
 /* --- Гайд --- */
-function openGuide() { $('guideOverlay').classList.add('open'); }
+function openGuide(dock) {
+  $('guideOverlay').classList.add('open');
+  if (dock && window.innerWidth >= 1000) { // на десктопе — сбоку, не блокируя сайт
+    $('guideOverlay').classList.add('dock');
+    document.body.classList.add('dockOpen');
+  }
+  fillQaddUI();
+}
+function hintGuideBtn() {
+  const b = $('guideBtn');
+  b.classList.add('pulse');
+  const tip = document.createElement('span');
+  tip.className = 'gbub';
+  tip.textContent = '← Гайд всегда можно открыть здесь';
+  b.parentElement.insertBefore(tip, b.nextSibling);
+  b.scrollIntoView({ block: 'nearest' });
+  setTimeout(() => { b.classList.remove('pulse'); tip.remove(); }, 8000);
+}
 function closeGuide() {
   $('guideOverlay').classList.remove('open');
+  $('guideOverlay').classList.remove('dock');
+  document.body.classList.remove('dockOpen');
   localStorage.setItem(LS + '_guide', '1');
-  maybeAskNotif(); // после гайда предлагаем включить уведомления
+  // первый раз закрыл гайд — показываем, где он живёт
+  if (!localStorage.getItem(LS + '_ghint')) {
+    localStorage.setItem(LS + '_ghint', '1');
+    hintGuideBtn();
+  }
+  maybeAskNotif(); // на телефоне после гайда предлагаем уведомления (если ещё не спрашивали)
 }
-$('guideBtn').onclick = openGuide;
+$('guideBtn').onclick = () => openGuide(false);
 $('guideClose').onclick = closeGuide;
 $('guideOverlay').onclick = e => { if (e.target === $('guideOverlay')) closeGuide(); };
-// первый визит без облака — показываем гайд
+
+/* --- Приветствие (первый визит) --- */
+async function welcomeDone(enableNotif) {
+  localStorage.setItem(LS + '_notifAsked', '1');
+  $('welcome').classList.remove('open');
+  if (enableNotif && 'Notification' in window && Notification.permission !== 'denied') {
+    const p = await Notification.requestPermission();
+    if (p === 'granted') {
+      notifOn = true;
+      localStorage.setItem(LS + '_notif', '1');
+      showNotif('Уведомления включены ✓', 'Предупрежу за 30 минут до дедлайна и в момент истечения.');
+    }
+    notifLabel();
+  }
+  openGuide(true); // гайд сбоку, сайт остаётся рабочим
+}
+$('wYes').onclick = () => welcomeDone(true);
+$('wLater').onclick = () => welcomeDone(false);
+
+// первый визит без облака
 if (!localStorage.getItem(LS + '_guide') && !sync) {
-  openGuide();
+  if (window.innerWidth >= 1000) {
+    $('welcome').classList.add('open'); // десктоп: приветствие + уведомления, потом гайд сбоку
+  } else {
+    openGuide(); // телефон: прежний поток — гайд, после него предложение уведомлений
+  }
 } else {
   // гайд уже видели (или облако подключено) — предложим уведомления при первом заходе
   setTimeout(maybeAskNotif, 1500);
