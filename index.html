@@ -84,6 +84,9 @@
   }
   .chip:hover { border-color: #e53e3e; }
   .chip.on { background: #e53e3e22; border-color: #e53e3e; color: #ff9d9d; }
+  /* чипы категорий подсвечиваются своим цветом */
+  .chip.cat { --cc: #e53e3e; }
+  .chip.cat:hover { border-color: var(--cc); color: var(--cc); }
 
   .pill {
     background: transparent; border: 1px solid #424650; border-radius: 999px;
@@ -414,6 +417,11 @@
   }
   .bmcopy:hover { background: #e0e0e6; }
   #bmMsg { color: #2f9e63; font-size: 12.5px; }
+  .qsel {
+    font-size: 13px; padding: 4px 8px; border-radius: 8px;
+    border: 1px solid #c6cad3; background: #fff; color: #1c1e24;
+    margin: 2px 6px 2px 0; outline: none;
+  }
 
   /* --- Предложение включить уведомления --- */
   #askNotif {
@@ -548,6 +556,7 @@
       <div class="cmrow">
         <button id="cmEmojiBtn" class="chip" title="Выбрать эмодзи">😀</button>
         <input id="cmName" type="text" class="pill" placeholder="название категории" maxlength="20">
+        <select id="cmColor" class="pill" title="Цвет задач этой категории по умолчанию"></select>
         <button id="cmAdd" class="chip">➕ Категорию</button>
       </div>
       <div id="emojiGrid"></div>
@@ -631,6 +640,12 @@
     <p>Выделил текст на любой странице (тему письма, название товара, что угодно) → клик по закладке → текст стал задачей здесь. Установка: включи панель закладок (<b>Ctrl+Shift+B</b>) и перетащи на неё эту кнопку:</p>
     <p style="text-align:center"><a id="bmLink" class="bmbtn" href="#">⚡ В задачи</a></p>
     <p>Не получается перетащить — <button id="bmCopy" class="bmcopy">скопировать код</button> и вставь его в поле «URL» новой закладки (Ctrl+Shift+O → ⋮ → «Добавить закладку»). <span id="bmMsg"></span></p>
+    <p><b>Настройки кнопки (на этом устройстве):</b> что присвоится задаче при нажатии.</p>
+    <p>
+      <select id="qaCat" class="qsel"></select>
+      <select id="qaColor" class="qsel"></select>
+      <select id="qaTimer" class="qsel"></select>
+    </p>
 
     <h3>☁ Синхронизация между устройствами</h3>
     <p>Чтобы список был одинаковым на телефоне, компе и ноуте, нужно бесплатное облако-хранилище. Мы используем <b>jsonbin.io</b>:</p>
@@ -773,8 +788,14 @@ function repName(r) {
   if (r.indexOf('c:') === 0) return 'каждые ' + r.slice(2) + ' дн.';
   return r;
 }
+function catColorOf(n) {
+  if (!n) return null;
+  const c = catList.find(x => x.n === n);
+  if (c && c.c) return c.c; // свой цвет категории
+  return CAT_COLOR[n] || null;
+}
 function effColor(t) {
-  return t.color || CAT_COLOR[t.cat] || '#ffffff';
+  return t.color || catColorOf(t.cat) || '#ffffff';
 }
 function colorRank(t) {
   const i = COLOR_ORDER.indexOf(effColor(t));
@@ -1192,7 +1213,8 @@ function render() {
     body.className = 'body';
     const title = document.createElement('div');
     title.className = 'title'; title.innerHTML = linkify(t.title);
-    if (t.color) title.style.color = themedColor(t.color);
+    const tColor = t.color || catColorOf(t.cat);
+    if (tColor) title.style.color = themedColor(tColor);
     body.appendChild(title);
 
     if (t.stage) {
@@ -1298,7 +1320,8 @@ function render() {
 
       allCatNames().forEach(c => {
         const chEl = document.createElement('span');
-        chEl.className = 'chip' + (t.cat === c ? ' on' : '');
+        chEl.className = 'chip cat' + (t.cat === c ? ' on' : '');
+        chEl.style.setProperty('--cc', themedColor(catColorOf(c) || '#e53e3e'));
         chEl.innerHTML = catChipHTML(c);
         chEl.onmousedown = e => {
           e.preventDefault(); e.stopPropagation();
@@ -1801,6 +1824,7 @@ function renderCatChips() {
     const c = document.createElement('span');
     c.className = 'chip cat' + (pickedCat === n ? ' on' : '');
     c.dataset.cat = n;
+    c.style.setProperty('--cc', themedColor(catColorOf(n) || '#e53e3e'));
     c.innerHTML = catChipHTML(n);
     c.onclick = () => {
       const was = pickedCat === n;
@@ -1837,8 +1861,12 @@ function cmReset() {
   $('cmEmojiBtn').innerHTML = '😀';
   $('cmName').value = '';
   $('cmName').placeholder = 'название категории';
+  $('cmColor').value = '';
   $('cmAdd').textContent = '➕ Категорию';
 }
+// варианты цвета категории
+$('cmColor').innerHTML = '<option value="">цвет: авто</option>' +
+  COLORS.map(c => '<option value="' + c[0] + '" style="color:' + c[0] + '">' + c[1] + '</option>').join('');
 
 // иконки с github.com/xandemon/developer-icons (v7.0.1) — полный набор репозитория, грузятся с CDN
 const DEV_ICONS = ['android','angular','ansible','anthropic','anthropic-basic-light','apache','apple-dark','apple-light','appwrite','arc','astro','atlassian','atom','auth0','avajs','axiom','azure','babel','backbonejs','bard','bash','bing','biome','bitbucket','bitnami','blueprintjs','bluesky','bootstrap4','bootstrap5','brave','bulmaui','bunjs','c','c-plus-plus','c-sharp','cakephp','canva','cassandradb','chakraui','chatgpt','chrome','chromium','circleci','claude-ai','clerk','clickhouse','clojure','cloudflare','cloudinary','codefresh','codeigniter','convex','copilot','crystal','css','css3','cypress','dart','datadog','deepseek','deno','deno-fresh','developer-icons','digitalocean','discord','django','dlang','docker','doctrine','docusaurus','dovetail','ec2','edge','elastic','electron','elementui','elixir','ember','erlang','esbuild','eslint','expressjs-dark','expressjs-light','facebook','fast-api','faunadb','figma','firebase','firefox','flask-dark','flask-light','flutter','flyio','framer-dark','framer-light','gatsby','git','github-copilot','github-dark','github-light','gitlab','gmail','go','google','google-cloud','grafana','grafbase','graphite','graphql','gridsome','gruntjs','gulp','hashnode','haskell','headlessui','heroku','hexo','hhvm','homebrew','hotjar','html5','hugging-face','hyper2','i18next','indesign','insomnia','instagram','internet-explorer','invision','ionic','jamstack','java','javascript','jenkins','jest','jira','jquery','jslint','json','k6','kafka','kibana','kotlin','kubernetes','laravel','lerna-dark','lerna-light','less','lightroom','linkedin','linux','lit','liveblocks','logrocket','lokalise','lua','lunacy','mariadb','marionette','markdown','mastodon','materialui','messenger','meta','microsoft','microsoft-sql-server','microsoft-sql-server-2','miro','mochajs','mongodb','mozilla','mysql','neovim','nestjs','netlify','netlify2','nextjs','nim','nodejs','notion','npm','numpy','nuxtjs','nx','ocaml','onedrive','openai','opera','oracle','outlook','pandacss','photoshop','php','pinia','pinterest','pixijs','playwright','pnpm-dark','pnpm-light','postgresql','postman','powershell','preact','presto','prettier','prisma','pugjs','pulumi','pwa','python','pytorch','pytorch3d','qwik','r','radixui','rails','railway','react-query','reactjs','reactrouter','reddit','redhat','redis','redux','redux-saga','remix-dark','remix-light','render','rollup','ruby','rust-dark','rust-light','safari','sass','scala','semanticui','serverless','shadcnui','shopware','sketch','sketch2','skype','slack','solidity','solidjs','spring','storyblok','storybook','stream','stylelint','sublime','supabase','sveltejs','swagger','swift','symfony-dark','symfony-light','tailwindcss','telegram','tensorflow','terraform','threads-dark','threads-light','threejs-dark','threejs-light','tiktok','tor','tRPC','twitter','typescript','ubuntu','unjs','upwork','upwork-basic','vagrant','vercel-dark','vercel-light','vim','visualbasic','vitejs','vitest','vivaldi','vk','vscode','vuejs','webassembly','webpack','webrtc','whatsapp','wordpress','x-dark','x-light','xamarin','xd','yoga','youtube','zen','zod'];
@@ -1911,6 +1939,7 @@ function renderCatMgr() {
       cmEmoji = c.e;
       $('cmEmojiBtn').innerHTML = pickerHTML(c.e);
       $('cmName').value = c.n;
+      $('cmColor').value = c.c || '';
       $('cmAdd').textContent = '💾 Сохранить';
       $('cmName').focus();
       renderCatMgr();
@@ -1958,11 +1987,12 @@ $('cmAdd').onclick = () => {
         entry.n = n;
       }
       entry.e = cmEmoji;
+      entry.c = $('cmColor').value || null;
       saveCats(); save();
     }
     cmReset();
   } else {
-    catList.push({ n: n, e: cmEmoji });
+    catList.push({ n: n, e: cmEmoji, c: $('cmColor').value || null });
     cmReset();
     saveCats();
   }
@@ -2360,7 +2390,29 @@ applyTheme();
 dateBtnLabel();
 
 /* --- Кнопка-закладка «В задачи» --- */
-const BM_CODE = "javascript:(()=>{const s=(window.getSelection()+'').trim();const t=s||prompt('Текст задачи:','');if(t)window.open('https://alextask.ru/?add='+encodeURIComponent(t.slice(0,300)),'alextask')})()";
+const BM_CODE = "javascript:(()=>{const s=(window.getSelection()+'').trim();const t=s||prompt('Текст задачи:','');if(t)window.open('" + (location.origin.indexOf('http') === 0 ? location.origin : 'https://alextask.ru') + "/?add='+encodeURIComponent(t.slice(0,300)),'alextask')})()";
+
+// настройки кнопки «В задачи» (на этом устройстве)
+let qadd = { cat: 'Работа', color: '', timer: 0 };
+try { Object.assign(qadd, JSON.parse(localStorage.getItem(LS + '_qadd')) || {}); } catch(e) {}
+function saveQadd() { localStorage.setItem(LS + '_qadd', JSON.stringify(qadd)); }
+function fillQaddUI() {
+  const qc = $('qaCat');
+  qc.innerHTML = '<option value="">Без категории</option>' +
+    allCatNames().map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('');
+  qc.value = allCatNames().includes(qadd.cat) ? qadd.cat : '';
+  const qcl = $('qaColor');
+  qcl.innerHTML = '<option value="">Цвет: авто</option>' +
+    COLORS.map(c => '<option value="' + c[0] + '" style="color:' + c[0] + '">' + c[1] + '</option>').join('');
+  qcl.value = qadd.color || '';
+  const qt = $('qaTimer');
+  qt.innerHTML = '<option value="0">Без таймера</option><option value="30">30 минут</option><option value="60">1 час</option><option value="120">2 часа</option><option value="240">4 часа</option><option value="480">8 часов</option><option value="1440">1 день</option><option value="2880">2 дня</option><option value="10080">Неделя</option>';
+  qt.value = String(qadd.timer || 0);
+  qc.onchange = () => { qadd.cat = qc.value; saveQadd(); };
+  qcl.onchange = () => { qadd.color = qcl.value; saveQadd(); };
+  qt.onchange = () => { qadd.timer = parseInt(qt.value, 10) || 0; saveQadd(); };
+}
+fillQaddUI();
 $('bmLink').setAttribute('href', BM_CODE);
 $('bmLink').onclick = e => {
   e.preventDefault();
@@ -2396,10 +2448,20 @@ let flashId = null;
   if (!addT || !addT.trim()) return;
   const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
   flashId = Date.now();
+  // применяем настройки кнопки «В задачи»: категория, цвет, таймер
+  let qDue = null, qTime = null;
+  if (qadd.timer > 0) {
+    const dl = new Date(Date.now() + qadd.timer * 60000);
+    qDue = dl.getFullYear() + '-' + String(dl.getMonth() + 1).padStart(2, '0') + '-' + String(dl.getDate()).padStart(2, '0');
+    qTime = String(dl.getHours()).padStart(2, '0') + ':' + String(dl.getMinutes()).padStart(2, '0');
+  }
   tasks.push({
     id: flashId,
     title: addT.trim().slice(0, 300),
-    cat: 'Работа',
+    cat: (qadd.cat && allCatNames().includes(qadd.cat)) ? qadd.cat : null,
+    color: qadd.color || null,
+    due: qDue,
+    dueTime: qTime,
     done: false,
     created: Date.now(),
     updatedAt: null,
