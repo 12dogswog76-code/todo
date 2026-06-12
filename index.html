@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0b0b0d">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%2315171c'/%3E%3Cpath d='M120 168a28 28 0 0 1 28-28h92a20 20 0 0 1 15 7l25 29h-160z' fill='%23e53e3e'/%3E%3Crect x='120' y='176' width='272' height='196' rx='24' fill='%233a3f4a'/%3E%3Crect x='120' y='204' width='272' height='168' rx='24' fill='%23494f5c'/%3E%3Cpath d='M205 292l42 42 76-90' stroke='%234caf7d' stroke-width='30' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Мои дела</title>
@@ -202,13 +202,14 @@
 
   /* --- Чек-листы --- */
   .checks { margin-top: 5px; }
-  .citem { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #c9cfdc; margin: 3px 0; }
+  .citem { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: #c9cfdc; margin: 5px 0; }
   .cbox {
-    width: 15px; height: 15px; min-width: 15px;
-    border: 1.5px solid #5a6070; border-radius: 4px; cursor: pointer;
+    width: 19px; height: 19px; min-width: 19px;
+    border: 2px solid #5a6070; border-radius: 5px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    font-size: 10px; color: transparent;
+    font-size: 12px; color: transparent;
   }
+  .cbox:hover { border-color: #4caf7d; }
   .citem.cdone .cbox { background: #4caf7d; border-color: #4caf7d; color: #fff; }
   .citem.cdone .ctext { text-decoration: line-through; color: #707688; }
   .cdel { background: none; border: none; color: #4a5060; cursor: pointer; font-size: 12px; padding: 0 3px; }
@@ -428,6 +429,57 @@
   }
   .footer a:hover { color: #9aa0ae; text-decoration: underline; }
 
+  /* --- Светлая тема --- */
+  body.light {
+    background: linear-gradient(180deg, #f6f7f9 0%, #e7e9ee 100%);
+    color: #1c1e24;
+  }
+  body.light .stats { color: #5f6673; }
+  body.light .addbox, body.light .task, body.light #ioPanel, body.light #syncPanel,
+  body.light #statsPanel, body.light #catMgr, body.light #emojiGrid, body.light .palette {
+    background: #ffffff; border-color: #d4d7de;
+  }
+  body.light #taskInput, body.light #searchInput, body.light .editInput,
+  body.light #ioText, body.light .statbox { background: #f2f3f6; color: #1c1e24; border-color: #d4d7de; }
+  body.light .statnum { color: #1c1e24; }
+  body.light .chip, body.light .pill { color: #5f6673; border-color: #c6cad3; }
+  body.light select.pill { background: #fff; }
+  body.light .pill.ico input { color: #5f6673; }
+  body.light .chip.on, body.light .pill.on, body.light .pill.ico.on { color: #e53e3e; border-color: #e53e3e; background: #e53e3e12; }
+  body.light .pill.ico.on input { color: #e53e3e; }
+  body.light .title { color: #1c1e24; }
+  body.light .task.cat-Работа .title { color: #d32f2f; }
+  body.light .task.cat-Личное .title { color: #b8860b; }
+  body.light .task.cat-Купить .title { color: #1c1e24; }
+  body.light .task.cat-ПК .title { color: #1e6fd9; }
+  body.light .tag { background: #eceef2; color: #5f6673; }
+  body.light .tag.cat-Работа { color: #d32f2f; }
+  body.light .tag.cat-Личное { color: #b8860b; }
+  body.light .tag.cat-Купить { color: #1c1e24; }
+  body.light .tag.cat-ПК { color: #1e6fd9; }
+  body.light .due { background: #eceef2; color: #5f6673; }
+  body.light .due.timer { background: #2e8f5e1a; color: #2e8f5e; }
+  body.light .due.overdue { background: #d32f2f14; color: #d32f2f; }
+  body.light .due.today { background: #d9730d14; color: #d9730d; }
+  body.light .stage { color: #1e6fd9; }
+  body.light .dates, body.light .stage .stageDate { color: #8a90a0; }
+  body.light .check, body.light .cbox { border-color: #b6bcc8; }
+  body.light .citem { color: #3c4250; }
+  body.light .mv, body.light .del, body.light .dragh { color: #9aa0ae; }
+  body.light .mv:hover { background: #eceef2; color: #1c1e24; }
+  body.light .iobar button, body.light #toggleDone { color: #7a8090; }
+  body.light .empty, body.light .hint { color: #8a90a0; }
+  body.light .pdot { box-shadow: inset 0 0 0 1px #d4d7de; }
+  body.light .pdot.sel { border-color: #1c1e24; }
+  body.light .iorow button, body.light .iorow label { background: #eceef2; color: #3c4250; }
+  body.light .iorow .danger { background: #e53e3e; color: #fff; }
+  body.light .em:hover { background: #eceef2; }
+  body.light .emtab { color: #5f6673; border-color: #c6cad3; }
+  body.light .emtab.on { color: #e53e3e; border-color: #e53e3e; }
+  body.light .cmitem { background: #f2f3f6; border-color: #d4d7de; color: #3c4250; }
+  body.light .footer a { color: #8a90a0; }
+  body.light #ioMsg { color: #2e8f5e; }
+
   /* --- Мобильная адаптация --- */
   @media (max-width: 500px) {
     body { padding: 12px 8px 50px; }
@@ -444,7 +496,8 @@
     .palette { right: 50px; }
     .pill.ico input[type=date] { min-width: 108px; }
     .pill.ico input[type=time] { min-width: 64px; }
-    .cbox { width: 18px; height: 18px; min-width: 18px; }
+    .cbox { width: 22px; height: 22px; min-width: 22px; }
+    .citem { font-size: 14px; }
   }
 </style>
 </head>
@@ -497,6 +550,8 @@
     <button id="statsBtn">📊 статистика</button>
     <button id="notifBtn">🔕 уведомления: выкл</button>
     <button id="pipBtn" style="display:none">🪟 поверх окон</button>
+    <button id="themeBtn">☀️ светлая тема</button>
+    <button id="dateBtn">📅 даты: 12 июн</button>
     <button id="guideBtn">❔ как пользоваться</button>
   </div>
   <div id="ioPanel">
@@ -665,8 +720,26 @@ function saveCats() {
 }
 
 const CAT_COLOR = { 'Работа': '#ff6b6b', 'Личное': '#ffd95e', 'ПК': '#7fb8ff' };
-const PALETTE = [null, '#ffffff', '#ff6b6b', '#ffd95e', '#7fb8ff', '#8fd6a8'];
-const COLOR_ORDER = ['#ff6b6b', '#ffd95e', '#ffffff', '#7fb8ff', '#8fd6a8'];
+// палитра: 10 цветов, порядок = «от красного к белому»
+const COLORS = [
+  ['#ff6b6b', 'Красный'], ['#ffa94d', 'Оранжевый'], ['#ffd95e', 'Жёлтый'],
+  ['#8fd6a8', 'Зелёный'], ['#66d9e8', 'Бирюзовый'], ['#7fb8ff', 'Голубой'],
+  ['#b197fc', 'Фиолетовый'], ['#ff8fce', 'Розовый'], ['#a3a8b8', 'Серый'], ['#ffffff', 'Белый']
+];
+const PALETTE = [null].concat(COLORS.map(c => c[0]));
+const COLOR_ORDER = COLORS.map(c => c[0]);
+// светлая тема: тёмные версии цветов, чтобы текст оставался читаемым (белый → почти чёрный)
+const LIGHT_TEXT = {
+  '#ffffff': '#1c1e24', '#ffd95e': '#b8860b', '#ff6b6b': '#d32f2f',
+  '#7fb8ff': '#1e6fd9', '#8fd6a8': '#2e8f5e', '#ffa94d': '#d9730d',
+  '#66d9e8': '#0b9aa8', '#b197fc': '#7048c8', '#ff8fce': '#d6336c', '#a3a8b8': '#5f6673'
+};
+let theme = localStorage.getItem(LS + '_theme') || 'dark';
+function isLight() { return theme === 'light'; }
+function themedColor(c) {
+  if (!c) return c;
+  return isLight() ? (LIGHT_TEXT[c.toLowerCase()] || c) : c;
+}
 const REP_NAME = { d: 'каждый день', w: 'каждую неделю', m: 'каждый месяц' };
 function repName(r) {
   if (!r) return '';
@@ -700,8 +773,11 @@ function todayStr() {
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+const MONTHS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+let dateFmt = localStorage.getItem(LS + '_dateFmt') || 'name';
 function fmtD(ts) {
   const d = new Date(ts);
+  if (dateFmt === 'name') return d.getDate() + ' ' + MONTHS[d.getMonth()];
   return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
 }
 function fmtDT(ts) {
@@ -975,13 +1051,8 @@ function render() {
   const colorSel = document.createElement('select');
   colorSel.className = 'pill';
   colorSel.title = 'Показать только один цвет';
-  colorSel.innerHTML =
-    '<option value="">Все цвета</option>' +
-    '<option value="#ff6b6b">🔴 Красные</option>' +
-    '<option value="#ffd95e">🟡 Жёлтые</option>' +
-    '<option value="#ffffff">⚪ Белые</option>' +
-    '<option value="#7fb8ff">🔵 Голубые</option>' +
-    '<option value="#8fd6a8">🟢 Зелёные</option>';
+  colorSel.innerHTML = '<option value="">Все цвета</option>' +
+    COLORS.map(c => '<option value="' + c[0] + '">' + c[1] + '</option>').join('');
   colorSel.value = state.colorF || '';
   colorSel.classList.toggle('on', !!colorSel.value);
   colorSel.onchange = () => { state.colorF = colorSel.value; save(); render(); };
@@ -1052,7 +1123,7 @@ function render() {
     body.className = 'body';
     const title = document.createElement('div');
     title.className = 'title'; title.innerHTML = linkify(t.title);
-    if (t.color) title.style.color = t.color;
+    if (t.color) title.style.color = themedColor(t.color);
     body.appendChild(title);
 
     if (t.stage) {
@@ -1293,7 +1364,7 @@ function render() {
       const clr = document.createElement('button');
       clr.className = 'clr';
       clr.textContent = '●';
-      clr.style.color = effColor(t);
+      clr.style.color = themedColor(effColor(t));
       clr.title = 'Цвет задачи';
       clr.onclick = (e) => {
         e.stopPropagation();
@@ -1667,7 +1738,7 @@ function renderCatChips() {
   });
   const plus = document.createElement('span');
   plus.className = 'chip' + ($('catMgr').classList.contains('open') ? ' on' : '');
-  plus.textContent = '✎ категории';
+  plus.textContent = '+ Категории';
   plus.title = 'Добавить или удалить категории';
   plus.onclick = () => {
     $('catMgr').classList.toggle('open');
@@ -1934,11 +2005,28 @@ const PIP_CSS = [
   '.pck.don .pckb { background:#4caf7d; border-color:#4caf7d; color:#fff; }',
   '.pright { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }',
   '.pgo { background:none; border:1px solid #424650; border-radius:6px; color:#9aa0ae; cursor:pointer; font-size:12px; padding:2px 7px; }',
-  '.pgo:hover { color:#fff; border-color:#e53e3e; }'
+  '.pgo:hover { color:#fff; border-color:#e53e3e; }',
+  '.ptit::first-letter { text-transform: uppercase; }',
+  '#pipTop { display:flex; gap:5px; margin-bottom:6px; align-items:center; flex-wrap:wrap; }',
+  '.psel { background:#1c1e24; border:1px solid #424650; border-radius:999px; color:#aab0c0; font-size:10.5px; padding:3px 6px; outline:none; }',
+  'body.light { background:#f2f3f6; color:#1c1e24; }',
+  'body.light .pt { background:#fff; border-color:#d4d7de; }',
+  'body.light #pipInput { background:#fff; color:#1c1e24; border-color:#c6cad3; }',
+  'body.light .pchip, body.light .pdotf.pall, body.light .pgo { color:#5f6673; border-color:#c6cad3; }',
+  'body.light .pchip.on, body.light .pdotf.pall.on { color:#e53e3e; border-color:#e53e3e; background:#e53e3e12; }',
+  'body.light .pck { color:#3c4250; }',
+  'body.light .pckb { border-color:#b6bcc8; }',
+  'body.light .pc { border-color:#b6bcc8; }',
+  'body.light .pstage { color:#1e6fd9; }',
+  'body.light .pempty { color:#8a90a0; }',
+  'body.light .pdotf { box-shadow: inset 0 0 0 1px #d4d7de; }',
+  'body.light .pdotf.on { border-color:#1c1e24; }',
+  'body.light .psel { background:#fff; color:#5f6673; border-color:#c6cad3; }'
 ].join('\n');
 
 let pipCat = localStorage.getItem(LS + '_pipCat') || 'все';
 let pipColor = localStorage.getItem(LS + '_pipColor') || '';
+let pipFiltOpen = false;
 
 async function togglePip() {
   if (!window.documentPictureInPicture) return;
@@ -1950,7 +2038,8 @@ async function togglePip() {
   const st = d.createElement('style');
   st.textContent = PIP_CSS;
   d.head.appendChild(st);
-  d.body.innerHTML = '<div id="pipCats"></div><div id="pipColors"></div><input id="pipInput" placeholder="+ задача (Enter)"><div id="pipList"></div>';
+  d.body.classList.toggle('light', isLight());
+  d.body.innerHTML = '<div id="pipTop"></div><div id="pipCats"></div><div id="pipColors"></div><input id="pipInput" placeholder="+ Задача (Enter)"><div id="pipList"></div>';
   const inp = d.getElementById('pipInput');
   inp.onkeydown = e => {
     if (e.key === 'Enter' && inp.value.trim()) {
@@ -1974,32 +2063,67 @@ function pipRender() {
   const list = d.getElementById('pipList');
   if (!list) return;
 
-  // фильтр категорий в мини-окне
+  // верхняя панель: сворачиваемые фильтры + сортировка (как на сайте)
+  const pt = d.getElementById('pipTop');
+  if (pt) {
+    pt.innerHTML = '';
+    const tg = d.createElement('span');
+    tg.className = 'pchip' + (pipFiltOpen ? ' on' : '');
+    tg.textContent = '# Фильтры ' + (pipFiltOpen ? '▴' : '▾');
+    tg.onclick = () => { pipFiltOpen = !pipFiltOpen; pipRender(); };
+    pt.appendChild(tg);
+    if (!pipFiltOpen && pipCat !== 'все') {
+      const cur = d.createElement('span');
+      cur.className = 'pchip on';
+      cur.innerHTML = (catEmojiHTML(pipCat, true) ? catEmojiHTML(pipCat, true) + ' ' : '') + esc(pipCat);
+      cur.title = 'Сбросить';
+      cur.onclick = () => { pipCat = 'все'; localStorage.setItem(LS + '_pipCat', pipCat); pipRender(); };
+      pt.appendChild(cur);
+    }
+    const sel = d.createElement('select');
+    sel.className = 'psel';
+    sel.innerHTML =
+      '<option value="manual">Сортировка: ручная</option>' +
+      '<option value="color-asc">Цвет: красный → белый</option>' +
+      '<option value="color-desc">Цвет: белый → красный</option>' +
+      '<option value="date-desc">Дата: новые → старые</option>' +
+      '<option value="date-asc">Дата: старые → новые</option>' +
+      '<option value="alpha-asc">Алфавит: А → Я</option>' +
+      '<option value="alpha-desc">Алфавит: Я → А</option>';
+    sel.value = state.sort || 'manual';
+    sel.onchange = () => { state.sort = sel.value; save(); render(); };
+    pt.appendChild(sel);
+  }
+
+  // фильтр категорий (раскрывается из «# Фильтры»)
   const pc = d.getElementById('pipCats');
   if (pc) {
+    pc.style.display = pipFiltOpen ? '' : 'none';
     pc.innerHTML = '';
     if (!allCatNames().includes(pipCat) && pipCat !== 'все') pipCat = 'все';
     ['все'].concat(allCatNames()).forEach(c => {
       const ch = d.createElement('span');
       ch.className = 'pchip' + (pipCat === c ? ' on' : '');
-      ch.innerHTML = c === 'все' ? 'все' : ((catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '') + esc(c));
+      ch.innerHTML = c === 'все' ? 'Все' : ((catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '') + esc(c));
       ch.onclick = () => {
         pipCat = c;
         localStorage.setItem(LS + '_pipCat', pipCat);
+        pipFiltOpen = false;
         pipRender();
       };
       pc.appendChild(ch);
     });
   }
 
-  // фильтр по цветам
+  // фильтр по цветам (10 цветов)
   const pcl = d.getElementById('pipColors');
   if (pcl) {
+    pcl.style.display = pipFiltOpen ? '' : 'none';
     pcl.innerHTML = '';
-    ['', '#ff6b6b', '#ffd95e', '#ffffff', '#7fb8ff', '#8fd6a8'].forEach(col => {
+    [''].concat(COLOR_ORDER).forEach(col => {
       const ch = d.createElement('span');
       ch.className = 'pdotf' + (col === '' ? ' pall' : '') + (pipColor === col ? ' on' : '');
-      if (col) { ch.style.background = col; ch.title = col; } else ch.textContent = 'все цвета';
+      if (col) { ch.style.background = col; ch.title = col; } else ch.textContent = 'Все цвета';
       ch.onclick = () => {
         pipColor = col;
         localStorage.setItem(LS + '_pipColor', pipColor);
@@ -2026,7 +2150,7 @@ function pipRender() {
     const mid = d.createElement('div'); mid.className = 'pmid';
     const s = d.createElement('div'); s.className = 'ptit';
     s.innerHTML = (t.pinned ? '📌 ' : '') + linkify(t.title);
-    s.style.color = effColor(t);
+    s.style.color = themedColor(effColor(t));
     mid.appendChild(s);
     if (t.stage) {
       const sg = d.createElement('div'); sg.className = 'pstage';
@@ -2081,6 +2205,30 @@ function updatePipBtn() {
 }
 $('pipBtn').onclick = togglePip;
 updatePipBtn();
+
+/* --- Тема и формат дат --- */
+function applyTheme() {
+  document.body.classList.toggle('light', isLight());
+  $('themeBtn').textContent = isLight() ? '🌙 тёмная тема' : '☀️ светлая тема';
+  if (pipWin) { try { pipWin.document.body.classList.toggle('light', isLight()); } catch(e) {} }
+}
+$('themeBtn').onclick = () => {
+  theme = isLight() ? 'dark' : 'light';
+  localStorage.setItem(LS + '_theme', theme);
+  applyTheme();
+  render();
+};
+function dateBtnLabel() {
+  $('dateBtn').textContent = '📅 даты: ' + (dateFmt === 'name' ? '12 июн' : '12/06');
+}
+$('dateBtn').onclick = () => {
+  dateFmt = dateFmt === 'name' ? 'num' : 'name';
+  localStorage.setItem(LS + '_dateFmt', dateFmt);
+  dateBtnLabel();
+  render();
+};
+applyTheme();
+dateBtnLabel();
 
 /* --- Кнопка-закладка «В задачи» --- */
 const BM_CODE = "javascript:(()=>{const s=(window.getSelection()+'').trim();const t=s||prompt('Текст задачи:','');if(t)window.open('https://alextask.ru/?add='+encodeURIComponent(t.slice(0,300)),'alextask')})()";
