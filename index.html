@@ -260,6 +260,14 @@
   .pdot.auto { border: 2px dashed #8a90a0; }
   .pdot.auto.sel { border: 2px dashed #fff; }
 
+  .fdot {
+    width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; display: inline-block; vertical-align: middle;
+  }
+  .fdot.on { border-color: #fff; }
+  body.light .fdot { box-shadow: inset 0 0 0 1px #d4d7de; }
+  body.light .fdot.on { border-color: #1c1e24; }
+
   .moves { display: flex; flex-direction: column; gap: 3px; }
   .mv {
     background: none; border: none; color: #5a6070; cursor: pointer;
@@ -328,6 +336,11 @@
   }
   .cmdel:hover { color: #fff; background: #e53e3e; }
   .cmdel.confirm { color: #fff; background: #e53e3e; font-size: 10.5px; }
+  .cmedit {
+    background: none; border: none; color: #5a6070; cursor: pointer;
+    font-size: 12px; padding: 1px 5px; border-radius: 999px;
+  }
+  .cmedit:hover, .cmedit.on { color: #fff; background: #5b7cfa; }
 
   /* --- Экспорт / импорт / облако / статистика --- */
   .iobar { display: flex; gap: 14px; margin-top: 22px; justify-content: center; flex-wrap: wrap; }
@@ -673,10 +686,18 @@ if (tasks.some(t => t.pos === undefined)) {
   legacy.forEach((t, i) => { if (t.pos === undefined) t.pos = i; });
 }
 
-let state = { filter: 'все', showDone: true, sort: 'manual', colorF: '', catsOpen: false };
+let state = { showDone: true, sort: 'manual', catsOpen: false, fCats: [], fArchive: false, colors: [] };
 try { Object.assign(state, JSON.parse(localStorage.getItem(LS+'_ui')) || {}); } catch(e) {}
-if (state.filter === 'Дом') state.filter = 'Купить';
-if (state.sortColor) { state.sort = 'color-asc'; delete state.sortColor; } // миграция старой настройки
+// миграция старых одиночных фильтров на множественные
+if (state.filter) {
+  if (state.filter === 'архив') state.fArchive = true;
+  else if (state.filter !== 'все') state.fCats = [state.filter === 'Дом' ? 'Купить' : state.filter];
+  delete state.filter;
+}
+if (state.colorF) { state.colors = [state.colorF]; delete state.colorF; }
+if (state.sortColor) { state.sort = 'color-asc'; delete state.sortColor; }
+if (!Array.isArray(state.fCats)) state.fCats = [];
+if (!Array.isArray(state.colors)) state.colors = [];
 if (!state.sort) state.sort = 'manual';
 
 let searchQ = '';
@@ -1010,32 +1031,79 @@ function render() {
     ? 'Всё сделано 🎉'
     : `Активных: ${active}` + (od ? ` · просрочено: ${od}` : '');
 
-  const isArc = state.filter === 'архив';
-  const cats = ['все'].concat(allCatNames(), ['без категории', 'архив']);
-  const fIcon = c => c === 'архив' ? '🗃 ' : (catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '');
+  const isArc = !!state.fArchive;
+  const fIcon = c => catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '';
   const f = $('filters');
   f.innerHTML = '';
-  // свёрнутый список категорий
+  const activeCnt = state.fCats.length + state.colors.length + (isArc ? 1 : 0);
   const tgl = document.createElement('span');
-  tgl.className = 'chip' + (state.catsOpen ? ' on' : '');
-  tgl.innerHTML = '# Фильтры ' + (state.catsOpen ? '▴' : '▾');
+  tgl.className = 'chip' + (state.catsOpen || activeCnt ? ' on' : '');
+  tgl.innerHTML = '# Фильтры' + (activeCnt ? ' (' + activeCnt + ')' : '') + ' ' + (state.catsOpen ? '▴' : '▾');
   tgl.onclick = () => { state.catsOpen = !state.catsOpen; save(); render(); };
   f.appendChild(tgl);
+
   if (state.catsOpen) {
-    cats.forEach(c => {
+    // «Все» — сброс
+    const all = document.createElement('span');
+    all.className = 'chip' + (activeCnt === 0 ? ' on' : '');
+    all.textContent = 'Все';
+    all.title = 'Сбросить все фильтры';
+    all.onclick = () => { state.fCats = []; state.colors = []; state.fArchive = false; save(); render(); };
+    f.appendChild(all);
+    // категории: можно выбрать несколько
+    allCatNames().concat(['без категории']).forEach(c => {
+      const on = state.fCats.includes(c);
       const el = document.createElement('span');
-      el.className = 'chip' + (state.filter === c ? ' on' : '');
+      el.className = 'chip' + (on ? ' on' : '');
       el.innerHTML = fIcon(c) + esc(c);
-      el.onclick = () => { state.filter = c; state.catsOpen = false; save(); render(); };
+      el.onclick = () => {
+        state.fCats = on ? state.fCats.filter(x => x !== c) : state.fCats.concat([c]);
+        save(); render();
+      };
       f.appendChild(el);
     });
-  } else if (state.filter !== 'все') {
-    const el = document.createElement('span');
-    el.className = 'chip on';
-    el.innerHTML = fIcon(state.filter) + esc(state.filter);
-    el.title = 'Текущий фильтр — нажми, чтобы сбросить';
-    el.onclick = () => { state.filter = 'все'; save(); render(); };
-    f.appendChild(el);
+    const arc = document.createElement('span');
+    arc.className = 'chip' + (isArc ? ' on' : '');
+    arc.innerHTML = '🗃 архив';
+    arc.onclick = () => { state.fArchive = !state.fArchive; save(); render(); };
+    f.appendChild(arc);
+    // цвета: можно выбрать несколько
+    COLOR_ORDER.forEach(col => {
+      const on = state.colors.includes(col);
+      const dEl = document.createElement('span');
+      dEl.className = 'fdot' + (on ? ' on' : '');
+      dEl.style.background = col;
+      dEl.title = (COLORS.find(c => c[0] === col) || ['', ''])[1];
+      dEl.onclick = () => {
+        state.colors = on ? state.colors.filter(x => x !== col) : state.colors.concat([col]);
+        save(); render();
+      };
+      f.appendChild(dEl);
+    });
+  } else {
+    // свёрнуто: показываем активные выборы, клик по чипу — убрать его
+    state.fCats.forEach(c => {
+      const el = document.createElement('span');
+      el.className = 'chip on';
+      el.innerHTML = fIcon(c) + esc(c) + ' ✕';
+      el.onclick = () => { state.fCats = state.fCats.filter(x => x !== c); save(); render(); };
+      f.appendChild(el);
+    });
+    if (isArc) {
+      const el = document.createElement('span');
+      el.className = 'chip on';
+      el.innerHTML = '🗃 архив ✕';
+      el.onclick = () => { state.fArchive = false; save(); render(); };
+      f.appendChild(el);
+    }
+    state.colors.forEach(col => {
+      const dEl = document.createElement('span');
+      dEl.className = 'fdot on';
+      dEl.style.background = col;
+      dEl.title = 'Убрать цвет';
+      dEl.onclick = () => { state.colors = state.colors.filter(x => x !== col); save(); render(); };
+      f.appendChild(dEl);
+    });
   }
   const sortSel = document.createElement('select');
   sortSel.className = 'pill';
@@ -1053,16 +1121,6 @@ function render() {
   sortSel.onchange = () => { state.sort = sortSel.value; save(); render(); };
   f.appendChild(sortSel);
 
-  const colorSel = document.createElement('select');
-  colorSel.className = 'pill';
-  colorSel.title = 'Показать только один цвет';
-  colorSel.innerHTML = '<option value="">Все цвета</option>' +
-    COLORS.map(c => '<option value="' + c[0] + '" style="color:' + themedColor(c[0]) + '">' + c[1] + '</option>').join('');
-  if (state.colorF) colorSel.style.color = themedColor(state.colorF); // выбранный цвет виден прямо на кнопке
-  colorSel.value = state.colorF || '';
-  colorSel.classList.toggle('on', !!colorSel.value);
-  colorSel.onchange = () => { state.colorF = colorSel.value; save(); render(); };
-  f.appendChild(colorSel);
   const sp = document.createElement('span'); sp.className = 'spacer'; f.appendChild(sp);
   if (!isArc) {
     const tg = document.createElement('button');
@@ -1076,13 +1134,18 @@ function render() {
   list.innerHTML = '';
   let shown = tasks.slice().sort(cmp).filter(t => {
     if (!matchSearch(t)) return false;
-    if (state.colorF && effColor(t) !== state.colorF) return false; // показ только выбранного цвета
-    if (isArc) return isArchived(t);
-    if (isArchived(t)) return false;
-    if (!state.showDone && t.done) return false;
-    if (state.filter === 'все') return true;
-    if (state.filter === 'без категории') return !t.cat;
-    return t.cat === state.filter;
+    if (state.colors.length && !state.colors.includes(effColor(t))) return false; // выбранные цвета
+    if (isArc) {
+      if (!isArchived(t)) return false;
+    } else {
+      if (isArchived(t)) return false;
+      if (!state.showDone && t.done) return false;
+    }
+    if (state.fCats.length) { // выбранные категории
+      const inCats = (t.cat && state.fCats.includes(t.cat)) || (!t.cat && state.fCats.includes('без категории'));
+      if (!inCats) return false;
+    }
+    return true;
   });
   if (isArc) shown.sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
 
@@ -1551,7 +1614,11 @@ $('applyBtn').onclick = () => {
   if (!data || !Array.isArray(data.tasks)) { ioMsg('В коде нет задач'); return; }
   if (!del_confirm_io()) return;
   tasks = data.tasks;
-  if (data.state) state = Object.assign({ filter: 'все', showDone: true, sortColor: false }, data.state);
+  if (data.state) {
+    state = Object.assign({ showDone: true, sort: 'manual', catsOpen: false, fCats: [], fArchive: false, colors: [] }, data.state);
+    if (!Array.isArray(state.fCats)) state.fCats = [];
+    if (!Array.isArray(state.colors)) state.colors = [];
+  }
   save(); render();
   $('ioPanel').classList.remove('open');
   ioMsg('Импортировано ✓');
@@ -1756,7 +1823,22 @@ function renderCatChips() {
 
 const EMOJIS = '😀 😁 😂 🤣 😊 😍 😎 🤓 🤔 🤨 😐 😏 😴 🤯 🥳 😤 😡 🥶 😱 🙃 🤝 👍 👎 👊 ✌️ 🤞 👋 💪 🙏 ✍️ 👀 🧠 ❤️ 🧡 💛 💚 💙 💜 🖤 🔥 ⭐ ✨ ⚡ 💥 💯 ✅ ❌ ⚠️ ❗ ❓ 💬 🏠 🏢 🏫 🏥 🏪 🏦 🚗 🚕 🚌 🚲 ✈️ 🚀 ⏰ ⏳ 📅 📆 🗓️ 💻 🖥️ ⌨️ 🖱️ 🖨️ 📱 ☎️ 📞 📡 📷 🎥 📺 🎮 🎧 🎵 🎤 💡 🔌 🔋 🛠️ 🔧 🔨 ⚙️ 🧰 🪛 🪚 📦 📁 🗂️ 📂 📋 📌 📍 ✂️ 📏 ✏️ 🖊️ 📝 📄 📑 📊 📈 📉 💰 💸 💳 🪙 💵 🛒 🛍️ 🎁 🍔 🍕 🍣 ☕ 🍺 🥤 🏋️ ⚽ 🏀 🎯 🎲 ♟️ 🧩 🧹 🧺 🧼 🐶 🐱 🐾 🌳 🌹 🌞 🌙 ❄️ ☔ 🌈 🎓 📚 🔑 🔒 🔓 🚪 🧾 🗑️ 🚩 🏁 🎖️ 🏆'.split(' ');
 let cmEmoji = '😀';
+let cmEditing = null; // имя категории, которую сейчас редактируем
 let emojiGridBuilt = false;
+
+function pickerHTML(e) {
+  if (e === '__syn') return SYNERGY_MINI;
+  if (e && e.indexOf('dev:') === 0) return '<img src="' + DEV_CDN + e.slice(4) + '.svg" style="width:16px;height:16px;vertical-align:-3px">';
+  return e || '😀';
+}
+function cmReset() {
+  cmEditing = null;
+  cmEmoji = '😀';
+  $('cmEmojiBtn').innerHTML = '😀';
+  $('cmName').value = '';
+  $('cmName').placeholder = 'название категории';
+  $('cmAdd').textContent = '➕ Категорию';
+}
 
 // иконки с github.com/xandemon/developer-icons (v7.0.1) — полный набор репозитория, грузятся с CDN
 const DEV_ICONS = ['android','angular','ansible','anthropic','anthropic-basic-light','apache','apple-dark','apple-light','appwrite','arc','astro','atlassian','atom','auth0','avajs','axiom','azure','babel','backbonejs','bard','bash','bing','biome','bitbucket','bitnami','blueprintjs','bluesky','bootstrap4','bootstrap5','brave','bulmaui','bunjs','c','c-plus-plus','c-sharp','cakephp','canva','cassandradb','chakraui','chatgpt','chrome','chromium','circleci','claude-ai','clerk','clickhouse','clojure','cloudflare','cloudinary','codefresh','codeigniter','convex','copilot','crystal','css','css3','cypress','dart','datadog','deepseek','deno','deno-fresh','developer-icons','digitalocean','discord','django','dlang','docker','doctrine','docusaurus','dovetail','ec2','edge','elastic','electron','elementui','elixir','ember','erlang','esbuild','eslint','expressjs-dark','expressjs-light','facebook','fast-api','faunadb','figma','firebase','firefox','flask-dark','flask-light','flutter','flyio','framer-dark','framer-light','gatsby','git','github-copilot','github-dark','github-light','gitlab','gmail','go','google','google-cloud','grafana','grafbase','graphite','graphql','gridsome','gruntjs','gulp','hashnode','haskell','headlessui','heroku','hexo','hhvm','homebrew','hotjar','html5','hugging-face','hyper2','i18next','indesign','insomnia','instagram','internet-explorer','invision','ionic','jamstack','java','javascript','jenkins','jest','jira','jquery','jslint','json','k6','kafka','kibana','kotlin','kubernetes','laravel','lerna-dark','lerna-light','less','lightroom','linkedin','linux','lit','liveblocks','logrocket','lokalise','lua','lunacy','mariadb','marionette','markdown','mastodon','materialui','messenger','meta','microsoft','microsoft-sql-server','microsoft-sql-server-2','miro','mochajs','mongodb','mozilla','mysql','neovim','nestjs','netlify','netlify2','nextjs','nim','nodejs','notion','npm','numpy','nuxtjs','nx','ocaml','onedrive','openai','opera','oracle','outlook','pandacss','photoshop','php','pinia','pinterest','pixijs','playwright','pnpm-dark','pnpm-light','postgresql','postman','powershell','preact','presto','prettier','prisma','pugjs','pulumi','pwa','python','pytorch','pytorch3d','qwik','r','radixui','rails','railway','react-query','reactjs','reactrouter','reddit','redhat','redis','redux','redux-saga','remix-dark','remix-light','render','rollup','ruby','rust-dark','rust-light','safari','sass','scala','semanticui','serverless','shadcnui','shopware','sketch','sketch2','skype','slack','solidity','solidjs','spring','storyblok','storybook','stream','stylelint','sublime','supabase','sveltejs','swagger','swift','symfony-dark','symfony-light','tailwindcss','telegram','tensorflow','terraform','threads-dark','threads-light','threejs-dark','threejs-light','tiktok','tor','tRPC','twitter','typescript','ubuntu','unjs','upwork','upwork-basic','vagrant','vercel-dark','vercel-light','vim','visualbasic','vitejs','vitest','vivaldi','vk','vscode','vuejs','webassembly','webpack','webrtc','whatsapp','wordpress','x-dark','x-light','xamarin','xd','yoga','youtube','zen','zod'];
@@ -1820,6 +1902,19 @@ function renderCatMgr() {
     it.className = 'cmitem';
     const lbl = document.createElement('span');
     lbl.innerHTML = catChipHTML(c.n);
+    const ed = document.createElement('button');
+    ed.className = 'cmedit' + (cmEditing === c.n ? ' on' : '');
+    ed.textContent = '✎'; ed.title = 'Редактировать категорию';
+    ed.onclick = () => {
+      if (cmEditing === c.n) { cmReset(); renderCatMgr(); return; } // повторный клик — отмена
+      cmEditing = c.n;
+      cmEmoji = c.e;
+      $('cmEmojiBtn').innerHTML = pickerHTML(c.e);
+      $('cmName').value = c.n;
+      $('cmAdd').textContent = '💾 Сохранить';
+      $('cmName').focus();
+      renderCatMgr();
+    };
     const del = document.createElement('button');
     del.className = 'cmdel'; del.textContent = '✕'; del.title = 'Удалить категорию';
     del.onclick = () => {
@@ -1834,28 +1929,49 @@ function renderCatMgr() {
       catList = catList.filter(x => x.n !== c.n);
       // задачи этой категории становятся «без категории»
       tasks.forEach(t => { if (t.cat === c.n) { t.cat = null; t.mod = Date.now(); } });
-      if (state.filter === c.n) state.filter = 'все';
+      state.fCats = state.fCats.filter(x => x !== c.n);
       if (pickedCat === c.n) pickedCat = null;
+      if (cmEditing === c.n) cmReset();
       saveCats(); save();
       renderCatChips(); renderCatMgr(); render();
     };
-    it.append(lbl, del);
+    it.append(lbl, ed, del);
     l.appendChild(it);
   });
 }
 $('cmAdd').onclick = () => {
   const n = $('cmName').value.trim();
   if (!n) { $('cmName').focus(); return; }
-  if (allCatNames().some(x => x.toLowerCase() === n.toLowerCase())) {
-    $('cmName').value = ''; $('cmName').placeholder = 'такая уже есть'; return;
+  const taken = allCatNames().some(x => x.toLowerCase() === n.toLowerCase() && x !== cmEditing);
+  if (taken) { $('cmName').value = ''; $('cmName').placeholder = 'такая уже есть'; return; }
+
+  if (cmEditing) {
+    // редактирование существующей категории
+    const entry = catList.find(x => x.n === cmEditing);
+    if (entry) {
+      if (n !== cmEditing) {
+        // переименование: задачи переезжают в новое имя
+        tasks.forEach(t => { if (t.cat === cmEditing) { t.cat = n; t.mod = Date.now(); } });
+        state.fCats = state.fCats.map(x => x === cmEditing ? n : x);
+        if (pickedCat === cmEditing) pickedCat = n;
+        if (pipCat === cmEditing) { pipCat = n; localStorage.setItem(LS + '_pipCat', pipCat); }
+        entry.n = n;
+      }
+      entry.e = cmEmoji;
+      saveCats(); save();
+    }
+    cmReset();
+  } else {
+    catList.push({ n: n, e: cmEmoji });
+    cmReset();
+    saveCats();
   }
-  catList.push({ n: n, e: cmEmoji });
-  $('cmName').value = ''; $('cmName').placeholder = 'название категории';
-  cmEmoji = '😀'; $('cmEmojiBtn').innerHTML = '😀';
-  saveCats();
   renderCatChips(); renderCatMgr(); render();
 };
-$('cmName').onkeydown = e => { if (e.key === 'Enter') $('cmAdd').onclick(); };
+$('cmName').onkeydown = e => {
+  if (e.key === 'Enter') $('cmAdd').onclick();
+  if (e.key === 'Escape') { cmReset(); renderCatMgr(); }
+};
 renderCatChips();
 ['dateInput','timeInput'].forEach(i => {
   $(i).onchange = e => {
@@ -2194,7 +2310,7 @@ function pipRender() {
       try { window.focus(); } catch(e) {}
       let el = document.querySelector('.task[data-id="' + t.id + '"]');
       if (!el) { // задача скрыта фильтрами — сбрасываем их
-        state.filter = 'все'; state.colorF = ''; searchQ = '';
+        state.fCats = []; state.colors = []; state.fArchive = false; searchQ = '';
         $('searchInput').value = '';
         render();
         el = document.querySelector('.task[data-id="' + t.id + '"]');
