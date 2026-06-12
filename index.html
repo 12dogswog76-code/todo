@@ -442,6 +442,7 @@
     <button id="syncBtn">☁ облако</button>
     <button id="statsBtn">📊 статистика</button>
     <button id="notifBtn">🔕 уведомления: выкл</button>
+    <button id="pipBtn" style="display:none">🪟 поверх окон</button>
     <button id="guideBtn">❔ как пользоваться</button>
   </div>
   <div id="ioPanel">
@@ -494,6 +495,7 @@
       <li>🔍 Поиск ищет по названиям, этапам и чек-листам. Фильтр «🗃 архив» — выполненные старше недели.</li>
       <li>🎨 Чип «по цвету» в фильтрах группирует задачи по цветам. Цвет задаче задаётся кнопкой ●.</li>
       <li>📊 «Статистика» внизу — сколько выполнено сегодня / за неделю / за месяц и серия дней подряд 🔥.</li>
+      <li>🪟 «Поверх окон» внизу (Chrome на компе) — мини-список, который висит поверх всех программ: отмечай и добавляй задачи, не переключаясь.</li>
       <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
     </ul>
 
@@ -1231,6 +1233,8 @@ function render() {
       }
     });
   }
+
+  pipRender(); // мини-окно поверх всех показывает то же самое
 }
 
 /* --- Поиск --- */
@@ -1615,6 +1619,88 @@ $('askLater').onclick = () => {
   localStorage.setItem(LS + '_notifAsked', '1');
   $('askNotif').classList.remove('open');
 };
+
+/* --- Мини-окно поверх всех программ (Document Picture-in-Picture, Chrome на ПК) --- */
+let pipWin = null;
+const PIP_CSS = [
+  '* { box-sizing:border-box; margin:0; padding:0; }',
+  "body { background:#15171c; color:#e8eaf0; font-family:-apple-system,'Segoe UI',Roboto,sans-serif; padding:10px; }",
+  '#pipInput { width:100%; background:#121317; border:1px solid #33363e; border-radius:8px; color:#e8eaf0; font-size:13px; padding:8px 10px; outline:none; margin-bottom:8px; }',
+  '#pipInput:focus { border-color:#e53e3e; }',
+  '.pt { display:flex; align-items:center; gap:8px; background:#1c1e24; border:1px solid #2c3038; border-radius:8px; padding:8px 9px; margin-bottom:6px; }',
+  '.pc { width:18px; height:18px; min-width:18px; border:2px solid #5a6070; border-radius:5px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:transparent; font-size:11px; font-weight:700; }',
+  '.pc:hover { border-color:#4caf7d; color:#4caf7d77; }',
+  '.ptit { flex:1; font-size:13px; line-height:1.3; word-break:break-word; }',
+  '.pdue { font-size:10px; color:#8fd6a8; white-space:nowrap; }',
+  '.pdue.over { color:#ff8b8b; }',
+  '.pempty { color:#777d8a; text-align:center; padding:20px 0; font-size:12.5px; }'
+].join('\n');
+
+async function togglePip() {
+  if (!window.documentPictureInPicture) return;
+  if (pipWin) { try { pipWin.close(); } catch(e) {} pipWin = null; updatePipBtn(); return; }
+  try {
+    pipWin = await documentPictureInPicture.requestWindow({ width: 360, height: 520 });
+  } catch(e) { return; }
+  const d = pipWin.document;
+  const st = d.createElement('style');
+  st.textContent = PIP_CSS;
+  d.head.appendChild(st);
+  d.body.innerHTML = '<input id="pipInput" placeholder="+ задача (Enter)"><div id="pipList"></div>';
+  const inp = d.getElementById('pipInput');
+  inp.onkeydown = e => {
+    if (e.key === 'Enter' && inp.value.trim()) {
+      const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
+      tasks.push({
+        id: Date.now(), title: inp.value.trim(), cat: null, done: false,
+        created: Date.now(), updatedAt: null, mod: Date.now(), pos: minPos - 1
+      });
+      inp.value = '';
+      save(); render();
+    }
+  };
+  pipWin.addEventListener('pagehide', () => { pipWin = null; updatePipBtn(); });
+  pipRender();
+  updatePipBtn();
+}
+function pipRender() {
+  if (!pipWin) return;
+  const d = pipWin.document;
+  const list = d.getElementById('pipList');
+  if (!list) return;
+  list.innerHTML = '';
+  const act = tasks.slice().sort(cmp).filter(t => !t.done);
+  if (!act.length) { list.innerHTML = '<div class="pempty">Всё сделано 🎉</div>'; return; }
+  act.forEach(t => {
+    const row = d.createElement('div'); row.className = 'pt';
+    const c = d.createElement('div'); c.className = 'pc'; c.textContent = '✓';
+    c.title = 'Выполнено';
+    c.onclick = () => {
+      t.done = true; t.completedAt = Date.now(); t.mod = Date.now();
+      spawnRepeat(t);
+      save(); render();
+    };
+    const s = d.createElement('div'); s.className = 'ptit';
+    s.textContent = (t.pinned ? '📌 ' : '') + t.title;
+    s.style.color = effColor(t);
+    row.append(c, s);
+    if (t.due) {
+      const du = d.createElement('div');
+      du.className = 'pdue' + (dueClass(t) === 'overdue' ? ' over' : '');
+      du.textContent = countdown(t);
+      row.appendChild(du);
+    }
+    list.appendChild(row);
+  });
+}
+function updatePipBtn() {
+  const b = $('pipBtn');
+  if (!window.documentPictureInPicture) { b.style.display = 'none'; return; }
+  b.style.display = '';
+  b.textContent = pipWin ? '🪟 закрыть мини-окно' : '🪟 поверх окон';
+}
+$('pipBtn').onclick = togglePip;
+updatePipBtn();
 
 /* --- Кнопка-закладка «В задачи» --- */
 const BM_CODE = "javascript:(()=>{const s=(window.getSelection()+'').trim();const t=s||prompt('Текст задачи:','');if(t)window.open('https://alextask.ru/?add='+encodeURIComponent(t.slice(0,300)),'alextask')})()";
