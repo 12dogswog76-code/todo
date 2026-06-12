@@ -264,8 +264,10 @@
   .pdot.auto.sel { border: 2px dashed #fff; }
 
   .fdot {
-    width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
-    border: 2px solid transparent; display: inline-block; vertical-align: middle;
+    width: 23px; height: 23px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; display: inline-flex;
+    align-items: center; justify-content: center; vertical-align: middle;
+    font-size: 10.5px; font-weight: 700; color: #15171c; line-height: 1;
   }
   .fdot.on { border-color: #fff; }
   body.light .fdot { box-shadow: inset 0 0 0 1px #d4d7de; }
@@ -1088,13 +1090,16 @@ function render() {
     arc.innerHTML = '🗃 архив';
     arc.onclick = () => { state.fArchive = !state.fArchive; save(); render(); };
     f.appendChild(arc);
-    // цвета: можно выбрать несколько
+    // цвета: показываем только используемые, внутри — количество активных задач
     COLOR_ORDER.forEach(col => {
+      const cnt = tasks.filter(t => !t.done && effColor(t) === col).length;
       const on = state.colors.includes(col);
+      if (!cnt && !on) return; // цвет никем не используется — не показываем
       const dEl = document.createElement('span');
       dEl.className = 'fdot' + (on ? ' on' : '');
       dEl.style.background = col;
-      dEl.title = (COLORS.find(c => c[0] === col) || ['', ''])[1];
+      dEl.textContent = cnt || '';
+      dEl.title = (COLORS.find(c => c[0] === col) || ['', ''])[1] + ': ' + cnt;
       dEl.onclick = () => {
         state.colors = on ? state.colors.filter(x => x !== col) : state.colors.concat([col]);
         save(); render();
@@ -1118,9 +1123,11 @@ function render() {
       f.appendChild(el);
     }
     state.colors.forEach(col => {
+      const cnt = tasks.filter(t => !t.done && effColor(t) === col).length;
       const dEl = document.createElement('span');
       dEl.className = 'fdot on';
       dEl.style.background = col;
+      dEl.textContent = cnt || '';
       dEl.title = 'Убрать цвет';
       dEl.onclick = () => { state.colors = state.colors.filter(x => x !== col); save(); render(); };
       f.appendChild(dEl);
@@ -2152,7 +2159,7 @@ const PIP_CSS = [
   '.pchip { font-size:11px; color:#aab0c0; border:1px solid #424650; border-radius:999px; padding:3px 9px; cursor:pointer; user-select:none; }',
   '.pchip.on { background:#e53e3e22; border-color:#e53e3e; color:#ff9d9d; }',
   '#pipColors { display:flex; gap:5px; margin-bottom:8px; align-items:center; }',
-  '.pdotf { width:18px; height:18px; border-radius:50%; cursor:pointer; border:2px solid transparent; }',
+  '.pdotf { width:21px; height:21px; border-radius:50%; cursor:pointer; border:2px solid transparent; display:inline-flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700; color:#15171c; line-height:1; }',
   '.pdotf.on { border-color:#fff; }',
   '.pdotf.pall { width:auto; height:auto; border-radius:999px; font-size:10.5px; color:#aab0c0; border:1px solid #424650; padding:2px 8px; }',
   '.pdotf.pall.on { border-color:#e53e3e; color:#ff9d9d; }',
@@ -2280,9 +2287,15 @@ function pipRender() {
     pcl.style.display = pipFiltOpen ? '' : 'none';
     pcl.innerHTML = '';
     [''].concat(COLOR_ORDER).forEach(col => {
+      const cnt = col ? tasks.filter(t => !t.done && effColor(t) === col).length : 0;
+      if (col && !cnt && pipColor !== col) return; // только используемые цвета
       const ch = d.createElement('span');
       ch.className = 'pdotf' + (col === '' ? ' pall' : '') + (pipColor === col ? ' on' : '');
-      if (col) { ch.style.background = col; ch.title = col; } else ch.textContent = 'Все цвета';
+      if (col) {
+        ch.style.background = col;
+        ch.textContent = cnt || '';
+        ch.title = (COLORS.find(c => c[0] === col) || ['', ''])[1] + ': ' + cnt;
+      } else ch.textContent = 'Все цвета';
       ch.onclick = () => {
         pipColor = col;
         localStorage.setItem(LS + '_pipColor', pipColor);
