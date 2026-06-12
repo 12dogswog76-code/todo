@@ -113,6 +113,17 @@
   .pill.ico.on, .pill.ico:focus-within { border-color: #e53e3e; }
   .pill.ico.on input { color: #ff9d9d; }
 
+  /* --- Верхняя панель быстрых функций --- */
+  .topbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .topbar button {
+    background: transparent; border: 1px solid #424650; border-radius: 999px;
+    color: #aab0c0; cursor: pointer; font-size: 12.5px; padding: 5px 12px;
+    transition: all .12s;
+  }
+  .topbar button:hover { border-color: #e53e3e; color: #e8eaf0; }
+  body.light .topbar button { color: #5f6673; border-color: #c6cad3; }
+  body.light .topbar button:hover { border-color: #e53e3e; color: #1c1e24; }
+
   /* --- Поиск --- */
   #searchInput {
     width: 100%;
@@ -279,6 +290,14 @@
     font-size: 15px; line-height: 1; padding: 5px 8px; border-radius: 6px;
   }
   .mv:hover { color: #e8eaf0; background: #2a2d35; }
+
+  .arcb {
+    background: none; border: none; color: #5a6070; cursor: pointer;
+    font-size: 15px; padding: 4px 6px; border-radius: 6px;
+  }
+  .arcb:hover { color: #e8eaf0; background: #2a2d35; }
+  body.light .arcb { color: #9aa0ae; }
+  body.light .arcb:hover { background: #eceef2; color: #1c1e24; }
 
   .del {
     background: none; border: none; color: #5a6070; cursor: pointer;
@@ -534,6 +553,14 @@
   <h1>Мои дела <span id="cloudDot" title="облако не подключено"></span></h1>
   <div class="stats" id="stats"></div>
 
+  <div class="topbar">
+    <button id="notifBtn">🔕 Уведомления: выкл</button>
+    <button id="dateBtn">📅 Даты: 12 июн</button>
+    <button id="themeBtn">☀️ Светлая тема</button>
+    <button id="pipBtn" style="display:none">🪟 Поверх окон</button>
+    <button id="guideBtn">❔ Как пользоваться</button>
+  </div>
+
   <div class="addbox">
     <div class="addrow">
       <input id="taskInput" type="text" placeholder="Что нужно сделать? Enter — и готово" autofocus>
@@ -573,15 +600,11 @@
   <div id="list"></div>
 
   <div class="iobar">
-    <button id="exportBtn">⇪ экспорт данных</button>
-    <button id="importBtn">⇩ импорт данных</button>
-    <button id="syncBtn">☁ облако</button>
-    <button id="statsBtn">📊 статистика</button>
-    <button id="notifBtn">🔕 уведомления: выкл</button>
-    <button id="pipBtn" style="display:none">🪟 поверх окон</button>
-    <button id="themeBtn">☀️ светлая тема</button>
-    <button id="dateBtn">📅 даты: 12 июн</button>
-    <button id="guideBtn">❔ как пользоваться</button>
+    <button id="exportBtn">⇪ Экспорт данных</button>
+    <button id="importBtn">⇩ Импорт данных</button>
+    <button id="syncBtn">☁ Облако</button>
+    <button id="statsBtn">📊 Статистика</button>
+    <button id="lifeBtn">⏳ Жизненный цикл</button>
   </div>
   <div id="ioPanel">
     <textarea id="ioText" placeholder="Сюда вставь код с другого устройства…"></textarea>
@@ -612,6 +635,16 @@
     <div class="hint" id="statStreak"></div>
   </div>
 
+  <div id="lifePanel">
+    <div class="hint" style="margin-top:0">Жизненный цикл выполненной задачи: сначала остаётся на месте → опускается вниз списка → уезжает в архив 🗃.</div>
+    <div class="iorow" style="align-items:center">
+      <span class="hint" style="margin:0">Вниз списка через:</span>
+      <select id="lifeDown" class="pill"></select>
+      <span class="hint" style="margin:0">В архив через:</span>
+      <select id="lifeArc" class="pill"></select>
+    </div>
+  </div>
+
   <div class="footer">
     <a href="https://t.me/zerowpoint" target="_blank" rel="noopener">автор — @zerowpoint</a>
   </div>
@@ -625,18 +658,25 @@
     <h3>Основы</h3>
     <ul>
       <li>Напиши задачу и нажми <b>Enter</b> — готово. Категория, этап, дедлайн и повтор — по желанию.</li>
-      <li><b>Клик по задаче</b> — редактировать текст, категорию, этап, дедлайн и чек-лист подпунктов.</li>
-      <li>Дата + время = таймер обратного отсчёта (время без даты = сегодня). Просроченное подсветится красным.</li>
-      <li>✓ — выполнено (опустится вниз через 2,5 часа, через неделю уедет в архив) · 📌 — закрепить · ● — цвет · ⠿ — перетащить · ▲▼ — порядок · ✕ — удалить.</li>
-      <li>🔁 Повторяющаяся задача после выполнения сама создастся на следующий срок (каждый день / неделю / месяц).</li>
-      <li>☑ Чек-лист: открой задачу кликом, в поле «+ подпункт» жми Enter — подпункты с галочками появятся прямо в задаче, со счётчиком «☑ 2/5».</li>
-      <li>🔍 Поиск ищет по названиям, этапам и чек-листам. Фильтр «🗃 архив» — выполненные старше недели.</li>
-      <li>🎨 Чип «по цвету» в фильтрах группирует задачи по цветам. Цвет задаче задаётся кнопкой ●.</li>
-      <li>🏷 Свои категории: кнопка «✎ категории» рядом с чипами — задай название, выбери эмодзи из палитры, удаляй ненужные. Категории синхронизируются между устройствами.</li>
-      <li>📊 «Статистика» внизу — сколько выполнено сегодня / за неделю / за месяц и серия дней подряд 🔥.</li>
-      <li>🪟 «Поверх окон» внизу (Chrome на компе) — мини-список, который висит поверх всех программ: отмечай и добавляй задачи, не переключаясь.</li>
+      <li><b>Клик по задаче</b> — редактор: текст, категория, этап, дедлайн, повтор и чек-лист подпунктов.</li>
+      <li>Дата + время = таймер обратного отсчёта (время без даты = сегодня). Просроченное краснеет, уведомления приходят за 30 минут и в момент истечения.</li>
+      <li>✓ — выполнено · 📌 — закрепить сверху · ● — цвет (10 цветов) · ⠿ — перетащить · ▲▼ — порядок · 🗃 — сразу в архив · ✕ — удалить (с подтверждением).</li>
+      <li>🔁 Повторы: каждый день / неделю / месяц / свой период в днях — после выполнения задача сама создастся на следующий срок.</li>
+      <li>☑ Чек-лист: в редакторе задачи поле «+ подпункт», Enter добавляет; счётчик «☑ 2/5» в метках.</li>
+      <li>🔍 Поиск ищет по названиям, этапам и чек-листам.</li>
+      <li>«<b># Фильтры</b>» — выбирай сразу несколько категорий и цветов; кружки цветов показывают число активных задач и появляются только у используемых цветов. Там же «✓ выполненные» — недавно закрытые задачи, ещё не уехавшие в архив.</li>
+      <li>Справа от фильтров: «🗃 Архив» и «Скрыть выполненные».</li>
+      <li>«<b>Сортировка</b>» — ручная, по цвету, по дате добавления, по алфавиту (всё в обе стороны). Перетаскивание возвращает ручной порядок.</li>
+      <li>🏷 «➕ Категории» — свои категории: имя, иконка (эмодзи или каталог dev-иконок), цвет задач по умолчанию; ✎ — редактировать, ✕ — удалить.</li>
+      <li>📊 «Статистика» — выполнено сегодня / за неделю / за месяц и серия дней подряд 🔥.</li>
+      <li>🪟 «Поверх окон» (Chrome на компе) — мини-список поверх всех программ: фильтры, сортировка, чек-листы, кнопка ↗ к задаче.</li>
+      <li>Над списком — быстрые кнопки: 🔔 Уведомления, 📅 Даты (12 июн / 12.06), ☀️ Тема, 🪟 Поверх окон и этот гайд. Внизу — Экспорт/Импорт, ☁ Облако, 📊 Статистика и ⏳ Жизненный цикл.</li>
       <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
     </ul>
+
+    <h3>🗃 Архив и жизненный цикл</h3>
+    <p>Выполненная задача сначала остаётся на своём месте, потом опускается вниз списка (по умолчанию через 2,5 часа), а потом сама уезжает в архив (по умолчанию через 7 дней). Архив открывается кнопкой «🗃 Архив» справа от фильтров: там работает поиск, ↩ возвращает задачу в работу, ✕ удаляет насовсем.</p>
+    <p>Сроки настраиваются кнопкой «⏳ жизненный цикл» внизу — можно поставить и «сразу», и «никогда». Кнопка 🗃 у выполненной задачи отправляет её в архив немедленно.</p>
 
     <h3>⚡ Кнопка «В задачи» — задача из любого текста</h3>
     <p>Выделил текст на любой странице (тему письма, название товара, что угодно) → клик по закладке → текст стал задачей здесь. Установка: включи панель закладок (<b>Ctrl+Shift+B</b>) и перетащи на неё эту кнопку:</p>
@@ -687,8 +727,11 @@
 
 <script>
 const LS = 'alexey_todo_v1';
-const DONE_DELAY = 2.5 * 60 * 60 * 1000; // 2,5 часа до «опускания» выполненных
-const ARCHIVE_AFTER = 7 * 24 * 60 * 60 * 1000; // через неделю выполненные уезжают в архив
+// жизненный цикл выполненной задачи (настраивается, в минутах; arc: -1 = никогда)
+let life = { down: 150, arc: 10080 };
+try { Object.assign(life, JSON.parse(localStorage.getItem(LS + '_life')) || {}); } catch(e) {}
+function lifeDownMs() { return life.down * 60000; }
+function lifeArcMs() { return life.arc < 0 ? -1 : life.arc * 60000; }
 
 let tasks = [];
 try { tasks = JSON.parse(localStorage.getItem(LS)) || []; } catch(e) {}
@@ -703,7 +746,7 @@ if (tasks.some(t => t.pos === undefined)) {
   legacy.forEach((t, i) => { if (t.pos === undefined) t.pos = i; });
 }
 
-let state = { showDone: true, sort: 'manual', catsOpen: false, fCats: [], fArchive: false, colors: [] };
+let state = { showDone: true, sort: 'manual', catsOpen: false, fCats: [], fArchive: false, fDone: false, colors: [] };
 try { Object.assign(state, JSON.parse(localStorage.getItem(LS+'_ui')) || {}); } catch(e) {}
 // миграция старых одиночных фильтров на множественные
 if (state.filter) {
@@ -885,10 +928,13 @@ function countdown(t) {
   return past ? 'просрочено на ' + s : 'осталось ' + s;
 }
 function isParked(t) {
-  return t.done && t.completedAt && (Date.now() - t.completedAt > DONE_DELAY);
+  return t.done && t.completedAt && (Date.now() - t.completedAt >= lifeDownMs());
 }
 function isArchived(t) {
-  return t.done && t.completedAt && (Date.now() - t.completedAt > ARCHIVE_AFTER);
+  if (!t.done) return false;
+  if (t.arc) return true; // отправлена в архив вручную
+  const a = lifeArcMs();
+  return a >= 0 && t.completedAt && (Date.now() - t.completedAt >= a);
 }
 function cmp(a, b) {
   const pa = isParked(a), pb = isParked(b);
@@ -1058,7 +1104,7 @@ function render() {
   const fIcon = c => catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '';
   const f = $('filters');
   f.innerHTML = '';
-  const activeCnt = state.fCats.length + state.colors.length + (isArc ? 1 : 0);
+  const activeCnt = state.fCats.length + state.colors.length + (state.fDone ? 1 : 0);
   const tgl = document.createElement('span');
   tgl.className = 'chip' + (state.catsOpen || activeCnt ? ' on' : '');
   tgl.innerHTML = '# Фильтры' + (activeCnt ? ' (' + activeCnt + ')' : '') + ' ' + (state.catsOpen ? '▴' : '▾');
@@ -1071,7 +1117,7 @@ function render() {
     all.className = 'chip' + (activeCnt === 0 ? ' on' : '');
     all.textContent = 'Все';
     all.title = 'Сбросить все фильтры';
-    all.onclick = () => { state.fCats = []; state.colors = []; state.fArchive = false; save(); render(); };
+    all.onclick = () => { state.fCats = []; state.colors = []; state.fArchive = false; state.fDone = false; save(); render(); };
     f.appendChild(all);
     // категории: можно выбрать несколько
     allCatNames().concat(['без категории']).forEach(c => {
@@ -1085,11 +1131,16 @@ function render() {
       };
       f.appendChild(el);
     });
-    const arc = document.createElement('span');
-    arc.className = 'chip' + (isArc ? ' on' : '');
-    arc.innerHTML = '🗃 архив';
-    arc.onclick = () => { state.fArchive = !state.fArchive; save(); render(); };
-    f.appendChild(arc);
+    const dn = document.createElement('span');
+    dn.className = 'chip' + (state.fDone ? ' on' : '');
+    dn.innerHTML = '✓ выполненные';
+    dn.title = 'Выполненные, которые ещё не в архиве';
+    dn.onclick = () => {
+      state.fDone = !state.fDone;
+      if (state.fDone) state.fArchive = false;
+      save(); render();
+    };
+    f.appendChild(dn);
     // цвета: показываем только используемые, внутри — количество активных задач
     COLOR_ORDER.forEach(col => {
       const cnt = tasks.filter(t => !t.done && effColor(t) === col).length;
@@ -1115,11 +1166,11 @@ function render() {
       el.onclick = () => { state.fCats = state.fCats.filter(x => x !== c); save(); render(); };
       f.appendChild(el);
     });
-    if (isArc) {
+    if (state.fDone) {
       const el = document.createElement('span');
       el.className = 'chip on';
-      el.innerHTML = '🗃 архив ✕';
-      el.onclick = () => { state.fArchive = false; save(); render(); };
+      el.innerHTML = '✓ выполненные ✕';
+      el.onclick = () => { state.fDone = false; save(); render(); };
       f.appendChild(el);
     }
     state.colors.forEach(col => {
@@ -1150,9 +1201,19 @@ function render() {
   f.appendChild(sortSel);
 
   const sp = document.createElement('span'); sp.className = 'spacer'; f.appendChild(sp);
-  if (!isArc) {
-    const tg = document.createElement('button');
-    tg.id = 'toggleDone';
+  // архив — отдельной кнопкой справа
+  const arcC = document.createElement('span');
+  arcC.className = 'chip' + (isArc ? ' on' : '');
+  arcC.innerHTML = '🗃 Архив';
+  arcC.onclick = () => {
+    state.fArchive = !state.fArchive;
+    if (state.fArchive) state.fDone = false;
+    save(); render();
+  };
+  f.appendChild(arcC);
+  if (!isArc && !state.fDone) {
+    const tg = document.createElement('span');
+    tg.className = 'chip';
     tg.textContent = state.showDone ? 'Скрыть выполненные' : 'Показать выполненные';
     tg.onclick = () => { state.showDone = !state.showDone; save(); render(); };
     f.appendChild(tg);
@@ -1165,6 +1226,8 @@ function render() {
     if (state.colors.length && !state.colors.includes(effColor(t))) return false; // выбранные цвета
     if (isArc) {
       if (!isArchived(t)) return false;
+    } else if (state.fDone) { // выполненные, ещё не уехавшие в архив
+      if (!t.done || isArchived(t)) return false;
     } else {
       if (isArchived(t)) return false;
       if (!state.showDone && t.done) return false;
@@ -1202,6 +1265,7 @@ function render() {
     ch.onclick = () => {
       t.done = !t.done;
       t.completedAt = t.done ? Date.now() : null;
+      if (!t.done) t.arc = false; // возврат в работу — из архива тоже
       t.mod = Date.now();
       if (t.done) spawnRepeat(t); // повторяющаяся задача создаётся на следующий срок
       save(); render();
@@ -1504,6 +1568,25 @@ function render() {
       row.appendChild(mv);
     }
 
+    if (t.done && !isArchived(t)) {
+      const arcB = document.createElement('button');
+      arcB.className = 'arcb'; arcB.textContent = '🗃'; arcB.title = 'В архив сразу';
+      arcB.onclick = () => {
+        t.arc = true; t.mod = Date.now();
+        save(); render();
+      };
+      row.appendChild(arcB);
+    }
+    if (isArchived(t)) {
+      const backB = document.createElement('button');
+      backB.className = 'arcb'; backB.textContent = '↩'; backB.title = 'Вернуть в работу';
+      backB.onclick = () => {
+        t.done = false; t.completedAt = null; t.arc = false; t.mod = Date.now();
+        save(); render();
+      };
+      row.appendChild(backB);
+    }
+
     const del = document.createElement('button');
     del.className = 'del'; del.textContent = '✕'; del.title = 'Удалить';
     del.onclick = () => {
@@ -1591,7 +1674,7 @@ function fillStats() {
 }
 
 function closePanels(except) {
-  ['ioPanel', 'syncPanel', 'statsPanel'].forEach(p => {
+  ['ioPanel', 'syncPanel', 'statsPanel', 'lifePanel'].forEach(p => {
     if (p !== except) $(p).classList.remove('open');
   });
 }
@@ -1599,6 +1682,30 @@ $('statsBtn').onclick = () => {
   closePanels('statsPanel');
   $('statsPanel').classList.toggle('open');
   if ($('statsPanel').classList.contains('open')) fillStats();
+};
+
+/* --- Жизненный цикл задачи --- */
+function saveLife() {
+  localStorage.setItem(LS + '_life', JSON.stringify(life));
+}
+$('lifeDown').innerHTML =
+  '<option value="0">Сразу</option><option value="30">30 минут</option><option value="60">1 час</option>' +
+  '<option value="150">2,5 часа</option><option value="300">5 часов</option><option value="600">10 часов</option>' +
+  '<option value="1440">1 день</option>';
+$('lifeArc').innerHTML =
+  '<option value="0">Сразу</option><option value="1440">1 день</option><option value="4320">3 дня</option>' +
+  '<option value="10080">7 дней</option><option value="20160">14 дней</option><option value="43200">30 дней</option>' +
+  '<option value="-1">Никогда</option>';
+$('lifeDown').value = String(life.down);
+$('lifeArc').value = String(life.arc);
+if ($('lifeDown').selectedIndex < 0) $('lifeDown').value = '150';
+if ($('lifeArc').selectedIndex < 0) $('lifeArc').value = '10080';
+$('lifeDown').onchange = () => { life.down = parseInt($('lifeDown').value, 10) || 0; saveLife(); render(); };
+$('lifeArc').onchange = () => { life.arc = parseInt($('lifeArc').value, 10); saveLife(); render(); };
+$('lifeBtn').onclick = () => {
+  const was = $('lifePanel').classList.contains('open');
+  closePanels('lifePanel');
+  $('lifePanel').classList.toggle('open', !was);
 };
 
 /* --- Экспорт / импорт --- */
@@ -1645,7 +1752,7 @@ $('applyBtn').onclick = () => {
   if (!del_confirm_io()) return;
   tasks = data.tasks;
   if (data.state) {
-    state = Object.assign({ showDone: true, sort: 'manual', catsOpen: false, fCats: [], fArchive: false, colors: [] }, data.state);
+    state = Object.assign({ showDone: true, sort: 'manual', catsOpen: false, fCats: [], fArchive: false, fDone: false, colors: [] }, data.state);
     if (!Array.isArray(state.fCats)) state.fCats = [];
     if (!Array.isArray(state.colors)) state.colors = [];
   }
@@ -2051,12 +2158,12 @@ function notifLabel() {
   const b = $('notifBtn');
   if (!('Notification' in window)) { b.style.display = 'none'; return; }
   if (Notification.permission === 'denied') {
-    b.textContent = '🔕 уведомления заблокированы в браузере';
+    b.textContent = '🔕 Уведомления заблокированы';
     return;
   }
   b.textContent = (notifOn && Notification.permission === 'granted')
-    ? '🔔 уведомления: вкл'
-    : '🔕 уведомления: выкл';
+    ? '🔔 Уведомления: вкл'
+    : '🔕 Уведомления: выкл';
 }
 
 async function showNotif(title, body) {
@@ -2373,7 +2480,7 @@ function updatePipBtn() {
   const b = $('pipBtn');
   if (!window.documentPictureInPicture) { b.style.display = 'none'; return; }
   b.style.display = '';
-  b.textContent = pipWin ? '🪟 закрыть мини-окно' : '🪟 поверх окон';
+  b.textContent = pipWin ? '🪟 Закрыть мини-окно' : '🪟 Поверх окон';
 }
 $('pipBtn').onclick = togglePip;
 updatePipBtn();
@@ -2381,7 +2488,7 @@ updatePipBtn();
 /* --- Тема и формат дат --- */
 function applyTheme() {
   document.body.classList.toggle('light', isLight());
-  $('themeBtn').textContent = isLight() ? '🌙 тёмная тема' : '☀️ светлая тема';
+  $('themeBtn').textContent = isLight() ? '🌙 Тёмная тема' : '☀️ Светлая тема';
   if (pipWin) { try { pipWin.document.body.classList.toggle('light', isLight()); } catch(e) {} }
 }
 $('themeBtn').onclick = () => {
@@ -2391,7 +2498,7 @@ $('themeBtn').onclick = () => {
   render();
 };
 function dateBtnLabel() {
-  $('dateBtn').textContent = '📅 даты: ' + (dateFmt === 'name' ? '12 июн' : '12/06');
+  $('dateBtn').textContent = '📅 Даты: ' + (dateFmt === 'name' ? '12 июн' : '12/06');
 }
 $('dateBtn').onclick = () => {
   dateFmt = dateFmt === 'name' ? 'num' : 'name';
