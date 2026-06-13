@@ -205,8 +205,8 @@
   .body { flex: 1; min-width: 0; cursor: pointer; }
   .title { font-size: 15px; line-height: 1.35; word-wrap: break-word; color: #ffffff; }
   .task.cat-Работа .title { color: #ff6b6b; }
-  .task.cat-Личное .title { color: #ffd95e; }
-  .task.cat-Купить .title { color: #ffffff; }
+  .task.cat-Личное .title { color: #7fb8ff; }
+  .task.cat-Купить .title { color: #8fd6a8; }
   .task.cat-ПК .title { color: #7fb8ff; }
   .tag.cat-ПК { color: #7fb8ff; }
   .title a, .stage a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
@@ -237,8 +237,8 @@
   .meta { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
   .tag { font-size: 11px; color: #9aa0ae; background: #2a2d35; border-radius: 6px; padding: 2px 7px; }
   .tag.cat-Работа { color: #ff6b6b; }
-  .tag.cat-Купить { color: #ffffff; }
-  .tag.cat-Личное { color: #ffd95e; }
+  .tag.cat-Купить { color: #8fd6a8; }
+  .tag.cat-Личное { color: #7fb8ff; }
   .dates { font-size: 10.5px; color: #707688; white-space: nowrap; }
   .due { font-size: 11px; border-radius: 6px; padding: 2px 7px; background: #2a2d35; color: #9aa0ae; }
   .due.overdue { background: #e53e3e26; color: #ff8b8b; }
@@ -560,13 +560,13 @@
   body.light .pill.ico.on input { color: #e53e3e; }
   body.light .title { color: #1c1e24; }
   body.light .task.cat-Работа .title { color: #d32f2f; }
-  body.light .task.cat-Личное .title { color: #b8860b; }
-  body.light .task.cat-Купить .title { color: #1c1e24; }
+  body.light .task.cat-Личное .title { color: #1e6fd9; }
+  body.light .task.cat-Купить .title { color: #2e8f5e; }
   body.light .task.cat-ПК .title { color: #1e6fd9; }
   body.light .tag { background: #eceef2; color: #5f6673; }
   body.light .tag.cat-Работа { color: #d32f2f; }
-  body.light .tag.cat-Личное { color: #b8860b; }
-  body.light .tag.cat-Купить { color: #1c1e24; }
+  body.light .tag.cat-Личное { color: #1e6fd9; }
+  body.light .tag.cat-Купить { color: #2e8f5e; }
   body.light .tag.cat-ПК { color: #1e6fd9; }
   body.light .due { background: #eceef2; color: #5f6673; }
   body.light .due.timer { background: #2e8f5e1a; color: #2e8f5e; }
@@ -849,10 +849,9 @@ const SYNERGY_LOGO = '<svg viewBox="0 0 100 100" width="19" height="19" style="d
 const SYNERGY_MINI = '<svg viewBox="0 0 100 100" width="12" height="12" style="vertical-align:-1px"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg>';
 // категории: редактируемый список, синхронизируется через облако
 const DEFAULT_CATS = [
-  { n: 'Работа', e: '__syn' },
-  { n: 'Купить', e: '💰' },
-  { n: 'Личное', e: '😐' },
-  { n: 'ПК', e: '🖥️' }
+  { n: 'Работа', e: '💼', c: '#ff6b6b' },
+  { n: 'Личное', e: '😊', c: '#7fb8ff' },
+  { n: 'Купить', e: '🛒', c: '#8fd6a8' }
 ];
 let catList = null;
 try { catList = JSON.parse(localStorage.getItem(LS + '_cats')); } catch(e) {}
@@ -882,7 +881,7 @@ function saveCats() {
   scheduleSync();
 }
 
-const CAT_COLOR = { 'Работа': '#ff6b6b', 'Личное': '#ffd95e', 'ПК': '#7fb8ff' };
+const CAT_COLOR = { 'Работа': '#ff6b6b', 'Личное': '#7fb8ff', 'Купить': '#8fd6a8', 'ПК': '#7fb8ff' };
 // палитра: 10 цветов, порядок = «от красного к белому»
 const COLORS = [
   ['#ff6b6b', 'Красный'], ['#ffa94d', 'Оранжевый'], ['#ffd95e', 'Жёлтый'],
@@ -2638,11 +2637,21 @@ function hintGuideBtn() {
     tip.style.top = (r.bottom + 8) + 'px';
   };
   place();
+  // макет ещё «доезжает» после закрытия гайда (анимация padding-left .25s + scrollIntoView),
+  // поэтому держим пузырёк привязанным к кнопке, пока всё не успокоится
+  const t0 = performance.now();
+  const track = () => {
+    place();
+    if (performance.now() - t0 < 600) requestAnimationFrame(track);
+  };
+  requestAnimationFrame(track);
+  document.body.addEventListener('transitionend', place);
   window.addEventListener('resize', place);
   window.addEventListener('scroll', place);
   setTimeout(() => {
     b.classList.remove('pulse');
     tip.remove();
+    document.body.removeEventListener('transitionend', place);
     window.removeEventListener('resize', place);
     window.removeEventListener('scroll', place);
   }, 8000);
