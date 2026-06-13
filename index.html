@@ -610,6 +610,36 @@
     .cbox { width: 22px; height: 22px; min-width: 22px; }
     .citem { font-size: 14px; }
   }
+
+  /* --- Всплывающее окно писем (уведомления из почты) --- */
+  #mailPop {
+    position: fixed; left: 14px; top: 14px; z-index: 90;
+    width: 330px; max-width: calc(100vw - 28px); max-height: 70vh;
+    background: #15171c; border: 1px solid #33363e; border-radius: 14px;
+    box-shadow: 0 10px 40px #000c; display: none; flex-direction: column;
+    animation: slideIn .25s ease;
+  }
+  #mailPop.open { display: flex; }
+  .mailhead { display: flex; align-items: center; gap: 8px; padding: 11px 13px; border-bottom: 1px solid #2c3038; }
+  .mailhead b { font-size: 14px; }
+  .mailhead .sp { flex: 1; }
+  .mailhead button { background: none; border: none; color: #9aa0ae; cursor: pointer; font-size: 12.5px; padding: 3px 6px; border-radius: 6px; }
+  .mailhead button:hover { color: #e8eaf0; background: #2a2d35; }
+  #mailList { overflow-y: auto; padding: 6px; }
+  .mailitem { display: flex; gap: 8px; align-items: flex-start; background: #1c1e24; border: 1px solid #2c3038; border-radius: 10px; padding: 9px 10px; margin-bottom: 6px; }
+  .msrc { font-size: 10.5px; font-weight: 700; border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
+  .msrc.jira { background: #1e6fd933; color: #7fb8ff; }
+  .msrc.person { background: #4caf7d22; color: #8fd6a8; }
+  .mtext { flex: 1; min-width: 0; }
+  .msubj { font-size: 13px; color: #e8eaf0; line-height: 1.3; word-wrap: break-word; }
+  .mfrom { font-size: 11px; color: #9aa0ae; margin-top: 3px; }
+  .mread { background: none; border: 1px solid #424650; border-radius: 6px; color: #9aa0ae; cursor: pointer; font-size: 12px; padding: 2px 7px; }
+  .mread:hover { color: #8fd6a8; border-color: #4caf7d; }
+  .topbar button.mbell.has { border-color: #e53e3e; color: #fff; background: #e53e3e22; }
+  body.light #mailPop { background: #fff; border-color: #d4d7de; }
+  body.light .mailhead { border-color: #e4e6ea; }
+  body.light .mailitem { background: #f2f3f6; border-color: #d4d7de; }
+  body.light .msubj { color: #1c1e24; }
 </style>
 </head>
 <body>
@@ -623,6 +653,7 @@
     <button id="themeBtn">☀️ Светлая тема</button>
     <button id="pipBtn" style="display:none">🪟 Поверх окон</button>
     <button id="guideBtn">❔ Как пользоваться</button>
+    <button id="mailBell" class="mbell" style="display:none" title="Письма с почты">✉</button>
   </div>
 
   <div class="addbox">
@@ -701,6 +732,11 @@
       <button id="syncOff" class="danger" style="display:none">Отключить облако</button>
     </div>
     <div id="syncMsg" class="hint"></div>
+    <input id="mailBinInput" type="text" class="editInput" style="margin-top:12px" placeholder="Код хранилища писем (из скрипта Gmail) — для уведомлений с почты">
+    <div class="iorow">
+      <button id="mailBinSave">Подключить почту</button>
+    </div>
+    <div id="mailBinMsg" class="hint"></div>
   </div>
 
   <div id="statsPanel">
@@ -800,6 +836,16 @@
       <button id="wLater">Позже</button>
     </div>
   </div>
+</div>
+
+<div id="mailPop">
+  <div class="mailhead">
+    <b>📨 Письма (<span id="mailCount">0</span>)</b>
+    <span class="sp"></span>
+    <button id="mailAll">прочитать все</button>
+    <button id="mailHide" title="Скрыть">✕</button>
+  </div>
+  <div id="mailList"></div>
 </div>
 
 <script>
@@ -2000,6 +2046,87 @@ $('syncOff').onclick = () => {
   setCloud('', '');
   syncUI(); syncMsg('Облако отключено. Данные остались и тут, и в облаке.');
 };
+
+/* --- Уведомления о письмах из почты (отдельный mail-бин jsonbin, только чтение) --- */
+let mailBin = localStorage.getItem(LS + '_mailbin') || '';
+let mailSeen = {};
+try { mailSeen = JSON.parse(localStorage.getItem(LS + '_mailseen')) || {}; } catch(e) {}
+let mailItems = [];
+let mailHidden = false;
+
+function mailConfigured() { return !!(mailBin && sync && sync.key); }
+function saveMailSeen() { localStorage.setItem(LS + '_mailseen', JSON.stringify(mailSeen)); }
+function unreadMail() { return mailItems.filter(m => !mailSeen[m.id]); }
+
+async function mailPull() {
+  if (!mailConfigured()) { renderMail(); return; }
+  try {
+    const r = await fetch(JB + '/' + mailBin + '/latest', { headers: { 'X-Master-Key': sync.key } });
+    if (!r.ok) throw 0;
+    const data = await r.json();
+    mailItems = (data.record && data.record.mail) || [];
+    // забываем «прочитано» для писем, которых уже нет в облаке
+    const ids = {}; mailItems.forEach(m => ids[m.id] = 1);
+    Object.keys(mailSeen).forEach(id => { if (!ids[id]) delete mailSeen[id]; });
+    saveMailSeen();
+    if (unreadMail().length) mailHidden = false; // новое письмо — снова показываем окно
+    renderMail();
+  } catch(e) {}
+}
+
+function renderMail() {
+  const pop = $('mailPop');
+  if (!pop) return;
+  const unread = unreadMail();
+  $('mailCount').textContent = unread.length;
+  if (unread.length && !mailHidden) pop.classList.add('open');
+  else pop.classList.remove('open');
+  const list = $('mailList');
+  list.innerHTML = '';
+  unread.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'mailitem';
+    row.innerHTML = m.source === 'jira'
+      ? '<span class="msrc jira">Jira</span>'
+      : '<span class="msrc person">Письмо</span>';
+    const txt = document.createElement('div');
+    txt.className = 'mtext';
+    txt.innerHTML = '<div class="msubj">' + esc(m.subject || '(без темы)') + '</div>' +
+      '<div class="mfrom">' + esc(m.name || '') + ' · ' + fmtDT(m.at || Date.now()) + '</div>';
+    row.appendChild(txt);
+    const rd = document.createElement('button');
+    rd.className = 'mread'; rd.textContent = '✓'; rd.title = 'Прочитано';
+    rd.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); renderMail(); };
+    row.appendChild(rd);
+    list.appendChild(row);
+  });
+  updateMailBell();
+}
+
+function updateMailBell() {
+  const b = $('mailBell');
+  if (!b) return;
+  b.style.display = mailConfigured() ? '' : 'none';
+  const n = unreadMail().length;
+  b.textContent = '✉' + (n ? ' ' + n : '');
+  b.classList.toggle('has', n > 0);
+}
+
+$('mailBell').onclick = () => { mailHidden = false; renderMail(); };
+$('mailHide').onclick = () => { mailHidden = true; renderMail(); };
+$('mailAll').onclick = () => { unreadMail().forEach(m => mailSeen[m.id] = Date.now()); saveMailSeen(); renderMail(); };
+$('mailBinInput').value = mailBin;
+$('mailBinSave').onclick = () => {
+  mailBin = $('mailBinInput').value.trim();
+  localStorage.setItem(LS + '_mailbin', mailBin);
+  $('mailBinMsg').textContent = mailBin ? 'Подключено. Проверяю почту…' : 'Почта отключена.';
+  updateMailBell();
+  mailPull();
+};
+updateMailBell();
+mailPull();
+setInterval(() => { if (!document.hidden) mailPull(); }, 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) mailPull(); });
 
 /* --- Чипы категорий в панели добавления + менеджер категорий --- */
 function renderCatChips() {
