@@ -373,6 +373,7 @@
     display: flex; gap: 8px; justify-content: center;
     align-items: center; flex-wrap: wrap; margin-top: 8px;
   }
+  .lcpair { display: inline-flex; align-items: center; gap: 8px; }
 
   /* --- Экспорт / импорт / облако / статистика --- */
   .iobar { display: flex; gap: 14px; margin-top: 16px; justify-content: center; flex-wrap: wrap; }
@@ -640,6 +641,9 @@
   body.light .mailhead { border-color: #e4e6ea; }
   body.light .mailitem { background: #f2f3f6; border-color: #d4d7de; }
   body.light .msubj { color: #1c1e24; }
+  .topbar button.on { border-color: #e53e3e; color: #fff; background: #e53e3e22; }
+  .mailitem.read { opacity: .5; }
+  .mailempty { color: #777d8a; text-align: center; padding: 18px 0; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -652,8 +656,9 @@
     <button id="dateBtn">📅 Даты: 12 июн</button>
     <button id="themeBtn">☀️ Светлая тема</button>
     <button id="pipBtn" style="display:none">🪟 Поверх окон</button>
+    <button id="archiveBtn">📦 Архив</button>
     <button id="guideBtn">❔ Как пользоваться</button>
-    <button id="mailBell" class="mbell" style="display:none" title="Письма с почты">✉</button>
+    <button id="mailBell" class="mbell" style="display:none" title="Письма с почты">📨 Письма</button>
   </div>
 
   <div class="addbox">
@@ -697,10 +702,8 @@
   <div id="lifePanel">
     <div class="hint">Жизненный цикл выполненной задачи: остаётся на месте → опускается вниз списка → уезжает в архив 📦</div>
     <div class="lcrow">
-      <span class="hint" style="margin:0">Вниз списка через:</span>
-      <select id="lifeDown" class="pill"></select>
-      <span class="hint" style="margin:0">В архив через:</span>
-      <select id="lifeArc" class="pill"></select>
+      <span class="lcpair"><span class="hint" style="margin:0">Вниз списка через:</span><select id="lifeDown" class="pill"></select></span>
+      <span class="lcpair"><span class="hint" style="margin:0">В архив через:</span><select id="lifeArc" class="pill"></select></span>
     </div>
   </div>
 
@@ -1326,16 +1329,8 @@ function render() {
   f.appendChild(sortSel);
 
   const sp = document.createElement('span'); sp.className = 'spacer'; f.appendChild(sp);
-  // архив — отдельной кнопкой справа
-  const arcC = document.createElement('span');
-  arcC.className = 'chip' + (isArc ? ' on' : '');
-  arcC.innerHTML = '📦 Архив';
-  arcC.onclick = () => {
-    state.fArchive = !state.fArchive;
-    if (state.fArchive) state.fDone = false;
-    save(); render();
-  };
-  f.appendChild(arcC);
+  // архив теперь кнопкой в верхней панели — подсветим её активной
+  { const ab = $('archiveBtn'); if (ab) ab.classList.toggle('on', !!state.fArchive); }
   if (!isArc && !state.fDone) {
     const tg = document.createElement('span');
     tg.className = 'chip';
@@ -2061,7 +2056,9 @@ let mailBin = localStorage.getItem(LS + '_mailbin') || '';
 let mailSeen = {};
 try { mailSeen = JSON.parse(localStorage.getItem(LS + '_mailseen')) || {}; } catch(e) {}
 let mailItems = [];
-let mailHidden = false;
+let mailOpen = false;
+let mailKnownIds = {};
+let mailFirstPull = true;
 
 function mailConfigured() { return !!(mailBin && sync && sync.key); }
 function saveMailSeen() { localStorage.setItem(LS + '_mailseen', JSON.stringify(mailSeen)); }
@@ -2074,11 +2071,15 @@ async function mailPull() {
     if (!r.ok) throw 0;
     const data = await r.json();
     mailItems = (data.record && data.record.mail) || [];
+    // авто-открытие окна — только при ПОЯВЛЕНИИ нового непрочитанного письма
+    let hasNew = false;
+    mailItems.forEach(m => { if (!mailKnownIds[m.id]) { mailKnownIds[m.id] = 1; if (!mailSeen[m.id]) hasNew = true; } });
+    if (hasNew && !mailFirstPull) mailOpen = true;
+    mailFirstPull = false;
     // забываем «прочитано» для писем, которых уже нет в облаке
     const ids = {}; mailItems.forEach(m => ids[m.id] = 1);
     Object.keys(mailSeen).forEach(id => { if (!ids[id]) delete mailSeen[id]; });
     saveMailSeen();
-    if (unreadMail().length) mailHidden = false; // новое письмо — снова показываем окно
     renderMail();
   } catch(e) {}
 }
@@ -2086,15 +2087,16 @@ async function mailPull() {
 function renderMail() {
   const pop = $('mailPop');
   if (!pop) return;
-  const unread = unreadMail();
-  $('mailCount').textContent = unread.length;
-  if (unread.length && !mailHidden) pop.classList.add('open');
-  else pop.classList.remove('open');
+  const items = mailItems.slice().sort((a, b) => (b.at || 0) - (a.at || 0));
+  $('mailCount').textContent = unreadMail().length;
+  if (mailOpen) pop.classList.add('open'); else pop.classList.remove('open');
   const list = $('mailList');
   list.innerHTML = '';
-  unread.forEach(m => {
+  if (!items.length) { list.innerHTML = '<div class="mailempty">Писем пока нет</div>'; updateMailBell(); return; }
+  items.forEach(m => {
+    const isUnread = !mailSeen[m.id];
     const row = document.createElement('div');
-    row.className = 'mailitem';
+    row.className = 'mailitem' + (isUnread ? '' : ' read');
     row.innerHTML = m.source === 'jira'
       ? '<span class="msrc jira">Jira</span>'
       : '<span class="msrc person">Письмо</span>';
@@ -2103,10 +2105,12 @@ function renderMail() {
     txt.innerHTML = '<div class="msubj">' + esc(m.subject || '(без темы)') + '</div>' +
       '<div class="mfrom">' + esc(m.name || '') + ' · ' + fmtDT(m.at || Date.now()) + '</div>';
     row.appendChild(txt);
-    const rd = document.createElement('button');
-    rd.className = 'mread'; rd.textContent = '✓'; rd.title = 'Прочитано';
-    rd.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); renderMail(); };
-    row.appendChild(rd);
+    if (isUnread) {
+      const rd = document.createElement('button');
+      rd.className = 'mread'; rd.textContent = '✓'; rd.title = 'Прочитано';
+      rd.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); renderMail(); };
+      row.appendChild(rd);
+    }
     list.appendChild(row);
   });
   updateMailBell();
@@ -2117,12 +2121,12 @@ function updateMailBell() {
   if (!b) return;
   b.style.display = mailConfigured() ? '' : 'none';
   const n = unreadMail().length;
-  b.textContent = '✉' + (n ? ' ' + n : '');
+  b.textContent = '📨 Письма' + (n ? ' (' + n + ')' : '');
   b.classList.toggle('has', n > 0);
 }
 
-$('mailBell').onclick = () => { mailHidden = false; renderMail(); };
-$('mailHide').onclick = () => { mailHidden = true; renderMail(); };
+$('mailBell').onclick = () => { mailOpen = !mailOpen; renderMail(); };
+$('mailHide').onclick = () => { mailOpen = false; renderMail(); };
 $('mailAll').onclick = () => { unreadMail().forEach(m => mailSeen[m.id] = Date.now()); saveMailSeen(); renderMail(); };
 $('mailBinInput').value = mailBin;
 $('mailBinSave').onclick = () => {
@@ -2366,7 +2370,14 @@ let notified = {};
 try { notified = JSON.parse(localStorage.getItem(LS + '_notified')) || {}; } catch(e) {}
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    reg.update();
+    setInterval(() => reg.update(), 3600000); // ищем обновление раз в час
+  }).catch(() => {});
+  let swReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swReloaded) return; swReloaded = true; location.reload(); // новая версия активировалась — обновляемся
+  });
 }
 
 function notifLabel() {
@@ -2698,6 +2709,7 @@ function updatePipBtn() {
   b.textContent = pipWin ? '🪟 Закрыть мини-окно' : '🪟 Поверх окон';
 }
 $('pipBtn').onclick = togglePip;
+$('archiveBtn').onclick = () => { state.fArchive = !state.fArchive; if (state.fArchive) state.fDone = false; save(); render(); };
 updatePipBtn();
 
 /* --- Тема и формат дат --- */

@@ -1,5 +1,5 @@
 // service worker «Мои дела»: уведомления + офлайн-режим (PWA)
-const CACHE = 'moi-dela-v3';
+const CACHE = 'moi-dela-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
