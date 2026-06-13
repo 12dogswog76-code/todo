@@ -2372,7 +2372,7 @@ try { notified = JSON.parse(localStorage.getItem(LS + '_notified')) || {}; } cat
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(reg => {
     reg.update();
-    setInterval(() => reg.update(), 3600000); // ищем обновление раз в час
+    setInterval(() => reg.update(), 600000); // ищем обновление раз в 10 минут
   }).catch(() => {});
   let swReloaded = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
