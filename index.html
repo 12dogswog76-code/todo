@@ -2125,7 +2125,7 @@ $('mailBinSave').onclick = () => {
 };
 updateMailBell();
 mailPull();
-setInterval(() => { if (!document.hidden) mailPull(); }, 120000);
+setInterval(() => { if (!document.hidden) mailPull(); }, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) mailPull(); });
 
 /* --- Чипы категорий в панели добавления + менеджер категорий --- */
