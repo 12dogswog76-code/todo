@@ -1,0 +1,165 @@
+' ============================================================================
+'  Уведомления о письмах из Outlook -> alextask.ru
+'  Макрос читает новое письмо локально и шлёт уведомление в облако сайта (HTTPS).
+'  Почту НЕ пересылает. Работает, пока Outlook запущен. Нужен классический Outlook.
+'
+'  УСТАНОВКА:
+'   1) Outlook -> разрешить макросы (Параметры -> Центр управления безопасностью ->
+'      Параметры макросов -> "Уведомления для всех макросов"), перезапустить.
+'   2) Alt+F11 -> Insert -> Module -> вставить БЛОК 1. Вписать свой MASTER_KEY.
+'   3) Запустить CreateMailBin (F5) -> получить КОД хранилища.
+'      Вставить его в MAIL_BIN_ID ниже и на сайте (Облако -> Код хранилища писем).
+'   4) Двойной клик ThisOutlookSession -> вставить БЛОК 2. Ctrl+S, перезапустить.
+'   5) Проверка: запустить TestNotify (F5) -> на сайте всплывёт окно "Письма".
+' ============================================================================
+
+
+' ===== БЛОК 1: вставить в Module1 =====
+Option Explicit
+
+Private Const MASTER_KEY As String = "PASTE_KEY_HERE"
+Private Const MAIL_BIN_ID As String = ""
+Private Const BLACKLIST As String = "noreply@example.com"
+Private Const JIRA_MATCH As String = "jira;servicedesk;service-desk;atlassian"
+Private Const KEEP As Long = 50
+Private Const TZ_OFFSET_HOURS As Double = 3
+Private Const JB As String = "https://api.jsonbin.io/v3/b"
+
+Public Sub CreateMailBin()
+    If MASTER_KEY = "PASTE_KEY_HERE" Or MASTER_KEY = "" Then
+        MsgBox "Enter MASTER_KEY first.", vbExclamation: Exit Sub
+    End If
+    Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "POST", JB, False
+    http.setRequestHeader "Content-Type", "application/json"
+    http.setRequestHeader "X-Master-Key", MASTER_KEY
+    http.setRequestHeader "X-Bin-Name", "alextask-mail"
+    http.send "{""mail"":[]}"
+    If http.Status >= 300 Then MsgBox "Error: " & http.Status & vbCrLf & http.responseText, vbCritical: Exit Sub
+    Dim r As String, p As Long, id As String
+    r = http.responseText
+    p = InStr(r, """id"":""")
+    If p = 0 Then MsgBox "No id in response", vbCritical: Exit Sub
+    id = Mid(r, p + 6): id = Left(id, InStr(id, """") - 1)
+    MsgBox "CODE (paste into MAIL_BIN_ID and on the site): " & vbCrLf & vbCrLf & id, vbInformation
+End Sub
+
+Public Sub TestNotify()
+    Dim s As String
+    s = ChrW(1058) & ChrW(1077) & ChrW(1089) & ChrW(1090) & " " & Format(Now, "hh:nn")
+    PushItem "test-" & Format(NowMs(), "0"), "person", "Test", "test@local", s, NowMs()
+    MsgBox "Sent. Check the site.", vbInformation
+End Sub
+
+Public Sub SendMailToSite(ByVal m As Object)
+    On Error GoTo done
+    Dim addr As String, nm As String, subj As String, src As String, low As String
+    addr = LCase(SmtpOf(m)): nm = m.SenderName: subj = m.Subject
+    If InBlacklist(addr) Then Exit Sub
+    low = LCase(nm & " " & addr): src = "person"
+    If MatchAny(low, JIRA_MATCH) Then src = "jira"
+    PushItem m.EntryID, src, nm, addr, subj, MsOf(m.ReceivedTime)
+done:
+End Sub
+
+Private Sub PushItem(id As String, src As String, nm As String, addr As String, subj As String, atMs As Double)
+    If MAIL_BIN_ID = "" Then Exit Sub
+    Dim http As Object, resp As String, body As String
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "GET", JB & "/" & MAIL_BIN_ID & "/latest", False
+    http.setRequestHeader "X-Master-Key", MASTER_KEY
+    http.send
+    If http.Status <> 200 Then Exit Sub
+    resp = http.responseText
+    body = AddToBin(resp, BuildItem(id, src, nm, addr, subj, atMs))
+    http.Open "PUT", JB & "/" & MAIL_BIN_ID, False
+    http.setRequestHeader "Content-Type", "application/json"
+    http.setRequestHeader "X-Master-Key", MASTER_KEY
+    http.send body
+End Sub
+
+Private Function BuildItem(id As String, src As String, nm As String, addr As String, subj As String, atMs As Double) As String
+    BuildItem = "{""id"":""" & Esc(id) & """,""source"":""" & src & """,""name"":""" & Esc(nm) & """,""from"":""" & Esc(addr) & """,""subject"":""" & Esc(subj) & """,""at"":" & Format(atMs, "0") & "}"
+End Function
+
+Private Function AddToBin(resp As String, newItem As String) As String
+    Const marker As String = """mail"":["
+    Dim inner As String, p1 As Long, p2 As Long, st As Long
+    p1 = InStr(resp, marker)
+    If p1 > 0 Then
+        st = p1 + Len(marker): p2 = InStr(st, resp, "]")
+        If p2 > st Then inner = Mid(resp, st, p2 - st)
+    End If
+    Dim newInner As String
+    If Len(inner) > 0 Then newInner = newItem & "," & inner Else newInner = newItem
+    Dim parts() As String: parts = Split(newInner, "},{")
+    If UBound(parts) >= KEEP Then
+        ReDim Preserve parts(KEEP - 1)
+        If Right$(parts(KEEP - 1), 1) <> "}" Then parts(KEEP - 1) = parts(KEEP - 1) & "}"
+    End If
+    AddToBin = "{""mail"":[" & Join(parts, "},{") & "]}"
+End Function
+
+Private Function Esc(ByVal s As String) As String
+    Dim i As Long, ch As Long, c As String, out As String
+    For i = 1 To Len(s)
+        c = Mid$(s, i, 1)
+        Select Case c
+            Case "\": out = out & "/"
+            Case """": out = out & "'"
+            Case "[", "{": out = out & "("
+            Case "]", "}": out = out & ")"
+            Case vbCr, vbLf: out = out & " "
+            Case Else
+                ch = AscW(c): If ch < 0 Then ch = ch + 65536
+                If ch < 32 Or ch > 126 Then out = out & "\u" & Right$("0000" & Hex$(ch), 4) Else out = out & c
+        End Select
+    Next i
+    Esc = out
+End Function
+
+Private Function MatchAny(ByVal hay As String, ByVal list As String) As Boolean
+    Dim a() As String, i As Long: a = Split(list, ";")
+    For i = LBound(a) To UBound(a)
+        If Len(Trim(a(i))) > 0 Then If InStr(hay, LCase(Trim(a(i)))) > 0 Then MatchAny = True: Exit Function
+    Next i
+End Function
+
+Private Function InBlacklist(ByVal addr As String) As Boolean
+    InBlacklist = (Len(addr) > 0) And MatchAny(addr, BLACKLIST)
+End Function
+
+Private Function SmtpOf(ByVal m As Object) As String
+    On Error Resume Next
+    If LCase(m.SenderEmailType) = "ex" Then
+        Dim ex As Object: Set ex = m.Sender.GetExchangeUser()
+        If Not ex Is Nothing Then SmtpOf = ex.PrimarySmtpAddress
+        If SmtpOf = "" Then SmtpOf = m.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x39FE001E")
+    Else
+        SmtpOf = m.SenderEmailAddress
+    End If
+    If SmtpOf = "" Then SmtpOf = m.SenderEmailAddress
+End Function
+
+Private Function MsOf(ByVal d As Date) As Double
+    MsOf = (CDbl(d) - CDbl(DateSerial(1970, 1, 1))) * 86400000# - TZ_OFFSET_HOURS * 3600000#
+End Function
+Private Function NowMs() As Double
+    NowMs = MsOf(Now)
+End Function
+
+
+' ===== БЛОК 2: вставить в ThisOutlookSession =====
+Private Sub Application_NewMailEx(ByVal EntryIDCollection As String)
+    Dim ids() As String, i As Long, itm As Object
+    ids = Split(EntryIDCollection, ",")
+    For i = LBound(ids) To UBound(ids)
+        Set itm = Nothing
+        On Error Resume Next
+        Set itm = Application.Session.GetItemFromID(ids(i))
+        On Error GoTo 0
+        If Not itm Is Nothing Then
+            If itm.Class = 43 Then SendMailToSite itm
+        End If
+    Next i
+End Sub

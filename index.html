@@ -644,6 +644,15 @@
   .topbar button.on { border-color: #e53e3e; color: #fff; background: #e53e3e22; }
   .mailitem.read { opacity: .5; }
   .mailempty { color: #777d8a; text-align: center; padding: 18px 0; font-size: 13px; }
+  #outlookGuide { position: fixed; inset: 0; background: #000000aa; display: none; align-items: center; justify-content: center; z-index: 55; padding: 16px; }
+  #outlookGuide.open { display: flex; }
+  #ogCard { background: #fff; color: #1c1e24; border-radius: 18px; max-width: 560px; width: 100%; max-height: 86vh; overflow-y: auto; padding: 22px 24px; box-shadow: 0 10px 40px #000c; }
+  #ogCard h2 { font-size: 18px; margin-bottom: 10px; color: #111; }
+  #ogCard h3 { font-size: 14.5px; margin: 16px 0 6px; color: #111; }
+  #ogCard p, #ogCard li { font-size: 13.5px; line-height: 1.55; color: #333; margin: 6px 0; }
+  #ogCard ol { padding-left: 20px; margin: 6px 0; }
+  #ogClose { display: block; width: 100%; margin-top: 18px; background: #e53e3e; border: none; border-radius: 10px; color: #fff; cursor: pointer; font-size: 14.5px; font-weight: 600; padding: 11px; }
+  #ogClose:hover { background: #ff5252; }
 </style>
 </head>
 <body>
@@ -813,6 +822,8 @@
     <h3>Без облака: экспорт / импорт</h3>
     <p>Не хочешь заводить облако — переноси данные вручную: <b>«⇪ экспорт»</b> → «Скопировать код» на одном устройстве, <b>«⇩ импорт»</b> → вставить код → «Импортировать» на другом. Тем же экспортом удобно делать резервную копию в файл.</p>
 
+    <h3>📨 Уведомления из рабочей почты (Outlook)</h3>
+    <p>Получай сюда письма из Outlook (Exchange). <button id="openOutlookGuide" class="bmcopy" style="cursor:pointer">Открыть инструкцию</button></p>
     <button id="guideClose">Понятно, погнали 👍</button>
   </div>
 </div>
@@ -849,6 +860,26 @@
     <button id="mailHide" title="Скрыть">✕</button>
   </div>
   <div id="mailList"></div>
+</div>
+
+<div id="outlookGuide">
+  <div id="ogCard">
+    <h2>📨 Уведомления о письмах из Outlook</h2>
+    <p>Письма с рабочей почты (Outlook на Exchange) можно получать сюда как уведомления. Это делает небольшой макрос в Outlook — он не пересылает почту, а отправляет уведомление прямо в облако этого сайта.</p>
+    <p><b>Нужно:</b> классический Outlook (не «новый»), разрешённые макросы, бесплатный аккаунт <b>jsonbin.io</b>; компьютер с Outlook должен быть включён.</p>
+    <h3>Шаги</h3>
+    <ol>
+      <li>Внизу сайта <b>«☁ Облако»</b> — подключи облако своим Master Key с jsonbin.io (если ещё не подключал).</li>
+      <li>Скачай код макроса: <a class="bmbtn" href="https://alextask.ru/outlook-macro.txt" target="_blank" rel="noopener" style="cursor:pointer">⬇ Скачать код</a></li>
+      <li>В Outlook разреши макросы: Файл → Параметры → Центр управления безопасностью → Параметры макросов → «Уведомления для всех макросов». Перезапусти Outlook.</li>
+      <li>Нажми <b>Alt+F11</b>. Слева Insert → Module — вставь часть «БЛОК 1» из файла. Впиши свой Master Key в первой строке.</li>
+      <li>Поставь курсор в <b>CreateMailBin</b>, нажми F5 — появится <b>КОД хранилища</b>. Вставь его и в строку MAIL_BIN_ID в коде, и сюда на сайт: «☁ Облако → Код хранилища писем».</li>
+      <li>Слева двойной клик по <b>ThisOutlookSession</b> — вставь «БЛОК 2».</li>
+      <li>Ctrl+S, перезапусти Outlook, разреши макрос. Проверка: запусти <b>TestNotify</b> (F5) — здесь всплывёт окно «Письма».</li>
+    </ol>
+    <p>Дальше всё само: новое письмо в Outlook → через секунды уведомление здесь. Письма Jira помечаются тегом «Jira», остальные — «Письмо».</p>
+    <button id="ogClose">Понятно 👍</button>
+  </div>
 </div>
 
 <script>
@@ -2824,7 +2855,10 @@ function closeGuide() {
   }
   maybeAskNotif(); // на телефоне после гайда предлагаем уведомления (если ещё не спрашивали)
 }
-$('guideBtn').onclick = () => openGuide(false);
+$('guideBtn').onclick = () => openGuide(true);
+$('openOutlookGuide').onclick = () => { $('guideOverlay').classList.remove('open','dock'); document.body.classList.remove('dockOpen'); $('outlookGuide').classList.add('open'); };
+$('ogClose').onclick = () => $('outlookGuide').classList.remove('open');
+$('outlookGuide').onclick = e => { if (e.target === $('outlookGuide')) $('outlookGuide').classList.remove('open'); };
 $('guideClose').onclick = closeGuide;
 $('guideOverlay').onclick = e => { if (e.target === $('guideOverlay')) closeGuide(); };
 
