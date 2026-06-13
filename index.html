@@ -667,6 +667,20 @@
   #bgClose:hover { background: #ff5252; }
   #basicsGuide.dock { display: block; background: transparent; pointer-events: none; padding: 0; }
   #basicsGuide.dock #bgCard { pointer-events: auto; position: fixed; left: 14px; top: 14px; bottom: 14px; width: 340px; max-width: 85vw; max-height: none; box-shadow: 0 8px 30px #0009; }
+  .faqlist { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .faqlink { display: block; width: 100%; text-align: left; background: #f2f3f6; border: 1px solid #d4d7de; border-radius: 10px; color: #1c1e24; cursor: pointer; font-size: 14px; padding: 11px 14px; }
+  .faqlink:hover { border-color: #e53e3e; background: #fff; }
+  .subg { position: fixed; inset: 0; background: #000000aa; display: none; align-items: center; justify-content: center; z-index: 56; padding: 16px; }
+  .subg.open { display: flex; }
+  .subgcard { background: #fff; color: #1c1e24; border-radius: 18px; max-width: 560px; width: 100%; max-height: 86vh; overflow-y: auto; padding: 22px 24px; box-shadow: 0 10px 40px #000c; }
+  .subgcard h2 { font-size: 18px; margin-bottom: 10px; color: #111; }
+  .subgcard h3 { font-size: 14.5px; margin: 16px 0 6px; color: #111; }
+  .subgcard p, .subgcard li { font-size: 13.5px; line-height: 1.55; color: #333; margin: 6px 0; }
+  .subgcard ul, .subgcard ol { padding-left: 20px; margin: 6px 0; }
+  .subgback { display: block; width: 100%; margin-top: 16px; background: #e53e3e; border: none; border-radius: 10px; color: #fff; cursor: pointer; font-size: 14.5px; font-weight: 600; padding: 11px; }
+  .subgback:hover { background: #ff5252; }
+  .subg.dock { display: block; background: transparent; pointer-events: none; padding: 0; }
+  .subg.dock .subgcard { pointer-events: auto; position: fixed; left: 14px; top: 14px; bottom: 14px; width: 340px; max-width: 85vw; max-height: none; box-shadow: 0 8px 30px #0009; }
 </style>
 </head>
 <body>
@@ -779,50 +793,18 @@
 <div id="guideOverlay">
   <div id="guideCard">
     <h2>🗂️ Как это работает</h2>
-    <p>Это простой список дел. Все данные хранятся <b>в твоём браузере</b> — никто, кроме тебя, их не видит. Регистрация не нужна.</p>
-
-    <h3>Основы</h3>
-    <p><button id="openBasics" class="bmcopy" style="cursor:pointer">📋 Открыть «Основы» — как всё устроено</button></p>
-
-    <h3>📦 Архив и жизненный цикл</h3>
-    <p>Выполненная задача сначала остаётся на своём месте, потом опускается вниз списка (по умолчанию через 2,5 часа), а потом сама уезжает в архив (по умолчанию через 7 дней). Архив открывается кнопкой «📦 Архив» справа от фильтров: там работает поиск, ↩ возвращает задачу в работу, ✕ удаляет насовсем.</p>
-    <p>Сроки настраиваются кнопкой «⏳ жизненный цикл» внизу — можно поставить и «сразу», и «никогда». Кнопка 📦 у выполненной задачи отправляет её в архив немедленно.</p>
-
-    <h3>⚡ Кнопка «В задачи» — задача из любого текста</h3>
-    <p>Выделил текст на любой странице (тему письма, название товара, что угодно) → клик по закладке → текст стал задачей здесь. Установка: включи панель закладок (<b>Ctrl+Shift+B</b>) и перетащи на неё эту кнопку:</p>
-    <p style="text-align:center"><a id="bmLink" class="bmbtn" href="#">⚡ В задачи</a></p>
-    <p>Не получается перетащить — <button id="bmCopy" class="bmcopy">скопировать код</button> и вставь его в поле «URL» новой закладки (Ctrl+Shift+O → ⋮ → «Добавить закладку»). <span id="bmMsg"></span></p>
-    <p><b>Настройки кнопки (на этом устройстве):</b> что присвоится задаче при нажатии.</p>
-    <p>
-      <select id="qaCat" class="qsel"></select>
-      <select id="qaColor" class="qsel"></select>
-      <select id="qaTimer" class="qsel"></select>
-    </p>
-
-    <h3>☁ Синхронизация между устройствами</h3>
-    <p>Чтобы список был одинаковым на телефоне, компе и ноуте, нужно бесплатное облако-хранилище. Мы используем <b>jsonbin.io</b>:</p>
-    <ol>
-      <li>Зарегистрируйся на <b>jsonbin.io</b> (нужна только почта, карта не нужна).</li>
-      <li>В кабинете открой <b>API Keys</b> и скопируй <b>Master Key</b>.</li>
-      <li>Здесь внизу нажми <b>«☁ облако»</b>, вставь Master Key → «Подключить». Это делается <b>один раз, только на первом устройстве</b>.</li>
-      <li>Нажми <b>«Скопировать код подключения»</b> и перешли его себе (например, в Telegram «Избранное»).</li>
-      <li>На остальных устройствах: «☁ облако» → вставь этот <b>код</b> → «Подключить».</li>
-    </ol>
-    <p>⚠️ Важно: Master Key вставляется только один раз на первом устройстве. На все остальные — только код подключения, иначе создастся новое пустое хранилище. Код подключения — это «ключ» от твоих задач, не делись им с чужими.</p>
-    <p>Дальше всё само: изменения улетают в облако через пару секунд, другие устройства подтягивают их при открытии и каждые 3 минуты. Точка возле заголовка: зелёная — всё ок, красная — нет связи (данные не теряются).</p>
-
-    <h3>🔔 Уведомления</h3>
-    <p>Кнопка «уведомления» внизу — браузер предупредит за 30 минут до дедлайна и в момент истечения. Работает, пока вкладка с сайтом открыта (можно в фоне).</p>
-
-    <h3>📱 Как приложение</h3>
-    <p>Сайт можно установить: в Chrome на компе — значок установки в адресной строке, на Android — меню ⋮ → «Установить приложение». Появится иконка, открывается в своём окне, работает даже без интернета.</p>
-
-    <h3>Без облака: экспорт / импорт</h3>
-    <p>Не хочешь заводить облако — переноси данные вручную: <b>«⇪ экспорт»</b> → «Скопировать код» на одном устройстве, <b>«⇩ импорт»</b> → вставить код → «Импортировать» на другом. Тем же экспортом удобно делать резервную копию в файл.</p>
-
-    <h3>📨 Уведомления из рабочей почты (Outlook)</h3>
-    <p>Получай сюда письма из Outlook (Exchange). <button id="openOutlookGuide" class="bmcopy" style="cursor:pointer">Открыть инструкцию</button></p>
-    <button id="guideClose">Понятно, погнали 👍</button>
+    <p>Все данные хранятся <b>в твоём браузере</b>, регистрация не нужна. Выбери раздел:</p>
+    <div class="faqlist">
+      <button class="faqlink" data-sec="sg-basics">📋 Основы</button>
+      <button class="faqlink" data-sec="sg-archive">📦 Архив и жизненный цикл</button>
+      <button class="faqlink" data-sec="sg-bm">⚡ Кнопка «В задачи»</button>
+      <button class="faqlink" data-sec="sg-sync">☁ Синхронизация между устройствами</button>
+      <button class="faqlink" data-sec="sg-notif">🔔 Уведомления</button>
+      <button class="faqlink" data-sec="sg-pwa">📱 Установить как приложение</button>
+      <button class="faqlink" data-sec="sg-io">↕ Экспорт / импорт</button>
+      <button class="faqlink" data-sec="sg-outlook">📨 Уведомления из почты (Outlook)</button>
+    </div>
+    <button id="guideClose">Закрыть</button>
   </div>
 </div>
 
@@ -860,31 +842,9 @@
   <div id="mailList"></div>
 </div>
 
-<div id="outlookGuide">
-  <div id="ogCard">
-    <h2>📨 Уведомления о письмах из Outlook</h2>
-    <p>Письма с рабочей почты (Outlook на Exchange) можно получать сюда как уведомления. Это делает небольшой макрос в Outlook — он не пересылает почту, а отправляет уведомление прямо в облако этого сайта.</p>
-    <p><b>Нужно:</b> классический Outlook (не «новый»), разрешённые макросы, бесплатный аккаунт <b>jsonbin.io</b>; компьютер с Outlook должен быть включён.</p>
-    <h3>Шаги</h3>
-    <ol>
-      <li>Внизу сайта <b>«☁ Облако»</b> — подключи облако своим Master Key с jsonbin.io (если ещё не подключал).</li>
-      <li>Скачай код макроса: <a class="bmbtn" href="https://alextask.ru/outlook-macro.txt" target="_blank" rel="noopener" style="cursor:pointer">⬇ Скачать код</a></li>
-      <li>В Outlook разреши макросы: Файл → Параметры → Центр управления безопасностью → Параметры макросов → «Уведомления для всех макросов». Перезапусти Outlook.</li>
-      <li>Нажми <b>Alt+F11</b> — откроется редактор. Сверху <b>Insert → Module</b>: слева появится «Module1», справа пустое поле. Вставь туда <b>«БЛОК 1»</b> из скачанного файла и впиши свой Master Key в самой первой строке.</li>
-      <li>Создай хранилище: кликни мышкой <b>внутри строки</b> <b>Public Sub CreateMailBin()</b> и нажми <b>F5</b> (это «запустить»; то же — зелёный треугольник ▶ сверху). Если выскочит список «Макрос» — выбери <b>CreateMailBin</b> → «Выполнить». Появится окошко с <b>КОДОМ</b> — вставь его и в строку <b>MAIL_BIN_ID</b> в коде, и сюда на сайт: «☁ Облако → Код хранилища писем».</li>
-      <li>Вставь второй блок: слева в дереве найди ветку <b>«Microsoft Outlook Objects»</b> и нажми <b>плюсик [+]</b> слева от неё, чтобы раскрыть — внутри появится <b>ThisOutlookSession</b>. Сделай по нему <b>двойной клик</b> и в открывшееся справа поле вставь <b>«БЛОК 2»</b>.</li>
-      <li>Сохрани (<b>Ctrl+S</b>), закрой и снова открой Outlook. Если при запуске спросит про макросы — нажми «Включить».</li>
-      <li><b>Проверка:</b> в редакторе (Alt+F11) открой Module1, кликни мышкой <b>внутри строки</b> <b>Public Sub TestNotify</b> и нажми <b>F5</b>. Если попросит подтвердить макрос — разреши. На сайте должно всплыть окно <b>«Письма»</b> с тестовым письмом.</li>
-    </ol>
-    <p>Дальше всё само: новое письмо в Outlook → через секунды уведомление здесь. Письма Jira помечаются тегом «Jira», остальные — «Письмо».</p>
-    <button id="ogClose">Понятно 👍</button>
-  </div>
-</div>
-
-<div id="basicsGuide">
-  <div id="bgCard">
-    <h2>🗂️ Основы</h2>
-    <ul>
+<div class="subg" id="sg-basics"><div class="subgcard">
+  <h2>📋 Основы</h2>
+  <ul>
       <li>Напиши задачу и нажми <b>Enter</b> — готово. Категория, этап, дедлайн и повтор — по желанию.</li>
       <li><b>Клик по задаче</b> — редактор: текст, категория, этап, дедлайн, повтор и чек-лист подпунктов.</li>
       <li>Дата + время = таймер обратного отсчёта (время без даты = сегодня). Просроченное краснеет, уведомления приходят за 30 минут и в момент истечения.</li>
@@ -901,9 +861,81 @@
       <li>Над списком — быстрые кнопки: 🔔 Уведомления, 📅 Даты (12 июн / 12.06), ☀️ Тема, 🪟 Поверх окон и этот гайд. Внизу — Экспорт/Импорт, ☁ Облако, 📊 Статистика и ⏳ Жизненный цикл.</li>
       <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
     </ul>
-    <button id="bgClose">Понятно 👍</button>
-  </div>
-</div>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-archive"><div class="subgcard">
+  <h2>📦 Архив и жизненный цикл</h2>
+  <p>Выполненная задача сначала остаётся на своём месте, потом опускается вниз списка (по умолчанию через 2,5 часа), а потом сама уезжает в архив (по умолчанию через 7 дней). Архив открывается кнопкой «📦 Архив» справа от фильтров: там работает поиск, ↩ возвращает задачу в работу, ✕ удаляет насовсем.</p>
+    <p>Сроки настраиваются кнопкой «⏳ жизненный цикл» внизу — можно поставить и «сразу», и «никогда». Кнопка 📦 у выполненной задачи отправляет её в архив немедленно.</p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-bm"><div class="subgcard">
+  <h2>⚡ Кнопка «В задачи»</h2>
+  <p>Выделил текст на любой странице (тему письма, название товара, что угодно) → клик по закладке → текст стал задачей здесь. Установка: включи панель закладок (<b>Ctrl+Shift+B</b>) и перетащи на неё эту кнопку:</p>
+    <p style="text-align:center"><a id="bmLink" class="bmbtn" href="#">⚡ В задачи</a></p>
+    <p>Не получается перетащить — <button id="bmCopy" class="bmcopy">скопировать код</button> и вставь его в поле «URL» новой закладки (Ctrl+Shift+O → ⋮ → «Добавить закладку»). <span id="bmMsg"></span></p>
+    <p><b>Настройки кнопки (на этом устройстве):</b> что присвоится задаче при нажатии.</p>
+    <p>
+      <select id="qaCat" class="qsel"></select>
+      <select id="qaColor" class="qsel"></select>
+      <select id="qaTimer" class="qsel"></select>
+    </p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-sync"><div class="subgcard">
+  <h2>☁ Синхронизация между устройствами</h2>
+  <p>Чтобы список был одинаковым на телефоне, компе и ноуте, нужно бесплатное облако-хранилище. Мы используем <b>jsonbin.io</b>:</p>
+    <ol>
+      <li>Зарегистрируйся на <b>jsonbin.io</b> (нужна только почта, карта не нужна).</li>
+      <li>В кабинете открой <b>API Keys</b> и скопируй <b>Master Key</b>.</li>
+      <li>Здесь внизу нажми <b>«☁ облако»</b>, вставь Master Key → «Подключить». Это делается <b>один раз, только на первом устройстве</b>.</li>
+      <li>Нажми <b>«Скопировать код подключения»</b> и перешли его себе (например, в Telegram «Избранное»).</li>
+      <li>На остальных устройствах: «☁ облако» → вставь этот <b>код</b> → «Подключить».</li>
+    </ol>
+    <p>⚠️ Важно: Master Key вставляется только один раз на первом устройстве. На все остальные — только код подключения, иначе создастся новое пустое хранилище. Код подключения — это «ключ» от твоих задач, не делись им с чужими.</p>
+    <p>Дальше всё само: изменения улетают в облако через пару секунд, другие устройства подтягивают их при открытии и каждые 3 минуты. Точка возле заголовка: зелёная — всё ок, красная — нет связи (данные не теряются).</p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-notif"><div class="subgcard">
+  <h2>🔔 Уведомления</h2>
+  <p>Кнопка «уведомления» внизу — браузер предупредит за 30 минут до дедлайна и в момент истечения. Работает, пока вкладка с сайтом открыта (можно в фоне).</p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-pwa"><div class="subgcard">
+  <h2>📱 Установить как приложение</h2>
+  <p>Сайт можно установить: в Chrome на компе — значок установки в адресной строке, на Android — меню ⋮ → «Установить приложение». Появится иконка, открывается в своём окне, работает даже без интернета.</p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-io"><div class="subgcard">
+  <h2>↕ Экспорт / импорт</h2>
+  <p>Не хочешь заводить облако — переноси данные вручную: <b>«⇪ экспорт»</b> → «Скопировать код» на одном устройстве, <b>«⇩ импорт»</b> → вставить код → «Импортировать» на другом. Тем же экспортом удобно делать резервную копию в файл.</p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-outlook"><div class="subgcard">
+  <h2>📨 Уведомления о письмах из Outlook</h2>
+  <p>Письма с рабочей почты (Outlook на Exchange) можно получать сюда как уведомления. Это делает небольшой макрос в Outlook — он не пересылает почту, а отправляет уведомление прямо в облако этого сайта.</p>
+    <p><b>Нужно:</b> классический Outlook (не «новый»), разрешённые макросы, бесплатный аккаунт <b>jsonbin.io</b>; компьютер с Outlook должен быть включён.</p>
+    <h3>Шаги</h3>
+    <ol>
+      <li>Внизу сайта <b>«☁ Облако»</b> — подключи облако своим Master Key с jsonbin.io (если ещё не подключал).</li>
+      <li>Скачай код макроса: <a class="bmbtn" href="https://alextask.ru/outlook-macro.txt" target="_blank" rel="noopener" style="cursor:pointer">⬇ Скачать код</a></li>
+      <li>В Outlook разреши макросы: Файл → Параметры → Центр управления безопасностью → Параметры макросов → «Уведомления для всех макросов». Перезапусти Outlook.</li>
+      <li>Нажми <b>Alt+F11</b> — откроется редактор. Сверху <b>Insert → Module</b>: слева появится «Module1», справа пустое поле. Вставь туда <b>«БЛОК 1»</b> из скачанного файла и впиши свой Master Key в самой первой строке.</li>
+      <li>Создай хранилище: кликни мышкой <b>внутри строки</b> <b>Public Sub CreateMailBin()</b> и нажми <b>F5</b> (это «запустить»; то же — зелёный треугольник ▶ сверху). Если выскочит список «Макрос» — выбери <b>CreateMailBin</b> → «Выполнить». Появится окошко с <b>КОДОМ</b> — вставь его и в строку <b>MAIL_BIN_ID</b> в коде, и сюда на сайт: «☁ Облако → Код хранилища писем».</li>
+      <li>Вставь второй блок: слева в дереве найди ветку <b>«Microsoft Outlook Objects»</b> и нажми <b>плюсик [+]</b> слева от неё, чтобы раскрыть — внутри появится <b>ThisOutlookSession</b>. Сделай по нему <b>двойной клик</b> и в открывшееся справа поле вставь <b>«БЛОК 2»</b>.</li>
+      <li>Сохрани (<b>Ctrl+S</b>), закрой и снова открой Outlook. Если при запуске спросит про макросы — нажми «Включить».</li>
+      <li><b>Проверка:</b> в редакторе (Alt+F11) открой Module1, кликни мышкой <b>внутри строки</b> <b>Public Sub TestNotify</b> и нажми <b>F5</b>. Если попросит подтвердить макрос — разреши. На сайте должно всплыть окно <b>«Письма»</b> с тестовым письмом.</li>
+    </ol>
+    <p>Дальше всё само: новое письмо в Outlook → через секунды уведомление здесь. Письма Jira помечаются тегом «Jira», остальные — «Письмо».</p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
 
 <script>
 const LS = 'alexey_todo_v1';
@@ -2867,7 +2899,7 @@ function hintGuideBtn() {
   }, 8000);
 }
 function closeGuide() {
-  $('basicsGuide').classList.remove('open', 'dock');
+  document.querySelectorAll('.subg').forEach(function (p) { p.classList.remove('open', 'dock'); });
   $('guideOverlay').classList.remove('open');
   $('guideOverlay').classList.remove('dock');
   document.body.classList.remove('dockOpen');
@@ -2880,14 +2912,11 @@ function closeGuide() {
   maybeAskNotif(); // на телефоне после гайда предлагаем уведомления (если ещё не спрашивали)
 }
 $('guideBtn').onclick = () => openGuide(true);
-$('openOutlookGuide').onclick = () => { $('guideOverlay').classList.remove('open','dock'); document.body.classList.remove('dockOpen'); $('outlookGuide').classList.add('open'); };
-$('ogClose').onclick = () => $('outlookGuide').classList.remove('open');
-$('outlookGuide').onclick = e => { if (e.target === $('outlookGuide')) $('outlookGuide').classList.remove('open'); };
-function openBasics() { $('guideOverlay').classList.remove('open', 'dock'); document.body.classList.remove('dockOpen'); $('basicsGuide').classList.add('open'); if (window.innerWidth >= 1000) { $('basicsGuide').classList.add('dock'); document.body.classList.add('dockOpen'); } }
-function closeBasics() { $('basicsGuide').classList.remove('open', 'dock'); document.body.classList.remove('dockOpen'); openGuide(true); }
-$('openBasics').onclick = openBasics;
-$('bgClose').onclick = closeBasics;
-$('basicsGuide').onclick = e => { if (e.target === $('basicsGuide')) closeBasics(); };
+function openSec(id) { $('guideOverlay').classList.remove('open', 'dock'); document.body.classList.remove('dockOpen'); var p = $(id); if (!p) return; p.classList.add('open'); if (window.innerWidth >= 1000) { p.classList.add('dock'); document.body.classList.add('dockOpen'); } if (id === 'sg-bm') fillQaddUI(); }
+function backToGuide() { document.querySelectorAll('.subg').forEach(function (p) { p.classList.remove('open', 'dock'); }); document.body.classList.remove('dockOpen'); openGuide(true); }
+document.querySelectorAll('.faqlink').forEach(function (b) { b.onclick = function () { openSec(b.dataset.sec); }; });
+document.querySelectorAll('.subgback').forEach(function (b) { b.onclick = backToGuide; });
+document.querySelectorAll('.subg').forEach(function (p) { p.onclick = function (e) { if (e.target === p) backToGuide(); }; });
 $('guideClose').onclick = closeGuide;
 $('guideOverlay').onclick = e => { if (e.target === $('guideOverlay')) closeGuide(); };
 
