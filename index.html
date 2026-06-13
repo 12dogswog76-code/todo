@@ -695,7 +695,7 @@
   <div id="list"></div>
 
   <div id="lifePanel">
-    <div class="hint">Жизненный цикл выполненной задачи: остаётся на месте → опускается вниз списка → уезжает в архив 🗃</div>
+    <div class="hint">Жизненный цикл выполненной задачи: остаётся на месте → опускается вниз списка → уезжает в архив 📦</div>
     <div class="lcrow">
       <span class="hint" style="margin:0">Вниз списка через:</span>
       <select id="lifeDown" class="pill"></select>
@@ -760,12 +760,12 @@
       <li>Напиши задачу и нажми <b>Enter</b> — готово. Категория, этап, дедлайн и повтор — по желанию.</li>
       <li><b>Клик по задаче</b> — редактор: текст, категория, этап, дедлайн, повтор и чек-лист подпунктов.</li>
       <li>Дата + время = таймер обратного отсчёта (время без даты = сегодня). Просроченное краснеет, уведомления приходят за 30 минут и в момент истечения.</li>
-      <li>✓ — выполнено · 📌 — закрепить сверху · ● — цвет (10 цветов) · ⠿ — перетащить · ▲▼ — порядок · 🗃 — сразу в архив · ✕ — удалить (с подтверждением).</li>
+      <li>✓ — выполнено · 📌 — закрепить сверху · ● — цвет (10 цветов) · ⠿ — перетащить · ▲▼ — порядок · 📦 — сразу в архив · ✕ — удалить (с подтверждением).</li>
       <li>🔁 Повторы: каждый день / неделю / месяц / свой период в днях — после выполнения задача сама создастся на следующий срок.</li>
       <li>☑ Чек-лист: в редакторе задачи поле «+ подпункт», Enter добавляет; счётчик «☑ 2/5» в метках.</li>
       <li>🔍 Поиск ищет по названиям, этапам и чек-листам.</li>
       <li>«<b># Фильтры</b>» — выбирай сразу несколько категорий и цветов; кружки цветов показывают число активных задач и появляются только у используемых цветов. Там же «✓ выполненные» — недавно закрытые задачи, ещё не уехавшие в архив.</li>
-      <li>Справа от фильтров: «🗃 Архив» и «Скрыть выполненные».</li>
+      <li>Справа от фильтров: «📦 Архив» и «Скрыть выполненные».</li>
       <li>«<b>Сортировка</b>» — ручная, по цвету, по дате добавления, по алфавиту (всё в обе стороны). Перетаскивание возвращает ручной порядок.</li>
       <li>🏷 «➕ Категории» — свои категории: имя, иконка (эмодзи или каталог dev-иконок), цвет задач по умолчанию; ✎ — редактировать, ✕ — удалить.</li>
       <li>📊 «Статистика» — выполнено сегодня / за неделю / за месяц и серия дней подряд 🔥.</li>
@@ -774,9 +774,9 @@
       <li>Ссылку просто вставь в текст — она станет кликабельной.</li>
     </ul>
 
-    <h3>🗃 Архив и жизненный цикл</h3>
-    <p>Выполненная задача сначала остаётся на своём месте, потом опускается вниз списка (по умолчанию через 2,5 часа), а потом сама уезжает в архив (по умолчанию через 7 дней). Архив открывается кнопкой «🗃 Архив» справа от фильтров: там работает поиск, ↩ возвращает задачу в работу, ✕ удаляет насовсем.</p>
-    <p>Сроки настраиваются кнопкой «⏳ жизненный цикл» внизу — можно поставить и «сразу», и «никогда». Кнопка 🗃 у выполненной задачи отправляет её в архив немедленно.</p>
+    <h3>📦 Архив и жизненный цикл</h3>
+    <p>Выполненная задача сначала остаётся на своём месте, потом опускается вниз списка (по умолчанию через 2,5 часа), а потом сама уезжает в архив (по умолчанию через 7 дней). Архив открывается кнопкой «📦 Архив» справа от фильтров: там работает поиск, ↩ возвращает задачу в работу, ✕ удаляет насовсем.</p>
+    <p>Сроки настраиваются кнопкой «⏳ жизненный цикл» внизу — можно поставить и «сразу», и «никогда». Кнопка 📦 у выполненной задачи отправляет её в архив немедленно.</p>
 
     <h3>⚡ Кнопка «В задачи» — задача из любого текста</h3>
     <p>Выделил текст на любой странице (тему письма, название товара, что угодно) → клик по закладке → текст стал задачей здесь. Установка: включи панель закладок (<b>Ctrl+Shift+B</b>) и перетащи на неё эту кнопку:</p>
@@ -893,6 +893,8 @@ try { tombstones = JSON.parse(localStorage.getItem(LS+'_tomb')) || []; } catch(e
 
 const SYNERGY_LOGO = '<svg viewBox="0 0 100 100" width="19" height="19" style="display:block"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg>';
 const SYNERGY_MINI = '<svg viewBox="0 0 100 100" width="12" height="12" style="vertical-align:-1px"><rect width="100" height="100" fill="#ec1c24"/><rect x="15" y="15" width="70" height="70" fill="#0b0b0d"/><polygon points="63,19 29,50 63,81 63,62 50,50 63,38" fill="#ec1c24"/></svg>';
+const CLAUDE_LOGO = '<svg viewBox="0 0 100 100" width="19" height="19" style="display:block"><g fill="none" stroke="#D97757" stroke-width="9" stroke-linecap="round"><line x1="57" y1="50" x2="94" y2="50"/><line x1="56.1" y1="53.5" x2="78.6" y2="66.5"/><line x1="53.5" y1="56.1" x2="72" y2="88.1"/><line x1="50" y1="57" x2="50" y2="83"/><line x1="46.5" y1="56.1" x2="28" y2="88.1"/><line x1="43.9" y1="53.5" x2="21.4" y2="66.5"/><line x1="43" y1="50" x2="6" y2="50"/><line x1="43.9" y1="46.5" x2="21.4" y2="33.5"/><line x1="46.5" y1="43.9" x2="28" y2="11.9"/><line x1="50" y1="43" x2="50" y2="17"/><line x1="53.5" y1="43.9" x2="72" y2="11.9"/><line x1="56.1" y1="46.5" x2="78.6" y2="33.5"/></g></svg>';
+const CLAUDE_MINI = '<svg viewBox="0 0 100 100" width="12" height="12" style="vertical-align:-1px"><g fill="none" stroke="#D97757" stroke-width="10" stroke-linecap="round"><line x1="57" y1="50" x2="94" y2="50"/><line x1="56.1" y1="53.5" x2="78.6" y2="66.5"/><line x1="53.5" y1="56.1" x2="72" y2="88.1"/><line x1="50" y1="57" x2="50" y2="83"/><line x1="46.5" y1="56.1" x2="28" y2="88.1"/><line x1="43.9" y1="53.5" x2="21.4" y2="66.5"/><line x1="43" y1="50" x2="6" y2="50"/><line x1="43.9" y1="46.5" x2="21.4" y2="33.5"/><line x1="46.5" y1="43.9" x2="28" y2="11.9"/><line x1="50" y1="43" x2="50" y2="17"/><line x1="53.5" y1="43.9" x2="72" y2="11.9"/><line x1="56.1" y1="46.5" x2="78.6" y2="33.5"/></g></svg>';
 // категории: редактируемый список, синхронизируется через облако
 const DEFAULT_CATS = [
   { n: 'Работа', e: '💼', c: '#ff6b6b' },
@@ -910,6 +912,7 @@ function catEmojiHTML(n, mini) {
   const c = catList.find(x => x.n === n);
   if (!c || !c.e) return '';
   if (c.e === '__syn') return mini ? SYNERGY_MINI : SYNERGY_LOGO;
+  if (c.e === '__claude') return mini ? CLAUDE_MINI : CLAUDE_LOGO;
   if (c.e.indexOf('dev:') === 0) {
     const s = mini ? 13 : 19;
     return '<img src="' + DEV_CDN + c.e.slice(4) + '.svg" alt="" style="width:' + s + 'px;height:' + s + 'px;vertical-align:' + (mini ? '-2px' : 'middle') + '">';
@@ -1326,7 +1329,7 @@ function render() {
   // архив — отдельной кнопкой справа
   const arcC = document.createElement('span');
   arcC.className = 'chip' + (isArc ? ' on' : '');
-  arcC.innerHTML = '🗃 Архив';
+  arcC.innerHTML = '📦 Архив';
   arcC.onclick = () => {
     state.fArchive = !state.fArchive;
     if (state.fArchive) state.fDone = false;
@@ -1692,7 +1695,7 @@ function render() {
 
     if (t.done && !isArchived(t)) {
       const arcB = document.createElement('button');
-      arcB.className = 'arcb'; arcB.textContent = '🗃'; arcB.title = 'В архив сразу';
+      arcB.className = 'arcb'; arcB.textContent = '📦'; arcB.title = 'В архив сразу';
       arcB.onclick = () => {
         t.arc = true; t.mod = Date.now();
         save(); render();
@@ -1896,7 +1899,7 @@ function setCloud(cls, tip) {
   d.title = tip || 'облако не подключено';
 }
 function syncMsg(s) { $('syncMsg').textContent = s; }
-function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, t: Date.now() }; }
+function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, mailBin: mailBin || '', t: Date.now() }; }
 
 function syncUI() {
   const on = !!(sync && sync.key && sync.bin);
@@ -1955,6 +1958,12 @@ function mergeData(remote) {
     localStorage.setItem(LS + '_cats', JSON.stringify(catList));
     localStorage.setItem(LS + '_catsMod', String(catsMod));
     if (typeof renderCatChips === 'function') { try { renderCatChips(); renderCatMgr(); } catch(e) {} }
+  }
+  // код хранилища писем приходит из облака — подхватываем на новом устройстве (телефоне)
+  if (remote && remote.mailBin && !mailBin) {
+    mailBin = remote.mailBin;
+    localStorage.setItem(LS + '_mailbin', mailBin);
+    try { updateMailBell(); mailPull(); } catch(e) {}
   }
 }
 
@@ -2119,6 +2128,7 @@ $('mailBinInput').value = mailBin;
 $('mailBinSave').onclick = () => {
   mailBin = $('mailBinInput').value.trim();
   localStorage.setItem(LS + '_mailbin', mailBin);
+  scheduleSync(); // отправим код в облако, чтобы телефон подхватил его сам
   $('mailBinMsg').textContent = mailBin ? 'Подключено. Проверяю почту…' : 'Почта отключена.';
   updateMailBell();
   mailPull();
@@ -2164,6 +2174,7 @@ let emojiGridBuilt = false;
 
 function pickerHTML(e) {
   if (e === '__syn') return SYNERGY_MINI;
+  if (e === '__claude') return CLAUDE_MINI;
   if (e && e.indexOf('dev:') === 0) return '<img src="' + DEV_CDN + e.slice(4) + '.svg" style="width:16px;height:16px;vertical-align:-3px">';
   return e || '😀';
 }
@@ -2205,6 +2216,12 @@ function buildEmojiGrid() {
   syn.innerHTML = SYNERGY_LOGO.replace('width="19" height="19" style="display:block"', 'width="22" height="22"');
   syn.onclick = () => pickIcon('__syn', SYNERGY_MINI, syn);
   gd.appendChild(syn);
+  const cla = document.createElement('span');
+  cla.className = 'em';
+  cla.title = 'Claude';
+  cla.innerHTML = CLAUDE_LOGO.replace('width="19" height="19" style="display:block"', 'width="22" height="22"');
+  cla.onclick = () => pickIcon('__claude', CLAUDE_MINI, cla);
+  gd.appendChild(cla);
   DEV_ICONS.forEach(n => {
     const cell = document.createElement('span');
     cell.className = 'em';
