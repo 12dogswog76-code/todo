@@ -2917,6 +2917,13 @@ function backToGuide() { document.querySelectorAll('.subg').forEach(function (p)
 document.querySelectorAll('.faqlink').forEach(function (b) { b.onclick = function () { openSec(b.dataset.sec); }; });
 document.querySelectorAll('.subgback').forEach(function (b) { b.onclick = backToGuide; });
 document.querySelectorAll('.subg').forEach(function (p) { p.onclick = function (e) { if (e.target === p) backToGuide(); }; });
+function syncDock() {
+  var wide = window.innerWidth >= 1000, docked = false;
+  if ($('guideOverlay').classList.contains('open')) { $('guideOverlay').classList.toggle('dock', wide); if (wide) docked = true; }
+  document.querySelectorAll('.subg.open').forEach(function (p) { p.classList.toggle('dock', wide); if (wide) docked = true; });
+  document.body.classList.toggle('dockOpen', docked);
+}
+window.addEventListener('resize', syncDock);
 $('guideClose').onclick = closeGuide;
 $('guideOverlay').onclick = e => { if (e.target === $('guideOverlay')) closeGuide(); };
 
