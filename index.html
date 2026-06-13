@@ -2121,7 +2121,7 @@ function updateMailBell() {
   if (!b) return;
   b.style.display = mailConfigured() ? '' : 'none';
   const n = unreadMail().length;
-  b.textContent = '📨 Письма' + (n ? ' (' + n + ')' : '');
+  b.innerHTML = '<img src="' + DEV_CDN + 'outlook.svg" alt="Письма" style="width:16px;height:16px;vertical-align:-3px">' + (n ? ' ' + n : '');
   b.classList.toggle('has', n > 0);
 }
 
