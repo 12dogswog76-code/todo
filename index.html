@@ -2867,6 +2867,7 @@ function hintGuideBtn() {
   }, 8000);
 }
 function closeGuide() {
+  $('basicsGuide').classList.remove('open', 'dock');
   $('guideOverlay').classList.remove('open');
   $('guideOverlay').classList.remove('dock');
   document.body.classList.remove('dockOpen');
@@ -2883,7 +2884,7 @@ $('openOutlookGuide').onclick = () => { $('guideOverlay').classList.remove('open
 $('ogClose').onclick = () => $('outlookGuide').classList.remove('open');
 $('outlookGuide').onclick = e => { if (e.target === $('outlookGuide')) $('outlookGuide').classList.remove('open'); };
 function openBasics() { $('guideOverlay').classList.remove('open', 'dock'); document.body.classList.remove('dockOpen'); $('basicsGuide').classList.add('open'); if (window.innerWidth >= 1000) { $('basicsGuide').classList.add('dock'); document.body.classList.add('dockOpen'); } }
-function closeBasics() { $('basicsGuide').classList.remove('open', 'dock'); document.body.classList.remove('dockOpen'); }
+function closeBasics() { $('basicsGuide').classList.remove('open', 'dock'); $('guideOverlay').classList.remove('open', 'dock'); document.body.classList.remove('dockOpen'); }
 $('openBasics').onclick = openBasics;
 $('bgClose').onclick = closeBasics;
 $('basicsGuide').onclick = e => { if (e.target === $('basicsGuide')) closeBasics(); };
