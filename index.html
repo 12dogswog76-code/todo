@@ -97,7 +97,7 @@
     color: #aab0c0; font-size: 12.5px; padding: 4px 10px; outline: none; color-scheme: dark;
   }
   .pill:focus, .pill.on { border-color: #e53e3e; color: #ff9d9d; }
-  #stageInput { width: 150px; }
+  #noteInput { width: 170px; }
   select.pill { background: #1c1e24; cursor: pointer; }
   /* выпадающие списки: текст обычного цвета, активность показывает только рамка */
   select.pill, select.pill.on, select.pill:focus { color: #e8eaf0; }
@@ -608,7 +608,7 @@
     .dragh { font-size: 17px; padding: 8px 3px; }
     .title { font-size: 15.5px; }
     #addBtn { padding: 0 16px; }
-    #stageInput { width: 130px; }
+    #noteInput { width: 130px; }
     .palette { right: 50px; }
     .pill.ico input[type=date] { min-width: 108px; }
     .pill.ico input[type=time] { min-width: 64px; }
@@ -747,7 +747,9 @@
     </div>
     <div class="options">
       <span id="catChips" style="display:contents"></span>
-      <input id="stageInput" type="text" class="pill" placeholder="Этап (на чём сейчас)" title="Этап (необязательно)">
+    </div>
+    <div class="options" id="addExtra">
+      <input id="noteInput" type="text" class="pill" placeholder="+ заметка" title="Заметка (необязательно)">
       <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
       <label class="pill ico" title="Время дедлайна — включает таймер (необязательно)">⏰<input id="timeInput" type="time"></label>
       <span class="chip" id="qdToday" title="Срок: сегодня">Сегодня</span>
@@ -761,7 +763,7 @@
         <option value="c">🔁 свой период…</option>
       </select>
     </div>
-    <div class="hint">Этап, дедлайн и повтор — по желанию. Дата + время = таймер (время без даты = сегодня). Клик по задаче — редактировать (там же чек-лист). ⠿ — перетащить, 📌 — закрепить. Ссылку просто вставь в текст.</div>
+    <div class="hint">Заметка, дедлайн и повтор — по желанию. Дата + время = таймер (время без даты = сегодня). Клик по задаче — редактировать (там же заметки). ⠿ — перетащить, 📌 — закрепить. Ссылку просто вставь в текст.</div>
 
     <div id="catMgr">
       <div class="cmrow">
@@ -1269,8 +1271,7 @@ function addTask() {
     id: Date.now(),
     title: text,
     cat: pickedCat,
-    stage: $('stageInput').value.trim() || null,
-    stageAt: $('stageInput').value.trim() ? Date.now() : null,
+    checks: $('noteInput').value.trim() ? [{ t: $('noteInput').value.trim(), d: false }] : undefined,
     due: $('dateInput').value || ($('timeInput').value ? todayStr() : null), // время без даты = сегодня
     dueTime: $('timeInput').value || null,
     repeat: $('repInput').value === 'c' ? 'c:' + addRepN : ($('repInput').value || null),
@@ -1280,7 +1281,7 @@ function addTask() {
     mod: Date.now(),
     pos: minPos - 1
   });
-  ['taskInput','stageInput','dateInput','timeInput','repInput'].forEach(i => {
+  ['taskInput','noteInput','dateInput','timeInput','repInput'].forEach(i => {
     $(i).value = '';
     $(i).classList.remove('on');
     if ($(i).parentElement && $(i).parentElement.classList.contains('ico')) {
@@ -2638,7 +2639,7 @@ document.addEventListener('keydown', e => {
   else if (e.code === 'Slash') { e.preventDefault(); $('searchInput').focus(); }
 });
 attachLinkPaste($('taskInput'));
-attachLinkPaste($('stageInput'));
+attachLinkPaste($('noteInput'));
 
 /* --- Уведомления --- */
 const NOTIF_ICON = 'icon.svg';
