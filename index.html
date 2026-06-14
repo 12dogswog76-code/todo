@@ -736,7 +736,6 @@
     <button id="pipBtn" style="display:none">🪟 Поверх окон</button>
     <button id="archiveBtn">📦 Архив</button>
     <button id="guideBtn">❔ Как пользоваться</button>
-    <button id="selBtn">✅ Выбрать</button>
     <button id="mailBell" class="mbell" style="display:none" title="Письма с почты">📨 Письма</button>
   </div>
 
@@ -1405,13 +1404,6 @@ function render() {
     all.title = 'Сбросить все фильтры';
     all.onclick = () => { state.fCats = []; state.colors = []; state.fArchive = false; state.fDone = false; state.view = ''; save(); render(); };
     f.appendChild(all);
-    [['today', '📅 Сегодня'], ['overdue', '⏰ Просрочено'], ['week', '🗓 Неделя']].forEach(v => {
-      const el = document.createElement('span');
-      el.className = 'chip' + (state.view === v[0] ? ' on' : '');
-      el.textContent = v[1];
-      el.onclick = () => { state.view = state.view === v[0] ? '' : v[0]; if (state.view) { state.fArchive = false; state.fDone = false; } save(); render(); };
-      f.appendChild(el);
-    });
     // категории: можно выбрать несколько
     allCatNames().concat(['без категории']).forEach(c => {
       const on = state.fCats.includes(c);
@@ -1422,6 +1414,13 @@ function render() {
         state.fCats = on ? state.fCats.filter(x => x !== c) : state.fCats.concat([c]);
         save(); render();
       };
+      f.appendChild(el);
+    });
+    [['today', '📅 Сегодня'], ['overdue', '⏰ Просрочено'], ['week', '🗓 Неделя']].forEach(v => {
+      const el = document.createElement('span');
+      el.className = 'chip' + (state.view === v[0] ? ' on' : '');
+      el.textContent = v[1];
+      el.onclick = () => { state.view = state.view === v[0] ? '' : v[0]; if (state.view) { state.fArchive = false; state.fDone = false; } save(); render(); };
       f.appendChild(el);
     });
     const dn = document.createElement('span');
@@ -1510,6 +1509,13 @@ function render() {
     tg.textContent = state.showDone ? 'Скрыть выполненные' : 'Показать выполненные';
     tg.onclick = () => { state.showDone = !state.showDone; save(); render(); };
     f.appendChild(tg);
+  }
+  if (!isArc) {
+    const selC = document.createElement('span');
+    selC.className = 'chip' + (selMode ? ' on' : '');
+    selC.textContent = 'Выбрать несколько';
+    selC.onclick = () => { selMode = !selMode; if (!selMode) selIds.clear(); save(); render(); updateSelBar(); };
+    f.appendChild(selC);
   }
 
   const list = $('list');
@@ -2612,7 +2618,6 @@ $('repInput').onchange = e => {
 };
 $('addBtn').onclick = addTask;
 $('taskInput').onkeydown = e => { if (e.key === 'Enter') addTask(); };
-$('selBtn').onclick = () => { selMode = !selMode; if (!selMode) selIds.clear(); $('selBtn').classList.toggle('on', selMode); render(); updateSelBar(); };
 function updateSelBar() {
   let bar = document.getElementById('selBar');
   if (!selMode) { if (bar) bar.classList.remove('show'); return; }
@@ -2621,7 +2626,7 @@ function updateSelBar() {
   const info = document.createElement('span'); info.textContent = 'Выбрано: ' + selIds.size; bar.appendChild(info);
   const sel = [...selIds];
   const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = fn; bar.appendChild(b); };
-  const exit = () => { selMode = false; selIds.clear(); $('selBtn').classList.remove('on'); };
+  const exit = () => { selMode = false; selIds.clear(); };
   mkBtn('Выполнить', () => { sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t && !t.done) { t.done = true; t.completedAt = Date.now(); t.mod = Date.now(); spawnRepeat(t); } }); exit(); save(); render(); updateSelBar(); });
   mkBtn('Удалить', () => { const rem = []; sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t) { rem.push(t); tombstones.push({ id: id, at: Date.now() }); } }); tasks = tasks.filter(x => !selIds.has(x.id)); exit(); save(); render(); updateSelBar(); if (rem.length) showUndo('Удалено: ' + rem.length, () => { rem.forEach(t => { tombstones = tombstones.filter(z => z.id !== t.id); tasks.push(t); }); save(); render(); }); });
   const catSel = document.createElement('select');
@@ -2632,7 +2637,7 @@ function updateSelBar() {
   bar.classList.add('show');
 }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { if (selMode) { selMode = false; selIds.clear(); $('selBtn').classList.remove('on'); render(); updateSelBar(); } else if (searchQ) { searchQ = ''; $('searchInput').value = ''; render(); } return; }
+  if (e.key === 'Escape') { if (selMode) { selMode = false; selIds.clear(); render(); updateSelBar(); } else if (searchQ) { searchQ = ''; $('searchInput').value = ''; render(); } return; }
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
   if (e.code === 'KeyN') { e.preventDefault(); $('taskInput').focus(); }
