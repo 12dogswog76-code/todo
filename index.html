@@ -614,6 +614,8 @@
     .pill.ico input[type=time] { min-width: 64px; }
     .cbox { width: 22px; height: 22px; min-width: 22px; }
     .citem { font-size: 14px; }
+    .topbar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .topbar button { width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; padding: 10px 6px; }
   }
 
   /* --- Всплывающее окно писем (уведомления из почты) --- */
@@ -748,7 +750,8 @@
   body.light .aibox { background: #fff; border-color: #d4d7de; color: #1c1e24; }
   .aihead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #2e313a; }
   body.light .aihead { border-color: #e6e8ee; }
-  .aihead .aititle { font-weight: 600; font-size: 14px; margin-right: auto; }
+  .aihead .aititle { font-weight: 600; font-size: 14px; margin-right: auto; white-space: nowrap; }
+  .ttshort { display: none; }
   .aihead select, .aihead button { background: #23252c; color: #e8eaf0; border: 1px solid #424650; border-radius: 8px; padding: 5px 8px; font-size: 13px; cursor: pointer; }
   body.light .aihead select, body.light .aihead button { background: #f2f3f6; color: #3c4250; border-color: #d4d7de; }
   .ailog { flex: 1; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -775,8 +778,11 @@
   @media (max-width: 600px) {
     .aimodal { padding: 7px; }
     .aibox { height: 94dvh; max-height: 94dvh; border-radius: 12px; }
-    .aihead { flex-wrap: wrap; padding: 9px 10px; gap: 6px; }
-    .aihead .aititle { font-size: 13px; white-space: nowrap; }
+    .aihead { flex-wrap: nowrap; padding: 9px 10px; gap: 6px; }
+    .aihead .aititle { font-size: 13px; }
+    .ttlong { display: none; } .ttshort { display: inline; }
+    .aihead .btxt { display: none; }
+    .aihead select { max-width: 122px; }
     .aihead select, .aihead button { padding: 5px 7px; font-size: 12px; }
     .aimsg { max-width: 92%; }
     .aifoot { padding: 8px 10px; gap: 6px; }
@@ -917,9 +923,9 @@
 <div id="aiModal" class="aimodal">
   <div class="aibox">
     <div class="aihead">
-      <span class="aititle">✨ ИИ-помощник</span>
+      <span class="aititle">✨ <span class="ttlong">ИИ-помощник</span><span class="ttshort">ИИ</span></span>
       <select id="aiModel" title="Модель"></select>
-      <button id="aiClear" title="Очистить переписку">Очистить</button>
+      <button id="aiClear" title="Очистить переписку">🗑<span class="btxt"> Очистить</span></button>
       <button id="aiClose" title="Закрыть">✕</button>
     </div>
     <div id="aiLog" class="ailog"></div>
@@ -2862,8 +2868,23 @@ function updateSelBar() {
   mkBtn('Выполнить', () => { sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t && !t.done) { t.done = true; t.completedAt = Date.now(); t.mod = Date.now(); spawnRepeat(t); } }); exit(); save(); render(); updateSelBar(); });
   mkBtn('Удалить', () => { const rem = []; sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t) { rem.push(t); tombstones.push({ id: id, at: Date.now() }); } }); tasks = tasks.filter(x => !selIds.has(x.id)); exit(); save(); render(); updateSelBar(); if (rem.length) showUndo('Удалено: ' + rem.length, () => { rem.forEach(t => { tombstones = tombstones.filter(z => z.id !== t.id); tasks.push(t); }); save(); render(); }); });
   const catSel = document.createElement('select');
-  catSel.innerHTML = '<option value="">Категория…</option>' + allCatNames().map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') + '<option value="__none">без категории</option>';
-  catSel.onchange = () => { const v = catSel.value; if (!v) return; sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t) { t.cat = (v === '__none' ? null : v); t.mod = Date.now(); } }); exit(); save(); render(); updateSelBar(); };
+  let copts = '<option value="">Категория…</option>';
+  topCats().forEach(c => {
+    copts += '<option value="' + esc(c.n) + '">' + esc(c.n) + '</option>';
+    subsOf(c.n).forEach(sx => { copts += '<option value="' + esc(c.n) + '\u0001' + esc(sx.n) + '">\u00A0\u00A0› ' + esc(sx.n) + '</option>'; });
+  });
+  copts += '<option value="__none">без категории</option>';
+  catSel.innerHTML = copts;
+  catSel.onchange = () => {
+    const v = catSel.value; if (!v) return;
+    sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t) {
+      if (v === '__none') { t.cat = null; t.sub = null; }
+      else if (v.indexOf('\u0001') >= 0) { const p = v.split('\u0001'); t.cat = p[0]; t.sub = p[1]; }
+      else { t.cat = v; t.sub = null; }
+      t.mod = Date.now();
+    } });
+    exit(); save(); render(); updateSelBar();
+  };
   bar.appendChild(catSel);
   mkBtn('Снять', () => { exit(); render(); updateSelBar(); });
   bar.classList.add('show');
@@ -3510,6 +3531,8 @@ setInterval(() => {
   let aiMsgs = [];
   try { aiMsgs = JSON.parse(localStorage.getItem(LS + '_ai')) || []; } catch (e) {}
   let aiModel = localStorage.getItem(LS + '_aiModel') || 'gpt-5-nano';
+  let aiTs = parseInt(localStorage.getItem(LS + '_aiTs') || '0', 10);
+  const AI_KV = 'alextask_chat';
   let puterLoading = null, busy = false;
 
   function loadPuter() {
@@ -3531,7 +3554,31 @@ setInterval(() => {
   modelSel.value = aiModel;
   modelSel.onchange = () => { aiModel = modelSel.value; localStorage.setItem(LS + '_aiModel', aiModel); };
 
-  function persist() { try { localStorage.setItem(LS + '_ai', JSON.stringify(aiMsgs.slice(-50))); } catch (e) {} }
+  function saveLocal() { try { localStorage.setItem(LS + '_ai', JSON.stringify(aiMsgs.slice(-50))); localStorage.setItem(LS + '_aiTs', String(aiTs)); } catch (e) {} }
+  function persist() { aiTs = Date.now(); saveLocal(); aiPush(); }
+  async function signedIn() {
+    try { if (window.puter && puter.auth && puter.auth.isSignedIn) return await puter.auth.isSignedIn(); } catch (e) {}
+    return false;
+  }
+  async function aiPush() {
+    try {
+      if (!window.puter || !puter.kv) return;
+      if (!(await signedIn())) return;
+      await puter.kv.set(AI_KV, JSON.stringify({ ts: aiTs, msgs: aiMsgs.slice(-50) }));
+    } catch (e) {}
+  }
+  async function aiPull() {
+    try {
+      await loadPuter();
+      if (!(await signedIn())) return;
+      const raw = await puter.kv.get(AI_KV);
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      if (obj && Array.isArray(obj.msgs) && (obj.ts || 0) > aiTs) {
+        aiMsgs = obj.msgs; aiTs = obj.ts; saveLocal(); renderAi();
+      }
+    } catch (e) {}
+  }
 
   function bubbleEl(m) {
     const b = document.createElement('div');
@@ -3555,7 +3602,7 @@ setInterval(() => {
     log.scrollTop = log.scrollHeight;
   }
 
-  function openAi() { $('aiModal').classList.add('open'); document.body.classList.add('aiopen'); renderAi(); setTimeout(() => $('aiInput').focus(), 60); }
+  function openAi() { $('aiModal').classList.add('open'); document.body.classList.add('aiopen'); renderAi(); aiPull(); setTimeout(() => $('aiInput').focus(), 60); }
   function closeAi() { $('aiModal').classList.remove('open'); document.body.classList.remove('aiopen'); }
   $('aiBtn').onclick = openAi;
   $('aiClose').onclick = closeAi;
