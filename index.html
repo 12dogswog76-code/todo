@@ -722,6 +722,7 @@
   .citem { font-size: 14.5px; margin: 7px 0; }
   .cbox { width: 22px; height: 22px; min-width: 22px; font-size: 14px; }
   .editAddNote { flex: 1 1 100%; }
+  .fcol { display: flex; flex-direction: column; gap: 4px; }
 </style>
 </head>
 <body>
@@ -748,7 +749,7 @@
       <span id="catChips" style="display:contents"></span>
     </div>
     <div class="options" id="addExtra">
-      <input id="noteInput" type="text" class="pill" placeholder="+ заметка" title="Заметка (необязательно)">
+      <input id="noteInput" type="text" class="pill" placeholder="+ Добавить заметку" title="Заметка (необязательно)">
       <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
       <label class="pill ico" title="Время дедлайна — включает таймер (необязательно)">⏰<input id="timeInput" type="time"></label>
       <span class="chip" id="qdToday" title="Срок: сегодня">Сегодня</span>
@@ -1500,22 +1501,23 @@ function render() {
   sortSel.onchange = () => { state.sort = sortSel.value; save(); render(); };
   f.appendChild(sortSel);
 
-  const sp = document.createElement('span'); sp.className = 'spacer'; f.appendChild(sp);
-  // архив теперь кнопкой в верхней панели — подсветим её активной
   { const ab = $('archiveBtn'); if (ab) ab.classList.toggle('on', !!state.fArchive); }
-  if (!isArc && !state.fDone) {
-    const tg = document.createElement('span');
-    tg.className = 'chip';
-    tg.textContent = state.showDone ? 'Скрыть выполненные' : 'Показать выполненные';
-    tg.onclick = () => { state.showDone = !state.showDone; save(); render(); };
-    f.appendChild(tg);
-  }
   if (!isArc) {
+    const fdiv = document.createElement('span'); fdiv.className = 'catdiv'; f.appendChild(fdiv);
+    const col = document.createElement('div'); col.className = 'fcol';
     const selC = document.createElement('span');
     selC.className = 'chip' + (selMode ? ' on' : '');
     selC.textContent = 'Выбрать несколько';
     selC.onclick = () => { selMode = !selMode; if (!selMode) selIds.clear(); save(); render(); updateSelBar(); };
-    f.appendChild(selC);
+    col.appendChild(selC);
+    if (!state.fDone) {
+      const tg = document.createElement('span');
+      tg.className = 'chip';
+      tg.textContent = state.showDone ? 'Скрыть выполненные' : 'Показать выполненные';
+      tg.onclick = () => { state.showDone = !state.showDone; save(); render(); };
+      col.appendChild(tg);
+    }
+    f.appendChild(col);
   }
 
   const list = $('list');
@@ -1720,7 +1722,7 @@ function render() {
       };
 
       const ckEl = document.createElement('input');
-      ckEl.type = 'text'; ckEl.placeholder = '+ заметка (Enter)';
+      ckEl.type = 'text'; ckEl.placeholder = '+ Добавить заметку (Enter)';
       ckEl.className = 'pill editAddNote';
       ckEl.onmousedown = e => e.stopPropagation();
       ckEl.onclick = e => e.stopPropagation();
