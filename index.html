@@ -681,6 +681,14 @@
   .subgback:hover { background: #ff5252; }
   .subg.dock { display: block; background: transparent; pointer-events: none; padding: 0; }
   .subg.dock .subgcard { pointer-events: auto; position: fixed; left: 14px; top: 14px; width: 340px; max-width: 85vw; max-height: calc(100vh - 28px); overflow-y: auto; box-shadow: 0 8px 30px #0009; }
+  #undoBar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); background: #2a2d35; color: #e8eaf0; border: 1px solid #424650; border-radius: 10px; padding: 9px 12px; display: flex; align-items: center; gap: 12px; font-size: 13px; box-shadow: 0 6px 20px #000a; z-index: 95; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  #undoBar.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  #undoBar button { background: none; border: none; color: #ff9d9d; cursor: pointer; font-size: 13px; font-weight: 600; }
+  #undoBar button:hover { color: #fff; }
+  .ckbar { height: 3px; background: #2a2d35; border-radius: 3px; margin: 5px 0 2px; overflow: hidden; max-width: 220px; }
+  .ckbarf { height: 100%; background: #4caf7d; border-radius: 3px; transition: width .2s; }
+  body.light #undoBar { background: #fff; color: #1c1e24; border-color: #d4d7de; }
+  body.light .ckbar { background: #e4e6ea; }
 </style>
 </head>
 <body>
@@ -1304,6 +1312,20 @@ function matchSearch(t) {
   return false;
 }
 
+let undoTimer = null;
+function shortTitle(s) { s = s || ''; return s.length > 32 ? s.slice(0, 32) + '…' : s; }
+function showUndo(text, undoFn) {
+  let el = document.getElementById('undoBar');
+  if (!el) { el = document.createElement('div'); el.id = 'undoBar'; document.body.appendChild(el); }
+  el.innerHTML = '';
+  const sp = document.createElement('span'); sp.textContent = text;
+  const btn = document.createElement('button'); btn.textContent = 'Отменить';
+  btn.onclick = () => { clearTimeout(undoTimer); el.classList.remove('show'); undoFn(); };
+  el.append(sp, btn);
+  el.classList.add('show');
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => el.classList.remove('show'), 6000);
+}
 function render() {
   // запоминаем позиции для анимации перемещения (FLIP)
   const oldPos = {};
@@ -1473,12 +1495,19 @@ function render() {
     ch.className = 'check'; ch.textContent = '✓';
     ch.title = t.done ? 'Вернуть в работу' : 'Отметить выполненной';
     ch.onclick = () => {
+      const wasDone = t.done;
       t.done = !t.done;
       t.completedAt = t.done ? Date.now() : null;
       if (!t.done) t.arc = false; // возврат в работу — из архива тоже
       t.mod = Date.now();
-      if (t.done) spawnRepeat(t); // повторяющаяся задача создаётся на следующий срок
+      let spawned = null;
+      if (t.done) { const _b = tasks.length; spawnRepeat(t); if (tasks.length > _b) spawned = tasks[tasks.length - 1]; }
       save(); render();
+      if (!wasDone && t.done) showUndo('Выполнено: ' + shortTitle(t.title), () => {
+        t.done = false; t.completedAt = null; t.arc = false; t.mod = Date.now();
+        if (spawned) tasks = tasks.filter(x => x !== spawned);
+        save(); render();
+      });
     };
     row.appendChild(ch);
 
@@ -1534,6 +1563,10 @@ function render() {
         ci_el.append(cb, ct, cd);
         cw.appendChild(ci_el);
       });
+      const ckbar = document.createElement('div'); ckbar.className = 'ckbar';
+      const ckfill = document.createElement('div'); ckfill.className = 'ckbarf';
+      ckfill.style.width = Math.round(t.checks.filter(c => c.d).length / t.checks.length * 100) + '%';
+      ckbar.appendChild(ckfill); cw.appendChild(ckbar);
       body.appendChild(cw);
     }
 
@@ -1801,9 +1834,14 @@ function render() {
     del.className = 'del'; del.textContent = '✕'; del.title = 'Удалить';
     del.onclick = () => {
       if (del.dataset.confirm) {
+        const removed = t, tomb = { id: t.id, at: Date.now() };
         tasks = tasks.filter(x => x.id !== t.id);
-        tombstones.push({ id: t.id, at: Date.now() });
+        tombstones.push(tomb);
         save(); render();
+        showUndo('Удалено: ' + shortTitle(removed.title), () => {
+          tombstones = tombstones.filter(x => x !== tomb);
+          tasks.push(removed); save(); render();
+        });
         return;
       }
       del.dataset.confirm = '1';
@@ -2162,9 +2200,13 @@ async function mailPull() {
     const data = await r.json();
     mailItems = (data.record && data.record.mail) || [];
     // авто-открытие окна — только при ПОЯВЛЕНИИ нового непрочитанного письма
-    let hasNew = false;
-    mailItems.forEach(m => { if (!mailKnownIds[m.id]) { mailKnownIds[m.id] = 1; if (!mailSeen[m.id]) hasNew = true; } });
+    let hasNew = false; const freshUnread = [];
+    mailItems.forEach(m => { if (!mailKnownIds[m.id]) { mailKnownIds[m.id] = 1; if (!mailSeen[m.id]) { hasNew = true; freshUnread.push(m); } } });
     if (hasNew && !mailFirstPull) mailOpen = true;
+    if (!mailFirstPull && freshUnread.length && localStorage.getItem(LS + '_notif') === '1' && ('Notification' in window) && Notification.permission === 'granted') {
+      if (freshUnread.length <= 3) freshUnread.forEach(m => showNotif(m.source === 'jira' ? '📨 Jira' : '📨 Письмо', m.subject || ''));
+      else showNotif('📨 Новых писем: ' + freshUnread.length, freshUnread.slice(0, 3).map(m => m.subject || '').join('; '));
+    }
     mailFirstPull = false;
     // забываем «прочитано» для писем, которых уже нет в облаке
     const ids = {}; mailItems.forEach(m => ids[m.id] = 1);
