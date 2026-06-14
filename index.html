@@ -721,6 +721,7 @@
   .chip.catmgr { border-style: dashed; }
   .citem { font-size: 14.5px; margin: 7px 0; }
   .cbox { width: 22px; height: 22px; min-width: 22px; font-size: 14px; }
+  .editAddNote { flex: 1 1 100%; }
 </style>
 </head>
 <body>
@@ -1711,6 +1712,18 @@ function render() {
         if (newTitle && newTitle !== t.title) { t.title = newTitle; t.updatedAt = Date.now(); t.mod = Date.now(); }
       };
 
+      const ckEl = document.createElement('input');
+      ckEl.type = 'text'; ckEl.placeholder = '+ заметка (Enter)';
+      ckEl.className = 'pill editAddNote';
+      ckEl.onmousedown = e => e.stopPropagation();
+      ckEl.onclick = e => e.stopPropagation();
+      const addPendingNote = () => { if (ckEl.value.trim()) { if (!t.checks) t.checks = []; t.checks.push({ t: ckEl.value.trim(), d: false }); ckEl.value = ''; t.updatedAt = Date.now(); t.mod = Date.now(); } };
+      ckEl.onkeydown = e => {
+        if (e.key === 'Enter' && ckEl.value.trim()) { addPendingNote(); grab(); save(); const id = t.id; render(); const nb = document.querySelector('.task[data-id="' + id + '"] .body'); if (nb) nb.click(); }
+        if (e.key === 'Escape') render();
+      };
+      panel.appendChild(ckEl);
+
       allCatNames().forEach(c => {
         const chEl = document.createElement('span');
         chEl.className = 'chip cat' + (t.cat === c ? ' on' : '');
@@ -1753,10 +1766,10 @@ function render() {
       };
       panel.appendChild(dWrap);
       panel.appendChild(tmWrap);
-      const mkQd = (label, fn) => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = label; b.onmousedown = e => { e.preventDefault(); e.stopPropagation(); }; b.onclick = e => { e.stopPropagation(); fn(); t.updatedAt = Date.now(); t.mod = Date.now(); grab(); save(); render(); }; panel.appendChild(b); };
+      const mkQd = (label, fn) => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = label; b.onmousedown = e => { e.preventDefault(); e.stopPropagation(); }; b.onclick = e => { e.stopPropagation(); fn(); dEl.value = t.due || ''; tmEl.value = t.dueTime || ''; dWrap.classList.toggle('on', !!t.due); tmWrap.classList.toggle('on', !!t.dueTime); t.updatedAt = Date.now(); t.mod = Date.now(); save(); }; panel.appendChild(b); };
       mkQd('Сегодня', () => { t.due = todayStr(); });
       mkQd('Завтра', () => { const dl = new Date(Date.now() + 86400000); t.due = _ymd(dl); t.dueTime = '09:00'; });
-      mkQd('+1ч', () => { const dl = new Date(Date.now() + 3600000); t.due = _ymd(dl); t.dueTime = _pad2(dl.getHours()) + ':' + _pad2(dl.getMinutes()); });
+      mkQd('+1ч', () => { const base = (t.due && t.dueTime ? deadlineOf(t).getTime() : Date.now()); const dl = new Date(base + 3600000); t.due = _ymd(dl); t.dueTime = _pad2(dl.getHours()) + ':' + _pad2(dl.getMinutes()); });
 
       // повтор
       const repEl = document.createElement('select');
@@ -1785,31 +1798,11 @@ function render() {
       };
       panel.appendChild(repEl);
 
-      // добавление подпункта чек-листа
-      const ckEl = document.createElement('input');
-      ckEl.type = 'text'; ckEl.placeholder = '+ заметка (Enter)';
-      ckEl.className = 'pill'; ckEl.style.width = '220px';
-      ckEl.onmousedown = e => e.stopPropagation();
-      ckEl.onclick = e => e.stopPropagation();
-      ckEl.onkeydown = e => {
-        if (e.key === 'Enter' && ckEl.value.trim()) {
-          if (!t.checks) t.checks = [];
-          t.checks.push({ t: ckEl.value.trim(), d: false });
-          t.updatedAt = Date.now(); t.mod = Date.now();
-          grab(); save();
-          const id = t.id;
-          render();
-          const nb = document.querySelector('.task[data-id="' + id + '"] .body');
-          if (nb) nb.click(); // оставляем редактор открытым для следующего подпункта
-        }
-        if (e.key === 'Escape') render();
-      };
-      panel.appendChild(ckEl);
       body.appendChild(panel);
 
       inp.focus(); inp.select();
       const finish = ok => {
-        if (ok) grab();
+        if (ok) { addPendingNote(); grab(); }
         save(); render();
       };
       inp.onkeydown = e => {
