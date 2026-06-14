@@ -738,6 +738,40 @@
   .cmaddsub:hover { opacity: 1; }
   .cmaddsub.on { opacity: 1; border-style: solid; }
   .cmbreak { flex-basis: 100%; height: 0; }
+  /* --- ИИ-модалка --- */
+  .aibtn.aibtn { border-color: #b197fc66; color: #cbb6ff; }
+  body.light .aibtn.aibtn { border-color: #b197fc; color: #7048c8; }
+  .aimodal { position: fixed; inset: 0; background: #000000aa; display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .aimodal.open { display: flex; }
+  .aibox { width: 580px; max-width: 100%; height: 80vh; max-height: 780px; background: #1c1e24; border: 1px solid #424650; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 14px 44px #000b; }
+  body.light .aibox { background: #fff; border-color: #d4d7de; color: #1c1e24; }
+  .aihead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #2e313a; }
+  body.light .aihead { border-color: #e6e8ee; }
+  .aihead .aititle { font-weight: 600; font-size: 14px; margin-right: auto; }
+  .aihead select, .aihead button { background: #23252c; color: #e8eaf0; border: 1px solid #424650; border-radius: 8px; padding: 5px 8px; font-size: 13px; cursor: pointer; }
+  body.light .aihead select, body.light .aihead button { background: #f2f3f6; color: #3c4250; border-color: #d4d7de; }
+  .ailog { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .aimsg { max-width: 86%; padding: 9px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; position: relative; }
+  .aimsg.u { align-self: flex-end; background: #e53e3e22; border: 1px solid #e53e3e55; }
+  .aimsg.a { align-self: flex-start; background: #23252c; border: 1px solid #343843; }
+  body.light .aimsg.a { background: #f2f3f6; border-color: #e0e3ea; }
+  .aimsg.aierr { border-color: #e5683e; color: #ffb59c; }
+  .aicopy { position: absolute; top: 3px; right: 5px; font-size: 11px; opacity: 0; cursor: pointer; background: none; border: none; color: inherit; padding: 2px 4px; }
+  .aimsg.a:hover .aicopy { opacity: .55; }
+  .aicopy:hover { opacity: 1; }
+  .aiempty { margin: auto; text-align: center; opacity: .5; font-size: 13px; max-width: 340px; line-height: 1.5; }
+  .aifoot { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; border-top: 1px solid #2e313a; }
+  body.light .aifoot { border-color: #e6e8ee; }
+  #aiInput { flex: 1; resize: none; max-height: 120px; min-height: 42px; background: #23252c; color: #e8eaf0; border: 1px solid #424650; border-radius: 10px; padding: 10px 11px; font-size: 14px; font-family: inherit; line-height: 1.4; }
+  body.light #aiInput { background: #f2f3f6; color: #1c1e24; border-color: #d4d7de; }
+  #aiMic, #aiSend { width: 42px; height: 42px; flex: none; border-radius: 10px; border: 1px solid #424650; background: #23252c; color: #e8eaf0; font-size: 17px; cursor: pointer; }
+  body.light #aiMic { background: #f2f3f6; color: #3c4250; border-color: #d4d7de; }
+  #aiSend { background: #e53e3e; border-color: #e53e3e; color: #fff; }
+  #aiSend:disabled { opacity: .5; cursor: default; }
+  #aiMic.rec { background: #e53e3e; border-color: #e53e3e; color: #fff; animation: aipulse 1s infinite; }
+  @keyframes aipulse { 50% { opacity: .45; } }
+  .aihint { font-size: 11px; opacity: .5; text-align: center; padding: 0 12px 9px; }
+  @media (max-width: 600px) { .aibox { height: 92vh; max-height: none; border-radius: 12px; } .aimsg { max-width: 92%; } }
 </style>
 </head>
 <body>
@@ -752,6 +786,7 @@
     <button id="pipBtn" style="display:none">🪟 Поверх окон</button>
     <button id="archiveBtn">📦 Архив</button>
     <button id="guideBtn">❔ Как пользоваться</button>
+    <button id="aiBtn" class="aibtn">✨ ИИ</button>
     <button id="mailBell" class="mbell" style="display:none" title="Письма с почты">📨 Письма</button>
   </div>
 
@@ -856,6 +891,24 @@
 
   <div class="footer">
     <a href="https://t.me/zerowpoint" target="_blank" rel="noopener">автор — @zerowpoint</a>
+  </div>
+</div>
+
+<div id="aiModal" class="aimodal">
+  <div class="aibox">
+    <div class="aihead">
+      <span class="aititle">✨ ИИ-помощник</span>
+      <select id="aiModel" title="Модель"></select>
+      <button id="aiClear" title="Очистить переписку">Очистить</button>
+      <button id="aiClose" title="Закрыть">✕</button>
+    </div>
+    <div id="aiLog" class="ailog"></div>
+    <div class="aifoot">
+      <button id="aiMic" title="Голосовой ввод">🎤</button>
+      <textarea id="aiInput" rows="1" placeholder="Спроси что-нибудь…  (Enter — отправить, Shift+Enter — перенос)"></textarea>
+      <button id="aiSend" title="Отправить">▶</button>
+    </div>
+    <div class="aihint">Бесплатно через Puter.js · текст запроса уходит на серверы Puter</div>
   </div>
 </div>
 
@@ -3417,6 +3470,116 @@ setInterval(() => {
 setInterval(() => {
   if (sync && !document.hidden && !document.querySelector('.editInput')) cloudPull();
 }, 60000);
+
+/* --- ИИ-помощник (Puter.js, без ключа) --- */
+(function () {
+  const MODELS = [
+    ['gpt-5-nano', '⚡ Быстрая'],
+    ['gpt-5-mini', '⚖ Сбаланс'],
+    ['gpt-5.4', '\u{1F9E0} Умная'],
+    ['gpt-4o-mini', '\u{1F916} GPT-4o mini']
+  ];
+  let aiMsgs = [];
+  try { aiMsgs = JSON.parse(localStorage.getItem(LS + '_ai')) || []; } catch (e) {}
+  let aiModel = localStorage.getItem(LS + '_aiModel') || 'gpt-5-nano';
+  let puterLoading = null, busy = false;
+
+  function loadPuter() {
+    if (window.puter) return Promise.resolve();
+    if (puterLoading) return puterLoading;
+    puterLoading = new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://js.puter.com/v2/';
+      sc.onload = res;
+      sc.onerror = () => { puterLoading = null; rej(new Error('Не удалось загрузить ИИ-движок (проверь интернет)')); };
+      document.head.appendChild(sc);
+    });
+    return puterLoading;
+  }
+
+  const modelSel = $('aiModel');
+  MODELS.forEach(m => { const o = document.createElement('option'); o.value = m[0]; o.textContent = m[1]; modelSel.appendChild(o); });
+  if (!MODELS.some(m => m[0] === aiModel)) aiModel = 'gpt-5-nano';
+  modelSel.value = aiModel;
+  modelSel.onchange = () => { aiModel = modelSel.value; localStorage.setItem(LS + '_aiModel', aiModel); };
+
+  function persist() { try { localStorage.setItem(LS + '_ai', JSON.stringify(aiMsgs.slice(-50))); } catch (e) {} }
+
+  function bubbleEl(m) {
+    const b = document.createElement('div');
+    b.className = 'aimsg ' + (m.role === 'user' ? 'u' : 'a');
+    b.textContent = m.content;
+    if (m.role !== 'user') {
+      const cp = document.createElement('button'); cp.className = 'aicopy'; cp.textContent = '⧉ копия';
+      cp.onclick = () => { if (navigator.clipboard) navigator.clipboard.writeText(m.content); cp.textContent = '✓'; setTimeout(() => cp.textContent = '⧉ копия', 1200); };
+      b.appendChild(cp);
+    }
+    return b;
+  }
+  function renderAi() {
+    const log = $('aiLog'); log.innerHTML = '';
+    if (!aiMsgs.length) {
+      const e = document.createElement('div'); e.className = 'aiempty';
+      e.textContent = 'Задай вопрос ИИ. Можно надиктовать голосом \u{1F3A4}. Ответы можно копировать. История хранится только на этом устройстве.';
+      log.appendChild(e); return;
+    }
+    aiMsgs.forEach(m => log.appendChild(bubbleEl(m)));
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function openAi() { $('aiModal').classList.add('open'); renderAi(); setTimeout(() => $('aiInput').focus(), 60); }
+  function closeAi() { $('aiModal').classList.remove('open'); }
+  $('aiBtn').onclick = openAi;
+  $('aiClose').onclick = closeAi;
+  $('aiModal').onclick = e => { if (e.target === $('aiModal')) closeAi(); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('aiModal').classList.contains('open')) closeAi(); });
+  $('aiClear').onclick = () => { aiMsgs = []; persist(); renderAi(); };
+
+  async function send() {
+    const inp = $('aiInput'); const text = inp.value.trim();
+    if (!text || busy) return;
+    busy = true; $('aiSend').disabled = true; inp.value = ''; inp.style.height = 'auto';
+    aiMsgs.push({ role: 'user', content: text }); persist(); renderAi();
+    const log = $('aiLog');
+    const bubble = document.createElement('div'); bubble.className = 'aimsg a'; bubble.textContent = '…';
+    log.appendChild(bubble); log.scrollTop = log.scrollHeight;
+    try {
+      await loadPuter();
+      const resp = await puter.ai.chat(aiMsgs.map(m => ({ role: m.role, content: m.content })), { model: aiModel, stream: true });
+      let acc = '';
+      for await (const part of resp) { const t = (part && part.text) || ''; if (t) { acc += t; bubble.textContent = acc; log.scrollTop = log.scrollHeight; } }
+      if (!acc) acc = '(пустой ответ)';
+      aiMsgs.push({ role: 'assistant', content: acc }); persist(); renderAi();
+    } catch (err) {
+      bubble.classList.add('aierr');
+      bubble.textContent = '⚠ ' + ((err && err.message) ? err.message : 'Ошибка запроса. Попробуй ещё раз или смени модель.');
+    }
+    busy = false; $('aiSend').disabled = false;
+  }
+  $('aiSend').onclick = send;
+  $('aiInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+  $('aiInput').addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px'; });
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { $('aiMic').style.display = 'none'; }
+  else {
+    let rec = null, recing = false;
+    $('aiMic').onclick = () => {
+      if (recing) { if (rec) rec.stop(); return; }
+      rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true; rec.continuous = false;
+      const base = $('aiInput').value;
+      rec.onresult = e => {
+        let s2 = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) s2 += e.results[i][0].transcript;
+        $('aiInput').value = (base ? base + ' ' : '') + s2;
+        $('aiInput').dispatchEvent(new Event('input'));
+      };
+      rec.onend = () => { recing = false; $('aiMic').classList.remove('rec'); $('aiInput').focus(); };
+      rec.onerror = () => { recing = false; $('aiMic').classList.remove('rec'); };
+      rec.start(); recing = true; $('aiMic').classList.add('rec');
+    };
+  }
+})();
 </script>
 </body>
 </html>
