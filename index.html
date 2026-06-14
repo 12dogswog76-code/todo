@@ -702,6 +702,16 @@
   #selBar button:hover { border-color: #e53e3e; }
   body.light #selBar { background: #fff; color: #1c1e24; border-color: #d4d7de; }
   body.light #selBar button, body.light #selBar select { background: #f2f3f6; color: #1c1e24; border-color: #d4d7de; }
+  #statChart, #statCats { margin-top: 12px; }
+  .schart-t { font-size: 11px; color: #9aa0ae; margin-bottom: 6px; }
+  .schart { display: flex; align-items: flex-end; gap: 3px; height: 60px; }
+  .scol { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+  .scbar { width: 100%; background: #4caf7d; border-radius: 3px 3px 0 0; min-height: 2px; }
+  .scatrow { display: flex; justify-content: space-between; font-size: 12.5px; color: #c9cfdc; padding: 3px 0; border-bottom: 1px solid #2c3038; }
+  .scatrow b { color: #fff; }
+  body.light .schart-t { color: #5f6673; }
+  body.light .scatrow { color: #3c4250; border-color: #e4e6ea; }
+  body.light .scatrow b { color: #1c1e24; }
 </style>
 </head>
 <body>
@@ -784,6 +794,10 @@
       <input type="file" id="fileInput" accept=".json,.txt" style="display:none">
       <button id="applyBtn" class="danger">Импортировать (заменит список)</button>
     </div>
+    <div class="iorow">
+      <select id="bakSel" class="pill"></select>
+      <button id="bakRestore">Восстановить из бэкапа</button>
+    </div>
     <div id="ioMsg"></div>
   </div>
 
@@ -807,6 +821,8 @@
   <div id="statsPanel">
     <div class="statgrid" id="statGrid"></div>
     <div class="hint" id="statStreak"></div>
+    <div id="statChart"></div>
+    <div id="statCats"></div>
   </div>
 
 
@@ -1981,6 +1997,19 @@ function fillStats() {
   $('statStreak').textContent = od
     ? 'Сейчас просрочено: ' + od + '. Разберись с ними — и серия не прервётся.'
     : 'Просроченных нет. Так держать!';
+  const N = 14, byDay = []; let maxv = 1;
+  for (let i = N - 1; i >= 0; i--) {
+    const dd = new Date(now - i * day), key = dd.toDateString();
+    const cnt = doneT.filter(t => dayKey(t.completedAt) === key).length;
+    if (cnt > maxv) maxv = cnt;
+    byDay.push({ d: dd, cnt: cnt });
+  }
+  $('statChart').innerHTML = '<div class="schart-t">Выполнено за 14 дней</div><div class="schart">' +
+    byDay.map(b => '<div class="scol" title="' + b.d.getDate() + ' ' + MONTHS[b.d.getMonth()] + ': ' + b.cnt + '"><div class="scbar" style="height:' + Math.round(b.cnt / maxv * 100) + '%"></div></div>').join('') + '</div>';
+  const catCnt = {}; tasks.filter(t => !t.done).forEach(t => { const k = t.cat || 'без категории'; catCnt[k] = (catCnt[k] || 0) + 1; });
+  const ents = Object.keys(catCnt).sort((a, b) => catCnt[b] - catCnt[a]);
+  $('statCats').innerHTML = ents.length ? '<div class="schart-t">Активные по категориям</div>' + ents.map(k =>
+    '<div class="scatrow"><span>' + (k === 'без категории' ? k : ((catEmojiHTML(k, true) ? catEmojiHTML(k, true) + ' ' : '') + esc(k))) + '</span><b>' + catCnt[k] + '</b></div>').join('') : '';
 }
 
 function closePanels(except) {
@@ -2016,6 +2045,22 @@ $('lifeArc').onchange = () => { life.arc = parseInt($('lifeArc').value, 10); sav
 /* --- Экспорт / импорт --- */
 function ioMsg(s) { $('ioMsg').textContent = s; setTimeout(() => { $('ioMsg').textContent = ''; }, 4000); }
 function exportStr() { return JSON.stringify({ v: 1, tasks, state }); }
+function bakKeys() { return Object.keys(localStorage).filter(k => k.indexOf(LS + '_bak_') === 0).sort(); }
+function autoBackup() {
+  try { const key = LS + '_bak_' + todayStr(); if (!localStorage.getItem(key)) localStorage.setItem(key, exportStr()); } catch(e) {}
+  const ks = bakKeys(); while (ks.length > 7) { try { localStorage.removeItem(ks.shift()); } catch(e) {} }
+}
+function fillBakSel() {
+  const sel = $('bakSel'); if (!sel) return;
+  const ks = bakKeys().reverse();
+  sel.innerHTML = ks.length ? ks.map(k => '<option value="' + k + '">' + k.replace(LS + '_bak_', '') + '</option>').join('') : '<option value="">нет резервных копий</option>';
+}
+$('bakRestore').onclick = () => {
+  const k = $('bakSel').value; if (!k) return;
+  if (!$('bakRestore').dataset.c) { $('bakRestore').dataset.c = '1'; $('bakRestore').textContent = 'точно? (заменит список)'; setTimeout(() => { if ($('bakRestore').isConnected) { delete $('bakRestore').dataset.c; $('bakRestore').textContent = 'Восстановить из бэкапа'; } }, 4000); return; }
+  delete $('bakRestore').dataset.c; $('bakRestore').textContent = 'Восстановить из бэкапа';
+  try { const data = JSON.parse(localStorage.getItem(k)); if (data && Array.isArray(data.tasks)) { tasks = data.tasks; if (data.state) state = Object.assign(state, data.state); save(); render(); ioMsg('Восстановлено: ' + k.replace(LS + '_bak_', '')); } else ioMsg('Пустая копия'); } catch(e) { ioMsg('Не удалось'); }
+};
 
 $('exportBtn').onclick = () => {
   closePanels('ioPanel');
@@ -2084,7 +2129,7 @@ function setCloud(cls, tip) {
   d.title = tip || 'облако не подключено';
 }
 function syncMsg(s) { $('syncMsg').textContent = s; }
-function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, mailBin: mailBin || '', t: Date.now() }; }
+function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, mailBin: mailBin || '', mailSeen: mailSeen, t: Date.now() }; }
 
 function syncUI() {
   const on = !!(sync && sync.key && sync.bin);
@@ -2149,6 +2194,11 @@ function mergeData(remote) {
     mailBin = remote.mailBin;
     localStorage.setItem(LS + '_mailbin', mailBin);
     try { updateMailBell(); mailPull(); } catch(e) {}
+  }
+  if (remote && remote.mailSeen) {
+    let mch = false;
+    Object.keys(remote.mailSeen).forEach(id => { if (!mailSeen[id]) { mailSeen[id] = remote.mailSeen[id]; mch = true; } });
+    if (mch) { saveMailSeen(); try { renderMail(); if (pipWin) pipRender(); updateMailBell(); } catch(e) {} }
   }
 }
 
@@ -2300,10 +2350,18 @@ function renderMail() {
     txt.innerHTML = '<div class="msubj">' + esc(m.subject || '(без темы)') + '</div>' +
       '<div class="mfrom">' + esc(m.name || '') + ' · ' + fmtDT(m.at || Date.now()) + '</div>';
     row.appendChild(txt);
+    const toTask = document.createElement('button');
+    toTask.className = 'mread'; toTask.textContent = '＋'; toTask.title = 'В задачи';
+    toTask.onclick = () => {
+      const minPos = tasks.length ? Math.min(...tasks.map(x => x.pos || 0)) : 0;
+      tasks.push({ id: Date.now(), title: 'Письмо: ' + (m.subject || '') + (m.name ? ' (от ' + m.name + ')' : ''), cat: null, done: false, created: Date.now(), updatedAt: null, mod: Date.now(), pos: minPos - 1 });
+      mailSeen[m.id] = Date.now(); saveMailSeen(); scheduleSync(); save(); render();
+    };
+    row.appendChild(toTask);
     if (isUnread) {
       const rd = document.createElement('button');
       rd.className = 'mread'; rd.textContent = '✓'; rd.title = 'Прочитано';
-      rd.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); renderMail(); };
+      rd.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); scheduleSync(); renderMail(); };
       row.appendChild(rd);
     }
     list.appendChild(row);
@@ -2322,7 +2380,7 @@ function updateMailBell() {
 
 $('mailBell').onclick = () => { mailOpen = !mailOpen; renderMail(); };
 $('mailHide').onclick = () => { mailOpen = false; renderMail(); };
-$('mailAll').onclick = () => { unreadMail().forEach(m => mailSeen[m.id] = Date.now()); saveMailSeen(); renderMail(); };
+$('mailAll').onclick = () => { unreadMail().forEach(m => mailSeen[m.id] = Date.now()); saveMailSeen(); scheduleSync(); renderMail(); };
 $('mailBinInput').value = mailBin;
 $('mailBinSave').onclick = () => {
   mailBin = $('mailBinInput').value.trim();
@@ -2868,7 +2926,7 @@ function pipRender() {
         tx.innerHTML = '<div class="pmsubj">' + esc(m.subject || '(без темы)') + '</div><div class="pmfrom">' + esc(m.name || '') + '</div>';
         row.appendChild(tx);
         const rb = d.createElement('button'); rb.className = 'pmread'; rb.textContent = '✓'; rb.title = 'Прочитано';
-        rb.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); if (typeof updateMailBell === 'function') updateMailBell(); pipRender(); };
+        rb.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); scheduleSync(); if (typeof updateMailBell === 'function') updateMailBell(); pipRender(); };
         row.append(rb); pm.appendChild(row);
       });
     }
@@ -3194,6 +3252,7 @@ syncUI();
 notifLabel();
 $('taskInput').focus();
 if (sync) cloudPull();
+autoBackup(); fillBakSel();
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sync) cloudPull();
