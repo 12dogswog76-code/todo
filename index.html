@@ -772,6 +772,14 @@
   @keyframes aipulse { 50% { opacity: .45; } }
   .aihint { font-size: 11px; opacity: .5; text-align: center; padding: 0 12px 9px; }
   @media (max-width: 600px) { .aibox { height: 92vh; max-height: none; border-radius: 12px; } .aimsg { max-width: 92%; } }
+  #addMoreRow { display: none; }
+  #addMoreBtn { color: #9aa0ad; border-style: dashed; }
+  @media (max-width: 600px) {
+    #addMoreRow { display: flex; }
+    #addExtra, #addHint { display: none; }
+    .addbox.moreopen #addExtra { display: flex; }
+    .addbox.moreopen #addHint { display: block; }
+  }
 </style>
 </head>
 <body>
@@ -798,6 +806,7 @@
     <div class="options">
       <span id="catChips" style="display:contents"></span>
     </div>
+    <div class="options" id="addMoreRow"><span class="chip" id="addMoreBtn">📅 Срок, заметка, повтор ▾</span></div>
     <div class="options" id="addExtra">
       <input id="noteInput" type="text" class="pill" placeholder="+ Добавить заметку" title="Заметка (необязательно)">
       <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
@@ -813,7 +822,7 @@
         <option value="c">🔁 свой период…</option>
       </select>
     </div>
-    <div class="hint">Заметка, дедлайн и повтор — по желанию. Дата + время = таймер (время без даты = сегодня). Клик по задаче — редактировать (там же заметки). ⠿ — перетащить, 📌 — закрепить. Ссылку просто вставь в текст.</div>
+    <div class="hint" id="addHint">Заметка, дедлайн и повтор — по желанию. Дата + время = таймер (время без даты = сегодня). Клик по задаче — редактировать (там же заметки). ⠿ — перетащить, 📌 — закрепить. Ссылку просто вставь в текст.</div>
 
     <div id="catMgr">
       <div class="cmrow">
@@ -2792,6 +2801,14 @@ $('cmName').onkeydown = e => {
   if (e.key === 'Escape') { cmReset(); renderCatMgr(); }
 };
 renderCatChips();
+{
+  const amb = $('addMoreBtn');
+  if (amb) amb.onclick = () => {
+    const box = amb.closest('.addbox');
+    const open = box.classList.toggle('moreopen');
+    amb.textContent = '📅 Срок, заметка, повтор ' + (open ? '▴' : '▾');
+  };
+}
 ['dateInput','timeInput'].forEach(i => {
   $(i).onchange = e => {
     e.target.parentElement.classList.toggle('on', !!e.target.value);
