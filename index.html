@@ -695,6 +695,13 @@
   .editNote { width: 100%; min-height: 46px; background: #121317; border: 1px solid #33363e; border-radius: 8px; color: #e8eaf0; font-size: 13px; padding: 6px 10px; outline: none; resize: vertical; font-family: inherit; margin-top: 4px; }
   .editNote:focus { border-color: #e53e3e; }
   body.light .editNote { background: #f2f3f6; color: #1c1e24; border-color: #d4d7de; }
+  .task.selected { outline: 2px solid #e53e3e; outline-offset: -2px; }
+  #selBar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); background: #2a2d35; color: #e8eaf0; border: 1px solid #424650; border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; box-shadow: 0 6px 20px #000a; z-index: 96; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: calc(100vw - 24px); }
+  #selBar.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  #selBar button, #selBar select { background: #1c1e24; border: 1px solid #424650; border-radius: 8px; color: #e8eaf0; cursor: pointer; font-size: 12.5px; padding: 5px 10px; }
+  #selBar button:hover { border-color: #e53e3e; }
+  body.light #selBar { background: #fff; color: #1c1e24; border-color: #d4d7de; }
+  body.light #selBar button, body.light #selBar select { background: #f2f3f6; color: #1c1e24; border-color: #d4d7de; }
 </style>
 </head>
 <body>
@@ -709,6 +716,7 @@
     <button id="pipBtn" style="display:none">🪟 Поверх окон</button>
     <button id="archiveBtn">📦 Архив</button>
     <button id="guideBtn">❔ Как пользоваться</button>
+    <button id="selBtn">✅ Выбрать</button>
     <button id="mailBell" class="mbell" style="display:none" title="Письма с почты">📨 Письма</button>
   </div>
 
@@ -990,6 +998,8 @@ if (!Array.isArray(state.colors)) state.colors = [];
 if (!state.sort) state.sort = 'manual';
 
 let searchQ = '';
+let selMode = false;
+let selIds = new Set();
 
 // облачная синхронизация (jsonbin.io)
 let sync = null;
@@ -1505,7 +1515,7 @@ function render() {
   shown.forEach(t => {
     const row = document.createElement('div');
     row.dataset.id = t.id;
-    row.className = 'task ' + (t.done ? 'done ' : '') + (isParked(t) ? 'parked ' : '') + (t.pinned ? 'pinned ' : '') + (t.cat ? 'cat-' + t.cat : '');
+    row.className = 'task ' + (t.done ? 'done ' : '') + (isParked(t) ? 'parked ' : '') + (t.pinned ? 'pinned ' : '') + (t.cat ? 'cat-' + t.cat : '') + (selMode && selIds.has(t.id) ? ' selected' : '');
 
     if (!isParked(t)) {
       const dh = document.createElement('div');
@@ -1647,6 +1657,7 @@ function render() {
 
     body.onclick = (ev) => {
       if (ev.target.closest('a')) return;
+      if (selMode) { if (selIds.has(t.id)) { selIds.delete(t.id); row.classList.remove('selected'); } else { selIds.add(t.id); row.classList.add('selected'); } updateSelBar(); return; }
       if (body.querySelector('.editInput')) return;
       const inp = document.createElement('input');
       inp.className = 'editInput'; inp.value = t.title;
@@ -2550,6 +2561,32 @@ $('repInput').onchange = e => {
 };
 $('addBtn').onclick = addTask;
 $('taskInput').onkeydown = e => { if (e.key === 'Enter') addTask(); };
+$('selBtn').onclick = () => { selMode = !selMode; if (!selMode) selIds.clear(); $('selBtn').classList.toggle('on', selMode); render(); updateSelBar(); };
+function updateSelBar() {
+  let bar = document.getElementById('selBar');
+  if (!selMode) { if (bar) bar.classList.remove('show'); return; }
+  if (!bar) { bar = document.createElement('div'); bar.id = 'selBar'; document.body.appendChild(bar); }
+  bar.innerHTML = '';
+  const info = document.createElement('span'); info.textContent = 'Выбрано: ' + selIds.size; bar.appendChild(info);
+  const sel = [...selIds];
+  const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = fn; bar.appendChild(b); };
+  const exit = () => { selMode = false; selIds.clear(); $('selBtn').classList.remove('on'); };
+  mkBtn('Выполнить', () => { sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t && !t.done) { t.done = true; t.completedAt = Date.now(); t.mod = Date.now(); spawnRepeat(t); } }); exit(); save(); render(); updateSelBar(); });
+  mkBtn('Удалить', () => { const rem = []; sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t) { rem.push(t); tombstones.push({ id: id, at: Date.now() }); } }); tasks = tasks.filter(x => !selIds.has(x.id)); exit(); save(); render(); updateSelBar(); if (rem.length) showUndo('Удалено: ' + rem.length, () => { rem.forEach(t => { tombstones = tombstones.filter(z => z.id !== t.id); tasks.push(t); }); save(); render(); }); });
+  const catSel = document.createElement('select');
+  catSel.innerHTML = '<option value="">Категория…</option>' + allCatNames().map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') + '<option value="__none">без категории</option>';
+  catSel.onchange = () => { const v = catSel.value; if (!v) return; sel.forEach(id => { const t = tasks.find(x => x.id === id); if (t) { t.cat = (v === '__none' ? null : v); t.mod = Date.now(); } }); exit(); save(); render(); updateSelBar(); };
+  bar.appendChild(catSel);
+  mkBtn('Снять', () => { exit(); render(); updateSelBar(); });
+  bar.classList.add('show');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (selMode) { selMode = false; selIds.clear(); $('selBtn').classList.remove('on'); render(); updateSelBar(); } else if (searchQ) { searchQ = ''; $('searchInput').value = ''; render(); } return; }
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+  if (e.code === 'KeyN') { e.preventDefault(); $('taskInput').focus(); }
+  else if (e.code === 'Slash') { e.preventDefault(); $('searchInput').focus(); }
+});
 attachLinkPaste($('taskInput'));
 attachLinkPaste($('stageInput'));
 
