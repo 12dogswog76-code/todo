@@ -3594,12 +3594,26 @@ setInterval(() => {
 
   function saveLocal() {
     try {
-      localStorage.setItem(LS + '_aiChats', JSON.stringify(aiChats.slice(0, 40).map(c => ({ id: c.id, title: c.title, ts: c.ts, msgs: (c.msgs || []).slice(-60) }))));
+      localStorage.setItem(LS + '_aiChats', JSON.stringify(aiChats.slice(0, 40).map(c => ({ id: c.id, title: c.title, titleManual: c.titleManual, ts: c.ts, msgs: (c.msgs || []).slice(-60) }))));
       localStorage.setItem(LS + '_aiCur', aiCur || '');
       localStorage.setItem(LS + '_aiTs', String(aiTs));
     } catch (e) {}
   }
   function persist() { aiTs = Date.now(); const c = curChat(); c.ts = aiTs; saveLocal(); aiPush(); }
+  function touch(c) { aiTs = Date.now(); c.ts = aiTs; saveLocal(); aiPush(); }
+  async function genTitle(chat) {
+    try {
+      const first = chat.msgs.find(m => m.role === 'user');
+      if (!first || chat.titleManual) return;
+      const r = await puter.ai.chat(
+        [{ role: 'user', content: 'Придумай очень короткое название (2–4 слова, на языке сообщения, без кавычек и точки в конце) для диалога, который начинается так:\n\n' + first.content.slice(0, 300) }],
+        { model: 'gpt-5-nano' }
+      );
+      let t = (r && r.message && r.message.content) || (r && r.text) || (typeof r === 'string' ? r : '');
+      t = (t || '').trim().replace(/^["'«»\s]+/, '').replace(/["'«».\s]+$/, '').slice(0, 42);
+      if (t && !chat.titleManual) { chat.title = t; touch(chat); renderAi(); renderList(); }
+    } catch (e) {}
+  }
 
   async function signedIn() {
     try { if (window.puter && puter.auth && puter.auth.isSignedIn) return await puter.auth.isSignedIn(); } catch (e) {}
@@ -3609,7 +3623,7 @@ setInterval(() => {
     try {
       if (!window.puter || !puter.kv) return;
       if (!(await signedIn())) return;
-      await puter.kv.set(AI_KV, JSON.stringify({ ts: aiTs, chats: aiChats.slice(0, 40).map(c => ({ id: c.id, title: c.title, ts: c.ts, msgs: (c.msgs || []).slice(-60) })) }));
+      await puter.kv.set(AI_KV, JSON.stringify({ ts: aiTs, chats: aiChats.slice(0, 40).map(c => ({ id: c.id, title: c.title, titleManual: c.titleManual, ts: c.ts, msgs: (c.msgs || []).slice(-60) })) }));
     } catch (e) {}
   }
   function mergeChats(localArr, cloudArr) {
@@ -3671,10 +3685,12 @@ setInterval(() => {
       const row = document.createElement('div'); row.className = 'aclrow' + (c.id === aiCur ? ' active' : '');
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = c.title || 'Новый чат';
       const cnt = document.createElement('span'); cnt.className = 'cnt'; cnt.textContent = (c.msgs ? c.msgs.filter(m => m.role === 'user').length : 0) + '↵';
+      const ren = document.createElement('button'); ren.className = 'acldel'; ren.textContent = '✎'; ren.title = 'Переименовать';
       const del = document.createElement('button'); del.className = 'acldel'; del.textContent = '✕'; del.title = 'Удалить чат';
       row.onclick = () => switchChat(c.id);
+      ren.onclick = ev => { ev.stopPropagation(); const nn = prompt('Название чата:', c.title || ''); if (nn !== null) { const v = nn.trim(); if (v) { c.title = v; c.titleManual = true; touch(c); renderAi(); renderList(); } } };
       del.onclick = ev => { ev.stopPropagation(); deleteChat(c.id); };
-      row.append(nm, cnt, del);
+      row.append(nm, cnt, ren, del);
       box.appendChild(row);
     });
   }
@@ -3727,6 +3743,7 @@ setInterval(() => {
       for await (const part of resp) { const t = (part && part.text) || ''; if (t) { acc += t; bubble.textContent = acc; log.scrollTop = log.scrollHeight; } }
       if (!acc) acc = '(пустой ответ)';
       chat.msgs.push({ role: 'assistant', content: acc }); persist(); renderAi();
+      if (!chat.titleManual && chat.msgs.filter(m => m.role === 'user').length === 1) genTitle(chat);
     } catch (err) {
       bubble.classList.add('aierr');
       bubble.textContent = '⚠ ' + ((err && err.message) ? err.message : 'Ошибка запроса. Попробуй ещё раз или смени модель.');
