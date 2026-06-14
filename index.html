@@ -1156,6 +1156,10 @@ function cmp(a, b) {
   if (pa && pb) return (b.completedAt || 0) - (a.completedAt || 0);
   const na = !!a.pinned, nb = !!b.pinned;
   if (na !== nb) return na ? -1 : 1;
+  // задачи с таймером (дедлайном) поднимаются выше остальных (но не выше закреплённых), срочные первыми
+  const ta = !!(a.due && !a.done), tb = !!(b.due && !b.done);
+  if (ta !== tb) return ta ? -1 : 1;
+  if (ta && tb) { const dd = deadlineOf(a) - deadlineOf(b); if (dd) return dd; }
   const s = state.sort || 'manual';
   if (s === 'color-asc' || s === 'color-desc') {
     const d = colorRank(a) - colorRank(b);
