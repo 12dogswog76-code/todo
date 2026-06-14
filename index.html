@@ -712,6 +712,10 @@
   body.light .schart-t { color: #5f6673; }
   body.light .scatrow { color: #3c4250; border-color: #e4e6ea; }
   body.light .scatrow b { color: #1c1e24; }
+  .task.editing .pin, .task.editing .clr, .task.editing .moves, .task.editing .del, .task.editing .arcb, .task.editing .dragh { display: none; }
+  .task.editing .body { width: 100%; }
+  .editOk { background: #4caf7d; border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 6px 12px; }
+  .editOk:hover { background: #43a047; }
 </style>
 </head>
 <body>
@@ -733,7 +737,7 @@
   <div class="addbox">
     <div class="addrow">
       <input id="taskInput" type="text" placeholder="Что нужно сделать? Enter — и готово" autofocus>
-      <button id="addBtn">＋</button>
+      <button id="addBtn">▼</button>
     </div>
     <div class="options">
       <span id="catChips" style="display:contents"></span>
@@ -1679,9 +1683,15 @@ function render() {
       inp.className = 'editInput'; inp.value = t.title;
       attachLinkPaste(inp);
       title.replaceWith(inp);
+      row.classList.add('editing');
 
       const panel = document.createElement('div');
       panel.className = 'editPanel';
+      const okBtn = document.createElement('button');
+      okBtn.className = 'editOk'; okBtn.textContent = '✓ Готово'; okBtn.title = 'Подтвердить изменения';
+      okBtn.onmousedown = e => { e.preventDefault(); e.stopPropagation(); };
+      okBtn.onclick = e => { e.stopPropagation(); finish(true); };
+      panel.appendChild(okBtn);
 
       const stEl = document.createElement('input');
       stEl.type = 'text'; stEl.placeholder = 'Этап (на чём сейчас)';
@@ -2146,7 +2156,7 @@ function syncUI() {
 function scheduleSync() {
   if (!sync) return;
   clearTimeout(pushTimer);
-  pushTimer = setTimeout(cloudPush, 1500);
+  pushTimer = setTimeout(cloudPush, 1000);
 }
 
 async function cloudPush() {
@@ -3255,15 +3265,19 @@ if (sync) cloudPull();
 autoBackup(); fillBakSel();
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && sync) cloudPull();
+  if (!sync) return;
+  if (!document.hidden) cloudPull();
+  else { clearTimeout(pushTimer); cloudPush(); }
 });
+window.addEventListener('focus', () => { if (sync && !document.querySelector('.editInput')) cloudPull(); });
+window.addEventListener('pagehide', () => { if (sync) { clearTimeout(pushTimer); cloudPush(); } });
 
 setInterval(() => {
   if (!document.querySelector('.editInput')) render();
 }, 60000);
 setInterval(() => {
   if (sync && !document.hidden && !document.querySelector('.editInput')) cloudPull();
-}, 180000);
+}, 60000);
 </script>
 </body>
 </html>
