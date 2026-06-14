@@ -746,12 +746,31 @@
   .aimodal { position: fixed; inset: 0; background: #000000aa; display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
   .aimodal.open { display: flex; }
   body.aiopen { overflow: hidden; }
-  .aibox { width: 580px; max-width: 100%; height: 80vh; max-height: 780px; background: #1c1e24; border: 1px solid #424650; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 14px 44px #000b; }
+  .aibox { position: relative; width: 580px; max-width: 100%; height: 80vh; max-height: 780px; background: #1c1e24; border: 1px solid #424650; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 14px 44px #000b; }
   body.light .aibox { background: #fff; border-color: #d4d7de; color: #1c1e24; }
   .aihead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #2e313a; }
   body.light .aihead { border-color: #e6e8ee; }
   .aihead .aititle { font-weight: 600; font-size: 14px; margin-right: auto; white-space: nowrap; }
   .ttshort { display: none; }
+  .aichatlist { position: absolute; inset: 0; z-index: 3; background: #1c1e24; display: none; flex-direction: column; }
+  body.light .aichatlist { background: #fff; }
+  .aichatlist.open { display: flex; }
+  .aclhead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #2e313a; }
+  body.light .aclhead { border-color: #e6e8ee; }
+  .aclhead b { font-size: 14px; }
+  .aclhead .sp { flex: 1; }
+  .aclhead button { background: #23252c; color: #e8eaf0; border: 1px solid #424650; border-radius: 8px; padding: 5px 9px; font-size: 12.5px; cursor: pointer; }
+  body.light .aclhead button { background: #f2f3f6; color: #3c4250; border-color: #d4d7de; }
+  #aclItems { overflow-y: auto; overscroll-behavior: contain; padding: 8px; }
+  .aclrow { display: flex; align-items: center; gap: 8px; padding: 10px 11px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+  .aclrow:hover { background: #23252c; }
+  body.light .aclrow:hover { background: #f2f3f6; }
+  .aclrow.active { background: #e53e3e1f; border-color: #e53e3e55; }
+  .aclrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .aclrow .cnt { font-size: 11px; opacity: .45; }
+  .acldel { background: none; border: none; color: #9aa0ae; cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 6px; }
+  .acldel:hover { color: #ff8f8f; }
+  .aclempty { opacity: .5; font-size: 13px; text-align: center; padding: 20px; }
   .aihead select, .aihead button { background: #23252c; color: #e8eaf0; border: 1px solid #424650; border-radius: 8px; padding: 5px 8px; font-size: 13px; cursor: pointer; }
   body.light .aihead select, body.light .aihead button { background: #f2f3f6; color: #3c4250; border-color: #d4d7de; }
   .ailog { flex: 1; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -923,10 +942,15 @@
 <div id="aiModal" class="aimodal">
   <div class="aibox">
     <div class="aihead">
-      <span class="aititle">✨ <span class="ttlong">ИИ-помощник</span><span class="ttshort">ИИ</span></span>
+      <button id="aiMenu" title="Список чатов">☰</button>
+      <span class="aititle" id="aiTitle">✨ Новый чат</span>
       <select id="aiModel" title="Модель"></select>
-      <button id="aiClear" title="Очистить переписку">🗑<span class="btxt"> Очистить</span></button>
+      <button id="aiNew" title="Новый чат">＋</button>
       <button id="aiClose" title="Закрыть">✕</button>
+    </div>
+    <div id="aiChatList" class="aichatlist">
+      <div class="aclhead"><b>Чаты</b><span class="sp"></span><button id="aclNew">➕ Новый</button><button id="aclClose">Готово</button></div>
+      <div id="aclItems"></div>
     </div>
     <div id="aiLog" class="ailog"></div>
     <div class="aifoot">
@@ -3520,20 +3544,34 @@ setInterval(() => {
   if (sync && !document.hidden && !document.querySelector('.editInput')) cloudPull();
 }, 60000);
 
-/* --- ИИ-помощник (Puter.js, без ключа) --- */
+/* --- ИИ-помощник (Puter.js, без ключа) --- мульти-чаты --- */
 (function () {
   const MODELS = [
     ['gpt-5-nano', '⚡ Быстрая'],
     ['gpt-5-mini', '⚖ Сбаланс'],
-    ['gpt-5.4', '\u{1F9E0} Умная'],
-    ['gpt-4o-mini', '\u{1F916} GPT-4o mini']
+    ['gpt-5.4', '🧠 Умная'],
+    ['gpt-4o-mini', '🤖 GPT-4o mini']
   ];
-  let aiMsgs = [];
-  try { aiMsgs = JSON.parse(localStorage.getItem(LS + '_ai')) || []; } catch (e) {}
-  let aiModel = localStorage.getItem(LS + '_aiModel') || 'gpt-5-nano';
-  let aiTs = parseInt(localStorage.getItem(LS + '_aiTs') || '0', 10);
   const AI_KV = 'alextask_chat';
+  let aiChats = null;
+  try { aiChats = JSON.parse(localStorage.getItem(LS + '_aiChats')); } catch (e) {}
+  if (!Array.isArray(aiChats)) {
+    // миграция со старого одиночного чата
+    let old = [];
+    try { old = JSON.parse(localStorage.getItem(LS + '_ai')) || []; } catch (e) {}
+    aiChats = old.length ? [{ id: 'm' + Date.now(), title: '', msgs: old, ts: Date.now() }] : [];
+  }
+  let aiCur = localStorage.getItem(LS + '_aiCur') || (aiChats[0] && aiChats[0].id) || null;
+  let aiTs = parseInt(localStorage.getItem(LS + '_aiTs') || '0', 10);
+  let aiModel = localStorage.getItem(LS + '_aiModel') || 'gpt-5-nano';
   let puterLoading = null, busy = false;
+
+  function newChatObj() { return { id: 'c' + Date.now() + Math.floor(Math.random() * 1000), title: '', msgs: [], ts: Date.now() }; }
+  function curChat() {
+    let c = aiChats.find(x => x.id === aiCur);
+    if (!c) { c = newChatObj(); aiChats.unshift(c); aiCur = c.id; }
+    return c;
+  }
 
   function loadPuter() {
     if (window.puter) return Promise.resolve();
@@ -3554,8 +3592,15 @@ setInterval(() => {
   modelSel.value = aiModel;
   modelSel.onchange = () => { aiModel = modelSel.value; localStorage.setItem(LS + '_aiModel', aiModel); };
 
-  function saveLocal() { try { localStorage.setItem(LS + '_ai', JSON.stringify(aiMsgs.slice(-50))); localStorage.setItem(LS + '_aiTs', String(aiTs)); } catch (e) {} }
-  function persist() { aiTs = Date.now(); saveLocal(); aiPush(); }
+  function saveLocal() {
+    try {
+      localStorage.setItem(LS + '_aiChats', JSON.stringify(aiChats.slice(0, 40).map(c => ({ id: c.id, title: c.title, ts: c.ts, msgs: (c.msgs || []).slice(-60) }))));
+      localStorage.setItem(LS + '_aiCur', aiCur || '');
+      localStorage.setItem(LS + '_aiTs', String(aiTs));
+    } catch (e) {}
+  }
+  function persist() { aiTs = Date.now(); const c = curChat(); c.ts = aiTs; saveLocal(); aiPush(); }
+
   async function signedIn() {
     try { if (window.puter && puter.auth && puter.auth.isSignedIn) return await puter.auth.isSignedIn(); } catch (e) {}
     return false;
@@ -3564,8 +3609,14 @@ setInterval(() => {
     try {
       if (!window.puter || !puter.kv) return;
       if (!(await signedIn())) return;
-      await puter.kv.set(AI_KV, JSON.stringify({ ts: aiTs, msgs: aiMsgs.slice(-50) }));
+      await puter.kv.set(AI_KV, JSON.stringify({ ts: aiTs, chats: aiChats.slice(0, 40).map(c => ({ id: c.id, title: c.title, ts: c.ts, msgs: (c.msgs || []).slice(-60) })) }));
     } catch (e) {}
+  }
+  function mergeChats(localArr, cloudArr) {
+    const map = {};
+    localArr.forEach(c => { map[c.id] = c; });
+    cloudArr.forEach(c => { const e = map[c.id]; if (!e || (c.ts || 0) > (e.ts || 0)) map[c.id] = c; });
+    return Object.keys(map).map(k => map[k]).sort((a, b) => (b.ts || 0) - (a.ts || 0));
   }
   async function aiPull() {
     try {
@@ -3574,8 +3625,11 @@ setInterval(() => {
       const raw = await puter.kv.get(AI_KV);
       if (!raw) return;
       const obj = JSON.parse(raw);
-      if (obj && Array.isArray(obj.msgs) && (obj.ts || 0) > aiTs) {
-        aiMsgs = obj.msgs; aiTs = obj.ts; saveLocal(); renderAi();
+      if (obj && Array.isArray(obj.chats)) {
+        aiChats = mergeChats(aiChats, obj.chats);
+        if (!aiChats.find(x => x.id === aiCur)) aiCur = (aiChats[0] && aiChats[0].id) || null;
+        aiTs = Math.max(aiTs, obj.ts || 0);
+        saveLocal(); renderAi(); renderList();
       }
     } catch (e) {}
   }
@@ -3591,40 +3645,88 @@ setInterval(() => {
     }
     return b;
   }
+  function setTitle() {
+    const c = curChat();
+    $('aiTitle').textContent = '✨ ' + (c.title || 'Новый чат');
+  }
   function renderAi() {
+    setTitle();
     const log = $('aiLog'); log.innerHTML = '';
-    if (!aiMsgs.length) {
+    const msgs = curChat().msgs;
+    if (!msgs.length) {
       const e = document.createElement('div'); e.className = 'aiempty';
-      e.textContent = 'Задай вопрос ИИ. Можно надиктовать голосом \u{1F3A4}. Ответы можно копировать. История хранится только на этом устройстве.';
+      e.textContent = 'Задай вопрос ИИ. ☰ — список чатов, ＋ — новый чат. Можно надиктовать голосом 🎤, ответы копируются. Чаты синхронизируются между устройствами (один аккаунт Puter).';
       log.appendChild(e); return;
     }
-    aiMsgs.forEach(m => log.appendChild(bubbleEl(m)));
+    msgs.forEach(m => log.appendChild(bubbleEl(m)));
     log.scrollTop = log.scrollHeight;
+  }
+  function renderList() {
+    const box = $('aclItems'); box.innerHTML = '';
+    if (!aiChats.length) {
+      const e = document.createElement('div'); e.className = 'aclempty'; e.textContent = 'Пока нет чатов. Нажми «➕ Новый».';
+      box.appendChild(e); return;
+    }
+    aiChats.forEach(c => {
+      const row = document.createElement('div'); row.className = 'aclrow' + (c.id === aiCur ? ' active' : '');
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = c.title || 'Новый чат';
+      const cnt = document.createElement('span'); cnt.className = 'cnt'; cnt.textContent = (c.msgs ? c.msgs.filter(m => m.role === 'user').length : 0) + '↵';
+      const del = document.createElement('button'); del.className = 'acldel'; del.textContent = '✕'; del.title = 'Удалить чат';
+      row.onclick = () => switchChat(c.id);
+      del.onclick = ev => { ev.stopPropagation(); deleteChat(c.id); };
+      row.append(nm, cnt, del);
+      box.appendChild(row);
+    });
+  }
+
+  function openList() { $('aiChatList').classList.add('open'); renderList(); }
+  function closeList() { $('aiChatList').classList.remove('open'); }
+  function switchChat(id) { aiCur = id; saveLocal(); renderAi(); closeList(); setTimeout(() => $('aiInput').focus(), 40); }
+  function newChat() {
+    const c = curChat();
+    if (!c.msgs.length && !c.title) { closeList(); renderAi(); return; } // текущий уже пустой
+    const n = newChatObj(); aiChats.unshift(n); aiCur = n.id; aiTs = Date.now(); saveLocal(); aiPush();
+    renderAi(); closeList(); setTimeout(() => $('aiInput').focus(), 40);
+  }
+  function deleteChat(id) {
+    aiChats = aiChats.filter(x => x.id !== id);
+    if (aiCur === id) aiCur = (aiChats[0] && aiChats[0].id) || null;
+    if (!aiChats.length) { const n = newChatObj(); aiChats.push(n); aiCur = n.id; }
+    aiTs = Date.now(); saveLocal(); aiPush(); renderAi(); renderList();
   }
 
   function openAi() { $('aiModal').classList.add('open'); document.body.classList.add('aiopen'); renderAi(); aiPull(); setTimeout(() => $('aiInput').focus(), 60); }
-  function closeAi() { $('aiModal').classList.remove('open'); document.body.classList.remove('aiopen'); }
+  function closeAi() { $('aiModal').classList.remove('open'); document.body.classList.remove('aiopen'); closeList(); }
   $('aiBtn').onclick = openAi;
   $('aiClose').onclick = closeAi;
+  $('aiMenu').onclick = () => { if ($('aiChatList').classList.contains('open')) closeList(); else openList(); };
+  $('aiNew').onclick = newChat;
+  $('aclNew').onclick = newChat;
+  $('aclClose').onclick = closeList;
   $('aiModal').onclick = e => { if (e.target === $('aiModal')) closeAi(); };
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('aiModal').classList.contains('open')) closeAi(); });
-  $('aiClear').onclick = () => { aiMsgs = []; persist(); renderAi(); };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && $('aiModal').classList.contains('open')) {
+      if ($('aiChatList').classList.contains('open')) closeList(); else closeAi();
+    }
+  });
 
   async function send() {
     const inp = $('aiInput'); const text = inp.value.trim();
     if (!text || busy) return;
     busy = true; $('aiSend').disabled = true; inp.value = ''; inp.style.height = 'auto';
-    aiMsgs.push({ role: 'user', content: text }); persist(); renderAi();
+    const chat = curChat();
+    if (!chat.title) chat.title = text.slice(0, 42);
+    chat.msgs.push({ role: 'user', content: text }); persist(); renderAi();
     const log = $('aiLog');
     const bubble = document.createElement('div'); bubble.className = 'aimsg a'; bubble.textContent = '…';
     log.appendChild(bubble); log.scrollTop = log.scrollHeight;
     try {
       await loadPuter();
-      const resp = await puter.ai.chat(aiMsgs.map(m => ({ role: m.role, content: m.content })), { model: aiModel, stream: true });
+      const resp = await puter.ai.chat(chat.msgs.map(m => ({ role: m.role, content: m.content })), { model: aiModel, stream: true });
       let acc = '';
       for await (const part of resp) { const t = (part && part.text) || ''; if (t) { acc += t; bubble.textContent = acc; log.scrollTop = log.scrollHeight; } }
       if (!acc) acc = '(пустой ответ)';
-      aiMsgs.push({ role: 'assistant', content: acc }); persist(); renderAi();
+      chat.msgs.push({ role: 'assistant', content: acc }); persist(); renderAi();
     } catch (err) {
       bubble.classList.add('aierr');
       bubble.textContent = '⚠ ' + ((err && err.message) ? err.message : 'Ошибка запроса. Попробуй ещё раз или смени модель.');
