@@ -716,6 +716,11 @@
   .task.editing .body { width: 100%; }
   .editOk { background: #4caf7d; border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 6px 12px; }
   .editOk:hover { background: #43a047; }
+  .catdiv { width: 1px; align-self: stretch; min-height: 22px; background: #33363e; margin: 0 5px; }
+  body.light .catdiv { background: #d4d7de; }
+  .chip.catmgr { border-style: dashed; }
+  .citem { font-size: 14.5px; margin: 7px 0; }
+  .cbox { width: 22px; height: 22px; min-width: 22px; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -1383,14 +1388,7 @@ function render() {
   const fIcon = c => catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '';
   const f = $('filters');
   f.innerHTML = '';
-  [['today', '📅 Сегодня'], ['overdue', '⏰ Просрочено'], ['week', '🗓 Неделя']].forEach(v => {
-    const el = document.createElement('span');
-    el.className = 'chip' + (state.view === v[0] ? ' on' : '');
-    el.textContent = v[1];
-    el.onclick = () => { state.view = state.view === v[0] ? '' : v[0]; if (state.view) { state.fArchive = false; state.fDone = false; } save(); render(); };
-    f.appendChild(el);
-  });
-  const activeCnt = state.fCats.length + state.colors.length + (state.fDone ? 1 : 0);
+  const activeCnt = state.fCats.length + state.colors.length + (state.fDone ? 1 : 0) + (state.view ? 1 : 0);
   const tgl = document.createElement('span');
   tgl.className = 'chip' + (state.catsOpen || activeCnt ? ' on' : '');
   tgl.innerHTML = '# Фильтры' + (activeCnt ? ' (' + activeCnt + ')' : '') + ' ' + (state.catsOpen ? '▴' : '▾');
@@ -1403,8 +1401,15 @@ function render() {
     all.className = 'chip' + (activeCnt === 0 ? ' on' : '');
     all.textContent = 'Все';
     all.title = 'Сбросить все фильтры';
-    all.onclick = () => { state.fCats = []; state.colors = []; state.fArchive = false; state.fDone = false; save(); render(); };
+    all.onclick = () => { state.fCats = []; state.colors = []; state.fArchive = false; state.fDone = false; state.view = ''; save(); render(); };
     f.appendChild(all);
+    [['today', '📅 Сегодня'], ['overdue', '⏰ Просрочено'], ['week', '🗓 Неделя']].forEach(v => {
+      const el = document.createElement('span');
+      el.className = 'chip' + (state.view === v[0] ? ' on' : '');
+      el.textContent = v[1];
+      el.onclick = () => { state.view = state.view === v[0] ? '' : v[0]; if (state.view) { state.fArchive = false; state.fDone = false; } save(); render(); };
+      f.appendChild(el);
+    });
     // категории: можно выбрать несколько
     allCatNames().concat(['без категории']).forEach(c => {
       const on = state.fCats.includes(c);
@@ -1445,6 +1450,14 @@ function render() {
     });
   } else {
     // свёрнуто: показываем активные выборы, клик по чипу — убрать его
+    if (state.view) {
+      const vl = { today: '📅 Сегодня', overdue: '⏰ Просрочено', week: '🗓 Неделя' };
+      const vEl = document.createElement('span');
+      vEl.className = 'chip on';
+      vEl.innerHTML = (vl[state.view] || state.view) + ' ✕';
+      vEl.onclick = () => { state.view = ''; save(); render(); };
+      f.appendChild(vEl);
+    }
     state.fCats.forEach(c => {
       const el = document.createElement('span');
       el.className = 'chip on';
@@ -1693,29 +1706,9 @@ function render() {
       okBtn.onclick = e => { e.stopPropagation(); finish(true); };
       panel.appendChild(okBtn);
 
-      const stEl = document.createElement('input');
-      stEl.type = 'text'; stEl.placeholder = 'Этап (на чём сейчас)';
-      stEl.className = 'pill'; stEl.style.width = '160px';
-      stEl.value = t.stage || '';
-      attachLinkPaste(stEl);
-
-      const ntEl = document.createElement('textarea');
-      ntEl.placeholder = 'Заметка (необязательно)';
-      ntEl.className = 'editNote';
-      ntEl.value = t.note || '';
-      attachLinkPaste(ntEl);
-      ntEl.onmousedown = e => e.stopPropagation();
-      ntEl.onclick = e => e.stopPropagation();
-
       const grab = () => {
         const newTitle = inp.value.trim();
-        const newStage = stEl.value.trim() || null;
-        let changed = false;
-        if (newTitle && newTitle !== t.title) { t.title = newTitle; changed = true; }
-        if (newStage !== (t.stage || null)) { t.stage = newStage; t.stageAt = newStage ? Date.now() : null; changed = true; }
-        const newNote = ntEl.value.trim() || null;
-        if (newNote !== (t.note || null)) { t.note = newNote; changed = true; }
-        if (changed) { t.updatedAt = Date.now(); t.mod = Date.now(); }
+        if (newTitle && newTitle !== t.title) { t.title = newTitle; t.updatedAt = Date.now(); t.mod = Date.now(); }
       };
 
       allCatNames().forEach(c => {
@@ -1732,14 +1725,6 @@ function render() {
         };
         panel.appendChild(chEl);
       });
-
-      stEl.onmousedown = e => e.stopPropagation();
-      stEl.onclick = e => e.stopPropagation();
-      stEl.onkeydown = e => {
-        if (e.key === 'Enter') { grab(); save(); render(); }
-        if (e.key === 'Escape') render();
-      };
-      panel.appendChild(stEl);
 
       const dEl = document.createElement('input');
       dEl.type = 'date'; dEl.value = t.due || '';
@@ -1768,6 +1753,10 @@ function render() {
       };
       panel.appendChild(dWrap);
       panel.appendChild(tmWrap);
+      const mkQd = (label, fn) => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = label; b.onmousedown = e => { e.preventDefault(); e.stopPropagation(); }; b.onclick = e => { e.stopPropagation(); fn(); t.updatedAt = Date.now(); t.mod = Date.now(); grab(); save(); render(); }; panel.appendChild(b); };
+      mkQd('Сегодня', () => { t.due = todayStr(); });
+      mkQd('Завтра', () => { const dl = new Date(Date.now() + 86400000); t.due = _ymd(dl); t.dueTime = '09:00'; });
+      mkQd('+1ч', () => { const dl = new Date(Date.now() + 3600000); t.due = _ymd(dl); t.dueTime = _pad2(dl.getHours()) + ':' + _pad2(dl.getMinutes()); });
 
       // повтор
       const repEl = document.createElement('select');
@@ -1798,8 +1787,8 @@ function render() {
 
       // добавление подпункта чек-листа
       const ckEl = document.createElement('input');
-      ckEl.type = 'text'; ckEl.placeholder = '+ подпункт (Enter)';
-      ckEl.className = 'pill'; ckEl.style.width = '150px';
+      ckEl.type = 'text'; ckEl.placeholder = '+ заметка (Enter)';
+      ckEl.className = 'pill'; ckEl.style.width = '220px';
       ckEl.onmousedown = e => e.stopPropagation();
       ckEl.onclick = e => e.stopPropagation();
       ckEl.onkeydown = e => {
@@ -1816,7 +1805,6 @@ function render() {
         if (e.key === 'Escape') render();
       };
       panel.appendChild(ckEl);
-      panel.appendChild(ntEl);
       body.appendChild(panel);
 
       inp.focus(); inp.select();
@@ -1833,12 +1821,10 @@ function render() {
         finish(true);
       };
       inp.onblur = blurGuard;
-      stEl.onblur = blurGuard;
       dEl.onblur = blurGuard;
       tmEl.onblur = blurGuard;
       repEl.onblur = blurGuard;
       ckEl.onblur = blurGuard;
-      ntEl.onblur = blurGuard;
     };
     row.appendChild(body);
 
@@ -2422,8 +2408,11 @@ function renderCatChips() {
     };
     box.appendChild(c);
   });
+  const divEl = document.createElement('span');
+  divEl.className = 'catdiv';
+  box.appendChild(divEl);
   const plus = document.createElement('span');
-  plus.className = 'chip' + ($('catMgr').classList.contains('open') ? ' on' : '');
+  plus.className = 'chip catmgr' + ($('catMgr').classList.contains('open') ? ' on' : '');
   plus.textContent = '➕ Категории';
   plus.title = 'Добавить или удалить категории';
   plus.onclick = () => {
