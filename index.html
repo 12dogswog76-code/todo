@@ -734,6 +734,10 @@
   .tag.subtag::before { content: '\203A\00A0'; opacity: .5; }
   .cmitem.cmsub { margin-left: 20px; }
   .cmitem.cmsub::before { content: '\203A'; opacity: .45; margin-right: 4px; }
+  .cmaddsub { display: inline-flex; align-items: center; margin: 1px 0 8px 20px; font-size: 12px; opacity: .6; cursor: pointer; padding: 2px 9px; border: 1px dashed currentColor; border-radius: 8px; }
+  .cmaddsub:hover { opacity: 1; }
+  .cmaddsub.on { opacity: 1; border-style: solid; }
+  .cmbreak { flex-basis: 100%; height: 0; }
 </style>
 </head>
 <body>
@@ -781,7 +785,7 @@
         <button id="cmEmojiBtn" class="chip" title="Выбрать эмодзи">😀</button>
         <input id="cmName" type="text" class="pill" placeholder="название категории" maxlength="20">
         <select id="cmColor" class="pill" title="Цвет задач этой категории по умолчанию"></select>
-        <select id="cmParent" class="pill" title="Сделать подкатегорией выбранной категории"><option value="">верхний уровень</option></select>
+        <input type="hidden" id="cmParent" value="">
         <button id="cmAdd" class="chip">➕ Категорию</button>
       </div>
       <div id="emojiGrid"></div>
@@ -2600,13 +2604,6 @@ $('cmEmojiBtn').onclick = () => {
 function renderCatMgr() {
   const l = $('cmList');
   l.innerHTML = '';
-  const par = $('cmParent');
-  if (par) {
-    const cur = par.value;
-    par.innerHTML = '<option value="">верхний уровень</option>' +
-      topCats().map(c => '<option value="' + esc(c.n) + '">в «' + esc(c.n) + '»</option>').join('');
-    if ([...par.options].some(o => o.value === cur)) par.value = cur;
-  }
   const mkRow = (c, sub) => {
     const it = document.createElement('span');
     it.className = 'cmitem' + (sub ? ' cmsub' : '');
@@ -2659,9 +2656,26 @@ function renderCatMgr() {
     it.append(lbl, ed, del);
     l.appendChild(it);
   };
-  topCats().forEach(c => {
+  topCats().forEach((c, gi) => {
+    if (gi) { const br = document.createElement('span'); br.className = 'cmbreak'; l.appendChild(br); }
     mkRow(c, false);
     subsOf(c.n).forEach(sx => mkRow(sx, true));
+    const composing = !cmEditing && $('cmParent') && $('cmParent').value === c.n;
+    const add = document.createElement('span');
+    add.className = 'cmaddsub' + (composing ? ' on' : '');
+    add.textContent = composing ? '+ название выше, затем «➕ Подкатегория»' : '+ Добавить подкатегорию';
+    add.onclick = () => {
+      const was = composing;
+      cmReset();
+      if (!was) {
+        $('cmParent').value = c.n;
+        $('cmName').placeholder = 'подкатегория в «' + c.n + '»';
+        $('cmAdd').textContent = '➕ Подкатегория';
+        $('cmName').focus();
+      }
+      renderCatMgr();
+    };
+    l.appendChild(add);
   });
 }
 $('cmAdd').onclick = () => {
