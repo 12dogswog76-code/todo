@@ -689,6 +689,12 @@
   .ckbarf { height: 100%; background: #4caf7d; border-radius: 3px; transition: width .2s; }
   body.light #undoBar { background: #fff; color: #1c1e24; border-color: #d4d7de; }
   body.light .ckbar { background: #e4e6ea; }
+  .note { margin-top: 4px; font-size: 12.5px; color: #aab0c0; white-space: pre-wrap; word-wrap: break-word; }
+  .note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  body.light .note { color: #5f6673; }
+  .editNote { width: 100%; min-height: 46px; background: #121317; border: 1px solid #33363e; border-radius: 8px; color: #e8eaf0; font-size: 13px; padding: 6px 10px; outline: none; resize: vertical; font-family: inherit; margin-top: 4px; }
+  .editNote:focus { border-color: #e53e3e; }
+  body.light .editNote { background: #f2f3f6; color: #1c1e24; border-color: #d4d7de; }
 </style>
 </head>
 <body>
@@ -1552,6 +1558,13 @@ function render() {
       body.appendChild(stg);
     }
 
+    if (t.note) {
+      const nt = document.createElement('div');
+      nt.className = 'note';
+      nt.innerHTML = '📝 ' + linkify(t.note);
+      body.appendChild(nt);
+    }
+
     // чек-лист
     if (t.checks && t.checks.length) {
       const cw = document.createElement('div');
@@ -1577,7 +1590,16 @@ function render() {
           t.mod = Date.now();
           save(); render();
         };
-        ci_el.append(cb, ct, cd);
+        const cto = document.createElement('button');
+        cto.className = 'cdel'; cto.textContent = '↗'; cto.title = 'Сделать отдельной задачей';
+        cto.onclick = e => {
+          e.stopPropagation();
+          const minPos = tasks.length ? Math.min(...tasks.map(x => x.pos || 0)) : 0;
+          tasks.push({ id: Date.now(), title: c.t, cat: t.cat, done: false, created: Date.now(), updatedAt: null, mod: Date.now(), pos: minPos - 1 });
+          t.checks.splice(ci, 1); t.mod = Date.now();
+          save(); render();
+        };
+        ci_el.append(cb, ct, cto, cd);
         cw.appendChild(ci_el);
       });
       const ckbar = document.createElement('div'); ckbar.className = 'ckbar';
@@ -1640,12 +1662,22 @@ function render() {
       stEl.value = t.stage || '';
       attachLinkPaste(stEl);
 
+      const ntEl = document.createElement('textarea');
+      ntEl.placeholder = 'Заметка (необязательно)';
+      ntEl.className = 'editNote';
+      ntEl.value = t.note || '';
+      attachLinkPaste(ntEl);
+      ntEl.onmousedown = e => e.stopPropagation();
+      ntEl.onclick = e => e.stopPropagation();
+
       const grab = () => {
         const newTitle = inp.value.trim();
         const newStage = stEl.value.trim() || null;
         let changed = false;
         if (newTitle && newTitle !== t.title) { t.title = newTitle; changed = true; }
         if (newStage !== (t.stage || null)) { t.stage = newStage; t.stageAt = newStage ? Date.now() : null; changed = true; }
+        const newNote = ntEl.value.trim() || null;
+        if (newNote !== (t.note || null)) { t.note = newNote; changed = true; }
         if (changed) { t.updatedAt = Date.now(); t.mod = Date.now(); }
       };
 
@@ -1747,6 +1779,7 @@ function render() {
         if (e.key === 'Escape') render();
       };
       panel.appendChild(ckEl);
+      panel.appendChild(ntEl);
       body.appendChild(panel);
 
       inp.focus(); inp.select();
@@ -1768,6 +1801,7 @@ function render() {
       tmEl.onblur = blurGuard;
       repEl.onblur = blurGuard;
       ckEl.onblur = blurGuard;
+      ntEl.onblur = blurGuard;
     };
     row.appendChild(body);
 
