@@ -716,6 +716,9 @@
       <input id="stageInput" type="text" class="pill" placeholder="Этап (на чём сейчас)" title="Этап (необязательно)">
       <label class="pill ico" title="Дедлайн (необязательно)">📅<input id="dateInput" type="date"></label>
       <label class="pill ico" title="Время дедлайна — включает таймер (необязательно)">⏰<input id="timeInput" type="time"></label>
+      <span class="chip" id="qdToday" title="Срок: сегодня">Сегодня</span>
+      <span class="chip" id="qdTom" title="Срок: завтра 9:00">Завтра</span>
+      <span class="chip" id="qd1h" title="Срок: через час">+1ч</span>
       <select id="repInput" class="pill" title="Повторять задачу">
         <option value="">Без повтора</option>
         <option value="d">🔁 каждый день</option>
@@ -966,7 +969,7 @@ if (tasks.some(t => t.pos === undefined)) {
   legacy.forEach((t, i) => { if (t.pos === undefined) t.pos = i; });
 }
 
-let state = { showDone: true, sort: 'manual', catsOpen: false, fCats: [], fArchive: false, fDone: false, colors: [] };
+let state = { showDone: true, sort: 'manual', catsOpen: false, fCats: [], fArchive: false, fDone: false, colors: [], view: '' };
 try { Object.assign(state, JSON.parse(localStorage.getItem(LS+'_ui')) || {}); } catch(e) {}
 // миграция старых одиночных фильтров на множественные
 if (state.filter) {
@@ -1344,6 +1347,13 @@ function render() {
   const fIcon = c => catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '';
   const f = $('filters');
   f.innerHTML = '';
+  [['today', '📅 Сегодня'], ['overdue', '⏰ Просрочено'], ['week', '🗓 Неделя']].forEach(v => {
+    const el = document.createElement('span');
+    el.className = 'chip' + (state.view === v[0] ? ' on' : '');
+    el.textContent = v[1];
+    el.onclick = () => { state.view = state.view === v[0] ? '' : v[0]; if (state.view) { state.fArchive = false; state.fDone = false; } save(); render(); };
+    f.appendChild(el);
+  });
   const activeCnt = state.fCats.length + state.colors.length + (state.fDone ? 1 : 0);
   const tgl = document.createElement('span');
   tgl.className = 'chip' + (state.catsOpen || activeCnt ? ' on' : '');
@@ -1467,6 +1477,13 @@ function render() {
     if (state.fCats.length) { // выбранные категории
       const inCats = (t.cat && state.fCats.includes(t.cat)) || (!t.cat && state.fCats.includes('без категории'));
       if (!inCats) return false;
+    }
+    if (state.view) {
+      if (t.done) return false;
+      const dl = t.due ? deadlineOf(t).getTime() : null;
+      if (state.view === 'overdue') { if (dueClass(t) !== 'overdue') return false; }
+      else if (state.view === 'today') { if (!(t.due === todayStr() || dueClass(t) === 'overdue')) return false; }
+      else if (state.view === 'week') { if (dl === null || dl > Date.now() + 7 * 86400000) return false; }
     }
     return true;
   });
@@ -2474,6 +2491,12 @@ renderCatChips();
     e.target.parentElement.classList.toggle('on', !!e.target.value);
   };
 });
+function _pad2(n){return String(n).padStart(2,'0');}
+function _ymd(dl){return dl.getFullYear()+'-'+_pad2(dl.getMonth()+1)+'-'+_pad2(dl.getDate());}
+function _markDL(){ $('dateInput').parentElement.classList.toggle('on', !!$('dateInput').value); $('timeInput').parentElement.classList.toggle('on', !!$('timeInput').value); }
+$('qdToday').onclick = () => { $('dateInput').value = todayStr(); $('timeInput').value = ''; _markDL(); $('taskInput').focus(); };
+$('qdTom').onclick = () => { const dl = new Date(Date.now() + 86400000); $('dateInput').value = _ymd(dl); $('timeInput').value = '09:00'; _markDL(); $('taskInput').focus(); };
+$('qd1h').onclick = () => { const dl = new Date(Date.now() + 3600000); $('dateInput').value = _ymd(dl); $('timeInput').value = _pad2(dl.getHours()) + ':' + _pad2(dl.getMinutes()); _markDL(); $('taskInput').focus(); };
 let addRepN = 2; // свой период повтора (дней) для новой задачи
 $('repInput').onchange = e => {
   const co = [...e.target.options].find(o => o.value === 'c');
