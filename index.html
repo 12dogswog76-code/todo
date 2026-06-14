@@ -2171,6 +2171,7 @@ async function mailPull() {
     Object.keys(mailSeen).forEach(id => { if (!ids[id]) delete mailSeen[id]; });
     saveMailSeen();
     renderMail();
+    try { if (pipWin) pipRender(); } catch(e) {}
   } catch(e) {}
 }
 
@@ -2566,93 +2567,176 @@ $('askLater').onclick = () => {
 let pipWin = null;
 const PIP_CSS = [
   '* { box-sizing:border-box; margin:0; padding:0; }',
-  "body { background:#15171c; color:#e8eaf0; font-family:-apple-system,'Segoe UI',Roboto,sans-serif; padding:10px; }",
-  '#pipInput { width:100%; background:#121317; border:1px solid #33363e; border-radius:8px; color:#e8eaf0; font-size:13px; padding:8px 10px; outline:none; margin-bottom:8px; }',
+  "body { background:#0f1115; color:#e8eaf0; font-family:-apple-system,'Segoe UI',Roboto,sans-serif; padding:10px; }",
+  'body.compact { padding:6px; }',
+  '#pipHead { display:flex; align-items:center; gap:6px; margin-bottom:8px; }',
+  '#pipTitle { font-size:13px; font-weight:700; flex:1; line-height:1.2; }',
+  '#pipTitle .sub { display:block; font-size:10.5px; font-weight:400; color:#9aa0ae; margin-top:1px; }',
+  '#pipTitle .od { color:#ff8b8b; }',
+  '.phbtn { background:#1c1e24; border:1px solid #2c3038; border-radius:8px; color:#aab0c0; cursor:pointer; font-size:12px; padding:5px 8px; line-height:1; }',
+  '.phbtn:hover { color:#fff; border-color:#e53e3e; }',
+  '.phbtn.on { color:#ff9d9d; border-color:#e53e3e; background:#e53e3e22; }',
+  '.phbtn.mail.has { color:#fff; border-color:#e53e3e; background:#e53e3e; }',
+  '#pipMail { display:none; margin-bottom:8px; max-height:40vh; overflow-y:auto; }',
+  '#pipMail.open { display:block; }',
+  '.pm { display:flex; gap:7px; align-items:flex-start; background:#1c1e24; border:1px solid #2c3038; border-radius:8px; padding:7px 8px; margin-bottom:5px; }',
+  '.pmsrc { font-size:9.5px; font-weight:700; border-radius:5px; padding:1px 6px; white-space:nowrap; }',
+  '.pmsrc.jira { background:#1e6fd933; color:#7fb8ff; }',
+  '.pmsrc.person { background:#4caf7d22; color:#8fd6a8; }',
+  '.pmtext { flex:1; min-width:0; }',
+  '.pmsubj { font-size:12px; line-height:1.25; }',
+  '.pmfrom { font-size:10px; color:#9aa0ae; margin-top:2px; }',
+  '.pmread { background:none; border:1px solid #424650; border-radius:5px; color:#9aa0ae; cursor:pointer; font-size:11px; padding:1px 6px; }',
+  '.pmread:hover { color:#8fd6a8; border-color:#4caf7d; }',
+  '.pmempty { color:#777d8a; font-size:11.5px; text-align:center; padding:8px 0; }',
+  '#pipAdd { display:flex; gap:5px; margin-bottom:8px; }',
+  '#pipInput { flex:1; background:#121317; border:1px solid #33363e; border-radius:8px; color:#e8eaf0; font-size:13px; padding:8px 10px; outline:none; min-width:0; }',
   '#pipInput:focus { border-color:#e53e3e; }',
-  '.pt { display:flex; align-items:center; gap:8px; background:#1c1e24; border:1px solid #2c3038; border-radius:8px; padding:8px 9px; margin-bottom:6px; }',
-  '.pc { width:18px; height:18px; min-width:18px; border:2px solid #5a6070; border-radius:5px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:transparent; font-size:11px; font-weight:700; }',
-  '.pc:hover { border-color:#4caf7d; color:#4caf7d77; }',
-  '.ptit { flex:1; font-size:13px; line-height:1.3; word-break:break-word; }',
-  '.ptit a { color:inherit; text-decoration:underline; text-underline-offset:2px; }',
-  '.ptit a:hover { opacity:.8; }',
-  '.pdue { font-size:10px; color:#8fd6a8; white-space:nowrap; }',
-  '.pdue.over { color:#ff8b8b; }',
-  '.pempty { color:#777d8a; text-align:center; padding:20px 0; font-size:12.5px; }',
+  '#pipDue { background:#1c1e24; border:1px solid #424650; border-radius:8px; color:#aab0c0; font-size:10.5px; padding:0 4px; outline:none; }',
+  '#pipSearch { width:100%; background:#1c1e24; border:1px solid #33363e; border-radius:8px; color:#e8eaf0; font-size:12px; padding:7px 10px; outline:none; margin-bottom:8px; }',
+  '#pipSearch:focus { border-color:#e53e3e; }',
+  '#pipTop { display:flex; gap:5px; margin-bottom:6px; align-items:center; flex-wrap:wrap; }',
   '#pipCats { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }',
+  '#pipColors { display:flex; gap:5px; margin-bottom:8px; align-items:center; flex-wrap:wrap; }',
   '.pchip { font-size:11px; color:#aab0c0; border:1px solid #424650; border-radius:999px; padding:3px 9px; cursor:pointer; user-select:none; }',
   '.pchip.on { background:#e53e3e22; border-color:#e53e3e; color:#ff9d9d; }',
-  '#pipColors { display:flex; gap:5px; margin-bottom:8px; align-items:center; }',
+  '.psel { background:#1c1e24; border:1px solid #424650; border-radius:999px; color:#aab0c0; font-size:10.5px; padding:3px 6px; outline:none; }',
   '.pdotf { width:21px; height:21px; border-radius:50%; cursor:pointer; border:2px solid transparent; display:inline-flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700; color:#15171c; line-height:1; }',
   '.pdotf.on { border-color:#fff; }',
   '.pdotf.pall { width:auto; height:auto; border-radius:999px; font-size:10.5px; color:#aab0c0; border:1px solid #424650; padding:2px 8px; }',
   '.pdotf.pall.on { border-color:#e53e3e; color:#ff9d9d; }',
+  '.pt { display:flex; align-items:center; gap:8px; background:#1c1e24; border:1px solid #2c3038; border-radius:10px; padding:8px 9px; margin-bottom:6px; }',
+  'body.compact .pt { padding:5px 7px; margin-bottom:4px; border-radius:8px; }',
+  '.pt.over { border-color:#e53e3e66; background:#e53e3e12; }',
+  '.pc { width:18px; height:18px; min-width:18px; border:2px solid #5a6070; border-radius:5px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:transparent; font-size:11px; font-weight:700; }',
+  '.pc:hover { border-color:#4caf7d; color:#4caf7d77; }',
   '.pmid { flex:1; min-width:0; }',
+  '.ptit { font-size:13px; line-height:1.3; word-break:break-word; }',
+  'body.compact .ptit { font-size:12px; }',
+  '.ptit a { color:inherit; text-decoration:underline; text-underline-offset:2px; }',
+  '.ptit a:hover { opacity:.8; }',
+  '.ptit::first-letter { text-transform: uppercase; }',
   '.pstage { font-size:10.5px; color:#9fc6ff; margin-top:2px; }',
   '.pck { display:flex; align-items:center; gap:5px; font-size:11px; color:#c9cfdc; margin-top:3px; }',
   '.pck.don .pckt { text-decoration:line-through; color:#707688; }',
   '.pckb { width:13px; height:13px; min-width:13px; border:1.5px solid #5a6070; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:9px; color:transparent; }',
   '.pck.don .pckb { background:#4caf7d; border-color:#4caf7d; color:#fff; }',
-  '.pright { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }',
-  '.pgo { background:none; border:1px solid #424650; border-radius:6px; color:#9aa0ae; cursor:pointer; font-size:12px; padding:2px 7px; }',
+  '.pright { display:flex; flex-direction:column; align-items:center; gap:3px; }',
+  '.pdue { font-size:10px; color:#8fd6a8; white-space:nowrap; }',
+  '.pdue.over { color:#ff8b8b; }',
+  '.pmoves { display:flex; gap:2px; }',
+  '.pmv { background:none; border:none; color:#5a6070; cursor:pointer; font-size:12px; line-height:1; padding:1px 3px; }',
+  '.pmv:hover { color:#e8eaf0; }',
+  '.pgo { background:none; border:1px solid #424650; border-radius:6px; color:#9aa0ae; cursor:pointer; font-size:12px; padding:1px 6px; }',
   '.pgo:hover { color:#fff; border-color:#e53e3e; }',
-  '.ptit::first-letter { text-transform: uppercase; }',
-  '#pipTop { display:flex; gap:5px; margin-bottom:6px; align-items:center; flex-wrap:wrap; }',
-  '.psel { background:#1c1e24; border:1px solid #424650; border-radius:999px; color:#aab0c0; font-size:10.5px; padding:3px 6px; outline:none; }',
-  'body.light { background:#f2f3f6; color:#1c1e24; }',
+  '.pempty { color:#777d8a; text-align:center; padding:20px 0; font-size:12.5px; }',
+  'body.light { background:#eef0f3; color:#1c1e24; }',
   'body.light .pt { background:#fff; border-color:#d4d7de; }',
-  'body.light #pipInput { background:#fff; color:#1c1e24; border-color:#c6cad3; }',
-  'body.light .pchip, body.light .pdotf.pall, body.light .pgo { color:#5f6673; border-color:#c6cad3; }',
-  'body.light .pchip.on, body.light .pdotf.pall.on { color:#e53e3e; border-color:#e53e3e; background:#e53e3e12; }',
+  'body.light .pt.over { border-color:#e53e3e66; background:#e53e3e10; }',
+  'body.light #pipInput, body.light #pipSearch, body.light .pm, body.light .phbtn { background:#fff; color:#1c1e24; border-color:#c6cad3; }',
+  'body.light .pchip, body.light .pdotf.pall, body.light .pgo, body.light #pipDue, body.light .psel { color:#5f6673; border-color:#c6cad3; background:#fff; }',
+  'body.light .pchip.on, body.light .pdotf.pall.on, body.light .phbtn.on { color:#e53e3e; border-color:#e53e3e; background:#e53e3e12; }',
   'body.light .pck { color:#3c4250; }',
-  'body.light .pckb { border-color:#b6bcc8; }',
-  'body.light .pc { border-color:#b6bcc8; }',
+  'body.light .pckb, body.light .pc { border-color:#b6bcc8; }',
   'body.light .pstage { color:#1e6fd9; }',
-  'body.light .pempty { color:#8a90a0; }',
+  'body.light .pempty, body.light .pmempty { color:#8a90a0; }',
   'body.light .pdotf { box-shadow: inset 0 0 0 1px #d4d7de; }',
   'body.light .pdotf.on { border-color:#1c1e24; }',
-  'body.light .psel { background:#fff; color:#5f6673; border-color:#c6cad3; }'
+  'body.light #pipTitle .sub { color:#5f6673; }'
 ].join('\n');
 
 let pipCat = localStorage.getItem(LS + '_pipCat') || 'все';
 let pipColor = localStorage.getItem(LS + '_pipColor') || '';
 let pipFiltOpen = false;
+let pipSearch = '';
+let pipMailOpen = false;
+let pipQuickDue = '';
+let pipCompact = localStorage.getItem(LS + '_pipCompact') === '1';
+
+function pipAddTask(text) {
+  const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
+  let due = null, dueTime = null, q = pipQuickDue;
+  const fmt = dl => dl.getFullYear() + '-' + String(dl.getMonth() + 1).padStart(2, '0') + '-' + String(dl.getDate()).padStart(2, '0');
+  if (q === 'today') { due = todayStr(); }
+  else if (q === '60' || q === '180') { const dl = new Date(Date.now() + parseInt(q, 10) * 60000); due = fmt(dl); dueTime = String(dl.getHours()).padStart(2, '0') + ':' + String(dl.getMinutes()).padStart(2, '0'); }
+  else if (q === 'tom9') { const dl = new Date(Date.now() + 86400000); due = fmt(dl); dueTime = '09:00'; }
+  tasks.push({ id: Date.now(), title: text, cat: (pipCat !== 'все' && allCatNames().includes(pipCat)) ? pipCat : null, due: due, dueTime: dueTime, done: false, created: Date.now(), updatedAt: null, mod: Date.now(), pos: minPos - 1 });
+  save(); render();
+}
 
 async function togglePip() {
   if (!window.documentPictureInPicture) return;
   if (pipWin) { try { pipWin.close(); } catch(e) {} pipWin = null; updatePipBtn(); return; }
+  const w = parseInt(localStorage.getItem(LS + '_pipW'), 10) || 360;
+  const h = parseInt(localStorage.getItem(LS + '_pipH'), 10) || 540;
   try {
-    pipWin = await documentPictureInPicture.requestWindow({ width: 360, height: 520 });
+    pipWin = await documentPictureInPicture.requestWindow({ width: w, height: h });
   } catch(e) { return; }
   const d = pipWin.document;
   const st = d.createElement('style');
   st.textContent = PIP_CSS;
   d.head.appendChild(st);
   d.body.classList.toggle('light', isLight());
-  d.body.innerHTML = '<div id="pipTop"></div><div id="pipCats"></div><div id="pipColors"></div><input id="pipInput" placeholder="+ Задача (Enter)"><div id="pipList"></div>';
+  d.body.classList.toggle('compact', pipCompact);
+  d.body.innerHTML =
+    '<div id="pipHead"><div id="pipTitle"></div>' +
+    '<button class="phbtn mail" id="pipMailBtn" title="Письма">✉</button>' +
+    '<button class="phbtn" id="pipCompactBtn" title="Компактный режим">▤</button></div>' +
+    '<div id="pipMail"></div>' +
+    '<div id="pipTop"></div><div id="pipCats"></div><div id="pipColors"></div>' +
+    '<div id="pipAdd"><input id="pipInput" placeholder="+ Задача (Enter)"><select id="pipDue" title="Срок"></select></div>' +
+    '<input id="pipSearch" placeholder="🔍 Поиск"><div id="pipList"></div>';
   const inp = d.getElementById('pipInput');
-  inp.onkeydown = e => {
-    if (e.key === 'Enter' && inp.value.trim()) {
-      const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
-      tasks.push({
-        id: Date.now(), title: inp.value.trim(),
-        cat: (pipCat !== 'все' && allCatNames().includes(pipCat)) ? pipCat : null, // в выбранную категорию
-        done: false, created: Date.now(), updatedAt: null, mod: Date.now(), pos: minPos - 1
-      });
-      inp.value = '';
-      save(); render();
-    }
-  };
+  inp.onkeydown = e => { if (e.key === 'Enter' && inp.value.trim()) { pipAddTask(inp.value.trim()); inp.value = ''; } };
+  const due = d.getElementById('pipDue');
+  due.innerHTML = '<option value="">без срока</option><option value="today">сегодня</option><option value="60">через 1 ч</option><option value="180">через 3 ч</option><option value="tom9">завтра 9:00</option>';
+  due.value = pipQuickDue;
+  due.onchange = () => { pipQuickDue = due.value; };
+  const srch = d.getElementById('pipSearch');
+  srch.value = pipSearch;
+  srch.oninput = () => { pipSearch = srch.value; pipRenderList(); };
+  d.getElementById('pipMailBtn').onclick = () => { pipMailOpen = !pipMailOpen; pipRender(); };
+  d.getElementById('pipCompactBtn').onclick = () => { pipCompact = !pipCompact; localStorage.setItem(LS + '_pipCompact', pipCompact ? '1' : ''); d.body.classList.toggle('compact', pipCompact); };
   pipWin.addEventListener('pagehide', () => { pipWin = null; updatePipBtn(); });
+  pipWin.addEventListener('resize', () => { try { localStorage.setItem(LS + '_pipW', pipWin.innerWidth); localStorage.setItem(LS + '_pipH', pipWin.innerHeight); } catch(e) {} });
   pipRender();
   updatePipBtn();
 }
+
 function pipRender() {
   if (!pipWin) return;
   const d = pipWin.document;
-  const list = d.getElementById('pipList');
-  if (!list) return;
-
-  // верхняя панель: сворачиваемые фильтры + сортировка (как на сайте)
+  const title = d.getElementById('pipTitle');
+  if (title) {
+    const active = tasks.filter(t => !t.done).length;
+    const od = tasks.filter(t => dueClass(t) === 'overdue').length;
+    title.innerHTML = 'Мои дела<span class="sub">Активных: ' + active + (od ? ' · <span class="od">просрочено: ' + od + '</span>' : '') + '</span>';
+  }
+  const unread = (typeof unreadMail === 'function') ? unreadMail() : [];
+  const mb = d.getElementById('pipMailBtn');
+  if (mb) {
+    mb.style.display = (typeof mailConfigured === 'function' && mailConfigured()) ? '' : 'none';
+    mb.textContent = '✉' + (unread.length ? ' ' + unread.length : '');
+    mb.classList.toggle('has', unread.length > 0);
+  }
+  const pm = d.getElementById('pipMail');
+  if (pm) {
+    pm.classList.toggle('open', pipMailOpen);
+    pm.innerHTML = '';
+    if (pipMailOpen) {
+      if (!unread.length) pm.innerHTML = '<div class="pmempty">Новых писем нет</div>';
+      else unread.forEach(m => {
+        const row = d.createElement('div'); row.className = 'pm';
+        row.innerHTML = m.source === 'jira' ? '<span class="pmsrc jira">Jira</span>' : '<span class="pmsrc person">Письмо</span>';
+        const tx = d.createElement('div'); tx.className = 'pmtext';
+        tx.innerHTML = '<div class="pmsubj">' + esc(m.subject || '(без темы)') + '</div><div class="pmfrom">' + esc(m.name || '') + '</div>';
+        row.appendChild(tx);
+        const rb = d.createElement('button'); rb.className = 'pmread'; rb.textContent = '✓'; rb.title = 'Прочитано';
+        rb.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); if (typeof updateMailBell === 'function') updateMailBell(); pipRender(); };
+        row.append(rb); pm.appendChild(row);
+      });
+    }
+  }
   const pt = d.getElementById('pipTop');
   if (pt) {
     pt.innerHTML = '';
@@ -2671,20 +2755,11 @@ function pipRender() {
     }
     const sel = d.createElement('select');
     sel.className = 'psel';
-    sel.innerHTML =
-      '<option value="manual">Сортировка: ручная</option>' +
-      '<option value="color-asc">Цвет: красный → белый</option>' +
-      '<option value="color-desc">Цвет: белый → красный</option>' +
-      '<option value="date-desc">Дата: новые → старые</option>' +
-      '<option value="date-asc">Дата: старые → новые</option>' +
-      '<option value="alpha-asc">Алфавит: А → Я</option>' +
-      '<option value="alpha-desc">Алфавит: Я → А</option>';
+    sel.innerHTML = '<option value="manual">Сортировка: ручная</option><option value="color-asc">Цвет: красный → белый</option><option value="color-desc">Цвет: белый → красный</option><option value="date-desc">Дата: новые → старые</option><option value="date-asc">Дата: старые → новые</option><option value="alpha-asc">Алфавит: А → Я</option><option value="alpha-desc">Алфавит: Я → А</option>';
     sel.value = state.sort || 'manual';
     sel.onchange = () => { state.sort = sel.value; save(); render(); };
     pt.appendChild(sel);
   }
-
-  // фильтр категорий (раскрывается из «# Фильтры»)
   const pc = d.getElementById('pipCats');
   if (pc) {
     pc.style.display = pipFiltOpen ? '' : 'none';
@@ -2694,104 +2769,73 @@ function pipRender() {
       const ch = d.createElement('span');
       ch.className = 'pchip' + (pipCat === c ? ' on' : '');
       ch.innerHTML = c === 'все' ? 'Все' : ((catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '') + esc(c));
-      ch.onclick = () => {
-        pipCat = c;
-        localStorage.setItem(LS + '_pipCat', pipCat);
-        pipFiltOpen = false;
-        pipRender();
-      };
+      ch.onclick = () => { pipCat = c; localStorage.setItem(LS + '_pipCat', pipCat); pipFiltOpen = false; pipRender(); };
       pc.appendChild(ch);
     });
   }
-
-  // фильтр по цветам (10 цветов)
   const pcl = d.getElementById('pipColors');
   if (pcl) {
     pcl.style.display = pipFiltOpen ? '' : 'none';
     pcl.innerHTML = '';
     [''].concat(COLOR_ORDER).forEach(col => {
       const cnt = col ? tasks.filter(t => !t.done && effColor(t) === col).length : 0;
-      if (col && !cnt && pipColor !== col) return; // только используемые цвета
+      if (col && !cnt && pipColor !== col) return;
       const ch = d.createElement('span');
       ch.className = 'pdotf' + (col === '' ? ' pall' : '') + (pipColor === col ? ' on' : '');
-      if (col) {
-        ch.style.background = col;
-        ch.textContent = cnt || '';
-        ch.title = (COLORS.find(c => c[0] === col) || ['', ''])[1] + ': ' + cnt;
-      } else ch.textContent = 'Все цвета';
-      ch.onclick = () => {
-        pipColor = col;
-        localStorage.setItem(LS + '_pipColor', pipColor);
-        pipRender();
-      };
+      if (col) { ch.style.background = col; ch.textContent = cnt || ''; ch.title = (COLORS.find(c => c[0] === col) || ['', ''])[1] + ': ' + cnt; }
+      else ch.textContent = 'Все цвета';
+      ch.onclick = () => { pipColor = col; localStorage.setItem(LS + '_pipColor', pipColor); pipRender(); };
       pcl.appendChild(ch);
     });
   }
+  pipRenderList();
+}
 
-  list.innerHTML = '';
+function pipRenderList() {
+  if (!pipWin) return;
+  const d = pipWin.document;
+  const list = d.getElementById('pipList');
+  if (!list) return;
+  const q = pipSearch.trim().toLowerCase();
   const act = tasks.slice().sort(cmp).filter(t => !t.done
     && (pipCat === 'все' || t.cat === pipCat)
-    && (!pipColor || effColor(t) === pipColor));
-  if (!act.length) { list.innerHTML = '<div class="pempty">Здесь пусто 🎉</div>'; return; }
+    && (!pipColor || effColor(t) === pipColor)
+    && (!q || t.title.toLowerCase().includes(q) || (t.stage && t.stage.toLowerCase().includes(q)) || (t.checks && t.checks.some(c => c.t.toLowerCase().includes(q)))));
+  list.innerHTML = '';
+  if (!act.length) { list.innerHTML = '<div class="pempty">' + (q ? 'Ничего не нашлось' : 'Здесь пусто 🎉') + '</div>'; return; }
   act.forEach(t => {
-    const row = d.createElement('div'); row.className = 'pt';
-    const c = d.createElement('div'); c.className = 'pc'; c.textContent = '✓';
-    c.title = 'Выполнено';
-    c.onclick = () => {
-      t.done = true; t.completedAt = Date.now(); t.mod = Date.now();
-      spawnRepeat(t);
-      save(); render();
-    };
+    const row = d.createElement('div'); row.className = 'pt' + (dueClass(t) === 'overdue' ? ' over' : '');
+    const c = d.createElement('div'); c.className = 'pc'; c.textContent = '✓'; c.title = 'Выполнено';
+    c.onclick = () => { t.done = true; t.completedAt = Date.now(); t.mod = Date.now(); spawnRepeat(t); save(); render(); };
     const mid = d.createElement('div'); mid.className = 'pmid';
-    const s = d.createElement('div'); s.className = 'ptit';
-    s.innerHTML = (t.pinned ? '📌 ' : '') + linkify(t.title);
-    s.style.color = themedColor(effColor(t));
-    mid.appendChild(s);
-    if (t.stage) {
-      const sg = d.createElement('div'); sg.className = 'pstage';
-      sg.innerHTML = '↳ ' + linkify(t.stage);
-      mid.appendChild(sg);
-    }
-    if (t.checks && t.checks.length) {
-      t.checks.forEach(ck => {
-        const cr = d.createElement('div'); cr.className = 'pck' + (ck.d ? ' don' : '');
-        const cb = d.createElement('span'); cb.className = 'pckb'; cb.textContent = '✓';
-        cb.onclick = () => { ck.d = !ck.d; t.mod = Date.now(); save(); render(); };
-        const ct = d.createElement('span'); ct.className = 'pckt'; ct.innerHTML = linkify(ck.t);
-        cr.append(cb, ct);
-        mid.appendChild(cr);
-      });
-    }
+    const s = d.createElement('div'); s.className = 'ptit'; s.innerHTML = (t.pinned ? '📌 ' : '') + linkify(t.title); s.style.color = themedColor(effColor(t)); mid.appendChild(s);
+    if (t.stage) { const sg = d.createElement('div'); sg.className = 'pstage'; sg.innerHTML = '↳ ' + linkify(t.stage); mid.appendChild(sg); }
+    if (t.checks && t.checks.length) t.checks.forEach(ck => {
+      const cr = d.createElement('div'); cr.className = 'pck' + (ck.d ? ' don' : '');
+      const cb = d.createElement('span'); cb.className = 'pckb'; cb.textContent = '✓';
+      cb.onclick = () => { ck.d = !ck.d; t.mod = Date.now(); save(); render(); };
+      const ct = d.createElement('span'); ct.className = 'pckt'; ct.innerHTML = linkify(ck.t);
+      cr.append(cb, ct); mid.appendChild(cr);
+    });
     const right = d.createElement('div'); right.className = 'pright';
-    if (t.due) {
-      const du = d.createElement('div');
-      du.className = 'pdue' + (dueClass(t) === 'overdue' ? ' over' : '');
-      du.textContent = countdown(t);
-      right.appendChild(du);
-    }
-    const go = d.createElement('button'); go.className = 'pgo'; go.textContent = '↗';
-    go.title = 'Открыть в приложении';
+    if (t.due) { const du = d.createElement('div'); du.className = 'pdue' + (dueClass(t) === 'overdue' ? ' over' : ''); du.textContent = countdown(t); right.appendChild(du); }
+    const mv = d.createElement('div'); mv.className = 'pmoves';
+    const up = d.createElement('button'); up.className = 'pmv'; up.textContent = '▲'; up.title = 'Выше'; up.onclick = () => moveTask(t, -1, act);
+    const dn = d.createElement('button'); dn.className = 'pmv'; dn.textContent = '▼'; dn.title = 'Ниже'; dn.onclick = () => moveTask(t, 1, act);
+    mv.append(up, dn); right.appendChild(mv);
+    const go = d.createElement('button'); go.className = 'pgo'; go.textContent = '↗'; go.title = 'Открыть в приложении';
     go.onclick = () => {
-      // главное окно — это приложение, если оно установлено, иначе вкладка сайта
       try { window.focus(); } catch(e) {}
       let el = document.querySelector('.task[data-id="' + t.id + '"]');
-      if (!el) { // задача скрыта фильтрами — сбрасываем их
-        state.fCats = []; state.colors = []; state.fArchive = false; searchQ = '';
-        $('searchInput').value = '';
-        render();
-        el = document.querySelector('.task[data-id="' + t.id + '"]');
-      }
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('flash');
-        setTimeout(() => el.classList.remove('flash'), 2300);
-      }
+      if (!el) { state.fCats = []; state.colors = []; state.fArchive = false; searchQ = ''; $('searchInput').value = ''; render(); el = document.querySelector('.task[data-id="' + t.id + '"]'); }
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 2300); }
     };
     right.appendChild(go);
     row.append(c, mid, right);
     list.appendChild(row);
   });
 }
+
 function updatePipBtn() {
   const b = $('pipBtn');
   if (!window.documentPictureInPicture) { b.style.display = 'none'; return; }
