@@ -932,9 +932,10 @@
       <button id="pushOffBtn" class="danger" style="display:none">Выключить push</button>
     </div>
     <div id="pushMsg" class="hint"></div>
-    <input id="pushKeyInput" type="text" class="editInput" style="margin-top:8px" placeholder="push-ключ (появится после включения)" readonly>
+    <input id="pushKeyInput" type="text" class="editInput" style="margin-top:8px" placeholder="push-ключ (один на ВСЕ твои устройства и в макрос)">
     <div class="iorow">
-      <button id="pushKeyCopy">Скопировать push-ключ (для Outlook-макроса)</button>
+      <button id="pushKeyCopy">Скопировать push-ключ</button>
+      <button id="pushKeyApply">Применить вставленный ключ</button>
     </div>
   </div>
 
@@ -3061,6 +3062,24 @@ function schedulePushRem() { if (!pushOn) return; clearTimeout(pushRemTimer); pu
 if ($('pushOnBtn')) $('pushOnBtn').onclick = enablePush;
 if ($('pushOffBtn')) $('pushOffBtn').onclick = disablePush;
 if ($('pushKeyCopy')) $('pushKeyCopy').onclick = async () => { ensurePushKey(); const ki = $('pushKeyInput'); if (ki) ki.value = pushKey; try { await navigator.clipboard.writeText(pushKey); pushMsg('push-ключ скопирован ✓'); } catch(e) { if (ki) { ki.select(); document.execCommand('copy'); } pushMsg('Скопировано ✓'); } };
+if ($('pushKeyApply')) $('pushKeyApply').onclick = async () => {
+  const v = (($('pushKeyInput').value) || '').trim();
+  if (!v) { pushMsg('Вставь ключ в поле выше.'); return; }
+  pushKey = v; localStorage.setItem(LS + '_pushKey', pushKey); scheduleSync();
+  if (pushOn) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToU8(VAPID_PUB) });
+      await fetch(PUSH_API + '/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ subscription: sub.toJSON(), pushKey }) });
+      lastRem = {}; pushSyncReminders();
+      pushMsg('Ключ применён, устройство переподписано ✓ Этот же ключ ставь везде и в макрос.');
+    } catch(e) { pushMsg('Ключ сохранён, но переподписка не удалась: ' + ((e && e.message) || e)); }
+  } else {
+    pushMsg('Ключ сохранён. Включи push, чтобы устройство получало уведомления по нему.');
+  }
+  updatePushUI();
+};
 updatePushUI();
 if (pushOn) setTimeout(pushSyncReminders, 2500);
 
