@@ -924,6 +924,16 @@
       <button id="mailBinSave">Подключить почту</button>
     </div>
     <div id="mailBinMsg" class="hint"></div>
+    <div class="hint" id="pushInfo" style="margin-top:14px; border-top:1px solid #2c3038; padding-top:12px;">🔔 Push при закрытом сайте (через Cloudflare): письма и дедлайны. Включается на каждом устройстве отдельно.</div>
+    <div class="iorow">
+      <button id="pushOnBtn">Включить push на этом устройстве</button>
+      <button id="pushOffBtn" class="danger" style="display:none">Выключить push</button>
+    </div>
+    <div id="pushMsg" class="hint"></div>
+    <input id="pushKeyInput" type="text" class="editInput" style="margin-top:8px" placeholder="push-ключ (появится после включения)" readonly>
+    <div class="iorow">
+      <button id="pushKeyCopy">Скопировать push-ключ (для Outlook-макроса)</button>
+    </div>
   </div>
 
   <div id="statsPanel">
@@ -1261,6 +1271,7 @@ function save() {
   localStorage.setItem(LS+'_ui', JSON.stringify(state));
   localStorage.setItem(LS+'_tomb', JSON.stringify(tombstones));
   scheduleSync();
+  schedulePushRem();
 }
 function todayStr() {
   const d = new Date();
@@ -2299,6 +2310,11 @@ function del_confirm_io() {
 
 /* --- Облако (jsonbin.io) --- */
 const JB = 'https://api.jsonbin.io/v3/b';
+const PUSH_API = 'https://alextask-push.12dogswog76.workers.dev';
+const VAPID_PUB = 'BNrmwMyHC1OFDhFuQZtwHAzbjdeqCzgs4kyy-gGRGpgHPTAMjvPRyGRyKgiryVJAykh2q10MwHMzSadX-2Rx150';
+let pushKey = localStorage.getItem(LS + '_pushKey') || '';
+let pushOn = localStorage.getItem(LS + '_pushOn') === '1';
+let lastRem = {}; try { lastRem = JSON.parse(localStorage.getItem(LS + '_pushRem')) || {}; } catch(e) {}
 let pushTimer = null;
 
 function setCloud(cls, tip) {
@@ -2307,7 +2323,7 @@ function setCloud(cls, tip) {
   d.title = tip || 'облако не подключено';
 }
 function syncMsg(s) { $('syncMsg').textContent = s; }
-function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, mailBin: mailBin || '', mailSeen: mailSeen, t: Date.now() }; }
+function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, mailBin: mailBin || '', mailSeen: mailSeen, pushKey: pushKey || '', t: Date.now() }; }
 
 function syncUI() {
   const on = !!(sync && sync.key && sync.bin);
@@ -2372,6 +2388,11 @@ function mergeData(remote) {
     mailBin = remote.mailBin;
     localStorage.setItem(LS + '_mailbin', mailBin);
     try { updateMailBell(); mailPull(); } catch(e) {}
+  }
+  if (remote && remote.pushKey && !pushKey) {
+    pushKey = remote.pushKey;
+    localStorage.setItem(LS + '_pushKey', pushKey);
+    try { updatePushUI(); } catch(e) {}
   }
   if (remote && remote.mailSeen) {
     let mch = false;
@@ -2979,6 +3000,66 @@ $('notifBtn').onclick = async () => {
   }
   notifLabel();
 };
+
+/* --- Web Push (Cloudflare worker): push при закрытом сайте --- */
+function urlB64ToU8(s) { const pad = '='.repeat((4 - s.length % 4) % 4); const b = (s + pad).replace(/-/g,'+').replace(/_/g,'/'); const raw = atob(b); const u = new Uint8Array(raw.length); for (let i=0;i<raw.length;i++) u[i]=raw.charCodeAt(i); return u; }
+function ensurePushKey() {
+  if (!pushKey) { pushKey = 'pk' + Math.random().toString(36).slice(2,10) + Math.random().toString(36).slice(2,8); localStorage.setItem(LS + '_pushKey', pushKey); scheduleSync(); }
+  return pushKey;
+}
+function updatePushUI() {
+  const ob = $('pushOnBtn'); if (!ob) return;
+  const fb = $('pushOffBtn'), ki = $('pushKeyInput');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) { ob.style.display = 'none'; if ($('pushInfo')) $('pushInfo').textContent = '🔔 Этот браузер не поддерживает push-уведомления.'; return; }
+  ob.style.display = pushOn ? 'none' : '';
+  if (fb) fb.style.display = pushOn ? '' : 'none';
+  if (ki) ki.value = pushKey || '';
+}
+function pushMsg(s) { if ($('pushMsg')) $('pushMsg').textContent = s; }
+async function enablePush() {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { pushMsg('Браузер не поддерживает push.'); return; }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { pushMsg('Нет разрешения на уведомления.'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToU8(VAPID_PUB) });
+    ensurePushKey();
+    const r = await fetch(PUSH_API + '/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ subscription: sub.toJSON(), pushKey }) });
+    if (!r.ok) { pushMsg('Ошибка воркера: ' + r.status + ' (проверь привязку KV = PUSH)'); return; }
+    pushOn = true; localStorage.setItem(LS + '_pushOn', '1');
+    updatePushUI(); pushMsg('Push включён ✓ Письма и дедлайны будут приходить при закрытом сайте.');
+    lastRem = {}; pushSyncReminders();
+  } catch (e) { pushMsg('Не удалось: ' + ((e && e.message) || e)); }
+}
+async function disablePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) { try { await fetch(PUSH_API + '/unsubscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ endpoint: sub.endpoint, pushKey }) }); } catch(e) {} await sub.unsubscribe(); }
+  } catch (e) {}
+  pushOn = false; localStorage.setItem(LS + '_pushOn', '');
+  updatePushUI(); pushMsg('Push выключен на этом устройстве.');
+}
+function reminderList() {
+  const now = Date.now();
+  return tasks.filter(t => !t.done && t.due && t.dueTime && deadlineOf(t).getTime() > now + 5000)
+    .map(t => ({ id: String(t.id), at: deadlineOf(t).getTime(), title: '⏳ Дедлайн: ' + t.title, body: t.cat || '' }));
+}
+function pushSyncReminders() {
+  if (!pushOn || !pushKey) return;
+  const want = {}; reminderList().forEach(r => { want[r.id] = r; });
+  Object.keys(lastRem).forEach(id => { if (!want[id]) { fetch(PUSH_API + '/cancel', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pushKey, taskId: id }) }).catch(()=>{}); delete lastRem[id]; } });
+  Object.keys(want).forEach(id => { const r = want[id]; const sig = r.at + '|' + r.title; if (lastRem[id] !== sig) { fetch(PUSH_API + '/schedule', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pushKey, taskId: id, at: r.at, title: r.title, body: r.body, url: 'https://alextask.ru' }) }).catch(()=>{}); lastRem[id] = sig; } });
+  try { localStorage.setItem(LS + '_pushRem', JSON.stringify(lastRem)); } catch(e) {}
+}
+let pushRemTimer = null;
+function schedulePushRem() { if (!pushOn) return; clearTimeout(pushRemTimer); pushRemTimer = setTimeout(pushSyncReminders, 1500); }
+if ($('pushOnBtn')) $('pushOnBtn').onclick = enablePush;
+if ($('pushOffBtn')) $('pushOffBtn').onclick = disablePush;
+if ($('pushKeyCopy')) $('pushKeyCopy').onclick = async () => { ensurePushKey(); const ki = $('pushKeyInput'); if (ki) ki.value = pushKey; try { await navigator.clipboard.writeText(pushKey); pushMsg('push-ключ скопирован ✓'); } catch(e) { if (ki) { ki.select(); document.execCommand('copy'); } pushMsg('Скопировано ✓'); } };
+updatePushUI();
+if (pushOn) setTimeout(pushSyncReminders, 2500);
 
 function checkDeadlines() {
   if (!notifOn || !('Notification' in window) || Notification.permission !== 'granted') return;
