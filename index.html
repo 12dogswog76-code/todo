@@ -640,6 +640,8 @@
   .mtext { flex: 1; min-width: 0; }
   .msubj { font-size: 13px; color: #e8eaf0; line-height: 1.3; word-wrap: break-word; }
   .mfrom { font-size: 11px; color: #9aa0ae; margin-top: 3px; }
+  .mprev { font-size: 12px; color: #b9bec9; margin-top: 3px; line-height: 1.3; }
+  body.light .mprev { color: #5f6673; }
   .mread { background: none; border: 1px solid #424650; border-radius: 6px; color: #9aa0ae; cursor: pointer; font-size: 12px; padding: 2px 7px; }
   .mread:hover { color: #8fd6a8; border-color: #4caf7d; }
   .topbar button.mbell.has { border-color: #e53e3e; color: #fff; background: #e53e3e22; }
@@ -2547,6 +2549,7 @@ function renderMail() {
     const txt = document.createElement('div');
     txt.className = 'mtext';
     txt.innerHTML = '<div class="msubj">' + esc(m.subject || '(без темы)') + '</div>' +
+      (m.prev ? '<div class="mprev">' + esc(m.prev) + '</div>' : '') +
       '<div class="mfrom">' + esc(m.name || '') + ' · ' + fmtDT(m.at || Date.now()) + '</div>';
     row.appendChild(txt);
     const toTask = document.createElement('button');
@@ -3136,6 +3139,7 @@ const PIP_CSS = [
   '.pmtext { flex:1; min-width:0; }',
   '.pmsubj { font-size:12px; line-height:1.25; }',
   '.pmfrom { font-size:10px; color:#9aa0ae; margin-top:2px; }',
+  '.pmprev { font-size:10px; color:#aab1bf; margin-top:2px; line-height:1.25; }',
   '.pmread { background:none; border:1px solid #424650; border-radius:5px; color:#9aa0ae; cursor:pointer; font-size:11px; padding:1px 6px; }',
   '.pmread:hover { color:#8fd6a8; border-color:#4caf7d; }',
   '.pmempty { color:#777d8a; font-size:11.5px; text-align:center; padding:8px 0; }',
@@ -3279,7 +3283,7 @@ function pipRender() {
         const row = d.createElement('div'); row.className = 'pm';
         row.innerHTML = m.source === 'jira' ? '<span class="pmsrc jira">Jira</span>' : '<span class="pmsrc person">Письмо</span>';
         const tx = d.createElement('div'); tx.className = 'pmtext';
-        tx.innerHTML = '<div class="pmsubj">' + esc(m.subject || '(без темы)') + '</div><div class="pmfrom">' + esc(m.name || '') + '</div>';
+        tx.innerHTML = '<div class="pmsubj">' + esc(m.subject || '(без темы)') + '</div>' + (m.prev ? '<div class="pmprev">' + esc(m.prev) + '</div>' : '') + '<div class="pmfrom">' + esc(m.name || '') + '</div>';
         row.appendChild(tx);
         const rb = d.createElement('button'); rb.className = 'pmread'; rb.textContent = '✓'; rb.title = 'Прочитано';
         rb.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); scheduleSync(); if (typeof updateMailBell === 'function') updateMailBell(); pipRender(); };
