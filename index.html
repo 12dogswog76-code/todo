@@ -921,6 +921,7 @@
       <button id="syncOff" class="danger" style="display:none">Отключить облако</button>
     </div>
     <div id="syncMsg" class="hint"></div>
+    <div id="syncStat" class="hint"></div>
     <input id="mailBinInput" type="text" class="editInput" style="margin-top:12px" placeholder="Код хранилища писем (из скрипта Gmail) — для уведомлений с почты">
     <div class="iorow">
       <button id="mailBinSave">Подключить почту</button>
@@ -2322,8 +2323,8 @@ let pushTimer = null;
 
 function setCloud(cls, tip) {
   const d = $('cloudDot');
-  d.className = cls || '';
-  d.title = tip || 'облако не подключено';
+  if (d) { d.className = cls || ''; d.title = tip || 'облако не подключено'; }
+  const st = $('syncStat'); if (st) st.textContent = tip ? ('☁ ' + tip) : '';
 }
 function syncMsg(s) { $('syncMsg').textContent = s; }
 function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, mailBin: mailBin || '', mailSeen: mailSeen, pushKey: pushKey || '', t: Date.now() }; }
@@ -2358,7 +2359,7 @@ async function cloudPush() {
     if (!r.ok) throw new Error(r.status);
     setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0,5));
   } catch(e) {
-    setCloud('cloud-err', 'нет связи с облаком — изменения сохранены локально');
+    setCloud('cloud-err', 'ошибка отправки (' + ((e && e.message) || 'нет сети') + ') — сохранено локально');
   }
 }
 
@@ -2423,7 +2424,7 @@ async function cloudPull() {
     if (JSON.stringify(tasks) !== remoteStr) scheduleSync();
     setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0,5));
   } catch(e) {
-    setCloud('cloud-err', 'нет связи с облаком');
+    setCloud('cloud-err', 'ошибка загрузки (' + ((e && e.message) || 'нет сети') + ')');
   }
 }
 
@@ -2479,7 +2480,7 @@ $('syncCopyCode').onclick = async () => {
     syncMsg('Скопируй код вручную (Ctrl+C).');
   }
 };
-$('syncNow').onclick = async () => { await cloudPull(); syncMsg('Синхронизировано ✓'); };
+$('syncNow').onclick = async () => { syncMsg('Проверяю…'); await cloudPush(); await cloudPull(); syncMsg(''); };
 $('syncOff').onclick = () => {
   if (!$('syncOff').dataset.c) {
     $('syncOff').dataset.c = '1';
@@ -3646,7 +3647,7 @@ setInterval(() => {
 }, 60000);
 setInterval(() => {
   if (sync && !document.hidden && !document.querySelector('.editInput')) cloudPull();
-}, 60000);
+}, 25000);
 
 /* --- ИИ-помощник (Puter.js, без ключа) --- мульти-чаты --- */
 (function () {
