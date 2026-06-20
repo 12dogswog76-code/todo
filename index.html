@@ -314,6 +314,12 @@
   }
 
   .empty { text-align: center; color: #777d8a; padding: 40px 0; font-size: 14px; }
+  .topbanner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #23252c; border: 1px solid #3a3e48; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 13.5px; color: #e8eaf0; }
+  body.light .topbanner { background: #f2f3f6; border-color: #d4d7de; color: #3c4250; }
+  .topbanner button { background: #e53e3e; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  .topbanner button.x { background: none; color: #9aa0ae; padding: 4px 8px; margin-left: auto; font-size: 15px; }
+  .topbanner button.x:hover { color: #e8eaf0; }
+  .wstep h2 { margin-top: 0; }
 
   .editInput {
     width: 100%;
@@ -752,7 +758,10 @@
   body.light .aibox { background: #fff; border-color: #d4d7de; color: #1c1e24; }
   .aihead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #2e313a; }
   body.light .aihead { border-color: #e6e8ee; }
-  .aihead .aititle { font-weight: 600; font-size: 14px; margin-right: auto; white-space: nowrap; }
+  .aihead .aititle { font-weight: 600; font-size: 14px; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+  .aihead .aittl { display: inline-block; white-space: nowrap; }
+  .aihead .aititle.scroll .aittl { animation: ttmarq 9s linear infinite; }
+  @keyframes ttmarq { 0%, 12% { transform: translateX(0); } 88%, 100% { transform: translateX(var(--ttd, 0)); } }
   .ttshort { display: none; }
   .aichatlist { position: absolute; inset: 0; z-index: 3; background: #1c1e24; display: none; flex-direction: column; }
   body.light .aichatlist { background: #fff; }
@@ -824,6 +833,9 @@
 <div class="wrap">
   <h1>Мои дела <span id="cloudDot" title="облако не подключено"></span></h1>
   <div class="stats" id="stats"></div>
+
+  <div id="demoBar" class="topbanner" style="display:none">👋 Это примеры, чтобы освоиться. <button id="demoClear">Очистить и начать с нуля</button><button id="demoHide" class="x" title="Скрыть">✕</button></div>
+  <div id="installBar" class="topbanner" style="display:none">📱 Установи как приложение — откроется в своём окне и работает без интернета. <button id="installBtn">Установить</button><button id="installHide" class="x" title="Скрыть">✕</button></div>
 
   <div class="topbar">
     <button id="notifBtn">🔕 Уведомления: выкл</button>
@@ -957,7 +969,7 @@
   <div class="aibox">
     <div class="aihead">
       <button id="aiMenu" title="Список чатов">☰</button>
-      <span class="aititle" id="aiTitle">✨ Новый чат</span>
+      <span class="aititle"><span class="aittl" id="aiTitle">✨ Новый чат</span></span>
       <select id="aiModel" title="Модель"></select>
       <button id="aiNew" title="Новый чат">＋</button>
       <button id="aiClose" title="Закрыть">✕</button>
@@ -982,10 +994,12 @@
     <p>Все данные хранятся <b>в твоём браузере</b>, регистрация не нужна. Выбери раздел:</p>
     <div class="faqlist">
       <button class="faqlink" data-sec="sg-basics">📋 Основы</button>
+      <button class="faqlink" data-sec="sg-cat">🗂️ Категории и подкатегории</button>
       <button class="faqlink" data-sec="sg-archive">📦 Архив и жизненный цикл</button>
       <button class="faqlink" data-sec="sg-bm">⚡ Кнопка «В задачи»</button>
       <button class="faqlink" data-sec="sg-sync">☁ Синхронизация между устройствами</button>
       <button class="faqlink" data-sec="sg-notif">🔔 Уведомления</button>
+      <button class="faqlink" data-sec="sg-ai">✨ ИИ-помощник</button>
       <button class="faqlink" data-sec="sg-pwa">📱 Установить как приложение</button>
       <button class="faqlink" data-sec="sg-io">↕ Экспорт / импорт</button>
       <button class="faqlink" data-sec="sg-outlook">📨 Уведомления из почты (Outlook)</button>
@@ -1007,13 +1021,21 @@
 
 <div id="welcome">
   <div class="wcard">
-    <h2>👋 Привет!</h2>
-    <p>Это «Мои дела» — быстрый список задач: категории, дедлайны с таймерами, чек-листы и синхронизация между устройствами. Всё хранится у тебя, без регистрации.</p>
-    <p>Дальше откроется <b>гайд</b> — пожалуйста, пролистай его, там всё управление и настройка синхронизации. Чтобы закрыть гайд, <b>прокрути его до конца</b> — кнопка внизу.</p>
-    <p>Включить уведомления? Предупредим за 30 минут до дедлайна и в момент, когда время выйдет.</p>
-    <div class="askrow">
-      <button id="wYes">🔔 Включить</button>
-      <button id="wLater">Позже</button>
+    <div class="wstep" id="wStep1">
+      <h2>👋 Это «Мои дела»</h2>
+      <p>Быстрый список задач: категории и подкатегории, дедлайны с таймерами, чек-листы и заметки. Всё хранится у тебя в браузере, без регистрации.</p>
+      <p>Добавь дело в поле сверху и нажми Enter. Клик по задаче — редактирование. Внизу — поиск, фильтры, синхронизация и уведомления.</p>
+      <div class="askrow"><button id="wNext">Дальше →</button><button id="wSkip">Пропустить</button></div>
+    </div>
+    <div class="wstep" id="wStep2" style="display:none">
+      <h2>⚙️ Пара полезных вещей</h2>
+      <p>☁ <b>Синхронизация</b> между устройствами и 🔔 <b>push-уведомления</b> о дедлайнах — в панелях снизу. ✨ <b>ИИ-помощник</b> — кнопка вверху. Полный гайд всегда под кнопкой «❔ Как пользоваться».</p>
+      <p id="wInstallLine" style="display:none">📱 Сайт можно <b>установить как приложение</b> — откроется в своём окне и работает без интернета.</p>
+      <div class="askrow">
+        <button id="wInstall" style="display:none">📱 Установить</button>
+        <button id="wNotif">🔔 Включить уведомления</button>
+        <button id="wDone">Готово</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1089,6 +1111,21 @@
 <div class="subg" id="sg-notif"><div class="subgcard">
   <h2>🔔 Уведомления</h2>
   <p>Кнопка «уведомления» внизу — браузер предупредит за 30 минут до дедлайна и в момент истечения. Работает, пока вкладка с сайтом открыта (можно в фоне).</p>
+  <p><b>Push при закрытом сайте</b> (даже когда вкладка закрыта) включается в панели <b>☁ Облако</b> → «Включить push на этом устройстве». Работает через бесплатный Cloudflare-воркер; на iPhone — только если добавить сайт «на экран Домой».</p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-ai"><div class="subgcard">
+  <h2>✨ ИИ-помощник</h2>
+  <p>Кнопка <b>«✨ ИИ»</b> вверху открывает чат с нейросетью прямо на сайте — спросить, объяснить, написать текст. Бесплатно (через Puter.js); при первом запросе может попросить вход в бесплатный аккаунт Puter.</p>
+  <p>Можно вести <b>несколько чатов</b> (☰ — список, ＋ — новый), у каждого своя тема. Название придумывается само, можно переименовать (✎). Есть выбор модели, голосовой ввод 🎤 и копирование ответов. Чаты синхронизируются между устройствами под одним аккаунтом Puter.</p>
+  <button class="subgback">← Назад к разделам</button>
+</div></div>
+
+<div class="subg" id="sg-cat"><div class="subgcard">
+  <h2>🗂️ Категории и подкатегории</h2>
+  <p>Кнопка <b>«➕ Категории»</b> под полем ввода открывает менеджер: добавляй категории со своей иконкой и цветом. Под каждой категорией — кнопка <b>«+ Добавить подкатегорию»</b> (например, Работа → 1С).</p>
+  <p>У задачи выбираешь категорию, затем подкатегорию во второй строке чипов. В фильтрах выбор категории показывает задачи вместе с подкатегориями, а выбор подкатегории сужает до неё. «Выбрать несколько» назначает категорию и подкатегорию сразу нескольким задачам.</p>
   <button class="subgback">← Назад к разделам</button>
 </div></div>
 
@@ -1277,6 +1314,7 @@ function save() {
   scheduleSync();
   schedulePushRem();
 }
+function bumpTop(t) { const mp = tasks.length ? Math.min(...tasks.map(x => x.pos || 0)) : 0; t.pos = mp - 1; t.mod = Date.now(); }
 function todayStr() {
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -1720,7 +1758,7 @@ function render() {
 
   if (shown.length === 0) {
     list.innerHTML = '<div class="empty">' + (tasks.length === 0
-      ? 'Пока пусто. Добавь первое дело ↑'
+      ? 'Пока пусто. Впиши первое дело в поле сверху и нажми Enter ↑'
       : (searchQ ? 'Ничего не нашлось' : (isArc ? 'Архив пуст' : 'Здесь ничего нет'))) + '</div>';
     return;
   }
@@ -1883,6 +1921,7 @@ function render() {
       attachLinkPaste(inp);
       title.replaceWith(inp);
       row.classList.add('editing');
+      const editStart = t.updatedAt || 0;
 
       const panel = document.createElement('div');
       panel.className = 'editPanel';
@@ -2005,7 +2044,7 @@ function render() {
 
       inp.focus(); inp.select();
       const finish = ok => {
-        if (ok) { addPendingNote(); grab(); }
+        if (ok) { addPendingNote(); grab(); if ((t.updatedAt || 0) !== editStart) bumpTop(t); }
         save(); render();
       };
       inp.onkeydown = e => {
@@ -3549,35 +3588,60 @@ window.addEventListener('resize', syncDock);
 $('guideClose').onclick = closeGuide;
 $('guideOverlay').onclick = e => { if (e.target === $('guideOverlay')) closeGuide(); };
 
-/* --- Приветствие (первый визит) --- */
-async function welcomeDone(enableNotif) {
+/* --- Установить как приложение --- */
+let deferredInstall = null;
+function isStandalone() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; updateInstallBar(); });
+window.addEventListener('appinstalled', () => { deferredInstall = null; updateInstallBar(); });
+function updateInstallBar() { const b = $('installBar'); if (!b) return; b.style.display = (deferredInstall && !isStandalone() && !localStorage.getItem(LS + '_instHide')) ? 'flex' : 'none'; }
+async function doInstall() { if (!deferredInstall) return; deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch(e) {} deferredInstall = null; updateInstallBar(); }
+if ($('installBtn')) $('installBtn').onclick = doInstall;
+if ($('installHide')) $('installHide').onclick = () => { localStorage.setItem(LS + '_instHide', '1'); updateInstallBar(); };
+
+/* --- Демо-задачи при первом заходе --- */
+function seedDemo() {
+  if (localStorage.getItem(LS + '_demo') || tasks.length || sync) return;
+  localStorage.setItem(LS + '_demo', '1');
+  const now = Date.now();
+  tasks = [
+    { id: now + 1, title: 'Кликни по задаче — здесь редактирование, заметки и дедлайн', cat: 'Личное', checks: [{ t: 'Отметь пункт галочкой', d: false }, { t: 'И ещё один', d: false }], done: false, created: now, updatedAt: null, mod: now, pos: -1 },
+    { id: now + 2, title: 'Задача с таймером до дедлайна', cat: 'Работа', due: todayStr(), dueTime: '18:00', done: false, created: now, updatedAt: null, mod: now, pos: -2 },
+    { id: now + 3, title: 'Молоко, хлеб, кофе', cat: 'Купить', done: false, created: now, updatedAt: null, mod: now, pos: -3 }
+  ];
+}
+function updateDemoBar() { const b = $('demoBar'); if (!b) return; b.style.display = (localStorage.getItem(LS + '_demo') === '1' && !localStorage.getItem(LS + '_demoDone')) ? 'flex' : 'none'; }
+if ($('demoClear')) $('demoClear').onclick = () => { tasks = []; localStorage.setItem(LS + '_demoDone', '1'); save(); render(); updateDemoBar(); $('taskInput').focus(); };
+if ($('demoHide')) $('demoHide').onclick = () => { localStorage.setItem(LS + '_demoDone', '1'); updateDemoBar(); };
+
+/* --- Онбординг (2 экрана, первый визит) --- */
+function onboardClose() {
+  localStorage.setItem(LS + '_guide', '1');
   localStorage.setItem(LS + '_notifAsked', '1');
   $('welcome').classList.remove('open');
-  if (enableNotif && 'Notification' in window && Notification.permission !== 'denied') {
-    const p = await Notification.requestPermission();
-    if (p === 'granted') {
-      notifOn = true;
-      localStorage.setItem(LS + '_notif', '1');
-      showNotif('Уведомления включены ✓', 'Предупрежу за 30 минут до дедлайна и в момент истечения.');
-    }
-    notifLabel();
-  }
-  openGuide(true); // гайд сбоку, сайт остаётся рабочим
+  if (!localStorage.getItem(LS + '_ghint')) { localStorage.setItem(LS + '_ghint', '1'); hintGuideBtn(); }
 }
-$('wYes').onclick = () => welcomeDone(true);
-$('wLater').onclick = () => welcomeDone(false);
-
-// первый визит без облака
-if (!localStorage.getItem(LS + '_guide') && !sync) {
-  if (window.innerWidth >= 1000) {
-    $('welcome').classList.add('open'); // десктоп: приветствие + уведомления, потом гайд сбоку
-  } else {
-    openGuide(); // телефон: прежний поток — гайд, после него предложение уведомлений
+if ($('wNext')) $('wNext').onclick = () => {
+  $('wStep1').style.display = 'none'; $('wStep2').style.display = '';
+  if (deferredInstall && !isStandalone()) { $('wInstall').style.display = ''; $('wInstallLine').style.display = ''; }
+};
+if ($('wSkip')) $('wSkip').onclick = onboardClose;
+if ($('wInstall')) $('wInstall').onclick = doInstall;
+if ($('wNotif')) $('wNotif').onclick = async () => {
+  if ('Notification' in window && Notification.permission !== 'denied') {
+    const p = await Notification.requestPermission();
+    if (p === 'granted') { notifOn = true; localStorage.setItem(LS + '_notif', '1'); notifLabel(); }
   }
+};
+if ($('wDone')) $('wDone').onclick = onboardClose;
+
+// первый визит без облака — короткий онбординг + демо-задачи
+if (!localStorage.getItem(LS + '_guide') && !sync) {
+  seedDemo(); save(); render(); updateDemoBar();
+  $('welcome').classList.add('open');
 } else {
-  // гайд уже видели (или облако подключено) — предложим уведомления при первом заходе
   setTimeout(maybeAskNotif, 1500);
 }
+updateInstallBar(); updateDemoBar();
 
 // быстрое добавление по ссылке: alextask.ru/?add=Текст задачи (кнопка-закладка «В задачи»)
 let flashId = null;
@@ -3766,7 +3830,13 @@ setInterval(() => {
   }
   function setTitle() {
     const c = curChat();
-    $('aiTitle').textContent = '✨ ' + (c.title || 'Новый чат');
+    const inner = $('aiTitle'); inner.textContent = '✨ ' + (c.title || 'Новый чат');
+    const box = inner.parentElement;
+    requestAnimationFrame(() => {
+      const over = inner.scrollWidth - box.clientWidth;
+      if (over > 6) { box.classList.add('scroll'); box.style.setProperty('--ttd', (-(over + 14)) + 'px'); }
+      else { box.classList.remove('scroll'); box.style.removeProperty('--ttd'); }
+    });
   }
   function renderAi() {
     setTitle();
