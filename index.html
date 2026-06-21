@@ -829,6 +829,7 @@
   }
   .amInput { width: 74px; }
   .tag.amt { color: #8fd6a8; font-weight: 600; }
+  .tag.amt.off { opacity: .5; text-decoration: line-through; }
   body.light .tag.amt { color: #2e8f5e; }
 </style>
 </head>
@@ -1575,7 +1576,7 @@ function render() {
 
   const active = tasks.filter(t => !t.done).length;
   const od = tasks.filter(t => dueClass(t) === 'overdue').length;
-  const money = tasks.reduce((sm, t) => (!t.done && t.amount && catSumOn(t.cat)) ? sm + t.amount : sm, 0);
+  const money = tasks.reduce((sm, t) => (!t.done && t.amount && !t.amountSkip && catSumOn(t.cat)) ? sm + t.amount : sm, 0);
   $('stats').textContent = (active === 0 && tasks.length > 0
     ? 'Всё сделано 🎉'
     : `Активных: ${active}` + (od ? ` · просрочено: ${od}` : ''))
@@ -1890,7 +1891,8 @@ function render() {
         meta.appendChild(stag);
       }
       if (t.amount && catSumOn(t.cat)) {
-        const am = document.createElement('span'); am.className = 'tag amt'; am.textContent = '₽ ' + fmtMoney(t.amount);
+        const am = document.createElement('span'); am.className = 'tag amt' + (t.amountSkip ? ' off' : ''); am.textContent = '₽ ' + fmtMoney(t.amount);
+        if (t.amountSkip) am.title = 'Не учитывается в общей сумме';
         meta.appendChild(am);
       }
     }
@@ -2025,8 +2027,14 @@ function render() {
         const amEl = document.createElement('input'); amEl.type = 'number'; amEl.min = '0'; amEl.step = 'any'; amEl.inputMode = 'decimal'; amEl.placeholder = 'сумма'; amEl.className = 'amInput'; amEl.value = (t.amount != null ? t.amount : '');
         amWrap.append('₽', amEl);
         amEl.onmousedown = e => e.stopPropagation(); amEl.onclick = e => e.stopPropagation();
-        amEl.onchange = () => { const v = parseFloat(amEl.value); t.amount = (isNaN(v) || v <= 0) ? undefined : v; amWrap.classList.toggle('on', !!t.amount); t.updatedAt = Date.now(); t.mod = Date.now(); save(); };
+        const saveAmount = () => { const v = parseFloat(amEl.value); t.amount = (isNaN(v) || v <= 0) ? undefined : v; amWrap.classList.toggle('on', !!t.amount); t.updatedAt = Date.now(); t.mod = Date.now(); };
+        amEl.onchange = () => { saveAmount(); save(); };
+        amEl.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); saveAmount(); finish(true); } };
         panel.appendChild(amWrap);
+        const skip = document.createElement('span'); skip.className = 'chip' + (t.amountSkip ? ' on' : ''); skip.textContent = 'не в сумму'; skip.title = 'Не учитывать сумму этой задачи в общем итоге';
+        skip.onmousedown = e => { e.preventDefault(); e.stopPropagation(); };
+        skip.onclick = e => { e.stopPropagation(); t.amountSkip = !t.amountSkip || undefined; skip.classList.toggle('on', !!t.amountSkip); t.updatedAt = Date.now(); t.mod = Date.now(); save(); };
+        panel.appendChild(skip);
       }
       const mkQd = (label, fn) => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = label; b.onmousedown = e => { e.preventDefault(); e.stopPropagation(); }; b.onclick = e => { e.stopPropagation(); fn(); dEl.value = t.due || ''; tmEl.value = t.dueTime || ''; dWrap.classList.toggle('on', !!t.due); tmWrap.classList.toggle('on', !!t.dueTime); t.updatedAt = Date.now(); t.mod = Date.now(); save(); }; panel.appendChild(b); };
       mkQd('Сегодня', () => { t.due = todayStr(); });
