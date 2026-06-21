@@ -827,6 +827,9 @@
     .addbox.moreopen #addExtra { display: flex; }
     .addbox.moreopen #addHint { display: block; }
   }
+  .amInput { width: 74px; }
+  .tag.amt { color: #8fd6a8; font-weight: 600; }
+  body.light .tag.amt { color: #2e8f5e; }
 </style>
 </head>
 <body>
@@ -880,6 +883,7 @@
         <input id="cmName" type="text" class="pill" placeholder="название категории" maxlength="20">
         <select id="cmColor" class="pill" title="Цвет задач этой категории по умолчанию"></select>
         <input type="hidden" id="cmParent" value="">
+        <button id="cmSumBtn" class="chip" title="Считать сумму ₽ у задач этой категории">₽ сумма</button>
         <button id="cmAdd" class="chip">➕ Категорию</button>
       </div>
       <div id="emojiGrid"></div>
@@ -1290,6 +1294,8 @@ function catColorOf(n) {
   return CAT_COLOR[n] || null;
 }
 function subColorOf(parent, sub) { const e = subEntry(parent, sub); return (e && e.c) || null; }
+function catSumOn(name) { if (!name) return false; const c = catList.find(x => x.n === name && !x.parent) || catList.find(x => x.n === name); return !!(c && c.sum); }
+function fmtMoney(n) { return Math.round(n).toLocaleString('ru-RU'); }
 function effColor(t) {
   return t.color || (t.sub ? subColorOf(t.cat, t.sub) : null) || catColorOf(t.cat) || '#ffffff';
 }
@@ -1569,9 +1575,11 @@ function render() {
 
   const active = tasks.filter(t => !t.done).length;
   const od = tasks.filter(t => dueClass(t) === 'overdue').length;
-  $('stats').textContent = active === 0 && tasks.length > 0
+  const money = tasks.reduce((sm, t) => (!t.done && t.amount && catSumOn(t.cat)) ? sm + t.amount : sm, 0);
+  $('stats').textContent = (active === 0 && tasks.length > 0
     ? 'Всё сделано 🎉'
-    : `Активных: ${active}` + (od ? ` · просрочено: ${od}` : '');
+    : `Активных: ${active}` + (od ? ` · просрочено: ${od}` : ''))
+    + (money > 0 ? ` · 💰 ${fmtMoney(money)} ₽` : '');
 
   const isArc = !!state.fArchive;
   const fIcon = c => catEmojiHTML(c, true) ? catEmojiHTML(c, true) + ' ' : '';
@@ -1881,6 +1889,10 @@ function render() {
         const sc2 = subColorOf(t.cat, t.sub); if (sc2) stag.style.color = themedColor(sc2);
         meta.appendChild(stag);
       }
+      if (t.amount && catSumOn(t.cat)) {
+        const am = document.createElement('span'); am.className = 'tag amt'; am.textContent = '₽ ' + fmtMoney(t.amount);
+        meta.appendChild(am);
+      }
     }
     if (t.repeat) {
       const rp = document.createElement('span');
@@ -2008,6 +2020,14 @@ function render() {
       };
       panel.appendChild(dWrap);
       panel.appendChild(tmWrap);
+      if (t.cat && catSumOn(t.cat)) {
+        const amWrap = document.createElement('label'); amWrap.className = 'pill ico' + (t.amount ? ' on' : '');
+        const amEl = document.createElement('input'); amEl.type = 'number'; amEl.min = '0'; amEl.step = 'any'; amEl.inputMode = 'decimal'; amEl.placeholder = 'сумма'; amEl.className = 'amInput'; amEl.value = (t.amount != null ? t.amount : '');
+        amWrap.append('₽', amEl);
+        amEl.onmousedown = e => e.stopPropagation(); amEl.onclick = e => e.stopPropagation();
+        amEl.onchange = () => { const v = parseFloat(amEl.value); t.amount = (isNaN(v) || v <= 0) ? undefined : v; amWrap.classList.toggle('on', !!t.amount); t.updatedAt = Date.now(); t.mod = Date.now(); save(); };
+        panel.appendChild(amWrap);
+      }
       const mkQd = (label, fn) => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = label; b.onmousedown = e => { e.preventDefault(); e.stopPropagation(); }; b.onclick = e => { e.stopPropagation(); fn(); dEl.value = t.due || ''; tmEl.value = t.dueTime || ''; dWrap.classList.toggle('on', !!t.due); tmWrap.classList.toggle('on', !!t.dueTime); t.updatedAt = Date.now(); t.mod = Date.now(); save(); }; panel.appendChild(b); };
       mkQd('Сегодня', () => { t.due = todayStr(); });
       mkQd('Завтра', () => { const dl = new Date(Date.now() + 86400000); t.due = _ymd(dl); t.dueTime = '09:00'; });
@@ -2686,6 +2706,7 @@ const EMOJIS = '😀 😁 😂 🤣 😊 😍 😎 🤓 🤔 🤨 😐 😏 😴
 let cmEmoji = '😀';
 let cmEditing = null; // имя категории, которую сейчас редактируем
 let cmEditingParent = null; // если редактируем подкатегорию — её родитель
+let cmSum = false; // считать ли сумму у задач этой категории
 let emojiGridBuilt = false;
 
 function pickerHTML(e) {
@@ -2703,8 +2724,11 @@ function cmReset() {
   $('cmName').placeholder = 'название категории';
   $('cmColor').value = '';
   if ($('cmParent')) $('cmParent').value = '';
+  cmSum = false; cmSumUI();
   $('cmAdd').textContent = '➕ Категорию';
 }
+function cmSumUI() { const b = $('cmSumBtn'); if (b) b.classList.toggle('on', !!cmSum); }
+if ($('cmSumBtn')) $('cmSumBtn').onclick = () => { cmSum = !cmSum; cmSumUI(); };
 // варианты цвета категории
 $('cmColor').innerHTML = '<option value="">цвет: авто</option>' +
   COLORS.map(c => '<option value="' + c[0] + '" style="color:' + c[0] + '">' + c[1] + '</option>').join('');
@@ -2776,7 +2800,7 @@ function renderCatMgr() {
     const it = document.createElement('span');
     it.className = 'cmitem' + (sub ? ' cmsub' : '');
     const lbl = document.createElement('span');
-    lbl.innerHTML = sub ? subChipHTML(c.parent, c.n) : catChipHTML(c.n);
+    lbl.innerHTML = (sub ? subChipHTML(c.parent, c.n) : catChipHTML(c.n)) + (c.sum ? ' <span style="opacity:.55">₽</span>' : '');
     const ed = document.createElement('button');
     const editingThis = cmEditing === c.n && cmEditingParent === (c.parent || null);
     ed.className = 'cmedit' + (editingThis ? ' on' : '');
@@ -2790,6 +2814,7 @@ function renderCatMgr() {
       $('cmName').value = c.n;
       $('cmColor').value = c.c || '';
       if ($('cmParent')) $('cmParent').value = c.parent || '';
+      cmSum = !!c.sum; cmSumUI();
       $('cmAdd').textContent = '💾 Сохранить';
       $('cmName').focus();
       renderCatMgr();
@@ -2865,7 +2890,7 @@ $('cmAdd').onclick = () => {
           entry.n = n;
         }
         entry.e = cmEmoji;
-        entry.c = $('cmColor').value || null;
+        entry.c = $('cmColor').value || null; entry.sum = cmSum || undefined;
         saveCats(); save();
       }
     } else {
@@ -2883,7 +2908,7 @@ $('cmAdd').onclick = () => {
           entry.n = n;
         }
         entry.e = cmEmoji;
-        entry.c = $('cmColor').value || null;
+        entry.c = $('cmColor').value || null; entry.sum = cmSum || undefined;
         saveCats(); save();
       }
     }
@@ -2892,10 +2917,10 @@ $('cmAdd').onclick = () => {
     // создание
     if (parentSel) {
       if (subsOf(parentSel).some(x => x.n.toLowerCase() === n.toLowerCase())) { dupMsg(); return; }
-      catList.push({ n: n, e: cmEmoji, c: $('cmColor').value || null, parent: parentSel });
+      catList.push({ n: n, e: cmEmoji, c: $('cmColor').value || null, parent: parentSel, sum: cmSum || undefined });
     } else {
       if (topCats().some(x => x.n.toLowerCase() === n.toLowerCase())) { dupMsg(); return; }
-      catList.push({ n: n, e: cmEmoji, c: $('cmColor').value || null });
+      catList.push({ n: n, e: cmEmoji, c: $('cmColor').value || null, sum: cmSum || undefined });
     }
     cmReset();
     saveCats();
