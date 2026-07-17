@@ -77,19 +77,35 @@
   body.light .vfoot { border-color: #d4d7de; color: #1c1e24; }
 
   @media (max-width: 760px) {
-    /* строки: ✓ | название | ∞ (или пусто) | сумма | ✎ */
-    .vgrid { grid-template-columns: 26px 1fr 36px 84px 30px; }
-    .vgrid .draghandle, .vgrid .c-grp, .vgrid .c-tot, .vgrid .c-rem, .vgrid .c-day { display: none; }
+    /* строки: ✓ | название(+детали) | ⠿ | ∞ | сумма | ✎ */
+    .vgrid { grid-template-columns: 26px 1fr 20px 34px 80px 26px; gap: 4px; }
+    .vgrid .c-grp, .vgrid .c-tot, .vgrid .c-rem, .vgrid .c-day { display: none; }
     .vgrid .vcell.c-py { font-size: 0; }
     .vgrid .vinf.c-py { justify-self: center; padding: 0 5px; font-size: 13px; }
+    .vgrid .draghandle { font-size: 17px; padding: 4px 0; }
+    .msub { display: block; }
     /* шапка и итог: ✓ | название | сумма | ✎ */
-    .vhead, .vfoot { grid-template-columns: 26px 1fr 120px 30px; }
+    .vhead, .vfoot { grid-template-columns: 26px 1fr 128px 26px; }
     .vhead span:nth-child(3), .vhead span:nth-child(4), .vhead span:nth-child(5), .vhead span:nth-child(6), .vhead span:nth-child(7), .vhead span:nth-child(8),
     .vfoot span:nth-child(3), .vfoot span:nth-child(4), .vfoot span:nth-child(5), .vfoot span:nth-child(6), .vfoot span:nth-child(7), .vfoot span:nth-child(8) { display: none; }
+    /* редактирование строк: аккуратные ряды */
+    input, select { font-size: 16px; }
+    .item .irow { flex-wrap: wrap; row-gap: 8px; }
+    .item .irow .nmfield { flex: 1 1 100%; background: #23252c; border-color: #3a3e48; }
+    body.light .item .irow .nmfield { background: #fff; border-color: #c6cad3; }
+    .item .irow select.gsel { flex: 1 1 45%; max-width: none; }
+    .item .irow input.amt { flex: 1 1 90px; }
+    .idet { padding-left: 0; gap: 8px 12px; }
+    .idet input.mini { font-size: 15px; padding: 6px 8px; }
+    .rowline { row-gap: 8px; }
+    .rowline .nmfield { flex: 1 1 100%; background: #23252c; border-color: #3a3e48; }
+    body.light .rowline .nmfield { background: #fff; border-color: #c6cad3; }
+    .rowline select.gsel { max-width: none; flex: 1 1 45%; }
   }
   .vname { flex: 1 1 auto; min-width: 120px; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
   .gchip.vgrp { white-space: normal; text-align: right; }
   .draghandle { cursor: grab; color: #555a66; font-size: 14px; user-select: none; text-align: center; }
+  .msub { display: none; font-size: 11px; color: #777d8a; margin-top: 2px; line-height: 1.35; }
   .draghandle:hover { color: #9aa0ae; }
   .item.dragover { border-top: 2px solid #e53e3e; }
   .yearhead { display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 16px 2px 8px; color: #9aa0ae; font-weight: 700; font-size: 15px; user-select: none; }
@@ -221,7 +237,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v14</span>
+    <span class="hint" style="align-self:center; margin:0">v15</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -493,11 +509,43 @@ function itemEl(p, it) {
     const row = document.createElement('div'); row.className = 'vgrid';
     const chk = document.createElement('button'); chk.className = 'paychk' + (it.paid ? ' on' : ''); chk.textContent = '✓'; chk.title = it.paid ? 'Оплачено — снять отметку' : 'Отметить как оплаченное';
     chk.onclick = () => { it.paid = !it.paid || undefined; save(); renderAll(); };
-    const nm = document.createElement('span'); nm.className = 'vname'; nm.textContent = it.name; nm.title = it.name;
+    const nm = document.createElement('span'); nm.className = 'vname'; nm.title = it.name;
+    const dparts = detParts(it);
+    nm.innerHTML = '<div>' + esc(it.name) + '</div>' + (dparts.length ? '<div class="msub">' + esc(dparts.join(' · ')) + '</div>' : '');
     const dh = document.createElement('span'); dh.className = 'draghandle'; dh.textContent = '⠿'; dh.title = 'Перетащить строку';
+    w.dataset.iid = it.id;
     dh.draggable = true;
     dh.ondragstart = e => { dragItemId = it.id; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', it.id); } catch (err) {} };
     dh.ondragend = () => { dragItemId = null; document.querySelectorAll('.item.dragover').forEach(x => x.classList.remove('dragover')); };
+    dh.style.touchAction = 'none';
+    dh.onpointerdown = e => {
+      if (e.pointerType === 'mouse') return; // мышь идёт через обычный drag&drop
+      e.preventDefault();
+      dragItemId = it.id;
+      const clean = () => document.querySelectorAll('.item.dragover').forEach(x => x.classList.remove('dragover'));
+      const move = ev => {
+        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+        const row2 = el && el.closest ? el.closest('.item[data-iid]') : null;
+        clean();
+        if (row2 && row2.dataset.iid !== String(dragItemId)) row2.classList.add('dragover');
+      };
+      const up = ev => {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+        const row2 = el && el.closest ? el.closest('.item[data-iid]') : null;
+        clean();
+        if (row2 && row2.dataset.iid && row2.dataset.iid !== String(dragItemId)) {
+          const from = p.items.findIndex(x => String(x.id) === String(dragItemId));
+          const to = p.items.findIndex(x => String(x.id) === row2.dataset.iid);
+          if (from >= 0 && to >= 0) { const m = p.items.splice(from, 1)[0]; p.items.splice(to, 0, m); save(); }
+        }
+        dragItemId = null;
+        renderPeriods();
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+    };
     w.ondragover = e => { if (dragItemId && dragItemId !== it.id) { e.preventDefault(); w.classList.add('dragover'); } };
     w.ondragleave = () => w.classList.remove('dragover');
     w.ondrop = e => {
