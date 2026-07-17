@@ -78,7 +78,8 @@
 
   @media (max-width: 760px) {
     /* строки: ✓ | название(+детали) | ⠿ | ∞ | сумма | ✎ */
-    .vgrid { grid-template-columns: 26px 1fr 20px 34px 80px 26px; gap: 4px; }
+    .vgrid { grid-template-columns: 26px 1fr 20px 34px 80px 30px; gap: 4px; }
+    .vgrid .rowedit { justify-self: center; margin-right: 6px; }
     .vgrid .c-grp, .vgrid .c-tot, .vgrid .c-rem, .vgrid .c-day { display: none; }
     .vgrid .vcell.c-py { font-size: 0; }
     .vgrid .vinf.c-py { justify-self: center; padding: 0 5px; font-size: 13px; }
@@ -88,7 +89,9 @@
     .mexp b { color: #e8eaf0; }
     body.light .mexp b { color: #1c1e24; }
     /* шапка и итог: ✓ | название | сумма | ✎ */
-    .vhead, .vfoot { grid-template-columns: 26px 1fr 128px 26px; }
+    .vhead, .vfoot { grid-template-columns: 26px 1fr 20px 34px 80px 30px; }
+    .vhead span:nth-child(9), .vfoot span:nth-child(9) { grid-column: 5; }
+    .vhead span:nth-child(10), .vfoot span:nth-child(10) { grid-column: 6; }
     .vhead span:nth-child(3), .vhead span:nth-child(4), .vhead span:nth-child(5), .vhead span:nth-child(6), .vhead span:nth-child(7), .vhead span:nth-child(8),
     .vfoot span:nth-child(3), .vfoot span:nth-child(4), .vfoot span:nth-child(5), .vfoot span:nth-child(6), .vfoot span:nth-child(7), .vfoot span:nth-child(8) { display: none; }
     /* редактирование строк: аккуратные ряды */
@@ -105,10 +108,10 @@
     body.light .rowline .nmfield { background: #fff; border-color: #c6cad3; }
     .rowline select.gsel { max-width: none; flex: 1 1 45%; }
   }
-  .vname { flex: 1 1 auto; min-width: 120px; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
+  .vname { flex: 1 1 auto; min-width: 120px; font-size: 14px; font-weight: 600; letter-spacing: .1px; white-space: normal; overflow-wrap: anywhere; }
   .gchip.vgrp { white-space: normal; text-align: right; }
   .draghandle { cursor: grab; color: #555a66; font-size: 14px; user-select: none; text-align: center; }
-  .msub { display: none; font-size: 11px; color: #777d8a; margin-top: 2px; line-height: 1.35; }
+  .msub { display: none; font-size: 11px; font-weight: 400; color: #777d8a; margin-top: 2px; line-height: 1.35; }
   .mexp { display: none; }
   .draghandle:hover { color: #9aa0ae; }
   .item.dragover { border-top: 2px solid #e53e3e; }
@@ -241,7 +244,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v17</span>
+    <span class="hint" style="align-self:center; margin:0">v18</span>
   </div>
 
   <div class="card" id="notifPanel">
