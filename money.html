@@ -241,7 +241,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v16</span>
+    <span class="hint" style="align-self:center; margin:0">v17</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -539,7 +539,12 @@ function itemEl(p, it) {
     const dparts = detParts(it);
     const expanded = expItems.has(it.id);
     nm.innerHTML = '<div style="color:' + gcolor(it.group) + '">' + esc(it.name) + '</div>' + (dparts.length && !expanded ? '<div class="msub">' + esc(dparts.join(' · ')) + '</div>' : '');
-    nm.onclick = ev => { if (window.innerWidth <= 760) { if (expanded) expItems.delete(it.id); else expItems.add(it.id); renderPeriods(); } };
+    const toggleExp = () => { if (expanded) expItems.delete(it.id); else expItems.add(it.id); renderPeriods(); };
+    w.onclick = ev => {
+      if (window.innerWidth > 760) return;
+      if (ev.target.closest('button') || ev.target.closest('select') || ev.target.closest('input') || ev.target.closest('.gchip') || ev.target.closest('.draghandle')) return;
+      toggleExp();
+    };
     const dh = document.createElement('span'); dh.className = 'draghandle'; dh.textContent = '⠿'; dh.title = 'Перетащить строку';
     w.dataset.iid = it.id;
     dh.draggable = true;
