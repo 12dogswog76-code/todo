@@ -71,9 +71,14 @@
   .vinf { color: #8fd6a8; border: 1px solid #4caf7d; border-radius: 6px; padding: 0 7px; justify-self: end; font-size: 14px; line-height: 1.4; }
   .rowedit { background: none; border: none; color: #666c78; cursor: pointer; font-size: 13px; padding: 2px 5px; }
   .rowedit:hover { color: #ffd95e; }
-  .ptotal { border-top: 1px solid #262a31; margin-top: 6px; padding-top: 9px; font-size: 13px; color: #9aa0ae; display: flex; gap: 16px; flex-wrap: wrap; }
-  .ptotal b { color: #e8eaf0; }
-  body.light .ptotal { border-color: #e6e8ee; }
+  .vfoot { display: grid; grid-template-columns: 26px minmax(120px, 1fr) 148px 84px 84px 64px 48px 92px 30px; gap: 6px; border-top: 1px solid #33363e; margin-top: 4px; padding-top: 8px; font-size: 12.5px; font-weight: 700; color: #e8eaf0; }
+  .vfoot span { text-align: right; white-space: nowrap; overflow: hidden; }
+  .vfoot span:nth-child(2) { text-align: left; color: #9aa0ae; font-weight: 600; }
+  body.light .vfoot { border-color: #d4d7de; color: #1c1e24; }
+  @media (max-width: 760px) {
+    .vfoot { grid-template-columns: 26px 1fr 92px 30px; }
+    .vfoot span:nth-child(3), .vfoot span:nth-child(4), .vfoot span:nth-child(5), .vfoot span:nth-child(6), .vfoot span:nth-child(7) { display: none; }
+  }
   @media (max-width: 760px) {
     .vgrid, .vhead { grid-template-columns: 26px 1fr 92px 30px; }
     .vhead span:nth-child(3), .vhead span:nth-child(4), .vhead span:nth-child(5), .vhead span:nth-child(6), .vhead span:nth-child(7),
@@ -198,7 +203,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v9</span>
+    <span class="hint" style="align-self:center; margin:0">v10</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -520,12 +525,10 @@ function renderPeriods() {
       const top = document.createElement('div'); top.className = 'addrow'; top.style.marginTop = '0';
       const tIn = document.createElement('input'); tIn.className = 'nm'; tIn.value = p.title; tIn.title = 'Название периода';
       const iIn = document.createElement('input'); iIn.className = 'amt'; iIn.type = 'number'; iIn.value = p.income || 0; iIn.title = 'Поступило ₽';
-      const delBtn = document.createElement('button'); delBtn.className = 'xbtn delper'; delBtn.textContent = '🗑 удалить'; delBtn.title = 'Удалить период (два нажатия)';
       tIn.onchange = () => { p.title = tIn.value.trim() || p.title; save(); renderAll(); };
       iIn.onchange = () => { p.income = parseFloat(iIn.value) || 0; save(); renderAll(); };
-      twoStepDel(delBtn, '🗑 удалить', () => { data.periods = data.periods.filter(x => x.id !== p.id); save(); renderAll(); });
       const incLbl = document.createElement('span'); incLbl.className = 'hint'; incLbl.style.margin = '0'; incLbl.textContent = 'поступило:';
-      top.append(tIn, incLbl, iIn, delBtn);
+      top.append(tIn, incLbl, iIn);
       bd.appendChild(top);
     }
     if (needInc) {
@@ -557,12 +560,13 @@ function renderPeriods() {
     }
     const sorted = p.items.slice().sort((a, b) => (a.paid ? 1 : 0) - (b.paid ? 1 : 0));
     sorted.forEach(it => itemsBox.appendChild(itemEl(p, it)));
-    if (p.items.length) {
-      const tot = document.createElement('div'); tot.className = 'ptotal';
-      tot.innerHTML = 'Всего трат: <b>' + fmt(plan) + ' ₽</b>' +
-        (p.plan ? '' : ' · оплачено: <b>' + fmt(paid) + ' ₽</b> · осталось оплатить: <b>' + fmt(plan - paid) + ' ₽</b>' +
-        ' · остаток от поступлений: <b>' + fmt((p.income || 0) - paid) + ' ₽</b>');
-      itemsBox.appendChild(tot);
+    if (!editMode && p.items.length) {
+      const num = v => { if (v == null) return 0; const n = parseFloat(String(v).replace(/[\s\u00a0]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+      const sTot = p.items.reduce((a, i) => a + num(i.total), 0);
+      const sRem = p.items.reduce((a, i) => a + num(i.remaining), 0);
+      const ft = document.createElement('div'); ft.className = 'vfoot';
+      ft.innerHTML = '<span></span><span>Итого</span><span></span><span>' + (sTot ? fmt(sTot) : '—') + '</span><span>' + (sRem ? fmt(sRem) : '—') + '</span><span></span><span></span><span>' + fmt(plan) + ' ₽</span><span></span>';
+      itemsBox.appendChild(ft);
     }
     bd.appendChild(itemsBox);
 
@@ -602,6 +606,10 @@ function renderPeriods() {
       if (added) { save(); renderAll(); }
     };
     bd.appendChild(fill);
+    const delP = document.createElement('button'); delP.className = 'xbtn delper'; delP.style.cssText = 'display:block; margin:10px 0 0 auto;';
+    delP.textContent = '🗑 удалить период'; delP.title = 'Удалить период (два нажатия)';
+    twoStepDel(delP, '🗑 удалить период', () => { data.periods = data.periods.filter(x => x.id !== p.id); save(); renderAll(); });
+    bd.appendChild(delP);
     card.appendChild(bd);
     box.appendChild(card);
   });
