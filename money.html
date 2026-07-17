@@ -84,6 +84,9 @@
     .vgrid .vinf.c-py { justify-self: center; padding: 0 5px; font-size: 13px; }
     .vgrid .draghandle { font-size: 17px; padding: 4px 0; }
     .msub { display: block; }
+    .mexp { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 7px 0 5px 30px; font-size: 12.5px; color: #9aa0ae; }
+    .mexp b { color: #e8eaf0; }
+    body.light .mexp b { color: #1c1e24; }
     /* шапка и итог: ✓ | название | сумма | ✎ */
     .vhead, .vfoot { grid-template-columns: 26px 1fr 128px 26px; }
     .vhead span:nth-child(3), .vhead span:nth-child(4), .vhead span:nth-child(5), .vhead span:nth-child(6), .vhead span:nth-child(7), .vhead span:nth-child(8),
@@ -106,6 +109,7 @@
   .gchip.vgrp { white-space: normal; text-align: right; }
   .draghandle { cursor: grab; color: #555a66; font-size: 14px; user-select: none; text-align: center; }
   .msub { display: none; font-size: 11px; color: #777d8a; margin-top: 2px; line-height: 1.35; }
+  .mexp { display: none; }
   .draghandle:hover { color: #9aa0ae; }
   .item.dragover { border-top: 2px solid #e53e3e; }
   .yearhead { display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 16px 2px 8px; color: #9aa0ae; font-weight: 700; font-size: 15px; user-select: none; }
@@ -237,7 +241,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v15</span>
+    <span class="hint" style="align-self:center; margin:0">v16</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -287,6 +291,7 @@ const $ = id => document.getElementById(id);
 const DEFAULT_GROUPS = ['Подписки','Кредиты/рассрочки','Долги','Быт/связь','Налоги','Накопления','Прочее'];
 const PALETTE = ['#b197fc','#ff8f8f','#ffa94d','#66d9e8','#ffd95e','#8fd6a8','#a3a8b8','#ff8fce','#7fb8ff','#e8eaf0'];
 function gcolor(g) {
+  if (data.groupColors && data.groupColors[g]) return data.groupColors[g];
   const i = data.groups.indexOf(g);
   return PALETTE[(i === -1 ? 6 : i) % PALETTE.length];
 }
@@ -296,6 +301,7 @@ try { const d = JSON.parse(localStorage.getItem(LSM)); if (d && d.periods) data 
 if (!Array.isArray(data.groups) || !data.groups.length) data.groups = DEFAULT_GROUPS.slice();
 if (!Array.isArray(data.goals)) data.goals = [];
 if (!Array.isArray(data.templates)) data.templates = [];
+if (!data.groupColors || typeof data.groupColors !== 'object') data.groupColors = {};
 // миграция: если нигде нет поля paid — считаем все прошлые периоды оплаченными
 function migratePaid(d) {
   const noPaid = d.periods.every(p => p.items.every(i => i.paid === undefined));
@@ -485,6 +491,26 @@ function detParts(it) {
 }
 const editItems = new Set(); // точечное редактирование отдельных строк
 let dragItemId = null; // перетаскивание строк внутри периода
+function pickGroupColor(g, ev) {
+  document.querySelectorAll('.miniask').forEach(x => x.remove());
+  const box = document.createElement('div'); box.className = 'miniask';
+  box.innerHTML = 'Цвет группы <b>«' + esc(g) + '»</b> (и её названий):';
+  const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-wrap:wrap;gap:7px;margin-top:9px';
+  PALETTE.forEach(c => {
+    const sw = document.createElement('button');
+    sw.style.cssText = 'width:26px;height:26px;border-radius:50%;border:2px solid ' + (gcolor(g) === c ? '#fff' : 'transparent') + ';background:' + c + ';cursor:pointer;padding:0';
+    sw.onclick = () => { data.groupColors[g] = c; save(); renderAll(); box.remove(); };
+    row.appendChild(sw);
+  });
+  box.appendChild(row);
+  document.body.appendChild(box);
+  const x = Math.min((ev && ev.clientX) || innerWidth / 2, innerWidth - 300);
+  const y = Math.min((ev && ev.clientY) || innerHeight / 2, innerHeight - 150);
+  box.style.left = Math.max(8, x - 130) + 'px';
+  box.style.top = (y + 12) + 'px';
+  setTimeout(() => { document.addEventListener('click', function h(e2) { if (!box.contains(e2.target)) { box.remove(); document.removeEventListener('click', h); } }); }, 100);
+}
+let expItems = new Set(); // развёрнутая инфа на телефоне
 function askRemoveTpl(tpl, ev) {
   document.querySelectorAll('.miniask').forEach(x => x.remove());
   const box = document.createElement('div'); box.className = 'miniask';
@@ -511,7 +537,9 @@ function itemEl(p, it) {
     chk.onclick = () => { it.paid = !it.paid || undefined; save(); renderAll(); };
     const nm = document.createElement('span'); nm.className = 'vname'; nm.title = it.name;
     const dparts = detParts(it);
-    nm.innerHTML = '<div>' + esc(it.name) + '</div>' + (dparts.length ? '<div class="msub">' + esc(dparts.join(' · ')) + '</div>' : '');
+    const expanded = expItems.has(it.id);
+    nm.innerHTML = '<div style="color:' + gcolor(it.group) + '">' + esc(it.name) + '</div>' + (dparts.length && !expanded ? '<div class="msub">' + esc(dparts.join(' · ')) + '</div>' : '');
+    nm.onclick = ev => { if (window.innerWidth <= 760) { if (expanded) expItems.delete(it.id); else expItems.add(it.id); renderPeriods(); } };
     const dh = document.createElement('span'); dh.className = 'draghandle'; dh.textContent = '⠿'; dh.title = 'Перетащить строку';
     w.dataset.iid = it.id;
     dh.draggable = true;
@@ -559,8 +587,9 @@ function itemEl(p, it) {
       dragItemId = null;
       save(); renderPeriods();
     };
-    const gb = document.createElement('span'); gb.className = 'gchip vgrp c-grp vcell'; gb.style.justifySelf = 'end';
+    const gb = document.createElement('span'); gb.className = 'gchip vgrp c-grp vcell'; gb.style.justifySelf = 'end'; gb.style.cursor = 'pointer'; gb.title = 'Нажми — сменить цвет группы';
     gb.innerHTML = '<span class="gdot" style="background:' + gcolor(it.group) + '"></span>' + esc(it.group || 'Прочее');
+    gb.onclick = ev => { ev.stopPropagation(); pickGroupColor(it.group || 'Прочее', ev); };
     const cTot = document.createElement('span'); cTot.className = 'vcell c-tot'; cTot.textContent = it.total || '—';
     const cRem = document.createElement('span'); cRem.className = 'vcell c-rem'; cRem.textContent = it.remaining || '—';
     let cPy;
@@ -572,6 +601,16 @@ function itemEl(p, it) {
     ed.onclick = () => { editItems.add(it.id); renderPeriods(); };
     row.append(chk, nm, dh, gb, cTot, cRem, cPy, cDay, am, ed);
     w.appendChild(row);
+    if (expanded) {
+      const mx = document.createElement('div'); mx.className = 'mexp';
+      mx.innerHTML = '<span class="gchip vgrp" style="cursor:pointer"><span class="gdot" style="background:' + gcolor(it.group) + '"></span>' + esc(it.group || 'Прочее') + '</span>' +
+        '<span>📅 день: <b>' + esc(it.day || '—') + '</b></span>' +
+        '<span>всего: <b>' + esc(it.total || '—') + '</b></span>' +
+        '<span>осталось: <b>' + esc(it.remaining || '—') + '</b></span>' +
+        '<span>платежей/год: <b>' + (it.perYear === '∞' ? '∞ каждый месяц' : esc(it.perYear || '—')) + '</b></span>';
+      mx.querySelector('.gchip').onclick = ev => { ev.stopPropagation(); pickGroupColor(it.group || 'Прочее', ev); };
+      w.appendChild(mx);
+    }
     return w;
   }
   const w = document.createElement('div'); w.className = 'item' + (it.paid ? ' paid' : '');
@@ -775,10 +814,13 @@ function renderTpl() {
       const row = document.createElement('div'); row.className = 'vgrid';
       const dot = document.createElement('span'); dot.style.textAlign = 'center';
       dot.innerHTML = '<span class="gdot" style="background:' + gcolor(t.group) + '; margin:0"></span>';
-      const nm = document.createElement('span'); nm.className = 'vname'; nm.textContent = t.name; nm.title = t.name;
+      const nm = document.createElement('span'); nm.className = 'vname'; nm.title = t.name;
+      const tparts = detParts(t);
+      nm.innerHTML = '<div style="color:' + gcolor(t.group) + '">' + esc(t.name) + '</div>' + (tparts.length ? '<div class="msub">' + esc(tparts.join(' · ')) + '</div>' : '');
       const dh = document.createElement('span');
-      const gb = document.createElement('span'); gb.className = 'gchip vgrp c-grp vcell'; gb.style.justifySelf = 'end';
+      const gb = document.createElement('span'); gb.className = 'gchip vgrp c-grp vcell'; gb.style.justifySelf = 'end'; gb.style.cursor = 'pointer'; gb.title = 'Нажми — сменить цвет группы';
       gb.innerHTML = '<span class="gdot" style="background:' + gcolor(t.group) + '"></span>' + esc(t.group || 'Прочее');
+      gb.onclick = ev => { ev.stopPropagation(); pickGroupColor(t.group || 'Прочее', ev); };
       const cTot = document.createElement('span'); cTot.className = 'vcell c-tot'; cTot.textContent = t.total || '—';
       const cRem = document.createElement('span'); cRem.className = 'vcell c-rem'; cRem.textContent = t.remaining || '—';
       let cPy;
@@ -1007,6 +1049,7 @@ $('impFile').onchange = e => {
       if (!Array.isArray(d.groups) || !d.groups.length) d.groups = DEFAULT_GROUPS.slice();
       if (!Array.isArray(d.goals)) d.goals = [];
       if (!Array.isArray(d.templates)) d.templates = [];
+      if (!d.groupColors || typeof d.groupColors !== 'object') d.groupColors = {};
       migratePaid(d); migrateYears(d);
       data = d; save(); renderAll();
       $('ioMsg').textContent = 'Импортировано ✓ (периодов: ' + d.periods.length + ')';
