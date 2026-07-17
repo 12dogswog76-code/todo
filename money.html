@@ -43,7 +43,7 @@
   input.mini { width: 64px; font-size: 12px; padding: 4px 6px; }
   input.nmfield { flex: 1; min-width: 110px; background: transparent; border-color: transparent; padding: 4px 6px; }
   input.nmfield:hover, input.nmfield:focus { background: #23252c; border-color: #3a3e48; }
-  select.gsel { font-size: 12px; padding: 4px 5px; max-width: 132px; }
+  select.gsel { font-size: 12px; padding: 4px 5px; }
   .item { border-top: 1px solid #262a31; padding: 7px 0 6px; }
   .item.paid { opacity: .55; }
   .item.paid .nmfield { text-decoration: line-through; }
@@ -53,11 +53,28 @@
   .paychk.on { border-color: #4caf7d; background: #4caf7d; color: #fff; }
   .idet { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; padding-left: 29px; font-size: 11.5px; color: #777d8a; }
   .idet label { display: flex; align-items: center; gap: 4px; }
-  .infbtn { background: none; border: 1px solid #3a3e48; color: #9aa0ae; border-radius: 6px; padding: 3px 7px; cursor: pointer; font-size: 12px; }
+  .infbtn { background: none; border: 1px solid #3a3e48; color: #9aa0ae; border-radius: 6px; padding: 2px 9px; cursor: pointer; font-size: 16px; line-height: 1.2; }
   .infbtn.on { border-color: #4caf7d; color: #8fd6a8; }
   .xbtn { background: none; border: none; color: #666c78; cursor: pointer; font-size: 15px; padding: 2px 6px; }
   .xbtn:hover { color: #ff8f8f; }
   .xbtn.confirm { color: #ff8f8f; font-size: 11.5px; border: 1px solid #e53e3e; border-radius: 6px; }
+  .delper { font-size: 15px; opacity: .9; border: 1px solid #3a3e48; border-radius: 8px; padding: 4px 10px; margin-left: auto; }
+  .delper:hover { border-color: #e53e3e; }
+  .tabs { align-items: center; }
+  #editModeBtn { margin-left: auto; }
+  #editModeBtn.on { border-color: #ffd95e; color: #ffd95e; background: #ffd95e14; }
+  .vname { flex: 1 1 auto; min-width: 120px; font-size: 14px; }
+  .item.paid .vname { text-decoration: line-through; }
+  .vgrp { font-size: 11.5px; padding: 2px 8px; }
+  .vdet { color: #777d8a; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46%; }
+  .vsum { font-weight: 700; white-space: nowrap; margin-left: auto; }
+  .period.dim .pitems { opacity: .3; pointer-events: none; filter: saturate(.4); }
+  .needinc { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #ffd95e14; border: 1px dashed #ffd95e88; border-radius: 10px; padding: 9px 11px; margin-top: 8px; }
+  .needinc b { color: #ffd95e; font-size: 13.5px; }
+  button.ghost:disabled { opacity: .45; cursor: default; }
+  button.ghost:disabled:hover { border-color: #4a4f5a; color: #9aa0ae; }
+  select.gsel { max-width: 176px; padding-right: 20px; }
+  @media (min-width: 1100px) { .wrap { max-width: 920px; } }
   .addrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
   .addrow input.nm { flex: 1; min-width: 130px; }
   button.act { background: #e53e3e; color: #fff; border: none; border-radius: 8px; padding: 8px 13px; font-size: 13.5px; cursor: pointer; }
@@ -109,6 +126,7 @@
     <button data-tab="fixed">🔁 Постоянные</button>
     <button data-tab="goals">🎯 Цели</button>
     <button data-tab="chart">📊 График</button>
+    <button id="editModeBtn" title="Включи, чтобы редактировать: появятся все поля. Выключи — чистый просмотр.">✎ Изменения</button>
   </div>
 
   <div id="tab-periods">
@@ -164,7 +182,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v7</span>
+    <span class="hint" style="align-self:center; margin:0">v8</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -231,7 +249,8 @@ function migratePaid(d) {
   }
 }
 migratePaid(data);
-let openId = null;
+const openIds = new Set();
+let editMode = localStorage.getItem(LSM + '_edit') === '1';
 let theme = localStorage.getItem(LSM + '_theme') || 'dark';
 
 let sync = null;
@@ -288,8 +307,13 @@ function nextPeriodTitle() {
   return '1–15 ' + MONTHS[(d.getMonth() + 1) % 12];
 }
 function updateNewBtn() {
-  $('newPeriod').textContent = '➕ Новый период «' + autoPeriodTitle() + '» (заполнится постоянными)';
-  $('planBtn').textContent = '📝 Запланировать будущий «' + nextPeriodTitle() + '» — прикинуть траты заранее';
+  const curT = autoPeriodTitle(), nextT = nextPeriodTitle();
+  const hasCur = data.periods.some(p => !p.plan && p.title === curT);
+  const hasNext = data.periods.some(p => p.title === nextT);
+  $('newPeriod').disabled = hasCur;
+  $('newPeriod').textContent = hasCur ? '✓ Текущий период «' + curT + '» уже создан' : '➕ Новый период «' + curT + '» (заполнится постоянными)';
+  $('planBtn').disabled = hasNext;
+  $('planBtn').textContent = hasNext ? '✓ Будущий «' + nextT + '» уже запланирован' : '📝 Запланировать будущий «' + nextT + '» — прикинуть траты заранее';
 }
 
 /* выбор группы: select со всеми группами + «➕ новая…» */
@@ -370,7 +394,29 @@ function renderSummary() {
   $('topline').textContent = 'Периодов: ' + data.periods.length + ' · постоянных: ' + data.templates.length + ' · целей: ' + data.goals.length;
 }
 
+function detParts(it) {
+  const parts = [];
+  if (it.day) parts.push('день ' + it.day);
+  if (it.total) parts.push('всего ' + it.total);
+  if (it.remaining) parts.push('осталось ' + it.remaining);
+  if (it.perYear) parts.push(it.perYear === '∞' ? '∞ каждый месяц' : it.perYear + ' в год');
+  return parts;
+}
 function itemEl(p, it) {
+  if (!editMode) {
+    const w = document.createElement('div'); w.className = 'item' + (it.paid ? ' paid' : '');
+    const row = document.createElement('div'); row.className = 'irow';
+    const chk = document.createElement('button'); chk.className = 'paychk' + (it.paid ? ' on' : ''); chk.textContent = '✓'; chk.title = it.paid ? 'Оплачено — снять отметку' : 'Отметить как оплаченное';
+    chk.onclick = () => { it.paid = !it.paid || undefined; save(); renderAll(); };
+    const nm = document.createElement('span'); nm.className = 'vname'; nm.textContent = it.name;
+    const gb = document.createElement('span'); gb.className = 'gchip vgrp';
+    gb.innerHTML = '<span class="gdot" style="background:' + gcolor(it.group) + '"></span>' + esc(it.group || 'Прочее');
+    const det = document.createElement('span'); det.className = 'vdet'; det.textContent = detParts(it).join(' · '); det.title = detParts(it).join(' · ');
+    const am = document.createElement('span'); am.className = 'vsum'; am.textContent = fmt(it.amount || 0) + ' ₽';
+    row.append(chk, nm, gb, det, am);
+    w.appendChild(row);
+    return w;
+  }
   const w = document.createElement('div'); w.className = 'item' + (it.paid ? ' paid' : '');
   const row = document.createElement('div'); row.className = 'irow';
   // галочка «оплачено»
@@ -426,7 +472,8 @@ function renderPeriods() {
   const box = $('plist'); box.innerHTML = '';
   const arr = data.periods.slice().reverse();
   arr.forEach(p => {
-    const card = document.createElement('div'); card.className = 'card period' + (openId === p.id ? ' open' : '') + (p.plan ? ' plan' : '');
+    const needInc = !p.plan && !(p.income > 0) && p.items.length > 0;
+    const card = document.createElement('div'); card.className = 'card period' + (openIds.has(p.id) ? ' open' : '') + (p.plan ? ' plan' : '') + (needInc ? ' dim' : '');
     const paid = paidSum(p), plan = planSum(p);
     const head = document.createElement('div'); head.className = 'phead';
     head.innerHTML = '<b>' + esc(p.title) + '</b>' +
@@ -435,21 +482,35 @@ function renderPeriods() {
         : '<span class="inc">+' + fmt(p.income || 0) + '</span><span class="spent">✓ ' + fmt(paid) + '</span>' +
           (plan - paid > 0.5 ? '<span class="rest">ждёт ' + fmt(plan - paid) + '</span>' : '') +
           '<span class="rest">= ' + fmt((p.income || 0) - paid) + ' ₽</span>') +
-      '<span class="sp"></span><span class="parrow">' + (openId === p.id ? '▲' : '▼') + '</span>';
-    head.onclick = () => { openId = (openId === p.id ? null : p.id); renderPeriods(); };
+      '<span class="sp"></span><span class="parrow">' + (openIds.has(p.id) ? '▲' : '▼') + '</span>';
+    head.onclick = () => { if (openIds.has(p.id)) openIds.delete(p.id); else openIds.add(p.id); renderPeriods(); };
     card.appendChild(head);
 
     const bd = document.createElement('div'); bd.className = 'pbody';
-    const top = document.createElement('div'); top.className = 'addrow'; top.style.marginTop = '0';
-    const tIn = document.createElement('input'); tIn.className = 'nm'; tIn.value = p.title; tIn.title = 'Название периода';
-    const iIn = document.createElement('input'); iIn.className = 'amt'; iIn.type = 'number'; iIn.value = p.income || 0; iIn.title = 'Поступило ₽';
-    const delBtn = document.createElement('button'); delBtn.className = 'xbtn'; delBtn.textContent = '🗑'; delBtn.title = 'Удалить период';
-    tIn.onchange = () => { p.title = tIn.value.trim() || p.title; save(); renderAll(); };
-    iIn.onchange = () => { p.income = parseFloat(iIn.value) || 0; save(); renderAll(); };
-    twoStepDel(delBtn, '🗑', () => { data.periods = data.periods.filter(x => x.id !== p.id); save(); renderAll(); });
-    const incLbl = document.createElement('span'); incLbl.className = 'hint'; incLbl.style.margin = '0'; incLbl.textContent = 'поступило:';
-    top.append(tIn, incLbl, iIn, delBtn);
-    bd.appendChild(top);
+    if (editMode) {
+      const top = document.createElement('div'); top.className = 'addrow'; top.style.marginTop = '0';
+      const tIn = document.createElement('input'); tIn.className = 'nm'; tIn.value = p.title; tIn.title = 'Название периода';
+      const iIn = document.createElement('input'); iIn.className = 'amt'; iIn.type = 'number'; iIn.value = p.income || 0; iIn.title = 'Поступило ₽';
+      const delBtn = document.createElement('button'); delBtn.className = 'xbtn delper'; delBtn.textContent = '🗑 удалить'; delBtn.title = 'Удалить период (два нажатия)';
+      tIn.onchange = () => { p.title = tIn.value.trim() || p.title; save(); renderAll(); };
+      iIn.onchange = () => { p.income = parseFloat(iIn.value) || 0; save(); renderAll(); };
+      twoStepDel(delBtn, '🗑 удалить', () => { data.periods = data.periods.filter(x => x.id !== p.id); save(); renderAll(); });
+      const incLbl = document.createElement('span'); incLbl.className = 'hint'; incLbl.style.margin = '0'; incLbl.textContent = 'поступило:';
+      top.append(tIn, incLbl, iIn, delBtn);
+      bd.appendChild(top);
+    }
+    if (needInc) {
+      const ni = document.createElement('div'); ni.className = 'needinc';
+      const nb = document.createElement('b'); nb.textContent = '💸 Внеси поступившую сумму:';
+      const niIn = document.createElement('input'); niIn.className = 'amt'; niIn.type = 'number'; niIn.placeholder = '₽';
+      const ok = document.createElement('button'); ok.className = 'act'; ok.textContent = '✓';
+      const applyInc = () => { const v = parseFloat(niIn.value); if (!isNaN(v) && v > 0) { p.income = v; save(); renderAll(); } };
+      ok.onclick = applyInc;
+      niIn.onkeydown = e => { if (e.key === 'Enter') applyInc(); };
+      ni.append(nb, niIn, ok);
+      bd.appendChild(ni);
+      setTimeout(() => { if (niIn.isConnected && openIds.has(p.id)) niIn.focus(); }, 60);
+    }
     if (p.plan) {
       const start = document.createElement('button'); start.className = 'act'; start.style.marginTop = '8px';
       start.textContent = '▶ Начать период (деньги пришли)';
@@ -459,11 +520,14 @@ function renderPeriods() {
     }
 
     // строки: сначала неоплаченные, оплаченные — внизу (зачёркнутые)
+    const itemsBox = document.createElement('div'); itemsBox.className = 'pitems';
     const sorted = p.items.slice().sort((a, b) => (a.paid ? 1 : 0) - (b.paid ? 1 : 0));
-    sorted.forEach(it => bd.appendChild(itemEl(p, it)));
+    sorted.forEach(it => itemsBox.appendChild(itemEl(p, it)));
+    bd.appendChild(itemsBox);
 
-    // добавление строки: название, группа, сумма, день
+    // добавление строки: название, группа, сумма, день (только в режиме изменений)
     const add = document.createElement('div'); add.className = 'addrow';
+    if (!editMode) add.style.display = 'none';
     const nm = document.createElement('input'); nm.className = 'nm'; nm.placeholder = 'расход…'; nm.setAttribute('list', 'names');
     let addGroup = 'Прочее';
     const gs = makeGroupSel('Прочее', v => { addGroup = v; });
@@ -484,6 +548,7 @@ function renderPeriods() {
     bd.appendChild(add);
 
     const fill = document.createElement('button'); fill.className = 'ghost'; fill.style.marginTop = '8px';
+    if (!editMode) fill.style.display = 'none';
     fill.textContent = '⤓ Добавить постоянные платежи';
     fill.onclick = () => {
       let added = 0;
@@ -503,6 +568,21 @@ function renderPeriods() {
 
 function renderTpl() {
   const box = $('tplList'); box.innerHTML = '';
+  const addrow = $('tplName') ? $('tplName').parentElement : null;
+  if (addrow) addrow.style.display = editMode ? '' : 'none';
+  if (!editMode) {
+    data.templates.forEach(t => {
+      const row = document.createElement('div'); row.className = 'rowline';
+      const gb = document.createElement('span'); gb.className = 'gchip vgrp';
+      gb.innerHTML = '<span class="gdot" style="background:' + gcolor(t.group) + '"></span>' + esc(t.group || 'Прочее');
+      const nm = document.createElement('span'); nm.className = 'vname'; nm.textContent = t.name;
+      const det = document.createElement('span'); det.className = 'vdet'; det.textContent = detParts(t).join(' · '); det.title = detParts(t).join(' · ');
+      const am = document.createElement('span'); am.className = 'vsum'; am.textContent = fmt(t.amount || 0) + ' ₽';
+      row.append(nm, gb, det, am);
+      box.appendChild(row);
+    });
+    return;
+  }
   data.templates.forEach(t => {
     const row = document.createElement('div'); row.className = 'rowline';
     const dot = document.createElement('span'); dot.className = 'gdot'; dot.style.background = gcolor(t.group);
@@ -609,21 +689,30 @@ function renderChart() {
 function renderAll() { renderSummary(); renderPeriods(); renderTpl(); renderGoals(); renderChart(); fillNames(); updateNewBtn(); }
 
 $('newPeriod').onclick = () => {
+  if (data.periods.some(x => !x.plan && x.title === autoPeriodTitle())) return;
   const p = { id: uid('p'), title: autoPeriodTitle(), income: 0, items: [] };
   data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined, total: t.total || undefined, remaining: t.remaining || undefined, perYear: t.perYear || undefined }));
   data.periods.push(p);
-  openId = p.id;
+  openIds.add(p.id);
   save(); renderAll();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 $('planBtn').onclick = () => {
+  if (data.periods.some(x => x.title === nextPeriodTitle())) return;
   const p = { id: uid('p'), title: nextPeriodTitle(), income: 0, items: [], plan: true };
   data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined, total: t.total || undefined, remaining: t.remaining || undefined, perYear: t.perYear || undefined }));
   data.periods.push(p);
-  openId = p.id;
+  openIds.add(p.id);
   save(); renderAll();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
+$('editModeBtn').onclick = () => {
+  editMode = !editMode;
+  localStorage.setItem(LSM + '_edit', editMode ? '1' : '');
+  $('editModeBtn').classList.toggle('on', editMode);
+  renderAll();
+};
+$('editModeBtn').classList.toggle('on', editMode);
 
 document.querySelectorAll('.tabs button').forEach(b => {
   b.onclick = () => {
