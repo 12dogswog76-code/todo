@@ -487,7 +487,7 @@ function renderPeriods() {
       let added = 0;
       data.templates.forEach(t => {
         if (!p.items.some(i => i.name.toLowerCase() === t.name.toLowerCase())) {
-          p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined });
+          p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined, total: t.total || undefined, remaining: t.remaining || undefined, perYear: t.perYear || undefined });
           added++;
         }
       });
@@ -515,6 +515,28 @@ function renderTpl() {
     twoStepDel(del, '✕', () => { data.templates = data.templates.filter(x => x.id !== t.id); save(); renderTpl(); });
     row.append(dot, nm, aIn, dIn, gs, del);
     box.appendChild(row);
+    const det = document.createElement('div'); det.className = 'idet'; det.style.paddingLeft = '18px';
+    const mkd = (lbl, key, width, title) => {
+      const l = document.createElement('label'); l.title = title;
+      const i2 = document.createElement('input'); i2.className = 'mini'; i2.style.width = width;
+      i2.value = t[key] || ''; i2.placeholder = '—';
+      i2.onchange = () => { t[key] = i2.value.trim() || undefined; save(); };
+      l.append(lbl + ' ', i2);
+      return l;
+    };
+    det.append(
+      mkd('всего', 'total', '76px', 'Полная сумма кредита/рассрочки'),
+      mkd('осталось', 'remaining', '76px', 'Сколько осталось выплатить')
+    );
+    const iw = document.createElement('label'); iw.title = 'Платежей в год. ∞ — постоянная плата (каждый месяц без конца)';
+    const py = document.createElement('input'); py.className = 'mini'; py.style.width = '44px'; py.placeholder = '—';
+    py.value = (t.perYear === '∞') ? '' : (t.perYear || '');
+    const inf = document.createElement('button'); inf.className = 'infbtn' + (t.perYear === '∞' ? ' on' : ''); inf.textContent = '∞';
+    py.onchange = () => { t.perYear = py.value.trim() || undefined; inf.classList.remove('on'); save(); };
+    inf.onclick = () => { if (t.perYear === '∞') { t.perYear = undefined; inf.classList.remove('on'); } else { t.perYear = '∞'; py.value = ''; inf.classList.add('on'); } save(); };
+    iw.append('платежей/год ', py, inf);
+    det.appendChild(iw);
+    box.appendChild(det);
   });
   const gb = $('tplGroupBox'); gb.innerHTML = '';
   let tplGroup = 'Прочее';
@@ -586,7 +608,7 @@ function renderAll() { renderSummary(); renderPeriods(); renderTpl(); renderGoal
 
 $('newPeriod').onclick = () => {
   const p = { id: uid('p'), title: autoPeriodTitle(), income: 0, items: [] };
-  data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined }));
+  data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined, total: t.total || undefined, remaining: t.remaining || undefined, perYear: t.perYear || undefined }));
   data.periods.push(p);
   openId = p.id;
   save(); renderAll();
@@ -594,7 +616,7 @@ $('newPeriod').onclick = () => {
 };
 $('planBtn').onclick = () => {
   const p = { id: uid('p'), title: nextPeriodTitle(), income: 0, items: [], plan: true };
-  data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined }));
+  data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined, total: t.total || undefined, remaining: t.remaining || undefined, perYear: t.perYear || undefined }));
   data.periods.push(p);
   openId = p.id;
   save(); renderAll();
