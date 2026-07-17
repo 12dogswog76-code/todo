@@ -89,6 +89,12 @@
   .draghandle { cursor: grab; color: #555a66; font-size: 14px; user-select: none; text-align: center; }
   .draghandle:hover { color: #9aa0ae; }
   .item.dragover { border-top: 2px solid #e53e3e; }
+  .miniask { position: fixed; z-index: 60; background: #23252c; border: 1px solid #424650; border-radius: 12px; padding: 11px 13px; box-shadow: 0 8px 28px #000a; font-size: 13px; max-width: 260px; }
+  .miniask .mrow { display: flex; gap: 8px; margin-top: 9px; }
+  .miniask button { flex: 1; border-radius: 8px; padding: 6px 0; font-size: 13px; cursor: pointer; }
+  .miniask .yes { background: #e53e3e; border: none; color: #fff; }
+  .miniask .no { background: none; border: 1px solid #424650; color: #9aa0ae; }
+  body.light .miniask { background: #fff; border-color: #d4d7de; color: #1c1e24; }
   .item.paid .vname { text-decoration: line-through; }
   .vgrp { font-size: 11.5px; padding: 2px 8px; }
   .vdet { color: #777d8a; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46%; }
@@ -164,7 +170,7 @@
   <div id="tab-fixed" style="display:none">
     <div class="card">
       <b>🔁 Постоянные платежи</b>
-      <div class="hint" style="margin-top:2px">Автоматически добавляются в каждый новый период. Всё меняется прямо здесь: название, сумма, день выплаты, группа.</div>
+      <div class="hint" style="margin-top:2px">Автоматически добавляются в каждый новый период. ✎ у строки — быстрая правка одного платежа; добавить новый можно в поле снизу.</div>
       <div id="tplList" style="margin-top:8px"></div>
       <div class="addrow">
         <input class="nm" id="tplName" placeholder="название" list="names">
@@ -207,7 +213,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v11</span>
+    <span class="hint" style="align-self:center; margin:0">v12</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -393,7 +399,7 @@ function twoStepDel(btn, label, fn) {
       setTimeout(() => { if (btn.isConnected) { delete btn.dataset.c; btn.textContent = label; btn.classList.remove('confirm'); } }, 3000);
       return;
     }
-    fn();
+    fn(e);
   };
 }
 
@@ -429,6 +435,24 @@ function detParts(it) {
 }
 const editItems = new Set(); // точечное редактирование отдельных строк
 let dragItemId = null; // перетаскивание строк внутри периода
+function askRemoveTpl(tpl, ev) {
+  document.querySelectorAll('.miniask').forEach(x => x.remove());
+  const box = document.createElement('div'); box.className = 'miniask';
+  box.innerHTML = 'Убрать <b>«' + esc(tpl.name) + '»</b> и из постоянных платежей?';
+  const row = document.createElement('div'); row.className = 'mrow';
+  const yes = document.createElement('button'); yes.className = 'yes'; yes.textContent = 'Да, убрать';
+  const no = document.createElement('button'); no.className = 'no'; no.textContent = 'Нет';
+  yes.onclick = () => { data.templates = data.templates.filter(x => x.id !== tpl.id); save(); renderTpl(); box.remove(); };
+  no.onclick = () => box.remove();
+  row.append(yes, no); box.appendChild(row);
+  document.body.appendChild(box);
+  const x = Math.min((ev && ev.clientX) || innerWidth / 2, innerWidth - 280);
+  const y = Math.min((ev && ev.clientY) || innerHeight / 2, innerHeight - 120);
+  box.style.left = Math.max(8, x - 120) + 'px';
+  box.style.top = (y + 14) + 'px';
+  setTimeout(() => { document.addEventListener('click', function h(e2) { if (!box.contains(e2.target)) { box.remove(); document.removeEventListener('click', h); } }); }, 100);
+  setTimeout(() => box.remove(), 12000);
+}
 function itemEl(p, it) {
   if (!editMode && !editItems.has(it.id)) {
     const w = document.createElement('div'); w.className = 'item' + (it.paid ? ' paid' : '');
@@ -483,7 +507,11 @@ function itemEl(p, it) {
   am.onchange = () => { it.amount = parseFloat(am.value) || 0; save(); renderSummary(); renderPeriodsHeadOnly(); };
   // удалить (двухшагово)
   const del = document.createElement('button'); del.className = 'xbtn'; del.textContent = '✕';
-  twoStepDel(del, '✕', () => { p.items = p.items.filter(x => x.id !== it.id); save(); renderAll(); });
+  twoStepDel(del, '✕', ev => {
+    p.items = p.items.filter(x => x.id !== it.id); save(); renderAll();
+    const tpl = data.templates.find(tt => tt.name.toLowerCase() === it.name.toLowerCase());
+    if (tpl) askRemoveTpl(tpl, ev);
+  });
   row.append(chk, nm, gs, am, del);
   if (!editMode) {
     const okb = document.createElement('button'); okb.className = 'rowedit'; okb.textContent = '✔'; okb.title = 'Готово';
@@ -637,24 +665,40 @@ function renderPeriods() {
   });
 }
 
+const editTpls = new Set(); // точечное редактирование постоянных
 function renderTpl() {
   const box = $('tplList'); box.innerHTML = '';
   const addrow = $('tplName') ? $('tplName').parentElement : null;
-  if (addrow) addrow.style.display = editMode ? '' : 'none';
-  if (!editMode) {
-    data.templates.forEach(t => {
-      const row = document.createElement('div'); row.className = 'rowline';
-      const gb = document.createElement('span'); gb.className = 'gchip vgrp';
-      gb.innerHTML = '<span class="gdot" style="background:' + gcolor(t.group) + '"></span>' + esc(t.group || 'Прочее');
-      const nm = document.createElement('span'); nm.className = 'vname'; nm.textContent = t.name;
-      const det = document.createElement('span'); det.className = 'vdet'; det.textContent = detParts(t).join(' · '); det.title = detParts(t).join(' · ');
-      const am = document.createElement('span'); am.className = 'vsum'; am.textContent = fmt(t.amount || 0) + ' ₽';
-      row.append(nm, gb, det, am);
-      box.appendChild(row);
-    });
-    return;
+  if (addrow) addrow.style.display = ''; // добавление видно всегда
+  if (!editMode && data.templates.length) {
+    const hd = document.createElement('div'); hd.className = 'vhead';
+    hd.innerHTML = '<span></span><span>Название</span><span class="h-drag"></span><span>Группа</span><span>Всего</span><span>Осталось</span><span>Раз/год</span><span>День</span><span>Сумма</span><span></span>';
+    box.appendChild(hd);
   }
   data.templates.forEach(t => {
+    if (!editMode && !editTpls.has(t.id)) {
+      const w = document.createElement('div'); w.className = 'item';
+      const row = document.createElement('div'); row.className = 'vgrid';
+      const dot = document.createElement('span'); dot.style.textAlign = 'center';
+      dot.innerHTML = '<span class="gdot" style="background:' + gcolor(t.group) + '; margin:0"></span>';
+      const nm = document.createElement('span'); nm.className = 'vname'; nm.textContent = t.name; nm.title = t.name;
+      const dh = document.createElement('span');
+      const gb = document.createElement('span'); gb.className = 'gchip vgrp c-grp vcell'; gb.style.justifySelf = 'end';
+      gb.innerHTML = '<span class="gdot" style="background:' + gcolor(t.group) + '"></span>' + esc(t.group || 'Прочее');
+      const cTot = document.createElement('span'); cTot.className = 'vcell c-tot'; cTot.textContent = t.total || '—';
+      const cRem = document.createElement('span'); cRem.className = 'vcell c-rem'; cRem.textContent = t.remaining || '—';
+      let cPy;
+      if (t.perYear === '∞') { cPy = document.createElement('span'); cPy.className = 'vinf c-py'; cPy.textContent = '∞'; cPy.title = 'Каждый месяц, без конца'; }
+      else { cPy = document.createElement('span'); cPy.className = 'vcell c-py'; cPy.textContent = t.perYear ? (t.perYear + '/год') : '—'; }
+      const cDay = document.createElement('span'); cDay.className = 'vcell c-day'; cDay.textContent = t.day || '—';
+      const am = document.createElement('span'); am.className = 'vsum'; am.style.textAlign = 'right'; am.textContent = fmt(t.amount || 0) + ' ₽';
+      const ed = document.createElement('button'); ed.className = 'rowedit'; ed.textContent = '✎'; ed.title = 'Изменить этот платёж';
+      ed.onclick = () => { editTpls.add(t.id); renderTpl(); };
+      row.append(dot, nm, dh, gb, cTot, cRem, cPy, cDay, am, ed);
+      w.appendChild(row);
+      box.appendChild(w);
+      return;
+    }
     const row = document.createElement('div'); row.className = 'rowline';
     const dot = document.createElement('span'); dot.className = 'gdot'; dot.style.background = gcolor(t.group);
     const nm = document.createElement('input'); nm.className = 'nmfield'; nm.value = t.name; nm.title = 'Название — правь прямо здесь';
@@ -667,6 +711,11 @@ function renderTpl() {
     const del = document.createElement('button'); del.className = 'xbtn'; del.textContent = '✕';
     twoStepDel(del, '✕', () => { data.templates = data.templates.filter(x => x.id !== t.id); save(); renderTpl(); });
     row.append(dot, nm, aIn, dIn, gs, del);
+    if (!editMode) {
+      const okb = document.createElement('button'); okb.className = 'rowedit'; okb.textContent = '✔'; okb.title = 'Готово';
+      okb.onclick = () => { editTpls.delete(t.id); renderTpl(); };
+      row.appendChild(okb);
+    }
     box.appendChild(row);
     const det = document.createElement('div'); det.className = 'idet'; det.style.paddingLeft = '18px';
     const mkd = (lbl, key, width, title) => {
@@ -691,9 +740,9 @@ function renderTpl() {
     det.appendChild(iw);
     box.appendChild(det);
   });
-  const gb = $('tplGroupBox'); gb.innerHTML = '';
+  const gbx = $('tplGroupBox'); gbx.innerHTML = '';
   let tplGroup = 'Прочее';
-  gb.appendChild(makeGroupSel('Прочее', v => { tplGroup = v; }));
+  gbx.appendChild(makeGroupSel('Прочее', v => { tplGroup = v; }));
   $('tplAdd').onclick = () => {
     const n = $('tplName').value.trim(); if (!n) return;
     data.templates.push({ id: uid('t'), name: n, amount: parseFloat($('tplAmt').value) || 0, day: $('tplDay').value.trim(), group: tplGroup });
