@@ -252,7 +252,7 @@ async function cloudPush() {
     setDot('ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
   } catch (e) { setDot('err', 'ошибка отправки (' + e.message + ')'); }
 }
-async function cloudPull() {
+async function cloudPull(force) {
   if (!sync) return;
   setDot('syncing', 'загрузка…');
   try {
@@ -260,7 +260,8 @@ async function cloudPull() {
     if (!r.ok) throw new Error(r.status);
     const j = await r.json();
     const rec = j.record;
-    if (rec && rec.periods && (rec.mod || 0) > (data.mod || 0)) {
+    const adopt = rec && rec.periods && (force ? rec.periods.length > 0 : (rec.mod || 0) > (data.mod || 0));
+    if (adopt) {
       data = rec; migratePaid(data); localStorage.setItem(LSM, JSON.stringify(data)); renderAll();
     } else if (rec && (rec.mod || 0) < (data.mod || 0)) { clearTimeout(pushT); pushT = setTimeout(cloudPush, 500); }
     setDot('ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
@@ -658,7 +659,7 @@ $('syncConnect').onclick = async () => {
   if (conf) {
     sync = conf; localStorage.setItem(LSM + '_sync', JSON.stringify(sync));
     syncUI(); $('syncMsg').textContent = 'Подключаюсь…';
-    await cloudPull(); $('syncMsg').textContent = 'Готово ✓';
+    await cloudPull(true); $('syncMsg').textContent = 'Готово ✓ Данные взяты из облака.';
     return;
   }
   $('syncMsg').textContent = 'Создаю хранилище…';
