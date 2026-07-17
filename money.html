@@ -58,20 +58,20 @@
   .xbtn { background: none; border: none; color: #666c78; cursor: pointer; font-size: 15px; padding: 2px 6px; }
   .xbtn:hover { color: #ff8f8f; }
   .xbtn.confirm { color: #ff8f8f; font-size: 11.5px; border: 1px solid #e53e3e; border-radius: 6px; }
-  .delper { font-size: 15px; opacity: .9; border: 1px solid #3a3e48; border-radius: 8px; padding: 4px 10px; margin-left: auto; }
+  .delper { font-size: 19px; opacity: .9; border: 1px solid #3a3e48; border-radius: 8px; padding: 4px 11px; margin-left: auto; }
   .delper:hover { border-color: #e53e3e; }
   .tabs { align-items: center; }
   #editModeBtn { margin-left: auto; }
   #editModeBtn.on { border-color: #ffd95e; color: #ffd95e; background: #ffd95e14; }
-  .vgrid { display: grid; grid-template-columns: 26px minmax(120px, 1fr) 148px 84px 84px 64px 48px 92px 30px; gap: 6px; align-items: center; }
-  .vhead { display: grid; grid-template-columns: 26px minmax(120px, 1fr) 148px 84px 84px 64px 48px 92px 30px; gap: 6px; font-size: 10.5px; color: #666c78; text-transform: uppercase; letter-spacing: .4px; padding: 2px 0 6px; }
+  .vgrid { display: grid; grid-template-columns: 26px minmax(120px, 1fr) 20px 148px 84px 84px 64px 48px 92px 30px; gap: 6px; align-items: center; }
+  .vhead { display: grid; grid-template-columns: 26px minmax(120px, 1fr) 20px 148px 84px 84px 64px 48px 92px 30px; gap: 6px; font-size: 10.5px; color: #666c78; text-transform: uppercase; letter-spacing: .4px; padding: 2px 0 6px; }
   .vhead span { text-align: right; white-space: nowrap; overflow: hidden; }
   .vhead span:nth-child(2) { text-align: left; }
   .vcell { font-size: 12px; color: #9aa0ae; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vinf { color: #8fd6a8; border: 1px solid #4caf7d; border-radius: 6px; padding: 0 7px; justify-self: end; font-size: 14px; line-height: 1.4; }
   .rowedit { background: none; border: none; color: #666c78; cursor: pointer; font-size: 13px; padding: 2px 5px; }
   .rowedit:hover { color: #ffd95e; }
-  .vfoot { display: grid; grid-template-columns: 26px minmax(120px, 1fr) 148px 84px 84px 64px 48px 92px 30px; gap: 6px; border-top: 1px solid #33363e; margin-top: 4px; padding-top: 8px; font-size: 12.5px; font-weight: 700; color: #e8eaf0; }
+  .vfoot { display: grid; grid-template-columns: 26px minmax(120px, 1fr) 20px 148px 84px 84px 64px 48px 92px 30px; gap: 6px; border-top: 1px solid #33363e; margin-top: 4px; padding-top: 8px; font-size: 12.5px; font-weight: 700; color: #e8eaf0; }
   .vfoot span { text-align: right; white-space: nowrap; overflow: hidden; }
   .vfoot span:nth-child(2) { text-align: left; color: #9aa0ae; font-weight: 600; }
   body.light .vfoot { border-color: #d4d7de; color: #1c1e24; }
@@ -82,9 +82,13 @@
   @media (max-width: 760px) {
     .vgrid, .vhead { grid-template-columns: 26px 1fr 92px 30px; }
     .vhead span:nth-child(3), .vhead span:nth-child(4), .vhead span:nth-child(5), .vhead span:nth-child(6), .vhead span:nth-child(7),
-    .vgrid .vcell.c-grp, .vgrid .vcell.c-tot, .vgrid .vcell.c-rem, .vgrid .vcell.c-py, .vgrid .vcell.c-day { display: none; }
+    .vgrid .vcell.c-grp, .vgrid .vcell.c-tot, .vgrid .vcell.c-rem, .vgrid .vcell.c-py, .vgrid .vcell.c-day, .vgrid .draghandle, .vhead .h-drag { display: none; }
   }
-  .vname { flex: 1 1 auto; min-width: 120px; font-size: 14px; }
+  .vname { flex: 1 1 auto; min-width: 120px; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
+  .gchip.vgrp { white-space: normal; text-align: right; }
+  .draghandle { cursor: grab; color: #555a66; font-size: 14px; user-select: none; text-align: center; }
+  .draghandle:hover { color: #9aa0ae; }
+  .item.dragover { border-top: 2px solid #e53e3e; }
   .item.paid .vname { text-decoration: line-through; }
   .vgrp { font-size: 11.5px; padding: 2px 8px; }
   .vdet { color: #777d8a; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46%; }
@@ -203,7 +207,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v10</span>
+    <span class="hint" style="align-self:center; margin:0">v11</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -424,6 +428,7 @@ function detParts(it) {
   return parts;
 }
 const editItems = new Set(); // точечное редактирование отдельных строк
+let dragItemId = null; // перетаскивание строк внутри периода
 function itemEl(p, it) {
   if (!editMode && !editItems.has(it.id)) {
     const w = document.createElement('div'); w.className = 'item' + (it.paid ? ' paid' : '');
@@ -431,6 +436,23 @@ function itemEl(p, it) {
     const chk = document.createElement('button'); chk.className = 'paychk' + (it.paid ? ' on' : ''); chk.textContent = '✓'; chk.title = it.paid ? 'Оплачено — снять отметку' : 'Отметить как оплаченное';
     chk.onclick = () => { it.paid = !it.paid || undefined; save(); renderAll(); };
     const nm = document.createElement('span'); nm.className = 'vname'; nm.textContent = it.name; nm.title = it.name;
+    const dh = document.createElement('span'); dh.className = 'draghandle'; dh.textContent = '⠿'; dh.title = 'Перетащить строку';
+    dh.draggable = true;
+    dh.ondragstart = e => { dragItemId = it.id; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', it.id); } catch (err) {} };
+    dh.ondragend = () => { dragItemId = null; document.querySelectorAll('.item.dragover').forEach(x => x.classList.remove('dragover')); };
+    w.ondragover = e => { if (dragItemId && dragItemId !== it.id) { e.preventDefault(); w.classList.add('dragover'); } };
+    w.ondragleave = () => w.classList.remove('dragover');
+    w.ondrop = e => {
+      e.preventDefault(); w.classList.remove('dragover');
+      if (!dragItemId || dragItemId === it.id) return;
+      const from = p.items.findIndex(x => x.id === dragItemId);
+      const to = p.items.findIndex(x => x.id === it.id);
+      if (from < 0 || to < 0) return;
+      const m = p.items.splice(from, 1)[0];
+      p.items.splice(to, 0, m);
+      dragItemId = null;
+      save(); renderPeriods();
+    };
     const gb = document.createElement('span'); gb.className = 'gchip vgrp c-grp vcell'; gb.style.justifySelf = 'end';
     gb.innerHTML = '<span class="gdot" style="background:' + gcolor(it.group) + '"></span>' + esc(it.group || 'Прочее');
     const cTot = document.createElement('span'); cTot.className = 'vcell c-tot'; cTot.textContent = it.total || '—';
@@ -442,7 +464,7 @@ function itemEl(p, it) {
     const am = document.createElement('span'); am.className = 'vsum'; am.style.textAlign = 'right'; am.textContent = fmt(it.amount || 0) + ' ₽';
     const ed = document.createElement('button'); ed.className = 'rowedit'; ed.textContent = '✎'; ed.title = 'Изменить эту строку';
     ed.onclick = () => { editItems.add(it.id); renderPeriods(); };
-    row.append(chk, nm, gb, cTot, cRem, cPy, cDay, am, ed);
+    row.append(chk, nm, dh, gb, cTot, cRem, cPy, cDay, am, ed);
     w.appendChild(row);
     return w;
   }
@@ -555,7 +577,7 @@ function renderPeriods() {
     const itemsBox = document.createElement('div'); itemsBox.className = 'pitems';
     if (!editMode && p.items.length) {
       const hd = document.createElement('div'); hd.className = 'vhead';
-      hd.innerHTML = '<span></span><span>Название</span><span>Группа</span><span>Всего</span><span>Осталось</span><span>Раз/год</span><span>День</span><span>Сумма</span><span></span>';
+      hd.innerHTML = '<span></span><span>Название</span><span class="h-drag"></span><span>Группа</span><span>Всего</span><span>Осталось</span><span>Раз/год</span><span>День</span><span>Сумма</span><span></span>';
       itemsBox.appendChild(hd);
     }
     const sorted = p.items.slice().sort((a, b) => (a.paid ? 1 : 0) - (b.paid ? 1 : 0));
@@ -565,7 +587,7 @@ function renderPeriods() {
       const sTot = p.items.reduce((a, i) => a + num(i.total), 0);
       const sRem = p.items.reduce((a, i) => a + num(i.remaining), 0);
       const ft = document.createElement('div'); ft.className = 'vfoot';
-      ft.innerHTML = '<span></span><span>Итого</span><span></span><span>' + (sTot ? fmt(sTot) : '—') + '</span><span>' + (sRem ? fmt(sRem) : '—') + '</span><span></span><span></span><span>' + fmt(plan) + ' ₽</span><span></span>';
+      ft.innerHTML = '<span></span><span>Итого</span><span class="h-drag"></span><span></span><span>' + (sTot ? fmt(sTot) : '—') + '</span><span>' + (sRem ? fmt(sRem) : '—') + '</span><span></span><span></span><span>' + fmt(plan) + ' ₽</span><span></span>';
       itemsBox.appendChild(ft);
     }
     bd.appendChild(itemsBox);
@@ -607,8 +629,8 @@ function renderPeriods() {
     };
     bd.appendChild(fill);
     const delP = document.createElement('button'); delP.className = 'xbtn delper'; delP.style.cssText = 'display:block; margin:10px 0 0 auto;';
-    delP.textContent = '🗑 удалить период'; delP.title = 'Удалить период (два нажатия)';
-    twoStepDel(delP, '🗑 удалить период', () => { data.periods = data.periods.filter(x => x.id !== p.id); save(); renderAll(); });
+    delP.textContent = '🗑'; delP.title = 'Удалить период (два нажатия)';
+    twoStepDel(delP, '🗑', () => { data.periods = data.periods.filter(x => x.id !== p.id); save(); renderAll(); });
     bd.appendChild(delP);
     card.appendChild(bd);
     box.appendChild(card);
@@ -932,6 +954,7 @@ $('mpushOff').onclick = async () => {
 mpushUI();
 if (data.nKey) setTimeout(syncRem, 3000);
 
+{ const cp = curPeriod(); if (cp) openIds.add(cp.id); }
 renderAll(); syncUI();
 if (sync) cloudPull();
 setInterval(() => { if (sync && !document.hidden) cloudPull(); }, 45000);
