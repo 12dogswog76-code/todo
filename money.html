@@ -89,6 +89,11 @@
   .draghandle { cursor: grab; color: #555a66; font-size: 14px; user-select: none; text-align: center; }
   .draghandle:hover { color: #9aa0ae; }
   .item.dragover { border-top: 2px solid #e53e3e; }
+  .yearhead { display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 16px 2px 8px; color: #9aa0ae; font-weight: 700; font-size: 15px; user-select: none; }
+  .yearhead:hover { color: #e8eaf0; }
+  .yearhead .cnt { font-weight: 400; font-size: 12px; opacity: .7; }
+  .yearhead .line { flex: 1; height: 1px; background: #2c3038; }
+  body.light .yearhead .line { background: #d4d7de; }
   .miniask { position: fixed; z-index: 60; background: #23252c; border: 1px solid #424650; border-radius: 12px; padding: 11px 13px; box-shadow: 0 8px 28px #000a; font-size: 13px; max-width: 260px; }
   .miniask .mrow { display: flex; gap: 8px; margin-top: 9px; }
   .miniask button { flex: 1; border-radius: 8px; padding: 6px 0; font-size: 13px; cursor: pointer; }
@@ -213,7 +218,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v12</span>
+    <span class="hint" style="align-self:center; margin:0">v13</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -280,6 +285,30 @@ function migratePaid(d) {
   }
 }
 migratePaid(data);
+const M_STEMS = [['январ',0],['феврал',1],['март',2],['апрел',3],['мая',4],['май',4],['июн',5],['июл',6],['август',7],['сентябр',8],['октябр',9],['ноябр',10],['декабр',11]];
+function firstMonth(title) {
+  const t = (title || '').toLowerCase();
+  let best = null, pos = 1e9;
+  M_STEMS.forEach(pair => { const i = t.indexOf(pair[0]); if (i >= 0 && i < pos) { pos = i; best = pair[1]; } });
+  return best;
+}
+function migrateYears(d) {
+  if (!d.periods.length || d.periods.every(p => p.year)) return;
+  let year = 2025, lastM = null;
+  d.periods.forEach(p => {
+    let m = null, yExp = null;
+    const dm = (p.title || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (dm) { m = parseInt(dm[2], 10) - 1; yExp = parseInt(dm[3], 10); }
+    else m = firstMonth(p.title);
+    if (yExp) year = yExp;
+    else if (m != null && lastM != null && (lastM - m) > 6) year++; // декабрь -> январь
+    if (m != null) lastM = m;
+    if (!p.year) p.year = year;
+  });
+}
+migrateYears(data);
+let openYears = new Set();
+{ const ys = data.periods.map(p => p.year).filter(Boolean); if (ys.length) openYears.add(Math.max(...ys)); else openYears.add(new Date().getFullYear()); }
 const openIds = new Set();
 let editMode = localStorage.getItem(LSM + '_edit') === '1';
 let theme = localStorage.getItem(LSM + '_theme') || 'dark';
@@ -313,7 +342,7 @@ async function cloudPull(force) {
     const rec = j.record;
     const adopt = rec && rec.periods && (force ? rec.periods.length > 0 : (rec.mod || 0) > (data.mod || 0));
     if (adopt) {
-      data = rec; migratePaid(data); localStorage.setItem(LSM, JSON.stringify(data)); renderAll();
+      data = rec; migratePaid(data); migrateYears(data); localStorage.setItem(LSM, JSON.stringify(data)); renderAll();
     } else if (rec && (rec.mod || 0) < (data.mod || 0)) { clearTimeout(pushT); pushT = setTimeout(cloudPush, 500); }
     setDot('ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
   } catch (e) { setDot('err', 'ошибка загрузки (' + e.message + ')'); }
@@ -337,10 +366,12 @@ function nextPeriodTitle() {
   if (d.getDate() < 15) return '15–30 ' + MONTHS[d.getMonth()];
   return '1–15 ' + MONTHS[(d.getMonth() + 1) % 12];
 }
+function nextPeriodYear() { const d = new Date(); return (d.getDate() >= 15 && d.getMonth() === 11) ? d.getFullYear() + 1 : d.getFullYear(); }
 function updateNewBtn() {
   const curT = autoPeriodTitle(), nextT = nextPeriodTitle();
-  const hasCur = data.periods.some(p => !p.plan && p.title === curT);
-  const hasNext = data.periods.some(p => p.title === nextT);
+  const curY = new Date().getFullYear(), nextY = nextPeriodYear();
+  const hasCur = data.periods.some(p => !p.plan && p.title === curT && (p.year || curY) === curY);
+  const hasNext = data.periods.some(p => p.title === nextT && (p.year || curY) === nextY);
   $('newPeriod').disabled = hasCur;
   $('newPeriod').textContent = hasCur ? '✓ Текущий период «' + curT + '» уже создан' : '➕ Новый период «' + curT + '» (заполнится постоянными)';
   $('planBtn').disabled = hasNext;
@@ -554,7 +585,19 @@ function renderPeriodsHeadOnly() { renderPeriods(); } // упрощённо: п�
 
 function renderPeriods() {
   const box = $('plist'); box.innerHTML = '';
-  const arr = data.periods.slice().reverse();
+  const nowY = new Date().getFullYear();
+  const years = [...new Set(data.periods.map(p => p.year || nowY))].sort((a, b) => b - a);
+  years.forEach(y => {
+    const list = data.periods.filter(p => (p.year || nowY) === y).reverse();
+    const yh = document.createElement('div'); yh.className = 'yearhead';
+    yh.innerHTML = '<span>' + (openYears.has(y) ? '▾' : '▸') + ' 📁 ' + y + '</span><span class="cnt">' + list.length + ' пер.</span><span class="line"></span>';
+    yh.onclick = () => { if (openYears.has(y)) openYears.delete(y); else openYears.add(y); renderPeriods(); };
+    box.appendChild(yh);
+    if (!openYears.has(y)) return;
+    renderPeriodCards(list, box);
+  });
+}
+function renderPeriodCards(arr, box) {
   arr.forEach(p => {
     const needInc = !p.plan && !(p.income > 0) && p.items.length > 0;
     const card = document.createElement('div'); card.className = 'card period' + (openIds.has(p.id) ? ' open' : '') + (p.plan ? ' plan' : '') + (needInc ? ' dim' : '');
@@ -809,8 +852,10 @@ function renderChart() {
 function renderAll() { renderSummary(); renderPeriods(); renderTpl(); renderGoals(); renderChart(); fillNames(); updateNewBtn(); }
 
 $('newPeriod').onclick = () => {
-  if (data.periods.some(x => !x.plan && x.title === autoPeriodTitle())) return;
-  const p = { id: uid('p'), title: autoPeriodTitle(), income: 0, items: [] };
+  const curY = new Date().getFullYear();
+  if (data.periods.some(x => !x.plan && x.title === autoPeriodTitle() && (x.year || curY) === curY)) return;
+  const p = { id: uid('p'), title: autoPeriodTitle(), income: 0, items: [], year: curY };
+  openYears.add(curY);
   data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined, total: t.total || undefined, remaining: t.remaining || undefined, perYear: t.perYear || undefined }));
   data.periods.push(p);
   openIds.add(p.id);
@@ -818,8 +863,10 @@ $('newPeriod').onclick = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 $('planBtn').onclick = () => {
-  if (data.periods.some(x => x.title === nextPeriodTitle())) return;
-  const p = { id: uid('p'), title: nextPeriodTitle(), income: 0, items: [], plan: true };
+  const nY = nextPeriodYear();
+  if (data.periods.some(x => x.title === nextPeriodTitle() && (x.year || nY) === nY)) return;
+  const p = { id: uid('p'), title: nextPeriodTitle(), income: 0, items: [], plan: true, year: nY };
+  openYears.add(nY);
   data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined, total: t.total || undefined, remaining: t.remaining || undefined, perYear: t.perYear || undefined }));
   data.periods.push(p);
   openIds.add(p.id);
@@ -909,7 +956,7 @@ $('impFile').onchange = e => {
       if (!Array.isArray(d.groups) || !d.groups.length) d.groups = DEFAULT_GROUPS.slice();
       if (!Array.isArray(d.goals)) d.goals = [];
       if (!Array.isArray(d.templates)) d.templates = [];
-      migratePaid(d);
+      migratePaid(d); migrateYears(d);
       data = d; save(); renderAll();
       $('ioMsg').textContent = 'Импортировано ✓ (периодов: ' + d.periods.length + ')';
     } catch (err) { $('ioMsg').textContent = 'Не удалось прочитать файл.'; }
