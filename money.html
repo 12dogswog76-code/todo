@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0b0d">
+<title>Мои деньги</title>
+<link rel="icon" href="icon.svg">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b0b0d; color: #e8eaf0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 18px 12px 60px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  a { color: #7fb8ff; }
+  h1 { font-size: 24px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h1 .backlink { font-size: 13px; font-weight: 400; margin-left: auto; }
+  #cloudDot { width: 10px; height: 10px; border-radius: 50%; background: #555a66; display: inline-block; }
+  #cloudDot.ok { background: #4caf7d; } #cloudDot.err { background: #e53e3e; } #cloudDot.syncing { background: #ffd95e; }
+  .topline { color: #9aa0ae; font-size: 13px; margin-bottom: 14px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tabs button { background: #1c1e24; color: #9aa0ae; border: 1px solid #33363e; border-radius: 10px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+  .tabs button.on { border-color: #e53e3e; color: #fff; background: #e53e3e22; }
+  .card { background: #1c1e24; border: 1px solid #2c3038; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .sumgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+  .sumgrid .lbl { font-size: 11.5px; color: #9aa0ae; }
+  .sumgrid .val { font-size: 19px; font-weight: 700; margin-top: 2px; }
+  .val.pos { color: #8fd6a8; } .val.neg { color: #ff8f8f; }
+  .grouprow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .gchip { font-size: 12px; border: 1px solid #33363e; border-radius: 8px; padding: 3px 9px; color: #cbd0da; }
+  .phead { display: flex; align-items: center; gap: 8px; cursor: pointer; flex-wrap: wrap; }
+  .phead b { font-size: 15px; }
+  .phead .inc { color: #8fd6a8; font-size: 13px; }
+  .phead .spent { color: #ff8f8f; font-size: 13px; }
+  .phead .rest { color: #9aa0ae; font-size: 13px; }
+  .phead .sp { flex: 1; }
+  .parrow { color: #9aa0ae; }
+  .pbody { margin-top: 10px; display: none; }
+  .period.open .pbody { display: block; }
+  table.items { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.items td { padding: 6px 6px; border-top: 1px solid #262a31; vertical-align: middle; }
+  table.items td.amt { text-align: right; white-space: nowrap; font-weight: 600; }
+  table.items td.grp { white-space: nowrap; }
+  .gdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .metatx { color: #777d8a; font-size: 11px; margin-top: 1px; }
+  .xbtn { background: none; border: none; color: #666c78; cursor: pointer; font-size: 15px; padding: 2px 6px; }
+  .xbtn:hover { color: #ff8f8f; }
+  input, select { background: #23252c; color: #e8eaf0; border: 1px solid #424650; border-radius: 8px; padding: 7px 9px; font-size: 13.5px; font-family: inherit; }
+  input:focus, select:focus { outline: none; border-color: #e53e3e; }
+  input.amt { width: 92px; text-align: right; }
+  input.day { width: 58px; }
+  .addrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  .addrow input.nm { flex: 1; min-width: 140px; }
+  button.act { background: #e53e3e; color: #fff; border: none; border-radius: 8px; padding: 8px 13px; font-size: 13.5px; cursor: pointer; }
+  button.ghost { background: none; border: 1px dashed #4a4f5a; color: #9aa0ae; border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer; }
+  button.ghost:hover { border-color: #e53e3e; color: #e8eaf0; }
+  .rowline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 7px 0; border-top: 1px solid #262a31; }
+  .rowline:first-child { border-top: none; }
+  .goal { margin-bottom: 12px; }
+  .gbar { height: 10px; background: #262a31; border-radius: 6px; overflow: hidden; margin-top: 6px; }
+  .gfill { height: 100%; background: #4caf7d; }
+  .chartrow { display: flex; align-items: flex-end; gap: 4px; height: 160px; margin-top: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .cbar { flex: 1; min-width: 26px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 100%; }
+  .cbar .bi { background: #4caf7d66; border: 1px solid #4caf7d; border-radius: 4px 4px 0 0; }
+  .cbar .bs { background: #e53e3e55; border: 1px solid #e53e3e; border-radius: 0 0 4px 4px; }
+  .clbl { font-size: 9.5px; color: #777d8a; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hint { color: #777d8a; font-size: 11.5px; margin-top: 8px; }
+  .iorow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .footerbar { margin-top: 22px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .footerbar button { background: #1c1e24; border: 1px solid #33363e; color: #9aa0ae; border-radius: 10px; padding: 8px 13px; font-size: 13px; cursor: pointer; }
+  .footerbar button:hover { border-color: #e53e3e; color: #e8eaf0; }
+  #syncPanel2, #ioPanel2 { display: none; }
+  #syncPanel2.open, #ioPanel2.open { display: block; }
+  textarea { width: 100%; min-height: 90px; background: #23252c; color: #e8eaf0; border: 1px solid #424650; border-radius: 8px; padding: 8px; font-size: 12px; font-family: monospace; }
+  body.light { background: #f4f5f8; color: #1c1e24; color-scheme: light; }
+  body.light .card, body.light .tabs button, body.light .footerbar button { background: #fff; border-color: #d4d7de; color: #3c4250; }
+  body.light .tabs button.on { border-color: #e53e3e; color: #b91c1c; background: #e53e3e14; }
+  body.light input, body.light select, body.light textarea { background: #fff; color: #1c1e24; border-color: #c6cad3; }
+  body.light table.items td { border-color: #e6e8ee; }
+  body.light .rowline { border-color: #e6e8ee; }
+  body.light .gchip { border-color: #d4d7de; color: #3c4250; }
+  body.light .gbar, body.light .cbar { }
+  @media (max-width: 520px) {
+    .sumgrid .val { font-size: 16px; }
+    table.items td { padding: 6px 3px; }
+    input.amt { width: 78px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💰 Мои деньги <span id="cloudDot" title="облако не подключено"></span><span class="backlink"><a href="./">← к задачам</a></span></h1>
+  <div class="topline" id="topline"></div>
+
+  <div class="tabs">
+    <button data-tab="periods" class="on">📆 Периоды</button>
+    <button data-tab="fixed">🔁 Постоянные</button>
+    <button data-tab="goals">🎯 Цели</button>
+    <button data-tab="chart">📊 График</button>
+  </div>
+
+  <div id="tab-periods">
+    <div class="card" id="summary"></div>
+    <button class="ghost" id="newPeriod" style="width:100%; padding:11px">➕ Новый период (заполнится постоянными платежами)</button>
+    <div id="plist"></div>
+  </div>
+
+  <div id="tab-fixed" style="display:none">
+    <div class="card">
+      <b>🔁 Постоянные платежи</b>
+      <div class="hint" style="margin-top:2px">Автоматически добавляются в каждый новый период. День — число месяца для оплаты.</div>
+      <div id="tplList" style="margin-top:8px"></div>
+      <div class="addrow">
+        <input class="nm" id="tplName" placeholder="название" list="names">
+        <input class="amt" id="tplAmt" type="number" placeholder="₽">
+        <input class="day" id="tplDay" placeholder="день">
+        <select id="tplGroup"></select>
+        <button class="act" id="tplAdd">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-goals" style="display:none">
+    <div class="card">
+      <b>🎯 Цели и накопления</b>
+      <div id="goalList" style="margin-top:10px"></div>
+      <div class="addrow">
+        <input class="nm" id="goalName" placeholder="цель (например: подушка)">
+        <input class="amt" id="goalTarget" type="number" placeholder="цель ₽">
+        <button class="act" id="goalAdd">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-chart" style="display:none">
+    <div class="card">
+      <b>📊 Поступления и выплаты по периодам</b>
+      <div class="chartrow" id="chart"></div>
+      <div class="hint">Зелёное — поступило, красное — выплачено. Последние 14 периодов.</div>
+    </div>
+    <div class="card">
+      <b>Разбивка последнего периода по группам</b>
+      <div id="gbreak" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="footerbar">
+    <button id="themeBtn">☀️ Тема</button>
+    <button id="syncBtn">☁ Облако</button>
+    <button id="ioBtn">↕ Импорт / экспорт</button>
+  </div>
+
+  <div class="card" id="syncPanel2">
+    <div class="hint" id="syncInfo" style="margin-top:0"></div>
+    <div class="iorow">
+      <input id="syncKey" style="flex:1; min-width:200px" placeholder="Master Key (jsonbin.io) или код подключения">
+      <button class="act" id="syncConnect">Подключить</button>
+    </div>
+    <div class="iorow">
+      <button class="ghost" id="syncCopy" style="display:none">Скопировать код подключения</button>
+      <button class="ghost" id="syncNow" style="display:none">Синхронизировать сейчас</button>
+      <button class="ghost" id="syncOff" style="display:none">Отключить</button>
+    </div>
+    <div class="hint" id="syncMsg"></div>
+  </div>
+
+  <div class="card" id="ioPanel2">
+    <div class="iorow">
+      <button class="ghost" id="expBtn">⇪ Скачать данные (JSON)</button>
+      <label class="ghost" style="cursor:pointer">⇩ Загрузить из файла<input id="impFile" type="file" accept=".json" style="display:none"></label>
+    </div>
+    <div class="hint" id="ioMsg">Импорт заменит текущие данные (с подтверждением).</div>
+  </div>
+
+  <datalist id="names"></datalist>
+</div>
+
+<script>
+const LSM = 'alexey_money_v1';
+const JB = 'https://api.jsonbin.io/v3/b';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Math.round(n).toLocaleString('ru-RU');
+const $ = id => document.getElementById(id);
+
+const DEFAULT_GROUPS = ['Подписки','Кредиты/рассрочки','Долги','Быт/связь','Налоги','Накопления','Прочее'];
+const GCOLORS = { 'Подписки':'#b197fc','Кредиты/рассрочки':'#ff8f8f','Долги':'#ffa94d','Быт/связь':'#66d9e8','Налоги':'#ffd95e','Накопления':'#8fd6a8','Прочее':'#a3a8b8' };
+function gcolor(g) { return GCOLORS[g] || '#a3a8b8'; }
+
+let data = { v: 1, periods: [], templates: [], goals: [], groups: DEFAULT_GROUPS.slice(), mod: 0 };
+try { const d = JSON.parse(localStorage.getItem(LSM)); if (d && d.periods) data = d; } catch (e) {}
+if (!Array.isArray(data.groups) || !data.groups.length) data.groups = DEFAULT_GROUPS.slice();
+if (!Array.isArray(data.goals)) data.goals = [];
+if (!Array.isArray(data.templates)) data.templates = [];
+let openId = null;
+let theme = localStorage.getItem(LSM + '_theme') || 'dark';
+
+let sync = null;
+try { sync = JSON.parse(localStorage.getItem(LSM + '_sync')); } catch (e) {}
+let pushT = null;
+function setDot(c, t) { const d = $('cloudDot'); d.className = c || ''; d.title = t || 'облако не подключено'; }
+function save() {
+  data.mod = Date.now();
+  localStorage.setItem(LSM, JSON.stringify(data));
+  if (sync) { clearTimeout(pushT); pushT = setTimeout(cloudPush, 1000); }
+}
+async function cloudPush() {
+  if (!sync) return;
+  setDot('syncing', 'отправка…');
+  try {
+    const r = await fetch(JB + '/' + sync.b, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.k }, body: JSON.stringify(data) });
+    if (!r.ok) throw new Error(r.status);
+    setDot('ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
+  } catch (e) { setDot('err', 'ошибка отправки (' + e.message + ')'); }
+}
+async function cloudPull() {
+  if (!sync) return;
+  setDot('syncing', 'загрузка…');
+  try {
+    const r = await fetch(JB + '/' + sync.b + '/latest', { headers: { 'X-Master-Key': sync.k } });
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    const rec = j.record;
+    if (rec && rec.periods && (rec.mod || 0) > (data.mod || 0)) {
+      data = rec; localStorage.setItem(LSM, JSON.stringify(data)); renderAll();
+    } else if (rec && (rec.mod || 0) < (data.mod || 0)) { clearTimeout(pushT); pushT = setTimeout(cloudPush, 500); }
+    setDot('ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
+  } catch (e) { setDot('err', 'ошибка загрузки (' + e.message + ')'); }
+}
+
+function spent(p) { return p.items.reduce((s, i) => s + (i.amount || 0), 0); }
+function curPeriod() { return data.periods.length ? data.periods[data.periods.length - 1] : null; }
+function uid(pre) { return pre + Date.now() + Math.floor(Math.random() * 999); }
+
+function groupOptions(sel) {
+  return data.groups.map(g => '<option' + (g === sel ? ' selected' : '') + '>' + esc(g) + '</option>').join('');
+}
+function fillNames() {
+  const set = new Set();
+  data.templates.forEach(t => set.add(t.name));
+  data.periods.forEach(p => p.items.forEach(i => set.add(i.name)));
+  $('names').innerHTML = [...set].map(n => '<option value="' + esc(n) + '">').join('');
+}
+function guessGroup(name) {
+  const seen = {};
+  data.periods.forEach(p => p.items.forEach(i => { if (i.name.toLowerCase() === name.toLowerCase() && i.group) seen[i.group] = (seen[i.group] || 0) + 1; }));
+  const t = data.templates.find(x => x.name.toLowerCase() === name.toLowerCase());
+  if (t && t.group) return t.group;
+  let best = null, bc = 0;
+  Object.keys(seen).forEach(g => { if (seen[g] > bc) { bc = seen[g]; best = g; } });
+  return best || 'Прочее';
+}
+
+function renderSummary() {
+  const p = curPeriod();
+  const box = $('summary');
+  if (!p) { box.innerHTML = '<div class="hint" style="margin:0">Пока нет периодов. Нажми «➕ Новый период» или импортируй данные (внизу «↕ Импорт»).</div>'; $('topline').textContent = ''; return; }
+  const sp = spent(p); const rest = (p.income || 0) - sp;
+  box.innerHTML = '<b>Текущий период: ' + esc(p.title) + '</b>' +
+    '<div class="sumgrid" style="margin-top:10px">' +
+    '<div><div class="lbl">Поступило</div><div class="val pos">' + fmt(p.income || 0) + ' ₽</div></div>' +
+    '<div><div class="lbl">Выплачено</div><div class="val neg">' + fmt(sp) + ' ₽</div></div>' +
+    '<div><div class="lbl">Остаток</div><div class="val ' + (rest >= 0 ? 'pos' : 'neg') + '">' + fmt(rest) + ' ₽</div></div>' +
+    '</div><div class="grouprow">' + groupChips(p) + '</div>';
+  $('topline').textContent = 'Периодов: ' + data.periods.length + ' · постоянных: ' + data.templates.length + ' · целей: ' + data.goals.length;
+}
+function groupChips(p) {
+  const by = {};
+  p.items.forEach(i => { by[i.group || 'Прочее'] = (by[i.group || 'Прочее'] || 0) + (i.amount || 0); });
+  return Object.keys(by).sort((a, b) => by[b] - by[a]).map(g =>
+    '<span class="gchip"><span class="gdot" style="background:' + gcolor(g) + '"></span>' + esc(g) + ': ' + fmt(by[g]) + ' ₽</span>').join('');
+}
+
+function renderPeriods() {
+  const box = $('plist'); box.innerHTML = '';
+  const arr = data.periods.slice().reverse();
+  arr.forEach(p => {
+    const card = document.createElement('div'); card.className = 'card period' + (openId === p.id ? ' open' : '');
+    const sp = spent(p); const rest = (p.income || 0) - sp;
+    const head = document.createElement('div'); head.className = 'phead';
+    head.innerHTML = '<b>' + esc(p.title) + '</b>' +
+      '<span class="inc">+' + fmt(p.income || 0) + '</span><span class="spent">−' + fmt(sp) + '</span><span class="rest">= ' + fmt(rest) + ' ₽</span>' +
+      '<span class="sp"></span><span class="parrow">' + (openId === p.id ? '▲' : '▼') + '</span>';
+    head.onclick = () => { openId = (openId === p.id ? null : p.id); renderPeriods(); };
+    card.appendChild(head);
+
+    const bd = document.createElement('div'); bd.className = 'pbody';
+    // редактирование названия и поступлений
+    const top = document.createElement('div'); top.className = 'addrow'; top.style.marginTop = '0';
+    top.innerHTML = '<input class="nm" value="' + esc(p.title) + '" title="Название периода">' +
+      '<input class="amt" type="number" value="' + (p.income || 0) + '" title="Поступило ₽">' +
+      '<button class="ghost" title="Удалить период">✕ период</button>';
+    const [tIn, iIn, delBtn] = top.querySelectorAll('input, button');
+    tIn.onchange = () => { p.title = tIn.value.trim() || p.title; save(); renderAll(); };
+    iIn.onchange = () => { p.income = parseFloat(iIn.value) || 0; save(); renderAll(); };
+    delBtn.onclick = () => { if (confirm('Удалить период «' + p.title + '» со всеми строками?')) { data.periods = data.periods.filter(x => x.id !== p.id); save(); renderAll(); } };
+    bd.appendChild(top);
+
+    const tbl = document.createElement('table'); tbl.className = 'items';
+    p.items.forEach(it => {
+      const tr = document.createElement('tr');
+      const meta = [it.total ? 'всего ' + it.total : '', it.remaining ? 'осталось ' + it.remaining : '', it.day ? 'день ' + it.day : ''].filter(Boolean).join(' · ');
+      tr.innerHTML = '<td><div>' + esc(it.name) + '</div>' + (meta ? '<div class="metatx">' + esc(meta) + '</div>' : '') + '</td>' +
+        '<td class="grp"><span class="gdot" style="background:' + gcolor(it.group) + '"></span>' + esc(it.group || '') + '</td>' +
+        '<td class="amt">' + fmt(it.amount || 0) + ' ₽</td><td style="width:30px"></td>';
+      const del = document.createElement('button'); del.className = 'xbtn'; del.textContent = '✕';
+      del.onclick = () => { p.items = p.items.filter(x => x.id !== it.id); save(); renderAll(); };
+      tr.lastChild.appendChild(del);
+      tr.children[0].style.cursor = 'pointer';
+      tr.children[0].title = 'Изменить строку';
+      tr.children[0].onclick = () => editItem(p, it);
+      tbl.appendChild(tr);
+    });
+    bd.appendChild(tbl);
+
+    const add = document.createElement('div'); add.className = 'addrow';
+    add.innerHTML = '<input class="nm" placeholder="расход…" list="names"><select>' + groupOptions('') + '</select><input class="amt" type="number" placeholder="₽"><button class="act">＋</button>';
+    const [nm, amt] = [add.querySelector('.nm'), add.querySelector('.amt')];
+    const gsel = add.querySelector('select'); const btn = add.querySelector('button');
+    nm.onchange = () => { gsel.value = guessGroup(nm.value.trim()); };
+    const doAdd = () => {
+      const n = nm.value.trim(); const a = parseFloat(amt.value);
+      if (!n || isNaN(a)) return;
+      p.items.push({ id: uid('i'), name: n, amount: a, group: gsel.value });
+      nm.value = ''; amt.value = ''; save(); renderAll();
+    };
+    btn.onclick = doAdd;
+    amt.onkeydown = e => { if (e.key === 'Enter') doAdd(); };
+    bd.appendChild(add);
+
+    const fill = document.createElement('button'); fill.className = 'ghost'; fill.style.marginTop = '8px';
+    fill.textContent = '⤓ Добавить постоянные платежи';
+    fill.onclick = () => {
+      let added = 0;
+      data.templates.forEach(t => {
+        if (!p.items.some(i => i.name.toLowerCase() === t.name.toLowerCase())) {
+          p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || '' });
+          added++;
+        }
+      });
+      if (added) { save(); renderAll(); }
+    };
+    bd.appendChild(fill);
+    card.appendChild(bd);
+    box.appendChild(card);
+  });
+}
+function editItem(p, it) {
+  const n = prompt('Название:', it.name); if (n === null) return;
+  const a = prompt('Сумма ₽:', it.amount); if (a === null) return;
+  if (n.trim()) it.name = n.trim();
+  const v = parseFloat(a); if (!isNaN(v)) it.amount = v;
+  save(); renderAll();
+}
+
+function renderTpl() {
+  const box = $('tplList'); box.innerHTML = '';
+  data.templates.forEach(t => {
+    const row = document.createElement('div'); row.className = 'rowline';
+    row.innerHTML = '<span class="gdot" style="background:' + gcolor(t.group) + '"></span><b style="flex:1; min-width:120px">' + esc(t.name) + '</b>' +
+      '<input class="amt" type="number" value="' + (t.amount || 0) + '"><input class="day" value="' + esc(t.day || '') + '" placeholder="день">' +
+      '<select>' + groupOptions(t.group) + '</select>';
+    const [aIn, dIn] = row.querySelectorAll('input');
+    const gSel = row.querySelector('select');
+    aIn.onchange = () => { t.amount = parseFloat(aIn.value) || 0; save(); };
+    dIn.onchange = () => { t.day = dIn.value.trim(); save(); };
+    gSel.onchange = () => { t.group = gSel.value; save(); renderTpl(); };
+    const del = document.createElement('button'); del.className = 'xbtn'; del.textContent = '✕';
+    del.onclick = () => { if (confirm('Удалить постоянный платёж «' + t.name + '»?')) { data.templates = data.templates.filter(x => x.id !== t.id); save(); renderTpl(); } };
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+  $('tplGroup').innerHTML = groupOptions('');
+}
+$('tplAdd').onclick = () => {
+  const n = $('tplName').value.trim(); if (!n) return;
+  data.templates.push({ id: uid('t'), name: n, amount: parseFloat($('tplAmt').value) || 0, day: $('tplDay').value.trim(), group: $('tplGroup').value });
+  $('tplName').value = ''; $('tplAmt').value = ''; $('tplDay').value = '';
+  save(); renderTpl(); fillNames();
+};
+
+function renderGoals() {
+  const box = $('goalList'); box.innerHTML = '';
+  if (!data.goals.length) box.innerHTML = '<div class="hint" style="margin:0 0 6px">Добавь цель — и пополняй её кнопкой ＋. Прогресс виден сразу.</div>';
+  data.goals.forEach(g => {
+    const d = document.createElement('div'); d.className = 'goal';
+    const pct = g.target > 0 ? Math.min(100, Math.round((g.saved || 0) / g.target * 100)) : 0;
+    d.innerHTML = '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap"><b style="flex:1">' + esc(g.name) + '</b>' +
+      '<span>' + fmt(g.saved || 0) + ' / ' + fmt(g.target || 0) + ' ₽ (' + pct + '%)</span></div>' +
+      '<div class="gbar"><div class="gfill" style="width:' + pct + '%"></div></div>';
+    const row = document.createElement('div'); row.className = 'addrow';
+    row.innerHTML = '<input class="amt" type="number" placeholder="＋ ₽"><button class="act">＋</button><button class="ghost">−</button><button class="xbtn" style="margin-left:auto">✕</button>';
+    const inp = row.querySelector('input'); const [plus, minus, del] = row.querySelectorAll('button');
+    const apply = mult => { const v = parseFloat(inp.value); if (isNaN(v) || v <= 0) return; g.saved = Math.max(0, (g.saved || 0) + mult * v); inp.value = ''; save(); renderGoals(); };
+    plus.onclick = () => apply(1);
+    minus.onclick = () => apply(-1);
+    inp.onkeydown = e => { if (e.key === 'Enter') apply(1); };
+    del.onclick = () => { if (confirm('Удалить цель «' + g.name + '»?')) { data.goals = data.goals.filter(x => x.id !== g.id); save(); renderGoals(); } };
+    d.appendChild(row);
+    box.appendChild(d);
+  });
+}
+$('goalAdd').onclick = () => {
+  const n = $('goalName').value.trim(); const t = parseFloat($('goalTarget').value);
+  if (!n || isNaN(t)) return;
+  data.goals.push({ id: uid('g'), name: n, target: t, saved: 0 });
+  $('goalName').value = ''; $('goalTarget').value = '';
+  save(); renderGoals();
+};
+
+function renderChart() {
+  const box = $('chart'); box.innerHTML = '';
+  const arr = data.periods.slice(-14);
+  const mx = Math.max(1, ...arr.map(p => Math.max(p.income || 0, spent(p))));
+  arr.forEach(p => {
+    const w = document.createElement('div'); w.style.flex = '1'; w.style.minWidth = '30px';
+    const bars = document.createElement('div'); bars.className = 'cbar';
+    const bi = document.createElement('div'); bi.className = 'bi'; bi.style.height = Math.round((p.income || 0) / mx * 70) + '%'; bi.title = '+' + fmt(p.income || 0);
+    const bs = document.createElement('div'); bs.className = 'bs'; bs.style.height = Math.round(spent(p) / mx * 70) + '%'; bs.title = '−' + fmt(spent(p));
+    bars.append(bi, bs);
+    const l = document.createElement('div'); l.className = 'clbl'; l.textContent = p.title;
+    w.append(bars, l);
+    box.appendChild(w);
+  });
+  const p = curPeriod();
+  $('gbreak').innerHTML = p ? '<div class="grouprow" style="margin-top:0">' + groupChips(p) + '</div>' : '<div class="hint">Нет данных</div>';
+}
+
+function renderAll() { renderSummary(); renderPeriods(); renderTpl(); renderGoals(); renderChart(); fillNames(); }
+
+$('newPeriod').onclick = () => {
+  const title = prompt('Название периода (например: 19 июля – 4 августа):');
+  if (title === null) return;
+  const inc = parseFloat(prompt('Поступило ₽:', '') || '');
+  const p = { id: uid('p'), title: (title.trim() || new Date().toLocaleDateString('ru-RU')), income: isNaN(inc) ? 0 : inc, items: [] };
+  data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || '' }));
+  data.periods.push(p);
+  openId = p.id;
+  save(); renderAll();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+document.querySelectorAll('.tabs button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    ['periods', 'fixed', 'goals', 'chart'].forEach(t => { $('tab-' + t).style.display = (b.dataset.tab === t) ? '' : 'none'; });
+    if (b.dataset.tab === 'chart') renderChart();
+  };
+});
+
+/* тема */
+function applyTheme() { document.body.classList.toggle('light', theme === 'light'); $('themeBtn').textContent = theme === 'light' ? '🌙 Тема' : '☀️ Тема'; }
+$('themeBtn').onclick = () => { theme = theme === 'light' ? 'dark' : 'light'; localStorage.setItem(LSM + '_theme', theme); applyTheme(); };
+applyTheme();
+
+/* облако */
+function syncUI() {
+  const on = !!(sync && sync.k && sync.b);
+  $('syncKey').style.display = on ? 'none' : '';
+  $('syncConnect').style.display = on ? 'none' : '';
+  $('syncCopy').style.display = on ? '' : 'none';
+  $('syncNow').style.display = on ? '' : 'none';
+  $('syncOff').style.display = on ? '' : 'none';
+  $('syncInfo').textContent = on
+    ? 'Облако подключено ✓ Скопируй код подключения и вставь на другом устройстве.'
+    : 'Отдельное хранилище для денег (не пересекается с задачами). На первом устройстве вставь Master Key с jsonbin.io, на остальных — код подключения.';
+}
+$('syncBtn').onclick = () => { $('ioPanel2').classList.remove('open'); $('syncPanel2').classList.toggle('open'); syncUI(); };
+$('ioBtn').onclick = () => { $('syncPanel2').classList.remove('open'); $('ioPanel2').classList.toggle('open'); };
+$('syncConnect').onclick = async () => {
+  const v = $('syncKey').value.trim();
+  if (!v) { $('syncMsg').textContent = 'Вставь ключ или код.'; return; }
+  let conf = null;
+  try { const o = JSON.parse(atob(v)); if (o.k && o.b) conf = o; } catch (e) {}
+  if (!conf && v[0] === '{') { try { const o = JSON.parse(v); if (o.k && o.b) conf = o; } catch (e) {} }
+  if (conf) {
+    sync = conf; localStorage.setItem(LSM + '_sync', JSON.stringify(sync));
+    syncUI(); $('syncMsg').textContent = 'Подключаюсь…';
+    await cloudPull(); $('syncMsg').textContent = 'Готово ✓';
+    return;
+  }
+  $('syncMsg').textContent = 'Создаю хранилище…';
+  try {
+    const r = await fetch(JB, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Master-Key': v, 'X-Bin-Name': 'alextask-money' }, body: JSON.stringify(data) });
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    sync = { k: v, b: j.metadata.id };
+    localStorage.setItem(LSM + '_sync', JSON.stringify(sync));
+    syncUI(); $('syncMsg').textContent = 'Хранилище создано ✓ Скопируй код подключения для других устройств.';
+    setDot('ok', 'синхронизировано');
+  } catch (e) { $('syncMsg').textContent = 'Не получилось (' + e.message + '). Проверь ключ.'; }
+};
+$('syncCopy').onclick = async () => {
+  const code = btoa(JSON.stringify(sync));
+  try { await navigator.clipboard.writeText(code); $('syncMsg').textContent = 'Код скопирован ✓'; }
+  catch (e) { prompt('Скопируй код:', code); }
+};
+$('syncNow').onclick = async () => { await cloudPush(); await cloudPull(); $('syncMsg').textContent = 'Синхронизировано ✓'; };
+$('syncOff').onclick = () => { sync = null; localStorage.removeItem(LSM + '_sync'); syncUI(); setDot('', ''); };
+
+/* импорт / экспорт */
+$('expBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'мои-деньги-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+};
+$('impFile').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!d || !Array.isArray(d.periods)) { $('ioMsg').textContent = 'Файл не похож на данные денег.'; return; }
+      if (!confirm('Заменить текущие данные данными из файла? (периодов: ' + d.periods.length + ')')) return;
+      if (!Array.isArray(d.groups) || !d.groups.length) d.groups = DEFAULT_GROUPS.slice();
+      if (!Array.isArray(d.goals)) d.goals = [];
+      if (!Array.isArray(d.templates)) d.templates = [];
+      data = d; save(); renderAll();
+      $('ioMsg').textContent = 'Импортировано ✓ (периодов: ' + d.periods.length + ')';
+    } catch (err) { $('ioMsg').textContent = 'Не удалось прочитать файл.'; }
+  };
+  rd.readAsText(f);
+  e.target.value = '';
+};
+
+renderAll(); syncUI();
+if (sync) cloudPull();
+setInterval(() => { if (sync && !document.hidden) cloudPull(); }, 45000);
+window.addEventListener('focus', () => { if (sync) cloudPull(); });
+window.addEventListener('pagehide', () => { if (sync) { clearTimeout(pushT); cloudPush(); } });
+</script>
+</body>
+</html>

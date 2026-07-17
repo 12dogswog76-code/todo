@@ -1,6 +1,6 @@
 // service worker «Мои дела»: уведомления + офлайн-режим (PWA) + Web Push
-const CACHE = 'moi-dela-v5';
-const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
+const CACHE = 'moi-dela-v6';
+const ASSETS = ['./', './index.html', './money.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));
@@ -21,8 +21,8 @@ self.addEventListener('fetch', e => {
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request)
-        .then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return r; })
-        .catch(() => caches.match('./index.html'))
+        .then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
+        .catch(() => caches.match(e.request).then(m => m || caches.match('./index.html')))
     );
     return;
   }
