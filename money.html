@@ -75,14 +75,17 @@
   .vfoot span { text-align: right; white-space: nowrap; overflow: hidden; }
   .vfoot span:nth-child(2) { text-align: left; color: #9aa0ae; font-weight: 600; }
   body.light .vfoot { border-color: #d4d7de; color: #1c1e24; }
+
   @media (max-width: 760px) {
-    .vfoot { grid-template-columns: 26px 1fr 92px 30px; }
-    .vfoot span:nth-child(3), .vfoot span:nth-child(4), .vfoot span:nth-child(5), .vfoot span:nth-child(6), .vfoot span:nth-child(7) { display: none; }
-  }
-  @media (max-width: 760px) {
-    .vgrid, .vhead { grid-template-columns: 26px 1fr 92px 30px; }
-    .vhead span:nth-child(3), .vhead span:nth-child(4), .vhead span:nth-child(5), .vhead span:nth-child(6), .vhead span:nth-child(7),
-    .vgrid .vcell.c-grp, .vgrid .vcell.c-tot, .vgrid .vcell.c-rem, .vgrid .vcell.c-py, .vgrid .vcell.c-day, .vgrid .draghandle, .vhead .h-drag { display: none; }
+    /* строки: ✓ | название | ∞ (или пусто) | сумма | ✎ */
+    .vgrid { grid-template-columns: 26px 1fr 36px 84px 30px; }
+    .vgrid .draghandle, .vgrid .c-grp, .vgrid .c-tot, .vgrid .c-rem, .vgrid .c-day { display: none; }
+    .vgrid .vcell.c-py { font-size: 0; }
+    .vgrid .vinf.c-py { justify-self: center; padding: 0 5px; font-size: 13px; }
+    /* шапка и итог: ✓ | название | сумма | ✎ */
+    .vhead, .vfoot { grid-template-columns: 26px 1fr 120px 30px; }
+    .vhead span:nth-child(3), .vhead span:nth-child(4), .vhead span:nth-child(5), .vhead span:nth-child(6), .vhead span:nth-child(7), .vhead span:nth-child(8),
+    .vfoot span:nth-child(3), .vfoot span:nth-child(4), .vfoot span:nth-child(5), .vfoot span:nth-child(6), .vfoot span:nth-child(7), .vfoot span:nth-child(8) { display: none; }
   }
   .vname { flex: 1 1 auto; min-width: 120px; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
   .gchip.vgrp { white-space: normal; text-align: right; }
@@ -218,7 +221,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v13</span>
+    <span class="hint" style="align-self:center; margin:0">v14</span>
   </div>
 
   <div class="card" id="notifPanel">
