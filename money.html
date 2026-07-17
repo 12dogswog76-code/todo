@@ -74,6 +74,11 @@
   .cbar .bs { background: #e53e3e55; border: 1px solid #e53e3e; border-radius: 0 0 4px 4px; }
   .clbl { font-size: 9.5px; color: #777d8a; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hint { color: #777d8a; font-size: 11.5px; margin-top: 8px; }
+  .planbadge { font-size: 11px; border: 1px solid #ffd95e88; color: #ffd95e; border-radius: 6px; padding: 2px 7px; }
+  .period.plan { border-style: dashed; border-color: #4a4f5a; }
+  #planBtn { width: 100%; padding: 9px; margin-top: 8px; }
+  #notifPanel { display: none; }
+  #notifPanel.open { display: block; }
   .iorow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .footerbar { margin-top: 22px; display: flex; gap: 8px; flex-wrap: wrap; }
   .footerbar button { background: #1c1e24; border: 1px solid #33363e; color: #9aa0ae; border-radius: 10px; padding: 8px 13px; font-size: 13px; cursor: pointer; }
@@ -109,6 +114,7 @@
   <div id="tab-periods">
     <div class="card" id="summary"></div>
     <button class="ghost" id="newPeriod" style="width:100%; padding:11px"></button>
+    <button class="ghost" id="planBtn"></button>
     <div id="plist"></div>
   </div>
 
@@ -157,6 +163,17 @@
     <button id="themeBtn">☀️ Тема</button>
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
+    <button id="notifBtn">🔔 Уведомления о выплатах</button>
+  </div>
+
+  <div class="card" id="notifPanel">
+    <b>🔔 Напоминания о выплатах</b>
+    <div class="hint" style="margin-top:4px">За день до каждой выплаты текущего периода (по полю «📅 день») придёт push — <b>даже при закрытом сайте</b>. Включай на том устройстве, куда хочешь получать (например, только на телефоне) — другие устройства получать не будут. Оплаченные (✓) не напоминаются.</div>
+    <div class="iorow">
+      <button class="act" id="mpushOn">Включить на этом устройстве</button>
+      <button class="ghost" id="mpushOff" style="display:none">Выключить на этом устройстве</button>
+    </div>
+    <div class="hint" id="mpushMsg"></div>
   </div>
 
   <div class="card" id="syncPanel2">
@@ -187,6 +204,8 @@
 <script>
 const LSM = 'alexey_money_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
+const PUSH_API = 'https://alextask-push.12dogswog76.workers.dev';
+const VAPID_PUB = 'BNrmwMyHC1OFDhFuQZtwHAzbjdeqCzgs4kyy-gGRGpgHPTAMjvPRyGRyKgiryVJAykh2q10MwHMzSadX-2Rx150';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = n => Math.round(n).toLocaleString('ru-RU');
 const $ = id => document.getElementById(id);
@@ -222,6 +241,7 @@ function save() {
   data.mod = Date.now();
   localStorage.setItem(LSM, JSON.stringify(data));
   if (sync) { clearTimeout(pushT); pushT = setTimeout(cloudPush, 1000); }
+  scheduleRem();
 }
 async function cloudPush() {
   if (!sync) return;
@@ -250,7 +270,7 @@ async function cloudPull() {
 function planSum(p) { return p.items.reduce((s, i) => s + (i.amount || 0), 0); }
 function paidSum(p) { return p.items.reduce((s, i) => s + (i.paid ? (i.amount || 0) : 0), 0); }
 function unpaidSum(p) { return planSum(p) - paidSum(p); }
-function curPeriod() { return data.periods.length ? data.periods[data.periods.length - 1] : null; }
+function curPeriod() { const arr = data.periods.filter(p => !p.plan); return arr.length ? arr[arr.length - 1] : null; }
 function uid(pre) { return pre + Date.now() + Math.floor(Math.random() * 999); }
 
 /* авто-название нового периода: 1–15 или 15–30 текущего месяца */
@@ -260,7 +280,15 @@ function autoPeriodTitle() {
   const m = MONTHS[d.getMonth()];
   return d.getDate() < 15 ? ('1–15 ' + m) : ('15–30 ' + m);
 }
-function updateNewBtn() { $('newPeriod').textContent = '➕ Новый период «' + autoPeriodTitle() + '» (заполнится постоянными)'; }
+function nextPeriodTitle() {
+  const d = new Date();
+  if (d.getDate() < 15) return '15–30 ' + MONTHS[d.getMonth()];
+  return '1–15 ' + MONTHS[(d.getMonth() + 1) % 12];
+}
+function updateNewBtn() {
+  $('newPeriod').textContent = '➕ Новый период «' + autoPeriodTitle() + '» (заполнится постоянными)';
+  $('planBtn').textContent = '📝 Запланировать будущий «' + nextPeriodTitle() + '» — прикинуть траты заранее';
+}
 
 /* выбор группы: select со всеми группами + «➕ новая…» */
 function makeGroupSel(value, onChange) {
@@ -396,13 +424,15 @@ function renderPeriods() {
   const box = $('plist'); box.innerHTML = '';
   const arr = data.periods.slice().reverse();
   arr.forEach(p => {
-    const card = document.createElement('div'); card.className = 'card period' + (openId === p.id ? ' open' : '');
+    const card = document.createElement('div'); card.className = 'card period' + (openId === p.id ? ' open' : '') + (p.plan ? ' plan' : '');
     const paid = paidSum(p), plan = planSum(p);
     const head = document.createElement('div'); head.className = 'phead';
     head.innerHTML = '<b>' + esc(p.title) + '</b>' +
-      '<span class="inc">+' + fmt(p.income || 0) + '</span><span class="spent">✓ ' + fmt(paid) + '</span>' +
-      (plan - paid > 0.5 ? '<span class="rest">ждёт ' + fmt(plan - paid) + '</span>' : '') +
-      '<span class="rest">= ' + fmt((p.income || 0) - paid) + ' ₽</span>' +
+      (p.plan
+        ? '<span class="planbadge">📝 план</span><span class="rest">трат на ' + fmt(plan) + ' ₽</span>'
+        : '<span class="inc">+' + fmt(p.income || 0) + '</span><span class="spent">✓ ' + fmt(paid) + '</span>' +
+          (plan - paid > 0.5 ? '<span class="rest">ждёт ' + fmt(plan - paid) + '</span>' : '') +
+          '<span class="rest">= ' + fmt((p.income || 0) - paid) + ' ₽</span>') +
       '<span class="sp"></span><span class="parrow">' + (openId === p.id ? '▲' : '▼') + '</span>';
     head.onclick = () => { openId = (openId === p.id ? null : p.id); renderPeriods(); };
     card.appendChild(head);
@@ -418,6 +448,13 @@ function renderPeriods() {
     const incLbl = document.createElement('span'); incLbl.className = 'hint'; incLbl.style.margin = '0'; incLbl.textContent = 'поступило:';
     top.append(tIn, incLbl, iIn, delBtn);
     bd.appendChild(top);
+    if (p.plan) {
+      const start = document.createElement('button'); start.className = 'act'; start.style.marginTop = '8px';
+      start.textContent = '▶ Начать период (деньги пришли)';
+      start.title = 'Период станет текущим: впиши поступившую сумму и отмечай оплаты галочками';
+      start.onclick = () => { delete p.plan; data.periods = data.periods.filter(x => x.id !== p.id).concat([p]); save(); renderAll(); };
+      bd.appendChild(start);
+    }
 
     // строки: сначала неоплаченные, оплаченные — внизу (зачёркнутые)
     const sorted = p.items.slice().sort((a, b) => (a.paid ? 1 : 0) - (b.paid ? 1 : 0));
@@ -555,6 +592,14 @@ $('newPeriod').onclick = () => {
   save(); renderAll();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
+$('planBtn').onclick = () => {
+  const p = { id: uid('p'), title: nextPeriodTitle(), income: 0, items: [], plan: true };
+  data.templates.forEach(t => p.items.push({ id: uid('i'), name: t.name, amount: t.amount || 0, group: t.group || 'Прочее', day: t.day || undefined }));
+  data.periods.push(p);
+  openId = p.id;
+  save(); renderAll();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 document.querySelectorAll('.tabs button').forEach(b => {
   b.onclick = () => {
@@ -639,6 +684,91 @@ $('impFile').onchange = e => {
   rd.readAsText(f);
   e.target.value = '';
 };
+
+/* --- Напоминания о выплатах (push через Cloudflare, даже при закрытом сайте) --- */
+let mpushOn = localStorage.getItem(LSM + '_mpush') === '1';
+let lastRemM = {}; try { lastRemM = JSON.parse(localStorage.getItem(LSM + '_rem')) || {}; } catch (e) {}
+function urlB64ToU8(b64) { const pad = '='.repeat((4 - b64.length % 4) % 4); const b = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/'); const raw = atob(b); const u = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u[i] = raw.charCodeAt(i); return u; }
+function ensureNKey() {
+  if (!data.nKey) { data.nKey = 'mk' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8); save(); }
+  return data.nKey;
+}
+function payDate(day) {
+  day = parseInt(day, 10); if (!day || day < 1) return null;
+  const now = new Date();
+  const mk = (y, m) => { const last = new Date(y, m + 1, 0).getDate(); return new Date(y, m, Math.min(day, last), 10, 0, 0); };
+  let d = mk(now.getFullYear(), now.getMonth());
+  if (d.getTime() < now.getTime() - 2 * 3600000) d = mk(now.getFullYear(), now.getMonth() + 1);
+  return d;
+}
+function remindItems() {
+  const p = curPeriod(); if (!p || !data.nKey) return [];
+  const out = [];
+  p.items.forEach(it => {
+    if (it.paid) return;
+    const pd = payDate(it.day); if (!pd) return;
+    let at = pd.getTime() - 86400000; // за день, в 10:00
+    if (at < Date.now()) {
+      if (pd.getTime() > Date.now()) at = Date.now() + 90000; // выплата скоро — напомним через полторы минуты
+      else return;
+    }
+    out.push({ id: 'm_' + it.id, at, title: '💰 Завтра выплата: ' + it.name, body: (it.amount ? fmt(it.amount) + ' ₽' : '') + (it.day ? ' · ' + it.day + '-го' : '') });
+  });
+  return out;
+}
+function syncRem() {
+  if (!data.nKey) return;
+  const want = {}; remindItems().forEach(r => { want[r.id] = r; });
+  Object.keys(lastRemM).forEach(id => {
+    if (!want[id]) {
+      fetch(PUSH_API + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pushKey: data.nKey, taskId: id }) }).catch(() => {});
+      delete lastRemM[id];
+    }
+  });
+  Object.keys(want).forEach(id => {
+    const r = want[id]; const sig = r.at + '|' + r.title + '|' + r.body;
+    if (lastRemM[id] !== sig) {
+      fetch(PUSH_API + '/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pushKey: data.nKey, taskId: id, at: r.at, title: r.title, body: r.body, url: 'https://alextask.ru/money.html' }) }).catch(() => {});
+      lastRemM[id] = sig;
+    }
+  });
+  try { localStorage.setItem(LSM + '_rem', JSON.stringify(lastRemM)); } catch (e) {}
+}
+let remT = null;
+function scheduleRem() { if (!data.nKey) return; clearTimeout(remT); remT = setTimeout(syncRem, 1500); }
+function mpushUI() {
+  $('mpushOn').style.display = mpushOn ? 'none' : '';
+  $('mpushOff').style.display = mpushOn ? '' : 'none';
+}
+$('notifBtn').onclick = () => { $('syncPanel2').classList.remove('open'); $('ioPanel2').classList.remove('open'); $('notifPanel').classList.toggle('open'); mpushUI(); };
+$('mpushOn').onclick = async () => {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { $('mpushMsg').textContent = 'Этот браузер не поддерживает push.'; return; }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { $('mpushMsg').textContent = 'Нет разрешения на уведомления.'; return; }
+    await navigator.serviceWorker.register('sw.js');
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToU8(VAPID_PUB) });
+    ensureNKey();
+    const r = await fetch(PUSH_API + '/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), pushKey: data.nKey }) });
+    if (!r.ok) { $('mpushMsg').textContent = 'Ошибка воркера: ' + r.status; return; }
+    mpushOn = true; localStorage.setItem(LSM + '_mpush', '1');
+    lastRemM = {}; syncRem();
+    mpushUI(); $('mpushMsg').textContent = 'Включено ✓ За день до каждой выплаты придёт push на это устройство.';
+  } catch (e) { $('mpushMsg').textContent = 'Не удалось: ' + (e.message || e); }
+};
+$('mpushOff').onclick = async () => {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub && data.nKey) await fetch(PUSH_API + '/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint, pushKey: data.nKey }) }).catch(() => {});
+  } catch (e) {}
+  mpushOn = false; localStorage.setItem(LSM + '_mpush', '');
+  mpushUI(); $('mpushMsg').textContent = 'Выключено на этом устройстве.';
+};
+mpushUI();
+if (data.nKey) setTimeout(syncRem, 3000);
 
 renderAll(); syncUI();
 if (sync) cloudPull();
