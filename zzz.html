@@ -1470,8 +1470,10 @@ function coreBonusOf(id, p) {
   return CORE_KNOWN[id] || {};
 }
 
-const CB_ROWS = [['atk','Базовая атака'],['ap','Знание аномалии'],['am','Контроль аномалии'],
-                 ['cr','Шанс крита, %'],['cd','Крит. урон, %'],['im','Импульс']];
+const CB_ROWS = [['atk','Базовая атака'],['hp','Базовое HP'],['def','Базовая защита'],
+                 ['ap','Знание аномалии'],['am','Контроль аномалии'],['im','Импульс'],
+                 ['cr','Шанс крита, %'],['cd','Крит. урон, %'],
+                 ['penp','Проц. пробивания, %'],['er','Восст. энергии']];
 function cbSum(p) {
   const c = coreBonusOf(curId, p);
   const t = CB_ROWS.filter(r => +c[r[0]]).map(r => r[1].split(',')[0] + ' +' + c[r[0]]);
@@ -1844,18 +1846,20 @@ function calcTotals(a, p, discs) {
   const pc = k => (d[k] || 0) / 10000;      // проценты хранятся ×10000
   const flat = k => d[k] || 0;
   const atkBase = b.atk + w.atk + (+cb.atk || 0);
+  const hpBase  = b.hp + (+cb.hp || 0);
+  const defBase = b.def + (+cb.def || 0);
   return {
-    hp:  Math.round(b.hp  * (1 + pc('hpp'))  + flat('hp')),
+    hp:  Math.round(hpBase * (1 + pc('hpp')) + flat('hp')),
     atk: Math.round(atkBase * (1 + pc('atkp')) + flat('atk')),
-    def: Math.round(b.def * (1 + pc('defp')) + flat('def')),
+    def: Math.round(defBase * (1 + pc('defp')) + flat('def')),
     cr:  (b.cr / 100) + (flat('cr') / 100) + (+cb.cr || 0),
     cd:  (b.cd / 100) + (flat('cd') / 100) + (+cb.cd || 0),
     ap:  Math.round(b.ap + flat('ap') + (+cb.ap || 0)),
     am:  Math.round(b.am * (1 + pc('amp')) + (+cb.am || 0)),
     im:  Math.round(b.im * (1 + pc('imp')) + flat('im') + (+cb.im || 0)),
     pen: Math.round(flat('pen')),
-    penp: flat('penp') / 100,
-    er:  Math.round((b.er + flat('er')) / 100 * 100) / 100,
+    penp: flat('penp') / 100 + (+cb.penp || 0),
+    er:  Math.round(((b.er + flat('er')) / 100 + (+cb.er || 0)) * 100) / 100,
     dmg: flat('dmg') / 100,
     _weaponAtk: Math.round(w.atk),
     _baseAtk: Math.round(b.atk)
