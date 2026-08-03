@@ -705,7 +705,7 @@ function blank() {
     have: false, lvl: 0, core: 0, mind: 0,
     sk: { 0: 1, 1: 1, 2: 1, 3: 1, 5: 1 },
     w: { id: 0, lvl: 0, br: 0, phase: 1 },
-    promo: 0, plan: { w: null, discs: [] }, manual: {},
+    promo: 0, plan: { w: null, discs: [] }, manual: {}, core2: {},
     discs: [], disc: {}, cur: {}, goal: {}, note: '', mod: Date.now()
   };
 }
@@ -717,6 +717,7 @@ function P(id) {
   if (p.w.br == null) p.w.br = p.w.lvl >= 60 ? 5 : Math.max(0, Math.floor((p.w.lvl || 0) / 10) - 1);
   if (!p.plan) p.plan = { w: null, discs: [] };
   if (!p.manual) p.manual = {};
+  if (!p.core2) p.core2 = {};
   if (!Array.isArray(p.plan.discs)) p.plan.discs = [];
   if (p.promo == null) p.promo = p.lvl ? Math.max(0, Math.ceil(p.lvl / 10) - 1) : 0;
   if (!p.cur) p.cur = {};
@@ -1055,7 +1056,7 @@ function renderSummary() {
 }
 
 // ─────────────── карточка агента ───────────────
-let curId = null, curTab = 'now', editing = null, ed = null, info = null;
+let curId = null, curTab = 'now', editing = null, ed = null, info = null, cbOpen = false;
 
 // какие основные характеристики бывают в каждом слоте (значение — база при Ур.0)
 const MAIN_OPTS = {
@@ -1179,7 +1180,7 @@ function planProg(p) {
                                      br: q.br != null ? q.br : 5, phase: q.phase || 1 } });
 }
 
-function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; renderSheet(); }
+function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; cbOpen = false; renderSheet(); }
 
 function renderSheet() {
   const a = DB.byId[curId], p = P(curId);
@@ -1203,6 +1204,7 @@ function renderSheet() {
          'прокачка, диски, оружие и характеристики.</div>' +
          '<button class="htab on" id="haveTog" style="padding:9px 18px">＋ Есть у меня</button>';
   } else {
+    const showCB = !!cbOpen;
     const nowT  = calcTotals(a, p, p.discs);
     const planT = calcTotals(a, planProg(p), planDiscs(p));
     const T = curTab === 'plan' ? planT : nowT;
@@ -1311,7 +1313,9 @@ function renderSheet() {
       ['A','B','C','D','E','F'].map((t, idx) =>
         '<span class="cc' + ((p.core || 0) > idx ? ' on' : '') + '">' + t + '</span>').join('') +
       '<span style="font-size:11px;color:var(--tx3);margin-left:6px">ядро ' + (p.core || 0) + '/6</span>' +
-      '</div><div class="skl">';
+      '<button class="htab" id="coreBonusBtn" style="margin-left:auto;padding:4px 10px;font-size:11px">' +
+        (cbSum(p) ? '⚙ прибавки ядра: ' + cbSum(p) : '⚙ задать прибавки ядра') + '</button>' +
+      '</div>' + (showCB ? coreBonusHTML(p) : '') + '<div class="skl">';
     SKILL_IDX.forEach(o => {
       h += '<div class="skb"><div class="skv">' + skillIcon(o.i, 22) +
            '<input type="number" class="sk" data-i="' + o.i + '" min="1" max="' +
@@ -1334,10 +1338,9 @@ function renderSheet() {
     if (oldDiscs) h += '<div class="warn" style="margin:10px 0;padding:10px;font-size:12px">' +
       '<b>Диски записаны в старом виде</b> — их характеристики не учитываются. ' +
       'Нажми «⟳ Импорт из игры» ещё раз.</div>';
-    h += '<div class="hint">Считается из уровня, прорыва, оружия и дисков — сходится с игрой. ' +
-         '<b>Знание и контроль аномалии</b> будут ниже: их поднимает прокачанное ядро, а Enka отдаёт ' +
-         'только названия умений, без цифр — взять эту прибавку неоткуда. ' +
-         'Впиши значение из игры руками, оно станет голубым и запомнится.</div>';
+    h += '<div class="hint">Считается из уровня, прорыва, оружия и дисков. Прибавки от ядра ' +
+         'у каждого агента свои — задай их кнопкой «прибавки ядра» рядом с кружками A–F, ' +
+         'и расчёт сойдётся с игрой. Любое число можно и просто переписать руками.</div>';
     h += '<div id="editZone"></div>';
   }
 
@@ -1385,6 +1388,9 @@ function bindSheet() {
   };
   document.querySelectorAll('.goalin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
   document.querySelectorAll('.curin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
+  const cbb = $('coreBonusBtn');
+  if (cbb) cbb.onclick = () => { applySheet(); cbOpen = !cbOpen; renderSheet(); };
+  document.querySelectorAll('.cbin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
 }
 
 // сохраняем то, что введено в полях, не закрывая карточку
@@ -1411,9 +1417,36 @@ function applySheet() {
     const c = calc[k] || 0;
     if (Math.abs(c - v) < 0.05) delete p.manual[k]; else p.manual[k] = v;
   });
+  if (!p.core2) p.core2 = {};
+  document.querySelectorAll('.cbin').forEach(i => {
+    const v = (i.value || '').trim();
+    if (v === '') delete p.core2[i.dataset.k]; else p.core2[i.dataset.k] = +v;
+  });
   const nt = $('fNote'); if (nt) p.note = nt.value.trim();
   refreshCur(p);
   save(curId);
+}
+
+const CB_ROWS = [['atk','Базовая атака'],['ap','Знание аномалии'],['am','Контроль аномалии'],
+                 ['cr','Шанс крита, %'],['cd','Крит. урон, %'],['im','Импульс']];
+function cbSum(p) {
+  const c = p.core2 || {};
+  const t = CB_ROWS.filter(r => +c[r[0]]).map(r => r[1].split(',')[0] + ' +' + c[r[0]]);
+  return t.length ? t.join(', ') : '';
+}
+function coreBonusHTML(p) {
+  const c = p.core2 || {};
+  return '<div class="editbox" style="margin:8px 0">' +
+    '<div class="cap2">ЧТО ДОБАВЛЯЕТ ПРОКАЧАННОЕ ЯДРО</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px">' +
+    CB_ROWS.map(r => '<div class="frow" style="gap:6px">' +
+      '<span style="flex:1;font-size:11.5px">' + esc(r[1]) + '</span>' +
+      '<input type="number" step="any" class="cbin" data-k="' + r[0] + '" value="' +
+        (c[r[0]] == null ? '' : esc(c[r[0]])) + '" style="width:66px;text-align:right">' +
+      '</div>').join('') + '</div>' +
+    '<div class="hint">Возьми из таблицы «Улучшение ядра» на вики — там для каждой ступени ' +
+    'написано, что растёт. Вписывай итог за все открытые ступени: например у Ремиэллы на F ' +
+    'это знание аномалии +54 и базовая атака +75. Учтётся в расчёте и уедет в облако.</div></div>';
 }
 
 // ── описание диска или оружия (раскрывается по клику) ──
@@ -1752,22 +1785,23 @@ function discSum(discs) {
 // итоговые характеристики агента: сборка = набор дисков (текущий или плановый)
 function calcTotals(a, p, discs) {
   const b = baseAt(a, p), w = weaponBonus(p), d = discSum(discs);
+  const cb = (p && p.core2) || {};      // прибавки от прокачанного ядра
   if (w.sec) {                       // доп. стат оружия кладём в общую кучу
     const k = PROP2STAT[w.sec.p];
     if (k) d[k] = (d[k] || 0) + w.sec.v;
   }
   const pc = k => (d[k] || 0) / 10000;      // проценты хранятся ×10000
   const flat = k => d[k] || 0;
-  const atkBase = b.atk + w.atk;
+  const atkBase = b.atk + w.atk + (+cb.atk || 0);
   return {
     hp:  Math.round(b.hp  * (1 + pc('hpp'))  + flat('hp')),
     atk: Math.round(atkBase * (1 + pc('atkp')) + flat('atk')),
     def: Math.round(b.def * (1 + pc('defp')) + flat('def')),
-    cr:  (b.cr / 100) + (flat('cr') / 100),
-    cd:  (b.cd / 100) + (flat('cd') / 100),
-    ap:  Math.round(b.ap + flat('ap')),
-    am:  Math.round(b.am * (1 + pc('amp'))),
-    im:  Math.round(b.im * (1 + pc('imp')) + flat('im')),
+    cr:  (b.cr / 100) + (flat('cr') / 100) + (+cb.cr || 0),
+    cd:  (b.cd / 100) + (flat('cd') / 100) + (+cb.cd || 0),
+    ap:  Math.round(b.ap + flat('ap') + (+cb.ap || 0)),
+    am:  Math.round(b.am * (1 + pc('amp')) + (+cb.am || 0)),
+    im:  Math.round(b.im * (1 + pc('imp')) + flat('im') + (+cb.im || 0)),
     pen: Math.round(flat('pen')),
     penp: flat('penp') / 100,
     er:  Math.round((b.er + flat('er')) / 100 * 100) / 100,
