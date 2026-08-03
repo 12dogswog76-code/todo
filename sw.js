@@ -1,6 +1,6 @@
 // service worker «Мои дела»: уведомления + офлайн-режим (PWA) + Web Push
-const CACHE = 'moi-dela-v6';
-const ASSETS = ['./', './index.html', './money.html', './manifest.json', './icon.svg'];
+const CACHE = 'moi-dela-v7';
+const ASSETS = ['./', './index.html', './money.html', './zzz.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));
@@ -17,6 +17,15 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  // картинки ZZZ с enka.network — кладём в кэш, чтобы трекер работал и без сети
+  if (url.hostname === 'enka.network' && url.pathname.indexOf('/ui/zzz/') === 0) {
+    e.respondWith(
+      caches.open(CACHE).then(c => c.match(e.request).then(hit =>
+        hit || fetch(e.request).then(r => { c.put(e.request, r.clone()); return r; }).catch(() => hit)
+      ))
+    );
+    return;
+  }
   if (url.origin !== location.origin || e.request.method !== 'GET') return;
   if (e.request.mode === 'navigate') {
     e.respondWith(

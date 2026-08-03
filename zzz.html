@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0b0d">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%2315171c'/%3E%3Cpath d='M256 96l40 108 116 8-90 74 28 112-94-62-94 62 28-112-90-74 116-8z' fill='%23e53e3e'/%3E%3C/svg%3E">
+<title>ZZZ Трекер</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(180deg, #0b0b0d 0%, #2e3138 70%, #41454e 100%);
+    background-attachment: fixed;
+    color: #e8eaf0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  @media (min-width: 1280px) { .wrap { max-width: 1180px; } }
+  @media (min-width: 1800px) { .wrap { max-width: 1400px; } }
+
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+  h1 a { font-size: 13px; font-weight: 400; color: #8a90a0; text-decoration: none; margin-left: 8px; }
+  h1 a:hover { color: #e53e3e; }
+  .stats { color: #9aa0ae; font-size: 13px; margin-bottom: 14px; }
+
+  #cloudDot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: #5a6070; margin-left: 6px; vertical-align: middle;
+  }
+  #cloudDot.cloud-ok { background: #4caf7d; }
+  #cloudDot.cloud-err { background: #e53e3e; }
+  #cloudDot.cloud-sync { background: #f0b052; }
+
+  .topbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .topbar button {
+    background: transparent; border: 1px solid #424650; border-radius: 999px;
+    color: #aab0c0; cursor: pointer; font-size: 12.5px; padding: 6px 13px; transition: all .12s;
+  }
+  .topbar button:hover { border-color: #e53e3e; color: #e8eaf0; }
+  .topbar button.on { border-color: #e53e3e; color: #fff; background: #e53e3e22; }
+
+  /* ── сводка ── */
+  .summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px; margin-bottom: 14px;
+  }
+  .sumcard {
+    background: #1c1e24cc; border: 1px solid #33363e; border-radius: 12px;
+    padding: 11px 13px;
+  }
+  .sumval { font-size: 21px; font-weight: 700; color: #e8eaf0; line-height: 1.15; }
+  .sumval.acc { color: #e53e3e; }
+  .sumval.ok { color: #4caf7d; }
+  .sumlab { font-size: 11px; color: #8a90a0; margin-top: 3px; }
+
+  /* ── поиск и фильтры ── */
+  #searchInput {
+    width: 100%; background: #121317; border: 1px solid #33363e; border-radius: 10px;
+    color: #e8eaf0; font-size: 15px; padding: 11px 14px; outline: none; margin-bottom: 10px;
+  }
+  #searchInput:focus { border-color: #e53e3e; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; align-items: center; }
+  .chip {
+    background: transparent; border: 1px solid #424650; border-radius: 999px;
+    color: #aab0c0; cursor: pointer; font-size: 12.5px; padding: 5px 12px;
+    transition: all .12s; user-select: none; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .chip:hover { border-color: #e53e3e; }
+  .chip.on { background: #e53e3e22; border-color: #e53e3e; color: #ff9d9d; }
+  .chip img { width: 15px; height: 15px; object-fit: contain; }
+  .fsep { width: 1px; height: 18px; background: #33363e; margin: 0 3px; }
+  .fttl { font-size: 11px; color: #6b7280; margin-right: 2px; }
+
+  /* ── сетка агентов ── */
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+    gap: 11px;
+  }
+  .card {
+    background: #1c1e24cc; border: 1px solid #33363e; border-radius: 14px;
+    overflow: hidden; cursor: pointer; transition: border-color .12s, transform .12s;
+    position: relative;
+  }
+  .card:hover { border-color: #e53e3e; transform: translateY(-2px); }
+  .card.have { border-color: #3d4450; }
+  .card.nothave { opacity: .5; }
+  .card.nothave:hover { opacity: .85; }
+
+  .cardimg {
+    position: relative; width: 100%; aspect-ratio: 1/1;
+    background: #15171c; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .cardimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cardimg .ph { color: #4a4f5a; font-size: 30px; }
+
+  .rarity {
+    position: absolute; top: 6px; left: 6px; font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 5px; background: #0b0b0dcc;
+  }
+  .rarity.S { color: #ffcf5c; }
+  .rarity.A { color: #d08bff; }
+
+  .badges { position: absolute; top: 6px; right: 6px; display: flex; flex-direction: column; gap: 3px; }
+  .badges img { width: 19px; height: 19px; background: #0b0b0dcc; border-radius: 5px; padding: 2px; }
+
+  .pct {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, transparent, #0b0b0de6);
+    padding: 14px 8px 5px; font-size: 12px; font-weight: 700; text-align: right;
+  }
+  .cardbody { padding: 8px 10px 10px; }
+  .cname { font-size: 13.5px; font-weight: 600; line-height: 1.2; }
+  .cname .en { display: block; font-size: 10.5px; color: #6b7280; font-weight: 400; margin-top: 1px; }
+
+  .bars { margin-top: 7px; display: flex; flex-direction: column; gap: 4px; }
+  .bar { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #7a8090; }
+  .bar b { width: 14px; flex: none; font-weight: 400; }
+  .track { flex: 1; height: 4px; background: #ffffff10; border-radius: 2px; overflow: hidden; }
+  .fill { height: 100%; background: #e53e3e; border-radius: 2px; transition: width .2s; }
+  .fill.full { background: #4caf7d; }
+  .bar span { width: 30px; text-align: right; flex: none; }
+
+  /* ── модалка ── */
+  .modal {
+    display: none; position: fixed; inset: 0; background: #000000b3; z-index: 100;
+    align-items: flex-start; justify-content: center; padding: 24px 12px; overflow-y: auto;
+  }
+  .modal.open { display: flex; }
+  .sheet {
+    background: #15171c; border: 1px solid #33363e; border-radius: 16px;
+    width: 100%; max-width: 620px; padding: 18px;
+  }
+  .shead { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+  .shead .pic { width: 62px; height: 62px; border-radius: 12px; object-fit: cover; background: #0b0b0d; flex: none; }
+  .shead h2 { font-size: 17px; font-weight: 700; }
+  .shead .sub { font-size: 12px; color: #8a90a0; margin-top: 3px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .shead .sub img { width: 15px; height: 15px; }
+  .xbtn {
+    margin-left: auto; background: none; border: none; color: #8a90a0;
+    font-size: 21px; cursor: pointer; line-height: 1; padding: 0 4px; flex: none;
+  }
+  .xbtn:hover { color: #e8eaf0; }
+
+  .sect { margin-bottom: 15px; }
+  .sect > h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+    color: #6b7280; margin-bottom: 7px; font-weight: 600;
+  }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
+  .row label { font-size: 12.5px; color: #aab0c0; min-width: 96px; }
+
+  .num, select.num {
+    background: #0b0b0d; border: 1px solid #33363e; border-radius: 8px;
+    color: #e8eaf0; padding: 6px 9px; font-size: 13px; width: 74px; outline: none;
+    font-family: inherit; color-scheme: dark;
+  }
+  .num:focus { border-color: #e53e3e; }
+  select.num { width: auto; min-width: 84px; cursor: pointer; }
+
+  .steps { display: flex; gap: 4px; flex-wrap: wrap; }
+  .step {
+    width: 27px; height: 27px; border-radius: 7px; border: 1px solid #424650;
+    background: transparent; color: #7a8090; font-size: 11.5px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .1s;
+  }
+  .step:hover { border-color: #e53e3e; }
+  .step.on { background: #e53e3e22; border-color: #e53e3e; color: #ff9d9d; font-weight: 600; }
+
+  table.stats2 { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.stats2 th {
+    font-size: 10.5px; color: #6b7280; font-weight: 500; text-align: right;
+    padding: 0 0 5px; text-transform: uppercase; letter-spacing: .4px;
+  }
+  table.stats2 th:first-child { text-align: left; }
+  table.stats2 td { padding: 2px 0; }
+  table.stats2 td:first-child { color: #aab0c0; }
+  table.stats2 td.n { text-align: right; padding-left: 6px; }
+  table.stats2 input {
+    background: #0b0b0d; border: 1px solid #33363e; border-radius: 7px;
+    color: #e8eaf0; padding: 4px 7px; font-size: 12.5px; width: 78px; outline: none;
+    text-align: right; font-family: inherit;
+  }
+  table.stats2 input:focus { border-color: #e53e3e; }
+  table.stats2 input.goal { border-color: #33363e; color: #9aa0ae; }
+  td.diff { font-size: 11px; text-align: right; width: 54px; padding-left: 6px; }
+  td.diff.ok { color: #4caf7d; }
+  td.diff.no { color: #e07070; }
+
+  .discgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; }
+  .disc {
+    background: #0b0b0d; border: 1px solid #33363e; border-radius: 9px; padding: 6px;
+    font-size: 10.5px; color: #8a90a0; text-align: center;
+  }
+  .disc img { width: 26px; height: 26px; object-fit: contain; margin-bottom: 2px; }
+  .disc .sl { color: #5a6070; font-size: 9.5px; }
+  .disc .nm { color: #c8ccd6; font-size: 10px; line-height: 1.25; margin-top: 1px; }
+  .disc .ms { color: #e53e3e; font-size: 10px; margin-top: 2px; }
+  .disc.empty { opacity: .4; }
+
+  .modal .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 13px; border-top: 1px solid #2a2d35; }
+  .modal .btns button, .panel button {
+    background: transparent; border: 1px solid #424650; border-radius: 9px;
+    color: #aab0c0; cursor: pointer; font-size: 13px; padding: 8px 15px; transition: all .12s;
+  }
+  .modal .btns button:hover, .panel button:hover { border-color: #e53e3e; color: #e8eaf0; }
+  .modal .btns button.pri { background: #e53e3e; border-color: #e53e3e; color: #fff; }
+  .modal .btns button.pri:hover { background: #ff5252; }
+
+  /* ── панели снизу ── */
+  .panel {
+    background: #1c1e24cc; border: 1px solid #33363e; border-radius: 14px;
+    padding: 14px; margin-top: 12px; display: none;
+  }
+  .panel.open { display: block; }
+  .panel input[type=text] {
+    width: 100%; background: #121317; border: 1px solid #33363e; border-radius: 9px;
+    color: #e8eaf0; padding: 9px 12px; font-size: 13.5px; outline: none; margin-bottom: 8px;
+  }
+  .panel input[type=text]:focus { border-color: #e53e3e; }
+  .hint { color: #8a90a0; font-size: 12px; line-height: 1.5; margin-top: 8px; }
+  .hint b { color: #c8ccd6; }
+  .hint ol { margin: 6px 0 0 18px; }
+  .hint li { margin-bottom: 4px; }
+  .prow { display: flex; gap: 7px; flex-wrap: wrap; }
+
+  .warn {
+    background: #e53e3e18; border: 1px solid #e53e3e55; border-radius: 12px;
+    padding: 14px; margin-bottom: 14px; font-size: 13px; line-height: 1.55; color: #ffc9c9;
+  }
+  .warn b { color: #fff; }
+  .warn code {
+    background: #0b0b0d; padding: 2px 7px; border-radius: 5px;
+    font-family: Consolas, monospace; font-size: 12.5px; color: #ffd0d0;
+  }
+  .empty { text-align: center; color: #6b7280; padding: 36px 12px; font-size: 13.5px; }
+
+  .foot { margin-top: 26px; text-align: center; color: #5a6070; font-size: 12px; }
+  .foot a { color: #7a8090; text-decoration: none; }
+  .foot a:hover { color: #e53e3e; }
+
+  /* ── светлая тема ── */
+  body.light { background: linear-gradient(180deg, #f7f8fa 0%, #e9ebef 100%); color: #1c1e24; }
+  body.light .sumcard, body.light .card, body.light .panel { background: #fff; border-color: #d4d7de; }
+  body.light .sumval { color: #1c1e24; }
+  body.light .sheet { background: #fff; border-color: #d4d7de; }
+  body.light #searchInput, body.light .num, body.light select.num,
+  body.light table.stats2 input, body.light .panel input[type=text] { background: #f2f3f6; border-color: #d4d7de; color: #1c1e24; }
+  body.light .chip, body.light .topbar button { color: #5f6673; border-color: #c6cad3; }
+  body.light .chip.on, body.light .topbar button.on { color: #e53e3e; border-color: #e53e3e; }
+  body.light .cname .en, body.light .sumlab, body.light .hint, body.light .bar { color: #6b7280; }
+  body.light .cardimg { background: #eceef2; }
+  body.light .disc { background: #f2f3f6; border-color: #d4d7de; }
+  body.light .disc .nm { color: #1c1e24; }
+
+  @media (max-width: 560px) {
+    body { padding: 14px 10px 50px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .sheet { padding: 14px; }
+    .row label { min-width: 100%; }
+    .topbar button { padding: 7px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>⚔️ ZZZ Трекер <a href="./" title="Список дел">← к задачам</a><span id="cloudDot" title="облако не подключено"></span></h1>
+  <div class="stats" id="stats">загрузка…</div>
+
+  <div class="topbar">
+    <button id="enkaBtn">⟳ Импорт из игры</button>
+    <button id="cloudBtn">☁ Облако</button>
+    <button id="ioBtn">↕ Импорт / экспорт</button>
+    <button id="themeBtn">☀️ Светлая тема</button>
+    <button id="helpBtn">❔ Как пользоваться</button>
+  </div>
+
+  <div id="noDb" class="warn" style="display:none">
+    <b>Не получилось загрузить справочники ZZZ.</b><br>
+    Страница берёт список агентов, дисков и W-Engine с открытого репозитория Enka.Network —
+    похоже, до него сейчас нет доступа.<br>
+    Причина: <code id="noDbErr">—</code><br><br>
+    Проверь интернет и обнови страницу. Если не помогает — база соберётся при следующем открытии,
+    либо можно собрать её локально скриптом <code>build-zzz-db.ps1</code> (тогда всё будет работать офлайн).
+  </div>
+
+  <div id="main" style="display:none">
+    <div class="summary" id="summary"></div>
+    <input id="searchInput" type="text" placeholder="🔍 Поиск по имени (можно по-русски или по-английски)">
+    <div class="filters" id="filters"></div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="emptyMsg" style="display:none">Под эти фильтры никто не подходит</div>
+  </div>
+
+  <!-- ── панель: импорт из игры ── -->
+  <div class="panel" id="enkaPanel">
+    <div class="prow">
+      <input type="text" id="uidInput" placeholder="UID аккаунта, например 1502024259" style="flex:1;min-width:200px;margin-bottom:0">
+      <button id="enkaGo" class="pri">Загрузить</button>
+    </div>
+    <div class="hint" id="enkaMsg">
+      Данные берутся с <b>enka.network</b> — открытой витрины профиля. Подтянутся уровень, ядро,
+      уровни навыков, мандрагоры, W-Engine и все 6 дисков со статами.<br>
+      <b>Важно:</b> Enka отдаёт только тех агентов, кого ты поставил в <b>витрину профиля</b> в игре
+      (обычно до 6 штук). Хочешь загрузить других — поменяй витрину в игре, подожди пару минут и нажми «Загрузить» ещё раз.
+    </div>
+  </div>
+
+  <!-- ── панель: облако ── -->
+  <div class="panel" id="cloudPanel">
+    <div class="hint" id="cloudInfo" style="margin-top:0"></div>
+    <input type="text" id="cloudKey" placeholder="Master Key (первое устройство) или код подключения (остальные)">
+    <div class="prow">
+      <button id="cloudConnect">Подключить</button>
+      <button id="cloudCopy" style="display:none">Скопировать код подключения</button>
+      <button id="cloudNow" style="display:none">Синхронизировать сейчас</button>
+      <button id="cloudOff" style="display:none">Отключить</button>
+    </div>
+    <div class="hint" id="cloudMsg"></div>
+  </div>
+
+  <!-- ── панель: импорт/экспорт ── -->
+  <div class="panel" id="ioPanel">
+    <div class="prow">
+      <button id="expFile">⇪ Скачать данные (JSON)</button>
+      <button id="impFile">⇩ Загрузить из файла</button>
+      <button id="rebuildDb">⟳ Обновить список агентов</button>
+      <button id="wipe">Очистить прогресс</button>
+    </div>
+    <div class="hint">Файл содержит только твой прогресс — база агентов и картинки в него не входят.<br>
+      «Обновить список агентов» стоит нажать, когда в игре вышел новый патч и появились новые персонажи
+      (сам список обновляется раз в неделю).</div>
+  </div>
+
+  <!-- ── панель: гайд ── -->
+  <div class="panel" id="helpPanel">
+    <div class="hint" style="margin-top:0">
+      <b>Что это.</b> Трекер прокачки агентов Zenless Zone Zero. Данные хранятся в браузере,
+      между устройствами синхронизируются через облако — так же, как задачи и деньги.
+      <ol>
+        <li><b>Отметь, кто у тебя есть</b> — клик по карточке, галочка «Есть у меня». Не отмеченные показываются приглушённо.</li>
+        <li><b>Заполни прогресс</b> — уровень, ядро, навыки, W-Engine. Можно вручную, а можно кнопкой «⟳ Импорт из игры» по UID.</li>
+        <li><b>Задай цели</b> — в блоке характеристик правая колонка. Трекер посчитает, сколько не хватает.</li>
+        <li><b>Смотри, что качать</b> — фильтр «недокачанные» и процент готовности на карточке.</li>
+      </ol>
+      <b>Процент готовности</b> считается по четырём частям: уровень, ядро, навыки и W-Engine.
+      <br><br>
+      <b>Синхронизация.</b> На первом устройстве вставь Master Key с jsonbin.io, скопируй код подключения,
+      на остальных вставь только код. Хранилище отдельное от задач — они друг друга не затирают.
+    </div>
+  </div>
+
+  <div class="foot">
+    <a href="./">📋 задачи</a> · <a href="money.html">💰 деньги</a> · <a href="https://enka.network/zzz/" target="_blank" rel="noopener">enka.network</a>
+  </div>
+</div>
+
+<!-- ── модалка агента ── -->
+<div class="modal" id="modal">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<input type="file" id="fileInput" accept="application/json" style="display:none">
+
+<script>
+'use strict';
+const LS = 'alexey_zzz_v1';
+const JB = 'https://api.jsonbin.io/v3/b';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+  ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+// ─────────────── справочники отображения ───────────────
+const ELEM = {
+  physical: { ru: 'Физический', c: '#c9c19b' },
+  fire:     { ru: 'Огонь',      c: '#ff6b4a' },
+  ice:      { ru: 'Лёд',        c: '#66d9e8' },
+  electric: { ru: 'Электро',    c: '#7fb8ff' },
+  ether:    { ru: 'Эфир',       c: '#ff8fce' },
+  wind:     { ru: 'Ветер',      c: '#8fd6a8' },
+  lumiflux: { ru: 'Люмифлюкс',  c: '#ffd95e' },
+  auricink: { ru: 'Аурчернила', c: '#b197fc' }
+};
+const PROF = {
+  attack:  'Атака',   stun:    'Оглушение', anomaly: 'Аномалия',
+  support: 'Поддержка', defense: 'Защита',  rupture: 'Разрыв'
+};
+// характеристики, которые ведём вручную/целями
+const STATS = [
+  { k: 'hp',  n: 'HP',                 pct: false },
+  { k: 'atk', n: 'Сила атаки',         pct: false },
+  { k: 'def', n: 'Защита',             pct: false },
+  { k: 'cr',  n: 'Шанс крита',         pct: true  },
+  { k: 'cd',  n: 'Крит. урон',         pct: true  },
+  { k: 'ap',  n: 'Знание аномалии',    pct: false },
+  { k: 'am',  n: 'Контроль аномалии',  pct: false },
+  { k: 'im',  n: 'Импульс',            pct: false },
+  { k: 'pen', n: 'Пробивание',         pct: false },
+  { k: 'er',  n: 'Восст. энергии',     pct: false },
+  { k: 'dmg', n: 'Бонус стихии',       pct: true  }
+];
+// какие PropertyId из Enka в какой наш стат складываются
+const PROP2STAT = {
+  '11103': 'hp',  '11102': 'hpp',
+  '12103': 'atk', '12102': 'atkp',
+  '13103': 'def', '13102': 'defp',
+  '20103': 'cr',  '21103': 'cd',
+  '31203': 'ap',  '31403': 'am', '31402': 'amp',
+  '12203': 'im',  '12202': 'imp',
+  '23203': 'pen', '23103': 'penp',
+  '30503': 'er',
+  '31503': 'dmg', '31603': 'dmg', '31703': 'dmg',
+  '31803': 'dmg', '31903': 'dmg', '32303': 'dmg'
+};
+// индексы навыков в ответе Enka
+const SKILL_IDX = [
+  { i: 0, n: 'Обычная атака' },
+  { i: 1, n: 'Уклонение' },
+  { i: 2, n: 'Помощь' },
+  { i: 3, n: 'Особая атака' },
+  { i: 5, n: 'Цепная атака' }
+];
+const SKILL_MAX = 12, CORE_MAX = 6, LVL_MAX = 60, WENG_MAX = 60;
+
+// ─────────────── состояние ───────────────
+let DB = null;                      // база из zzz-db.json
+let prog = {};                      // прогресс: { [agentId]: {...} }
+let ui = { q: '', el: [], pr: [], have: false, todo: false, sort: 'pct' };
+let sync = null, pushTimer = null;
+let theme = localStorage.getItem(LS + '_theme') || 'dark';
+
+try { prog = JSON.parse(localStorage.getItem(LS)) || {}; } catch (e) { prog = {}; }
+try { Object.assign(ui, JSON.parse(localStorage.getItem(LS + '_ui')) || {}); } catch (e) {}
+try { sync = JSON.parse(localStorage.getItem(LS + '_sync')); } catch (e) {}
+
+if (theme === 'light') document.body.classList.add('light');
+
+function blank() {
+  return {
+    have: false, lvl: 0, core: 0, mind: 0,
+    sk: { 0: 1, 1: 1, 2: 1, 3: 1, 5: 1 },
+    w: { id: 0, lvl: 0, phase: 1 },
+    discs: [], disc: {}, cur: {}, goal: {}, note: '', mod: Date.now()
+  };
+}
+function P(id) {
+  if (!prog[id]) prog[id] = blank();
+  const p = prog[id];
+  if (!p.sk) p.sk = { 0:1, 1:1, 2:1, 3:1, 5:1 };
+  if (!p.w) p.w = { id: 0, lvl: 0, phase: 1 };
+  if (!p.cur) p.cur = {};
+  if (!p.goal) p.goal = {};
+  if (!Array.isArray(p.discs)) p.discs = [];
+  return p;
+}
+
+function save(touch) {
+  if (touch) P(touch).mod = Date.now();
+  localStorage.setItem(LS, JSON.stringify(prog));
+  localStorage.setItem(LS + '_ui', JSON.stringify(ui));
+  scheduleSync();
+}
+
+// ─────────────── загрузка базы ───────────────
+// База собирается прямо в браузере из открытых справочников Enka и кладётся в localStorage.
+// Локальный zzz-db.json (если собран скриптом build-zzz-db.ps1) имеет приоритет — с ним
+// картинки берутся с сайта и всё работает офлайн.
+const ENKA_RAW = 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/';
+const ENKA_CDN = 'https://enka.network';
+const DB_KEY = LS + '_db';
+const DB_TTL = 7 * 24 * 3600 * 1000;   // раз в неделю обновляем сама
+
+// Запасные имена — на случай, если в локализации Enka ключ имени не найдётся.
+// Ключ — нормализованное имя (в т.ч. внутреннее: у ZZZ оно часто отличается от игрового,
+// например Anbi → Anby, Nekomiya → Нэкомата). Значение: [русское, английское].
+const NAMES = {
+  ellen:['Эллен','Ellen'], ellenjoe:['Эллен','Ellen'],
+  miyabi:['Мияби','Miyabi'], remielle:['Ремиэлла','Remielle'], sigrid:['Сигрид','Sigrid'],
+  norma:['Норма','Norma'], pyrois:['Пироис','Pyrois'], velina:['Велина','Velina'],
+  billystarlight:['Звёздный Билли','Billy Starlight'], promeia:['Промея','Promeia'],
+  cissia:['Циссия','Cissia'], nangongyu:['Наньгун Юй','Nangong Yu'], aria:['Ария','Aria'],
+  sunna:['Санна','Sunna'], zhao:['Чжао','Zhao'], yeshunguang:['Е Шуньгуан','Ye Shunguang'],
+  banyue:['Баньюэ','Banyue'], dialyn:['Диалинь','Dialyn'], yidhari:['Йидхари','Yidhari'],
+  manato:['Манато','Manato'], lucia:['Люсия','Lucia'],
+  orphiemagus:['Орфея и Магус','Orphie & Magus'], orphie:['Орфея и Магус','Orphie & Magus'],
+  seed:['Сид','Seed'], alice:['Элис','Alice'], yuzuha:['Юдзуха','Yuzuha'],
+  jufufu:['Цзюй Фуфу','Ju Fufu'], panyinhu:['Пань Иньху','Pan Yinhu'],
+  yixuan:['Исюань','Yixuan'], hugo:['Хуго','Hugo'], vivian:['Вивиан','Vivian'],
+  anbysoldier0:['Солдат 0 Энби','Anby: Soldier 0'], soldier0anby:['Солдат 0 Энби','Anby: Soldier 0'],
+  pulchra:['Пульхра','Pulchra'], trigger:['Гашетка','Trigger'], evelyn:['Эвелин','Evelyn'],
+  astrayao:['Астра Яо','Astra Yao'], astra:['Астра Яо','Astra Yao'],
+  harumasa:['Харумаса','Harumasa'], lighter:['Лайтер','Lighter'], yanagi:['Янаги','Yanagi'],
+  burnice:['Бёрнис','Burnice'], caesar:['Цезарь','Caesar'],
+  janedoe:['Джейн','Jane Doe'], jane:['Джейн','Jane Doe'],
+  seth:['Сет','Seth'], qingyi:['Цинъи','Qingyi'], zhuyuan:['Чжу Юань','Zhu Yuan'],
+  piper:['Пайпер','Piper'], lucy:['Люси','Lucy'],
+  anby:['Энби','Anby'], anbi:['Энби','Anby'], anbydemara:['Энби','Anby'],
+  nicole:['Николь','Nicole'], nicoledemara:['Николь','Nicole'],
+  billy:['Билли','Billy'], billykid:['Билли','Billy'],
+  corin:['Корин','Corin'], corinwickes:['Корин','Corin'],
+  anton:['Антон','Anton'], antonivanov:['Антон','Anton'],
+  ben:['Бен','Ben'], benbigger:['Бен','Ben'],
+  soukaku:['Сокаку','Soukaku'],
+  nekomata:['Нэкомата','Nekomata'], nekomiya:['Нэкомата','Nekomata'], nekomiyamana:['Нэкомата','Nekomata'],
+  lycaon:['Ликаон','Lycaon'], vonlycaon:['Ликаон','Lycaon'],
+  koleda:['Коляда','Koleda'], koledabelobog:['Коляда','Koleda'],
+  soldier11:['Солдат 11','Soldier 11'],
+  grace:['Грейс','Grace'], gracehoward:['Грейс','Grace'],
+  rina:['Рина','Rina'], alexandrina:['Рина','Rina'], alexandrinasebastiane:['Рина','Rina']
+};
+const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const ELEM_MAP = { Physics:'physical', Fire:'fire', Ice:'ice', Elec:'electric',
+                   Ether:'ether', Wind:'wind', Lumiflux:'lumiflux', AuricInk:'auricink' };
+const PROF_MAP = { Attack:'attack', Stun:'stun', Anomaly:'anomaly',
+                   Support:'support', Defense:'defense', Defence:'defense', Rupture:'rupture' };
+
+function setLoad(msg) { $('stats').textContent = msg; }
+
+async function loadDb(force) {
+  // 1) свой собранный файл рядом со страницей
+  if (!force) {
+    try {
+      const r = await fetch('zzz-db.json', { cache: 'no-cache' });
+      if (r.ok) {
+        const db = await r.json();
+        db.local = true;
+        DB = db; boot(); return;
+      }
+    } catch (e) {}
+    // 2) кэш в браузере
+    try {
+      const c = JSON.parse(localStorage.getItem(DB_KEY));
+      if (c && c.agents && c.agents.length && (Date.now() - (c.ts || 0) < DB_TTL)) {
+        DB = c; boot();
+        return;
+      }
+    } catch (e) {}
+  }
+  // 3) собираем с Enka
+  try {
+    setLoad('качаю справочники ZZZ с enka.network…');
+    const get = f => fetch(ENKA_RAW + f).then(r => {
+      if (!r.ok) throw new Error(f + ': HTTP ' + r.status);
+      return r.json();
+    });
+    const [avatars, weapons, equip, props, locs] =
+      await Promise.all(['avatars.json','weapons.json','equipments.json','property.json','locs.json'].map(get));
+
+    setLoad('собираю базу…');
+    const ru = locs[DB_LANG] || locs.ru || locs.en || {};
+    const en = locs.en || {};
+    const pick = (dict, key, alt) => (key && dict[key]) ? String(dict[key]) : (alt || '');
+
+    const agents = Object.keys(avatars).map(id => {
+      const a = avatars[id], internal = String(a.Name || '');
+      const tryKeys = ['Avatar_Name_' + id, internal + '_Name', internal, 'AvatarName_' + id];
+      let nRu = '', nEn = '';
+      tryKeys.forEach(k => { if (!nRu) nRu = pick(ru, k, ''); if (!nEn) nEn = pick(en, k, ''); });
+      const tail = internal.split('_').pop() || ('#' + id);
+      const fb = NAMES[norm(nEn)] || NAMES[norm(tail)] || null;
+      if (!nEn) nEn = fb ? fb[1] : tail;
+      if (!nRu) nRu = fb ? fb[0] : nEn;
+      const bp = a.BaseProps || {};
+      return {
+        id: +id, ru: nRu, en: nEn,
+        rarity: (+a.Rarity >= 4 ? 'S' : 'A'),
+        element: (a.ElementTypes || []).map(e => ELEM_MAP[e] || String(e).toLowerCase()),
+        prof: PROF_MAP[a.ProfessionType] || String(a.ProfessionType || '').toLowerCase(),
+        weapon: +a.WeaponId || 0,
+        icon: a.CircleIcon ? ENKA_CDN + a.CircleIcon : '',
+        art:  a.Image ? ENKA_CDN + a.Image : '',
+        base: { hp:+bp['11101']||0, atk:+bp['12101']||0, def:+bp['13101']||0,
+                im:+bp['12201']||0, ap:+bp['31201']||0, am:+bp['31401']||0,
+                cr:+bp['20101']||0, cd:+bp['21101']||0 }
+      };
+    }).filter(a => a.en);
+
+    const suits = Object.keys(equip.Suits || {}).map(sid => {
+      const s = equip.Suits[sid];
+      return { id: +sid, ru: pick(ru, s.Name, ''), en: pick(en, s.Name, ''),
+               icon: s.Icon ? ENKA_CDN + s.Icon : '', bonus: s.SetBonusProps || {} };
+    });
+
+    const engines = Object.keys(weapons).map(wid => {
+      const w = weapons[wid];
+      return { id: +wid, ru: pick(ru, w.ItemName, ''), en: pick(en, w.ItemName, ''),
+               rarity: (+w.Rarity >= 4 ? 'S' : (+w.Rarity === 3 ? 'A' : 'B')),
+               prof: PROF_MAP[w.ProfessionType] || String(w.ProfessionType || '').toLowerCase(),
+               icon: w.ImagePath ? ENKA_CDN + w.ImagePath : '',
+               main: w.MainStat || null, sec: w.SecondaryStat || null };
+    });
+
+    const pmap = {};
+    Object.keys(props).forEach(p => {
+      if (props[p] && props[p].Name) pmap[p] = { n: props[p].Name, f: props[p].Format || '' };
+    });
+
+    DB = { v: 1, ts: Date.now(), built: new Date().toISOString().slice(0, 16).replace('T', ' '),
+           source: 'enka.network', agents, suits, engines, props: pmap };
+    try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch (e) {}
+    boot();
+  } catch (e) {
+    // последняя попытка — просроченный кэш лучше, чем ничего
+    try {
+      const c = JSON.parse(localStorage.getItem(DB_KEY));
+      if (c && c.agents && c.agents.length) { DB = c; boot(); return; }
+    } catch (e2) {}
+    $('noDb').style.display = 'block';
+    $('noDbErr').textContent = e.message || String(e);
+    setLoad('база не загрузилась');
+  }
+}
+const DB_LANG = 'ru';
+loadDb(false);
+
+function boot() {
+  DB.byId = {};
+  DB.agents.forEach(a => { DB.byId[a.id] = a; });
+  DB.suitById = {};
+  (DB.suits || []).forEach(s => { DB.suitById[s.id] = s; });
+  DB.engById = {};
+  (DB.engines || []).forEach(w => { DB.engById[w.id] = w; });
+
+  $('main').style.display = 'block';
+  renderFilters();
+  render();
+  if (sync) cloudPull();
+  cloudUI();
+}
+
+// ─────────────── расчёты ───────────────
+function pctOf(id) {
+  const p = prog[id];
+  if (!p || !p.have) return 0;
+  const lvl  = Math.min(1, (p.lvl || 0) / LVL_MAX);
+  const core = Math.min(1, (p.core || 0) / CORE_MAX);
+  let s = 0, n = 0;
+  SKILL_IDX.forEach(o => { s += Math.min(SKILL_MAX, (p.sk && p.sk[o.i]) || 1); n += SKILL_MAX; });
+  const sk = n ? s / n : 0;
+  const w  = Math.min(1, ((p.w && p.w.lvl) || 0) / WENG_MAX);
+  return Math.round((lvl + core + sk + w) / 4 * 100);
+}
+function isDone(id) { return pctOf(id) >= 100; }
+
+// ─────────────── отрисовка ───────────────
+function renderFilters() {
+  const els = {}, prs = {};
+  DB.agents.forEach(a => {
+    (a.element || []).forEach(e => els[e] = 1);
+    if (a.prof) prs[a.prof] = 1;
+  });
+  let h = '<span class="fttl">стихия</span>';
+  Object.keys(els).forEach(e => {
+    const on = ui.el.indexOf(e) !== -1 ? ' on' : '';
+    const nm = (ELEM[e] && ELEM[e].ru) || e;
+    h += '<span class="chip f-el' + on + '" data-v="' + esc(e) + '">' + esc(nm) + '</span>';
+  });
+  h += '<span class="fsep"></span><span class="fttl">роль</span>';
+  Object.keys(prs).forEach(p => {
+    const on = ui.pr.indexOf(p) !== -1 ? ' on' : '';
+    h += '<span class="chip f-pr' + on + '" data-v="' + esc(p) + '">' + esc(PROF[p] || p) + '</span>';
+  });
+  h += '<span class="fsep"></span>';
+  h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">✓ есть у меня</span>';
+  h += '<span class="chip f-todo' + (ui.todo ? ' on' : '') + '">⚡ недокачанные</span>';
+  $('filters').innerHTML = h;
+
+  const tog = (arr, v) => {
+    const i = arr.indexOf(v);
+    if (i === -1) arr.push(v); else arr.splice(i, 1);
+  };
+  document.querySelectorAll('.f-el').forEach(c => c.onclick = () => { tog(ui.el, c.dataset.v); save(); renderFilters(); render(); });
+  document.querySelectorAll('.f-pr').forEach(c => c.onclick = () => { tog(ui.pr, c.dataset.v); save(); renderFilters(); render(); });
+  document.querySelector('.f-have').onclick = () => { ui.have = !ui.have; save(); renderFilters(); render(); };
+  document.querySelector('.f-todo').onclick = () => { ui.todo = !ui.todo; save(); renderFilters(); render(); };
+}
+
+function visible() {
+  const q = (ui.q || '').toLowerCase().trim();
+  return DB.agents.filter(a => {
+    if (q && (a.ru || '').toLowerCase().indexOf(q) === -1
+          && (a.en || '').toLowerCase().indexOf(q) === -1) return false;
+    if (ui.el.length && !(a.element || []).some(e => ui.el.indexOf(e) !== -1)) return false;
+    if (ui.pr.length && ui.pr.indexOf(a.prof) === -1) return false;
+    const p = prog[a.id];
+    if (ui.have && !(p && p.have)) return false;
+    if (ui.todo && (!p || !p.have || isDone(a.id))) return false;
+    return true;
+  });
+}
+
+function render() {
+  const list = visible().slice().sort((x, y) => {
+    const px = pctOf(x.id), py = pctOf(y.id);
+    const hx = prog[x.id] && prog[x.id].have ? 1 : 0;
+    const hy = prog[y.id] && prog[y.id].have ? 1 : 0;
+    if (hx !== hy) return hy - hx;
+    if (px !== py) return py - px;
+    return (x.ru || '').localeCompare(y.ru || '', 'ru');
+  });
+
+  $('grid').innerHTML = list.map(cardHTML).join('');
+  $('emptyMsg').style.display = list.length ? 'none' : 'block';
+  document.querySelectorAll('.card').forEach(c => {
+    c.onclick = () => openAgent(+c.dataset.id);
+  });
+  renderSummary();
+}
+
+function imgUrl(kind, v) {
+  if (!v) return '';
+  return /^https?:/.test(v) ? v : 'img/zzz/' + kind + '/' + v;
+}
+
+function img(src, cls, alt) {
+  if (!src) return '';
+  return '<img class="' + cls + '" src="' + esc(src) + '" alt="' + esc(alt || '') + '" loading="lazy" onerror="this.style.display=\'none\'">';
+}
+
+function cardHTML(a) {
+  const p = prog[a.id], have = !!(p && p.have), pc = pctOf(a.id);
+  const el = (a.element || [])[0] || '';
+  const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
+  const pic = imgUrl('agents', a.icon);
+
+  let bars = '';
+  if (have) {
+    const mk = (lab, val, max) => {
+      const w = Math.min(100, Math.round(val / max * 100));
+      return '<div class="bar"><b>' + lab + '</b><div class="track"><div class="fill' +
+             (w >= 100 ? ' full' : '') + '" style="width:' + w + '%"></div></div><span>' +
+             val + '</span></div>';
+    };
+    let sk = 0; SKILL_IDX.forEach(o => sk += Math.min(SKILL_MAX, (p.sk && p.sk[o.i]) || 1));
+    bars = '<div class="bars">' +
+      mk('Ур', p.lvl || 0, LVL_MAX) +
+      mk('Яд', p.core || 0, CORE_MAX) +
+      mk('Нв', sk, SKILL_MAX * SKILL_IDX.length) +
+      mk('W', (p.w && p.w.lvl) || 0, WENG_MAX) +
+      '</div>';
+  }
+
+  return '<div class="card ' + (have ? 'have' : 'nothave') + '" data-id="' + a.id + '">' +
+    '<div class="cardimg">' +
+      (pic ? img(pic, '', a.ru) : '<div class="ph">👤</div>') +
+      '<span class="rarity ' + esc(a.rarity) + '">' + esc(a.rarity) + '</span>' +
+      (have ? '<div class="pct" style="color:' + col + '">' + pc + '%</div>' : '') +
+    '</div>' +
+    '<div class="cardbody">' +
+      '<div class="cname">' + esc(a.ru) +
+        (a.en && a.en !== a.ru ? '<span class="en">' + esc(a.en) + '</span>' : '') +
+      '</div>' + bars +
+    '</div></div>';
+}
+
+function renderSummary() {
+  const all = DB.agents.length;
+  let have = 0, done = 0, sum = 0, lvlMax = 0;
+  DB.agents.forEach(a => {
+    const p = prog[a.id];
+    if (p && p.have) {
+      have++;
+      const pc = pctOf(a.id);
+      sum += pc;
+      if (pc >= 100) done++;
+      if ((p.lvl || 0) >= LVL_MAX) lvlMax++;
+    }
+  });
+  const avg = have ? Math.round(sum / have) : 0;
+  const cards = [
+    { v: have + ' / ' + all, l: 'агентов есть', c: '' },
+    { v: avg + '%',          l: 'средняя готовность', c: 'acc' },
+    { v: done,               l: 'прокачаны полностью', c: done ? 'ok' : '' },
+    { v: lvlMax,             l: 'на 60 уровне', c: '' },
+    { v: have - done,        l: 'осталось докачать', c: '' }
+  ];
+  $('summary').innerHTML = cards.map(c =>
+    '<div class="sumcard"><div class="sumval ' + c.c + '">' + esc(c.v) + '</div>' +
+    '<div class="sumlab">' + esc(c.l) + '</div></div>').join('');
+  $('stats').textContent = 'база от ' + (DB.built || '?') + ' · ' + all + ' агентов · ' +
+    (DB.suits || []).length + ' сетов · ' + (DB.engines || []).length + ' W-Engine';
+}
+
+// ─────────────── карточка агента ───────────────
+let curId = null;
+
+function openAgent(id) {
+  curId = id;
+  const a = DB.byId[id], p = P(id);
+  const el = (a.element || [])[0] || '';
+  const pic = imgUrl('agents', a.icon);
+
+  let h = '<div class="shead">' +
+    (pic ? '<img class="pic" src="' + esc(pic) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
+    '<div><h2>' + esc(a.ru) + '</h2><div class="sub">' +
+      '<span style="color:' + ((ELEM[el] && ELEM[el].c) || '#aab0c0') + '">' +
+        esc((ELEM[el] && ELEM[el].ru) || el) + '</span>· ' +
+      esc(PROF[a.prof] || a.prof) + ' · ранг ' + esc(a.rarity) +
+      (a.en && a.en !== a.ru ? ' · ' + esc(a.en) : '') +
+    '</div></div>' +
+    '<button class="xbtn" onclick="closeModal()">✕</button></div>';
+
+  // есть у меня
+  h += '<div class="sect"><label class="chip' + (p.have ? ' on' : '') + '" id="haveTog" style="font-size:13px">' +
+       (p.have ? '✓ есть у меня' : '＋ отметить, что есть') + '</label></div>';
+
+  if (p.have) {
+    // уровень / ядро / мандрагоры
+    h += '<div class="sect"><h3>Прокачка</h3>' +
+      '<div class="row"><label>Уровень</label>' +
+        '<select class="num" id="fLvl">' +
+          [0,10,20,30,40,50,60].map(v => '<option value="' + v + '"' +
+            (p.lvl === v ? ' selected' : '') + '>' + (v || '—') + '</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="row"><label>Ядро навыка</label><div class="steps" id="fCore">' +
+        ['—','A','B','C','D','E','F'].map((t, i) =>
+          '<div class="step' + (p.core === i ? ' on' : '') + '" data-v="' + i + '">' + t + '</div>').join('') +
+      '</div></div>' +
+      '<div class="row"><label>Мандрагоры</label><div class="steps" id="fMind">' +
+        [0,1,2,3,4,5,6].map(i =>
+          '<div class="step' + (p.mind === i ? ' on' : '') + '" data-v="' + i + '">M' + i + '</div>').join('') +
+      '</div></div>' +
+    '</div>';
+
+    // навыки
+    h += '<div class="sect"><h3>Навыки (макс. ' + SKILL_MAX + ')</h3>';
+    SKILL_IDX.forEach(o => {
+      h += '<div class="row"><label>' + esc(o.n) + '</label>' +
+           '<input type="number" class="num sk" data-i="' + o.i + '" min="1" max="' + SKILL_MAX +
+           '" value="' + ((p.sk && p.sk[o.i]) || 1) + '"></div>';
+    });
+    h += '</div>';
+
+    // W-Engine
+    const eng = DB.engById[p.w.id];
+    h += '<div class="sect"><h3>W-Engine</h3>' +
+      '<div class="row"><label>Модель</label>' +
+        '<select class="num" id="fEng" style="min-width:190px">' +
+          '<option value="0">— не выбран —</option>' +
+          (DB.engines || []).slice().sort((x, y) => (x.ru || '').localeCompare(y.ru || '', 'ru'))
+            .map(w => '<option value="' + w.id + '"' + (p.w.id === w.id ? ' selected' : '') + '>' +
+                 esc((w.ru || w.en || ('#' + w.id))) + ' · ' + esc(w.rarity) + '</option>').join('') +
+        '</select></div>' +
+      '<div class="row"><label>Уровень</label>' +
+        '<input type="number" class="num" id="fEngLvl" min="0" max="60" value="' + (p.w.lvl || 0) + '">' +
+        '<label style="min-width:auto;margin-left:8px">Фаза</label>' +
+        '<select class="num" id="fEngPh">' +
+          [1,2,3,4,5].map(v => '<option value="' + v + '"' +
+            ((p.w.phase || 1) === v ? ' selected' : '') + '>P' + v + '</option>').join('') +
+        '</select></div>' +
+      (a.weapon && DB.engById[a.weapon]
+        ? '<div class="hint" style="margin-top:2px">Сигнатурный: <b>' +
+          esc(DB.engById[a.weapon].ru || DB.engById[a.weapon].en) + '</b></div>' : '') +
+    '</div>';
+
+    // диски
+    h += '<div class="sect"><h3>Диски</h3><div class="discgrid">';
+    for (let s = 1; s <= 6; s++) {
+      const d = (p.discs || []).find(x => x.slot === s);
+      const suit = d && DB.suitById[d.suit];
+      h += '<div class="disc' + (d ? '' : ' empty') + '">' +
+        '<div class="sl">слот ' + s + '</div>' +
+        (suit && suit.icon ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
+        '<div class="nm">' + esc(suit ? (suit.ru || suit.en) : '—') + '</div>' +
+        (d && d.main ? '<div class="ms">' + esc(d.main) + '</div>' : '') +
+      '</div>';
+    }
+    h += '</div>';
+    // какие комплекты собраны (4+2 и т.п.)
+    const cnt = {};
+    (p.discs || []).forEach(d => { if (d.suit) cnt[d.suit] = (cnt[d.suit] || 0) + 1; });
+    const sets = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+    if (sets.length) {
+      h += '<div class="hint" style="margin-top:7px">Комплекты: ' + sets.map(sid => {
+        const s = DB.suitById[sid], n = cnt[sid];
+        const nm = esc(s ? (s.ru || s.en) : ('#' + sid));
+        const strong = n >= 4 ? ' style="color:#4caf7d"' : (n >= 2 ? ' style="color:#c8ccd6"' : '');
+        return '<b' + strong + '>' + nm + ' ×' + n + '</b>';
+      }).join(' · ') + '</div>';
+    }
+    h += '<div class="hint">Диски заполняются кнопкой «⟳ Импорт из игры» — вручную их вбивать долго.</div></div>';
+
+    // характеристики: моё / цель / вклад дисков
+    const dsc = p.disc || {};
+    const fmtD = (k, pct) => {
+      const v = dsc[k];
+      if (!v) return '';
+      return pct ? '+' + (v / 100).toFixed(1) : '+' + Math.round(v);
+    };
+    h += '<div class="sect"><h3>Характеристики</h3>' +
+      '<table class="stats2"><tr><th>показатель</th><th>сейчас</th><th>цель</th><th></th><th>с дисков</th></tr>';
+    STATS.forEach(s => {
+      const cv = p.cur[s.k], gv = p.goal[s.k];
+      let diff = '', dcls = '';
+      if (cv != null && gv != null && gv !== '') {
+        const d = (+cv) - (+gv);
+        if (d >= 0) { diff = '✓'; dcls = 'ok'; }
+        else { diff = (s.pct ? (d).toFixed(1) : Math.round(d)); dcls = 'no'; }
+      }
+      h += '<tr><td>' + esc(s.n) + (s.pct ? ' %' : '') + '</td>' +
+        '<td class="n"><input type="number" step="any" class="st-cur" data-k="' + s.k + '" value="' +
+          (cv == null ? '' : esc(cv)) + '"></td>' +
+        '<td class="n"><input type="number" step="any" class="st-goal goal" data-k="' + s.k + '" value="' +
+          (gv == null ? '' : esc(gv)) + '"></td>' +
+        '<td class="diff ' + dcls + '">' + diff + '</td>' +
+        '<td class="diff" style="color:#6b7280">' + esc(fmtD(s.k, s.pct)) + '</td></tr>';
+    });
+    h += '</table><div class="hint">«Сейчас» и «цель» вписываешь сам — итоговые числа бери из игры ' +
+         'или со своей карточки на enka.network. Колонка <b>«с дисков»</b> считается точно ' +
+         'при импорте: это чистый вклад надетых дисков, по нему видно качество сборки.</div></div>';
+
+    // заметка
+    h += '<div class="sect"><h3>Заметка</h3>' +
+      '<input type="text" id="fNote" class="num" style="width:100%" value="' + esc(p.note || '') + '" ' +
+      'placeholder="например: ждёт сигнатурку, или мейн для Шию"></div>';
+  }
+
+  h += '<div class="btns"><button onclick="closeModal()">Закрыть</button>' +
+       '<button class="pri" id="saveBtn">Сохранить</button></div>';
+
+  $('sheet').innerHTML = h;
+  $('modal').classList.add('open');
+  bindSheet();
+}
+
+function bindSheet() {
+  const p = P(curId);
+
+  $('haveTog').onclick = () => {
+    p.have = !p.have;
+    p.mod = Date.now();
+    save(curId);
+    openAgent(curId);
+    render();
+  };
+
+  if (!p.have) { $('saveBtn').onclick = closeModal; return; }
+
+  const core = $('fCore'), mind = $('fMind');
+  core.querySelectorAll('.step').forEach(s => s.onclick = () => {
+    p.core = +s.dataset.v;
+    core.querySelectorAll('.step').forEach(x => x.classList.remove('on'));
+    s.classList.add('on');
+  });
+  mind.querySelectorAll('.step').forEach(s => s.onclick = () => {
+    p.mind = +s.dataset.v;
+    mind.querySelectorAll('.step').forEach(x => x.classList.remove('on'));
+    s.classList.add('on');
+  });
+
+  $('saveBtn').onclick = () => {
+    p.lvl = +$('fLvl').value || 0;
+    document.querySelectorAll('.sk').forEach(i => {
+      p.sk[+i.dataset.i] = Math.max(1, Math.min(SKILL_MAX, +i.value || 1));
+    });
+    p.w.id    = +$('fEng').value || 0;
+    p.w.lvl   = Math.max(0, Math.min(60, +$('fEngLvl').value || 0));
+    p.w.phase = +$('fEngPh').value || 1;
+    document.querySelectorAll('.st-cur').forEach(i => {
+      const v = i.value.trim();
+      if (v === '') delete p.cur[i.dataset.k]; else p.cur[i.dataset.k] = +v;
+    });
+    document.querySelectorAll('.st-goal').forEach(i => {
+      const v = i.value.trim();
+      if (v === '') delete p.goal[i.dataset.k]; else p.goal[i.dataset.k] = +v;
+    });
+    p.note = $('fNote').value.trim();
+    save(curId);
+    closeModal();
+    render();
+  };
+}
+
+function closeModal() { $('modal').classList.remove('open'); curId = null; }
+$('modal').onclick = e => { if (e.target === $('modal')) closeModal(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ─────────────── импорт из игры (Enka) ───────────────
+function statFromDiscs(av) {
+  // складываем мейн- и сабстаты всех надетых дисков + бонусы собранных комплектов
+  const acc = {};
+  const add = (k, v) => { if (!k) return; acc[k] = (acc[k] || 0) + v; };
+  const cnt = {};
+  (av.EquippedList || []).forEach(eq => {
+    const e = eq.Equipment; if (!e) return;
+    const suit = Math.floor((e.Id || 0) / 100) * 100;
+    cnt[suit] = (cnt[suit] || 0) + 1;
+    (e.MainPropertyList || []).forEach(mp => {
+      const mult = 1 + 0.2 * (e.Level || 0);          // мейн растёт с уровня диска
+      add(PROP2STAT[String(mp.PropertyId)], (mp.PropertyValue || 0) * mult);
+    });
+    (e.RandomPropertyList || []).forEach(rp => {
+      add(PROP2STAT[String(rp.PropertyId)], (rp.PropertyValue || 0) * (rp.PropertyLevel || 1));
+    });
+  });
+  // бонус за комплект из 2 предметов (данные Enka содержат именно его)
+  if (typeof DB !== 'undefined' && DB && DB.suitById) {
+    Object.keys(cnt).forEach(sid => {
+      if (cnt[sid] < 2) return;
+      const s = DB.suitById[sid];
+      if (!s || !s.bonus) return;
+      Object.keys(s.bonus).forEach(pid => add(PROP2STAT[pid], s.bonus[pid]));
+    });
+  }
+  return acc;
+}
+
+function applyEnka(av) {
+  const a = DB.byId[av.Id];
+  if (!a) return null;
+  const p = P(av.Id);
+  p.have = true;
+  p.lvl  = av.Level || 0;
+  p.core = av.CoreSkillEnhancement || 0;
+  p.mind = av.TalentLevel || 0;
+
+  (av.SkillLevelList || []).forEach(s => {
+    if (SKILL_IDX.some(o => o.i === s.Index)) p.sk[s.Index] = s.Level || 1;
+  });
+
+  if (av.Weapon) {
+    p.w.id    = av.Weapon.Id || 0;
+    p.w.lvl   = av.Weapon.Level || 0;
+    p.w.phase = av.Weapon.UpgradeLevel || 1;
+  }
+
+  p.discs = (av.EquippedList || []).map(eq => {
+    const e = eq.Equipment; if (!e) return null;
+    const suit = Math.floor((e.Id || 0) / 100) * 100;
+    let main = '';
+    const mp = (e.MainPropertyList || [])[0];
+    if (mp) {
+      const pr = DB.props && DB.props[String(mp.PropertyId)];
+      const isPct = pr && pr.f && pr.f.indexOf('%') !== -1;
+      const val = (mp.PropertyValue || 0) * (1 + 0.2 * (e.Level || 0));
+      main = isPct ? (val / 100).toFixed(1) + '%' : String(Math.round(val));
+    }
+    return { slot: eq.Slot, suit: suit, lvl: e.Level || 0, main: main };
+  }).filter(Boolean);
+
+  // точный вклад надетых дисков (мейн + сабстаты) — считается без допущений
+  p.disc = statFromDiscs(av);
+  p.mod = Date.now();
+  return a;
+}
+
+$('enkaGo').onclick = async () => {
+  const uid = $('uidInput').value.trim().replace(/\D/g, '');
+  if (!uid) { $('enkaMsg').innerHTML = '<b>Впиши UID.</b> Он виден в игре внизу экрана профиля.'; return; }
+  localStorage.setItem(LS + '_uid', uid);
+  $('enkaMsg').textContent = 'Гружу профиль…';
+
+  const urls = [
+    'https://enka.network/api/zzz/uid/' + uid + '/',
+    'https://corsproxy.io/?https://enka.network/api/zzz/uid/' + uid + '/'
+  ];
+  let data = null, lastErr = '';
+  for (const u of urls) {
+    try {
+      const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+      if (!r.ok) { lastErr = 'HTTP ' + r.status; continue; }
+      data = await r.json();
+      break;
+    } catch (e) { lastErr = e.message; }
+  }
+  if (!data) {
+    $('enkaMsg').innerHTML = '<b>Не получилось загрузить.</b> ' + esc(lastErr) +
+      '<br>Возможно, браузер блокирует запрос к чужому домену. Открой ' +
+      '<a href="https://enka.network/zzz/' + esc(uid) + '/" target="_blank" rel="noopener" style="color:#ff9d9d">свой профиль на enka.network</a> ' +
+      'и проверь, что витрина видна.';
+    return;
+  }
+
+  const list = (data.PlayerInfo && data.PlayerInfo.ShowcaseDetail &&
+                data.PlayerInfo.ShowcaseDetail.AvatarList) || [];
+  if (!list.length) {
+    $('enkaMsg').innerHTML = '<b>Витрина пустая.</b> Зайди в игру → профиль → добавь агентов в витрину, ' +
+      'подожди пару минут и попробуй снова.';
+    return;
+  }
+
+  const done = [], skip = [];
+  list.forEach(av => {
+    const a = applyEnka(av);
+    if (a) done.push(a.ru); else skip.push(av.Id);
+  });
+  save();
+  render();
+
+  const nick = (data.PlayerInfo && data.PlayerInfo.ShowcaseDetail &&
+                data.PlayerInfo.ShowcaseDetail.SocialDetail &&
+                data.PlayerInfo.ShowcaseDetail.SocialDetail.ProfileDetail &&
+                data.PlayerInfo.ShowcaseDetail.SocialDetail.ProfileDetail.Nickname) || '';
+  $('enkaMsg').innerHTML = '<b>Готово' + (nick ? ', ' + esc(nick) : '') + '.</b> Загружено: ' +
+    esc(done.join(', ')) +
+    (skip.length ? '<br>Не нашлись в базе (id ' + esc(skip.join(', ')) +
+      ') — пересобери базу скриптом build-zzz-db.ps1.' : '');
+};
+
+const savedUid = localStorage.getItem(LS + '_uid');
+if (savedUid) $('uidInput').value = savedUid;
+
+// ─────────────── облако (отдельный бин, как у денег) ───────────────
+function setCloud(cls, title) {
+  const d = $('cloudDot');
+  d.className = ''; if (cls) d.classList.add(cls);
+  d.title = title || '';
+}
+function payload() { return { v: 1, prog: prog, t: Date.now() }; }
+
+function cloudUI() {
+  const on = !!(sync && sync.key && sync.bin);
+  $('cloudCopy').style.display = on ? '' : 'none';
+  $('cloudNow').style.display  = on ? '' : 'none';
+  $('cloudOff').style.display  = on ? '' : 'none';
+  $('cloudKey').style.display     = on ? 'none' : '';
+  $('cloudConnect').style.display = on ? 'none' : '';
+  $('cloudInfo').innerHTML = on
+    ? 'Облако подключено ✓ Скопируй код подключения и вставь его на других устройствах.'
+    : 'Хранилище <b>отдельное от задач и денег</b> — они друг друга не затрут.<br>' +
+      'На первом устройстве вставь Master Key с jsonbin.io, на остальных — код подключения.';
+}
+function scheduleSync() {
+  if (!sync) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(cloudPush, 1500);
+}
+async function cloudPush() {
+  if (!sync) return;
+  setCloud('cloud-sync', 'отправка…');
+  try {
+    const r = await fetch(JB + '/' + sync.bin, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.key },
+      body: JSON.stringify(payload())
+    });
+    if (!r.ok) throw new Error(r.status);
+    setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
+  } catch (e) {
+    setCloud('cloud-err', 'нет связи с облаком — сохранено локально');
+  }
+}
+function mergeProg(remote) {
+  if (!remote || !remote.prog) return false;
+  let changed = false;
+  Object.keys(remote.prog).forEach(id => {
+    const r = remote.prog[id], l = prog[id];
+    if (!l || (r.mod || 0) > (l.mod || 0)) { prog[id] = r; changed = true; }
+  });
+  return changed;
+}
+async function cloudPull() {
+  if (!sync) return;
+  setCloud('cloud-sync', 'загрузка…');
+  try {
+    const r = await fetch(JB + '/' + sync.bin + '/latest', { headers: { 'X-Master-Key': sync.key } });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (mergeProg(data.record)) {
+      localStorage.setItem(LS, JSON.stringify(prog));
+      if (!$('modal').classList.contains('open')) render();
+    }
+    setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
+  } catch (e) {
+    setCloud('cloud-err', 'нет связи с облаком');
+  }
+}
+$('cloudConnect').onclick = async () => {
+  const v = $('cloudKey').value.trim();
+  if (!v) { $('cloudMsg').textContent = 'Вставь Master Key или код подключения.'; return; }
+  let conf = null;
+  if (v[0] === '{') { try { const o = JSON.parse(v); if (o.k && o.b) conf = { key: o.k, bin: o.b }; } catch (e) {} }
+  if (!conf && !v.startsWith('$')) {
+    try { const o = JSON.parse(atob(v)); if (o.k && o.b) conf = { key: o.k, bin: o.b }; } catch (e) {}
+  }
+  if (conf) {
+    sync = conf;
+    localStorage.setItem(LS + '_sync', JSON.stringify(sync));
+    cloudUI(); $('cloudMsg').textContent = 'Подключаюсь…';
+    await cloudPull(); render();
+    $('cloudMsg').textContent = 'Готово ✓ Данные объединены с облаком.';
+    return;
+  }
+  $('cloudMsg').textContent = 'Создаю хранилище…';
+  try {
+    const r = await fetch(JB, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': v,
+        'X-Bin-Name': 'zzz-tracker',
+        'X-Bin-Private': 'true'
+      },
+      body: JSON.stringify(payload())
+    });
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    sync = { key: v, bin: d.metadata.id };
+    localStorage.setItem(LS + '_sync', JSON.stringify(sync));
+    cloudUI();
+    $('cloudMsg').textContent = 'Готово ✓ Теперь нажми «Скопировать код подключения» и вставь его на телефоне.';
+  } catch (e) {
+    $('cloudMsg').textContent = 'Не вышло (' + e.message + '). Проверь Master Key.';
+  }
+};
+$('cloudCopy').onclick = () => {
+  const code = btoa(JSON.stringify({ k: sync.key, b: sync.bin }));
+  navigator.clipboard.writeText(code)
+    .then(() => $('cloudMsg').textContent = 'Код скопирован ✓ Вставь его на другом устройстве.')
+    .catch(() => { $('cloudKey').style.display = ''; $('cloudKey').value = code; });
+};
+$('cloudNow').onclick = async () => { await cloudPull(); $('cloudMsg').textContent = 'Синхронизировано ✓'; };
+$('cloudOff').onclick = () => {
+  if (!confirm('Отключить облако? Данные останутся в этом браузере.')) return;
+  sync = null; localStorage.removeItem(LS + '_sync');
+  cloudUI(); setCloud('', 'облако не подключено'); $('cloudMsg').textContent = 'Облако отключено.';
+};
+
+// ─────────────── импорт/экспорт файлом ───────────────
+$('expFile').onclick = () => {
+  const blob = new Blob([JSON.stringify(payload(), null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'zzz-tracker-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+};
+$('impFile').onclick = () => $('fileInput').click();
+$('fileInput').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!d.prog) throw new Error('не тот файл');
+      if (!confirm('Заменить текущий прогресс данными из файла?')) return;
+      prog = d.prog; save(); render();
+      alert('Загружено ✓');
+    } catch (err) { alert('Не получилось: ' + err.message); }
+  };
+  rd.readAsText(f);
+  e.target.value = '';
+};
+$('wipe').onclick = () => {
+  if (!confirm('Стереть весь прогресс трекера? Отменить будет нельзя.')) return;
+  prog = {}; save(); render();
+};
+$('rebuildDb').onclick = async () => {
+  localStorage.removeItem(DB_KEY);
+  $('noDb').style.display = 'none';
+  await loadDb(true);
+  if (DB) alert('Список обновлён: ' + DB.agents.length + ' агентов.');
+};
+
+// ─────────────── панели, тема, поиск ───────────────
+function togglePanel(id) {
+  ['enkaPanel', 'cloudPanel', 'ioPanel', 'helpPanel'].forEach(p => {
+    if (p !== id) $(p).classList.remove('open');
+  });
+  ['enkaBtn', 'cloudBtn', 'ioBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
+  const wasOpen = $(id).classList.contains('open');
+  $(id).classList.toggle('open', !wasOpen);
+  const map = { enkaPanel: 'enkaBtn', cloudPanel: 'cloudBtn', ioPanel: 'ioBtn', helpPanel: 'helpBtn' };
+  if (!wasOpen) $(map[id]).classList.add('on');
+}
+$('enkaBtn').onclick  = () => togglePanel('enkaPanel');
+$('cloudBtn').onclick = () => { togglePanel('cloudPanel'); cloudUI(); };
+$('ioBtn').onclick    = () => togglePanel('ioPanel');
+$('helpBtn').onclick  = () => togglePanel('helpPanel');
+
+function themeLabel() {
+  $('themeBtn').textContent = (theme === 'light' ? '🌙 Тёмная тема' : '☀️ Светлая тема');
+}
+$('themeBtn').onclick = () => {
+  theme = (theme === 'light' ? 'dark' : 'light');
+  document.body.classList.toggle('light', theme === 'light');
+  localStorage.setItem(LS + '_theme', theme);
+  themeLabel();
+};
+themeLabel();
+
+$('searchInput').value = ui.q || '';
+$('searchInput').oninput = e => { ui.q = e.target.value; save(); render(); };
+
+// периодическая подтяжка облака
+document.addEventListener('visibilitychange', () => { if (!document.hidden && sync) cloudPull(); });
+setInterval(() => { if (sync && !document.hidden && !$('modal').classList.contains('open')) cloudPull(); }, 180000);
+
+// service worker
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
