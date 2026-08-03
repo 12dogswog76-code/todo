@@ -1330,7 +1330,7 @@ function renderSheet() {
         '<span class="cc' + ((p.core || 0) > idx ? ' on' : '') + '">' + t + '</span>').join('') +
       '<span style="font-size:11px;color:var(--tx3);margin-left:6px">ядро ' + (p.core || 0) + '/6</span>' +
       '<button class="htab" id="coreBonusBtn" style="margin-left:auto;padding:4px 10px;font-size:11px">' +
-        (cbSum(p) ? '⚙ прибавки ядра: ' + cbSum(p) : '⚙ задать прибавки ядра') + '</button>' +
+        (cbSum(p) ? '⚙ ядро даёт: ' + cbSum(p) : '⚙ задать прибавки ядра') + '</button>' +
       '</div>' + (showCB ? coreBonusHTML(p) : '') + '<div class="skl">';
     SKILL_IDX.forEach(o => {
       h += '<div class="skb"><div class="skv">' + skillIcon(o.i, 22) +
@@ -1449,15 +1449,28 @@ function applySheet() {
   save(curId);
 }
 
+// Прибавки от ядра, собранные с gachabase.net (раздел Core Skill).
+// Применяются сами, если для агента ничего не задано вручную.
+const CORE_KNOWN = {
+  1581: { ap: 54, atk: 75 }        // Ремиэлла: Anomaly Proficiency +54, Base ATK +75
+};
+function coreBonusOf(id, p) {
+  const own = (p && p.core2) || {};
+  if (Object.keys(own).some(k => +own[k])) return own;   // своё важнее
+  return CORE_KNOWN[id] || {};
+}
+
 const CB_ROWS = [['atk','Базовая атака'],['ap','Знание аномалии'],['am','Контроль аномалии'],
                  ['cr','Шанс крита, %'],['cd','Крит. урон, %'],['im','Импульс']];
 function cbSum(p) {
-  const c = p.core2 || {};
+  const c = coreBonusOf(curId, p);
   const t = CB_ROWS.filter(r => +c[r[0]]).map(r => r[1].split(',')[0] + ' +' + c[r[0]]);
   return t.length ? t.join(', ') : '';
 }
 function coreBonusHTML(p) {
-  const c = p.core2 || {};
+  const own = p.core2 || {};
+  const auto = CORE_KNOWN[curId] || {};
+  const c = Object.keys(own).some(k => +own[k]) ? own : auto;
   return '<div class="editbox" style="margin:8px 0">' +
     '<div class="cap2">ЧТО ДОБАВЛЯЕТ ПРОКАЧАННОЕ ЯДРО</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px">' +
@@ -1466,9 +1479,10 @@ function coreBonusHTML(p) {
       '<input type="number" step="any" class="cbin" data-k="' + r[0] + '" value="' +
         (c[r[0]] == null ? '' : esc(c[r[0]])) + '" style="width:66px;text-align:right">' +
       '</div>').join('') + '</div>' +
-    '<div class="hint">Возьми из таблицы «Улучшение ядра» на вики — там для каждой ступени ' +
-    'написано, что растёт. Вписывай итог за все открытые ступени: например у Ремиэллы на F ' +
-    'это знание аномалии +54 и базовая атака +75. Учтётся в расчёте и уедет в облако.</div></div>';
+    '<div class="hint">' + (CORE_KNOWN[curId] && !Object.keys(own).some(k => +own[k])
+      ? 'Подставлено из справочника для этого агента. Можно переписать своими числами.'
+      : 'Возьми из раздела Core Skill на gachabase.net — там указано, что даёт ядро на максимуме. ' +
+        'Вписывай итог за все открытые ступени.') + ' Учтётся в расчёте и уедет в облако.</div></div>';
 }
 
 // ── описание диска или оружия (раскрывается по клику) ──
@@ -1807,7 +1821,7 @@ function discSum(discs) {
 // итоговые характеристики агента: сборка = набор дисков (текущий или плановый)
 function calcTotals(a, p, discs) {
   const b = baseAt(a, p), w = weaponBonus(p), d = discSum(discs);
-  const cb = (p && p.core2) || {};      // прибавки от прокачанного ядра
+  const cb = coreBonusOf(a && a.id, p);   // прибавки от прокачанного ядра
   if (w.sec) {                       // доп. стат оружия кладём в общую кучу
     const k = PROP2STAT[w.sec.p];
     if (k) d[k] = (d[k] || 0) + w.sec.v;
