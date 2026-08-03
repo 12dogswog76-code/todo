@@ -540,7 +540,8 @@ const ELEM = {
   auricether:{ ru: 'Аурэфир',   c: '#c9a7ff' },
   frost:    { ru: 'Мороз',      c: '#9fe8ff' },
   firefrost:{ ru: 'Огнемороз',  c: '#ff9a76' },
-  zhenzhenassault: { ru: 'Штурм', c: '#ff7a7a' }
+  zhenzhenassault: { ru: 'Заточенный клинок', c: '#ffd54a' },
+  honededge:       { ru: 'Заточенный клинок', c: '#ffd54a' }
 };
 const PROF = {
   attack:  'Нападение', stun:    'Устрашение', anomaly: 'Аномалия',
@@ -588,10 +589,10 @@ const SKILL_MAX = 12, CORE_MAX = 6, LVL_MAX = 60, WENG_MAX = 60;
 // Вики отдаёт файлы по адресу, где папки — первые символы MD5 от имени файла.
 // Если конкретного файла там нет, подставляется нарисованный запасной значок.
 const WIKI = 'https://static.wikia.nocookie.net/zenless-zone-zero/images/';
-const W_EL = {'physical':'c/ce/Icon_Physical.png', 'fire':'0/0a/Icon_Fire.png', 'ice':'5/52/Icon_Ice.png', 'electric':'1/1c/Icon_Electric.png', 'ether':'d/d2/Icon_Ether.png', 'wind':'a/a7/Icon_Wind.png', 'frost':'8/88/Icon_Frost.png', 'auricink':'3/31/Icon_Auric_Ink.png', 'auricether':'3/31/Icon_Auric_Ink.png', 'firefrost':'8/88/Icon_Frost.png', 'lumiflux':'4/4e/Icon_Lumina.png', 'lumen':'4/4e/Icon_Lumina.png', 'zhenzhenassault':'c/ce/Icon_Physical.png'};
+const W_EL = {'physical':'c/ce/Icon_Physical.png', 'fire':'0/0a/Icon_Fire.png', 'ice':'5/52/Icon_Ice.png', 'electric':'1/1c/Icon_Electric.png', 'ether':'d/d2/Icon_Ether.png', 'wind':'a/a7/Icon_Wind.png', 'frost':'8/88/Icon_Frost.png', 'auricink':'3/31/Icon_Auric_Ink.png', 'auricether':'3/31/Icon_Auric_Ink.png', 'firefrost':'8/88/Icon_Frost.png', 'lumiflux':'9/9c/Icon_Lumen.png', 'lumen':'9/9c/Icon_Lumen.png', 'zhenzhenassault':'3/3e/Icon_Honed_Edge.png', 'honededge':'3/3e/Icon_Honed_Edge.png'};
 const W_PR = {'attack':'3/30/Icon_Attack.png', 'stun':'5/53/Icon_Stun.png', 'anomaly':'d/d2/Icon_Anomaly.png', 'support':'2/2f/Icon_Support.png', 'defense':'f/fb/Icon_Defense.png', 'rupture':'e/ef/Icon_Rupture.png'};
 const W_ST = {'hp':'d/d7/Icon_HP.png', 'atk':'6/69/Icon_ATK.png', 'def':'0/0d/Icon_DEF.png', 'im':'7/7e/Icon_Impact.png', 'cr':'f/ff/Icon_CRIT_Rate.png', 'cd':'b/b2/Icon_CRIT_DMG.png', 'ap':'2/25/Icon_Anomaly_Proficiency.png', 'am':'c/c9/Icon_Anomaly_Mastery.png', 'pen':'0/0e/Icon_PEN.png', 'penp':'f/f4/Icon_PEN_Ratio.png', 'er':'5/58/Icon_Energy_Regen.png', 'dmg':'d/d2/Icon_Ether.png'};
-const W_SK = {'0':'b/bb/Icon_Basic_Attack.png', '1':'b/bb/Icon_Dodge.png', '2':'f/f3/Icon_Assist.png', '3':'d/dd/Icon_Special_Attack.png', '5':'2/20/Icon_Chain_Attack.png', '6':'b/bc/Icon_Core_Skill.png'};
+const W_SK = {'0':'b/bb/Icon_Basic_Attack.png', '1':'b/bb/Icon_Dodge.png', '2':'5/56/Icon_Assist_Attack.png', '3':'d/df/Icon_EX_Special_Attack.png', '5':'c/cd/Icon_Ultimate_Colored.png', '6':'b/bc/Icon_Core_Skill.png'};
 function wikiSrc(p, size) { return WIKI + p + '/revision/latest/scale-to-width-down/' + (size || 48); }
 
 // ─────────────── значки стихий и ролей ───────────────
@@ -681,7 +682,9 @@ const SK_PATH = {
   5:'<circle cx="12" cy="12" r="10"/><path d="M12 6a6 6 0 1 0 6 6" fill="none" stroke="#0b0d11" stroke-width="2.4"/>'
 };
 function skillIcon(i, size, col) {
-  return SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
+  const fb = SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
+  const k = String(i);
+  return W_SK[k] ? iconImg(wikiSrc(W_SK[k], 64), fb, size || 20, '') : fb;
 }
 
 // ─────────────── состояние ───────────────
