@@ -107,11 +107,11 @@
   .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .card .ph::after{
     content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,transparent 34%,#08090ce6 62%,#08090c 100%);
+    background:linear-gradient(180deg,transparent 22%,#08090cb3 46%,#08090cf7 72%,#08090c 100%);
   }
   .card.no .ph img{opacity:.4}
   .card.no:hover .ph img{opacity:.75}
-  .card.no .nmb b{color:var(--tx2)}
+  .card.no .nmb b{color:#cfd4e0}
 
   .rk{
     position:absolute;top:0;left:0;font-size:10.5px;font-weight:800;padding:3px 9px 4px;
@@ -126,9 +126,9 @@
   .elb{top:6px;border:1px solid var(--el)}
   .prb{top:34px;border:1px solid #ffffff2e}
   .elb svg,.prb svg{display:block}
-  .nmb{position:absolute;left:9px;right:9px;bottom:7px}
-  .nmb b{display:block;font-size:13.5px;font-weight:800;line-height:1.2;text-shadow:0 2px 8px #000,0 0 3px #000}
-  .nmb span{display:block;font-size:9.5px;color:#a8aec0;text-shadow:0 1px 4px #000}
+  .nmb{position:absolute;left:9px;right:9px;bottom:7px;z-index:2}
+  .nmb b{display:block;font-size:13.5px;font-weight:800;line-height:1.2;color:#fff;text-shadow:0 1px 2px #000,0 2px 10px #000}
+  .nmb span{display:block;font-size:9.5px;color:#bcc2d2;text-shadow:0 1px 3px #000}
   .pcirc{
     position:absolute;right:8px;bottom:34px;width:34px;height:34px;border-radius:50%;
     display:grid;place-items:center;font-size:10.5px;font-weight:800;
@@ -231,6 +231,13 @@
   .weng .wr b{display:block;font-size:13px;color:var(--gold);font-variant-numeric:tabular-nums}
   .weng .edit{flex:none;color:var(--tx3);font-size:13px;cursor:pointer;padding:2px 4px}
   .weng .edit:hover{color:var(--gold)}
+  .drop{overflow:hidden}
+  .drop>*{animation:dropin .26s cubic-bezier(.22,.9,.3,1)}
+  @keyframes dropin{
+    from{opacity:0;transform:translateY(-6px);max-height:0}
+    to{opacity:1;transform:translateY(0);max-height:640px}
+  }
+  @media (prefers-reduced-motion:reduce){.drop>*{animation:none}}
   .infobox{background:#0b0d11;border:1px solid var(--line);border-radius:11px;padding:12px;margin-top:9px}
   .infobox h5{font-size:12.5px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:8px}
   .infobox h5 img{width:26px;height:26px;object-fit:contain}
@@ -565,39 +572,53 @@ const SKILL_MAX = 12, CORE_MAX = 6, LVL_MAX = 60, WENG_MAX = 60;
 
 
 // ─────────────── значки стихий и ролей ───────────────
-function svg(inner, col, size) {
+// Рисуем сами: у Enka иконок стихий нет, а вики их автоматически не отдаёт.
+// Формы подобраны под игровые: эфир — четырёхлучевая искра, лёд — снежинка, и т.д.
+function svgW(inner, col, size) {
   return '<svg viewBox="0 0 24 24" width="' + (size || 14) + '" height="' + (size || 14) +
-    '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-    inner + '</svg>';
+    '" fill="' + col + '">' + inner + '</svg>';
 }
 const EL_PATH = {
-  physical: '<path d="M4 12h6l2-5 2 10 2-5h4"/>',
-  fire:     '<path d="M12 3s5 4.5 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 1.5 1 2.5 2 2.5s1-3-1-7z"/>',
-  ice:      '<path d="M12 2v20M4 7l16 10M20 7L4 17"/>',
-  electric: '<path d="M13 2 5 14h6l-2 8 8-12h-6z"/>',
-  ether:    '<path d="M12 3c5 0 9 4 9 9s-4 9-9 9-9-4-9-9"/><circle cx="12" cy="12" r="3"/>',
-  wind:     '<path d="M3 8h11a3 3 0 1 0-3-3M3 14h14a3 3 0 1 1-3 3"/>',
-  frost:    '<path d="M12 2v20M5 8l14 8M19 8 5 16"/><path d="M9 5l3 3 3-3"/>',
-  firefrost:'<path d="M12 3s4 4 4 8a4 4 0 0 1-8 0"/><path d="M4 14h16M6 10l12 8"/>',
-  auricink: '<path d="M12 3c4 5 6 7.5 6 10a6 6 0 0 1-12 0c0-2.5 2-5 6-10z"/>',
-  auricether:'<path d="M12 3c4 5 6 7.5 6 10a6 6 0 0 1-12 0c0-2.5 2-5 6-10z"/><circle cx="12" cy="13" r="2"/>',
-  lumiflux: '<path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/><circle cx="12" cy="12" r="3"/>',
-  lumen:    '<path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="4"/>'
+  // четырёхлучевая искра
+  ether:    '<path d="M12 1.5c.6 4.6 1.9 7.9 4.6 9.4-2.7 1.5-4 4.8-4.6 9.4-.6-4.6-1.9-7.9-4.6-9.4C10.1 9.4 11.4 6.1 12 1.5z" transform="translate(0,1.2)"/><path d="M20 8.5c.3 2 .8 3.4 2 4.1-1.2.7-1.7 2.1-2 4.1-.3-2-.8-3.4-2-4.1 1.2-.7 1.7-2.1 2-4.1z" opacity=".75"/>',
+  // молния
+  electric: '<path d="M13.6 1.5 4.8 13.4h5.4l-1.6 9.1 9.1-12.2h-5.6z"/>',
+  // пламя
+  fire:     '<path d="M12.4 1.4c.6 3.2-1.3 4.6-2.8 6.2C8 9.3 6.6 11 6.6 13.7c0 3.8 2.9 6.9 6.4 6.9s6.4-3.1 6.4-6.9c0-3.6-2.1-5.3-3.5-7.6-.5 1.6-1.6 2.4-2.4 2-.9-.5-1.6-2.6-1.1-6.7zM12 12.2c1.6 1.4 2.5 2.6 2.5 4 0 1.5-1.1 2.7-2.5 2.7s-2.5-1.2-2.5-2.7c0-1.4.9-2.6 2.5-4z"/>',
+  // снежинка
+  ice:      '<path d="M11.1 1h1.8v6.2l2.6-2.6 1.3 1.3-3.9 3.9v2.1l1.8-1 4.1-2.4.9 1.6-2.6 1.5 4.4 1.2-.5 1.7-4.4-1.2 1.3 2.3-1.6.9-2.4-4.2-1.8-1v2.1l3.9 3.9-1.3 1.3-2.6-2.6V23h-1.8v-6.2l-2.6 2.6-1.3-1.3 3.9-3.9v-2.1l-1.8 1-2.4 4.2-1.6-.9 1.3-2.3-4.4 1.2-.5-1.7 4.4-1.2-2.6-1.5.9-1.6 4.1 2.4 1.8 1v-2.1L5.9 6.6l1.3-1.3 2.6 2.6V1z"/>',
+  // удар (физический)
+  physical: '<path d="M3 12.6 9.4 3l1.9 6.6L21 6.2l-6.3 9.4 6.3 2.2-9.4 3.2-1.5-6.4z"/>',
+  // ветер
+  wind:     '<path d="M2 7.5h11.6a2.6 2.6 0 1 0-2.6-2.7H8.9A4.7 4.7 0 1 1 13.6 9.6H2zM2 12.4h15.4a2.6 2.6 0 1 1-2.6 2.7h2.1a4.7 4.7 0 1 0-4.7-4.8H2z" opacity=".95"/><path d="M2 16.6h8.4a2.2 2.2 0 1 1-2.2 2.2h1.8a4 4 0 1 0 4-4H2z" opacity=".6"/>',
+  frost:    '<path d="M11.1 1h1.8v7l3-3 1.3 1.3-4.3 4.3v2.2l1.9-1.1 4.3-2.5.9 1.6-3 1.7 4.5 1.2-.5 1.7-4.5-1.2 1.4 2.4-1.6.9-2.5-4.3-1.9-1.1V23h-1.8v-6.9l-1.9 1.1-2.5 4.3-1.6-.9L5.5 18 1 19.2l-.5-1.7L5 16.3l-3-1.7.9-1.6L7.2 15.5l1.9 1.1v-2.2L4.8 10.1 6.1 8.8l3 3z"/>',
+  firefrost:'<path d="M12 1c.5 2.8-1.1 4-2.4 5.4C8.2 8 7 9.5 7 11.8c0 3.3 2.5 6 5.5 6s5.5-2.7 5.5-6c0-3.1-1.8-4.6-3-6.6-.4 1.4-1.4 2.1-2.1 1.7C12.1 6.4 11.5 4.6 12 1z"/><path d="M11.2 17.5h1.6V23h-1.6zM4 19.4l.8-1.4 4.8 2.8-.8 1.4zM19.2 17.9l.8 1.4-4.8 2.8-.8-1.4z"/>',
+  auricink: '<path d="M12 1.6c4.6 5.8 7 9 7 11.8 0 3.9-3.1 7-7 7s-7-3.1-7-7c0-2.8 2.4-6 7-11.8z"/>',
+  auricether:'<path d="M12 1.6c4.6 5.8 7 9 7 11.8 0 3.9-3.1 7-7 7s-7-3.1-7-7c0-2.8 2.4-6 7-11.8z" opacity=".85"/><circle cx="12" cy="13.6" r="2.6" fill="#0b0d11"/>',
+  lumiflux: '<circle cx="12" cy="12" r="4.4"/><path d="M11.1 1h1.8v4.2h-1.8zM11.1 18.8h1.8V23h-1.8zM1 11.1h4.2v1.8H1zM18.8 11.1H23v1.8h-4.2zM4.2 5.5 5.5 4.2l3 3-1.3 1.3zM15.5 16.8l1.3-1.3 3 3-1.3 1.3zM18.5 4.2l1.3 1.3-3 3-1.3-1.3zM4.2 18.5l3-3 1.3 1.3-3 3z"/>',
+  lumen:    '<circle cx="12" cy="12" r="5"/><path d="M11.1 1h1.8v4h-1.8zM11.1 19h1.8v4h-1.8zM1 11.1h4v1.8H1zM19 11.1h4v1.8h-4z"/>',
+  zhenzhenassault:'<path d="M12 1.8 14.6 9h7.6l-6.2 4.5 2.4 7.3L12 16.3l-6.4 4.5L8 13.5 1.8 9h7.6z"/>'
 };
 const PROF_PATH = {
-  attack:  '<path d="M14 3 21 10 10 21l-4-1-1-4z"/><path d="M3 21l4-4"/>',
-  stun:    '<path d="M14 4h6v6M20 4 9 15"/><path d="M4 20l6-6"/><circle cx="6" cy="18" r="3"/>',
-  anomaly: '<path d="M12 21c-4 0-7-3-7-7s3-8 7-11c-2 5 1 6 3 8s3 3 3 5-2 5-6 5z"/>',
-  support: '<path d="M12 21s-8-5-8-11a4 4 0 0 1 8-2 4 4 0 0 1 8 2c0 6-8 11-8 11z"/>',
-  defense: '<path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z"/>',
-  rupture: '<path d="M12 2 9 9l-6 1 5 4-2 8 6-4 6 4-2-8 5-4-6-1z"/>'
+  // мишень с перекрестьем — «Атака»
+  attack:  '<path d="M12 1.5a10.5 10.5 0 1 0 0 21 10.5 10.5 0 0 0 0-21zm0 3a7.5 7.5 0 1 1 0 15 7.5 7.5 0 0 1 0-15z"/><circle cx="12" cy="12" r="3.4"/>',
+  // взрыв — «Оглушение»
+  stun:    '<path d="m12 1 2.6 6.1L21 5.4l-3.1 5.4 5.1 2.2-6.4 1.6 1.6 6.4-4.6-4.2-4.6 4.2 1.6-6.4L4.2 13l5.1-2.2L6.2 5.4l6.4 1.7z"/>',
+  // волна в круге — «Аномалия»
+  anomaly: '<path d="M12 1.5a10.5 10.5 0 1 0 0 21 10.5 10.5 0 0 0 0-21zm0 2.6a7.9 7.9 0 0 1 7.9 7.9c0 1.5-1.3 1.9-2.6 1.9s-2.3-1.4-3.6-1.4-2.1 1.4-3.5 1.4-2.3-1.4-3.6-1.4-2.5.5-2.5-.5A7.9 7.9 0 0 1 12 4.1z"/><path d="M5.2 15.4c1.3 0 2.2 1.3 3.5 1.3s2.2-1.3 3.5-1.3 2.2 1.3 3.5 1.3 2-.9 3.1-1.2A7.9 7.9 0 0 1 5.2 15.4z" opacity=".7"/>',
+  // расходящиеся стрелки — «Поддержка»
+  support: '<path d="M12 1.4 8.2 6.2h2.4v4.3H6.3V8.1L1.5 12l4.8 3.9v-2.4h4.3v4.3H8.2L12 22.6l3.8-4.8h-2.4v-4.3h4.3v2.4l4.8-3.9-4.8-3.9v2.4h-4.3V6.2h2.4z"/>',
+  // щит — «Защита»
+  defense: '<path d="M12 1.4 3.2 5.1v6.3c0 5.3 3.7 9.4 8.8 11.2 5.1-1.8 8.8-5.9 8.8-11.2V5.1z"/>',
+  // раскол — «Разрыв»
+  rupture: '<path d="M13.4 1 6 12.2h4.3L9.1 23l8.9-13.1h-5z" /><path d="M3 3.6 5.2 6 3.6 7.6 1.2 5.4zM19.8 16.4 22 18.8l-1.6 1.6-2.4-2.2z" opacity=".7"/>'
 };
 function elIcon(el, size) {
   const c = (ELEM[el] && ELEM[el].c) || '#8b92a3';
-  return svg(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size);
+  return svgW(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size);
 }
 function profIcon(pr, size, col) {
-  return svg(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size);
+  return svgW(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size);
 }
 
 // ─────────────── состояние ───────────────
@@ -1146,7 +1167,7 @@ function renderSheet() {
              (wb.sec ? esc(shortName(wb.sec.p)) + ' ' + esc(secText(wb.sec)) + ' · ' : '') +
              'Ур.' + (wSrc.w.lvl || 0) + ' · P' + (wSrc.w.phase || 1) + '</div>' : '') +
         '<span class="edit" id="wEditBtn" title="изменить">✎</span>' +
-      '</div></div>';
+      '</div><div class="drop" id="infoW"></div></div>';
 
     // ── диски ──
     const list = curTab === 'plan' ? planDiscs(p) : (p.discs || []);
@@ -1183,7 +1204,7 @@ function renderSheet() {
         esc(su ? (su.ru || su.en) : '#' + sid) + ' ' + n + '/4</span>';
     }).join('');
     if (pills) h += '<div class="setline">' + pills + '</div>';
-    h += '</div>';
+    h += '<div class="drop" id="infoD"></div></div>';
 
     // ── ядро и навыки ──
     h += '<div class="sect"><h4>Ядро и навыки</h4>' +
@@ -1296,8 +1317,11 @@ function applySheet() {
 }
 
 // ── описание диска или оружия (раскрывается по клику) ──
+function zoneFor(kind) { return $(kind === 'weapon' ? 'infoW' : 'infoD') || $('editZone'); }
+
 function openInfo(kind, slot) {
-  const z = $('editZone'); if (!z) return;
+  const z = zoneFor(kind); if (!z) return;
+  ['infoW', 'infoD', 'editZone'].forEach(x => { if ($(x) && $(x) !== z) $(x).innerHTML = ''; });
   const p = P(curId);
   const list = curTab === 'plan' ? planDiscs(p) : (p.discs || []);
   let h = '<div class="infobox">';
@@ -1336,7 +1360,9 @@ function openInfo(kind, slot) {
       h += '<div class="bonus" style="margin-top:9px">' +
         '<b>2 предмета' + (have >= 2 ? ' ✓' : '') + ':</b> ' + (bon || 'нет данных') + '<br>' +
         '<b>4 предмета' + (have >= 4 ? ' ✓' : '') + ':</b> особый эффект комплекта — ' +
-        'его описание Enka не отдаёт, смотри в игре<br>' +
+        (su && su.en ? '<a href="https://zenless-zone-zero.fandom.com/wiki/' +
+          esc(su.en.replace(/ /g, '_')) + '" target="_blank" rel="noopener" ' +
+          'style="color:var(--gold)">открыть описание на вики ↗</a>' : 'смотри в игре') + '<br>' +
         '<span style="color:var(--tx3)">надето предметов этого комплекта: ' + have + ' из 6</span></div>';
     }
     h += '<div class="prow"><button id="infoEdit" class="pri">✎ Изменить</button>' +
@@ -1359,8 +1385,10 @@ function openInfo(kind, slot) {
       h += '<div class="bonus" style="margin-top:9px">' +
         '<b>Уровень:</b> ' + (wSrc.w.lvl || 0) + ' · <b>прорыв:</b> ' + (wSrc.w.br || 0) +
         ' · <b>фаза:</b> P' + (wSrc.w.phase || 1) + '<br>' +
-        '<span style="color:var(--tx3)">Текст пассивного умения Enka не отдаёт — ' +
-        'фаза P' + (wSrc.w.phase || 1) + ' усиливает его эффект.</span></div>';
+        (w.en ? '<a href="https://zenless-zone-zero.fandom.com/wiki/' +
+          esc(w.en.replace(/ /g, '_')) + '" target="_blank" rel="noopener" ' +
+          'style="color:var(--gold)">описание пассивного умения на вики ↗</a><br>' : '') +
+        '<span style="color:var(--tx3)">Фаза P' + (wSrc.w.phase || 1) + ' усиливает эффект умения.</span></div>';
     }
     h += '<div class="prow"><button id="infoEdit" class="pri">✎ Изменить</button>' +
          '<button id="infoClose">Свернуть</button></div>';
@@ -1368,14 +1396,14 @@ function openInfo(kind, slot) {
 
   h += '</div>';
   z.innerHTML = h;
-  try { z.scrollIntoView({ block: 'nearest' }); } catch (e) {}
   $('infoClose').onclick = () => { info = null; renderSheet(); };
   $('infoEdit').onclick = () => { info = null; editing = { kind: kind, slot: slot }; renderSheet(); };
 }
 
 // ── редакторы диска и оружия ──
 function openEditor(kind, slot) {
-  const z = $('editZone'); if (!z) return;
+  const z = zoneFor(kind); if (!z) return;
+  ['infoW', 'infoD', 'editZone'].forEach(x => { if ($(x) && $(x) !== z) $(x).innerHTML = ''; });
   const p = P(curId);
   const isPlan = curTab === 'plan';
   let h = '<div class="editbox">';
@@ -1452,7 +1480,6 @@ function openEditor(kind, slot) {
   }
   h += '</div>';
   z.innerHTML = h;
-  try { z.scrollIntoView({ block: 'nearest' }); } catch (e) {}
 
   if (kind === 'disc') {
     z.querySelectorAll('#pkSuit .pick').forEach(c => c.onclick = () => {
@@ -1802,7 +1829,9 @@ function setCloud(cls, title) {
   d.className = ''; if (cls) d.classList.add(cls);
   d.title = title || '';
 }
-function payload() { return { v: 1, prog: prog, t: Date.now() }; }
+function payload() {
+  return { v: 1, prog: prog, uid: localStorage.getItem(LS + '_uid') || '', t: Date.now() };
+}
 
 function cloudUI() {
   const on = !!(sync && sync.key && sync.bin);
@@ -1837,7 +1866,12 @@ async function cloudPush() {
   }
 }
 function mergeProg(remote) {
-  if (!remote || !remote.prog) return false;
+  if (!remote) return false;
+  if (remote.uid && !localStorage.getItem(LS + '_uid')) {
+    localStorage.setItem(LS + '_uid', remote.uid);
+    if ($('uidInput')) $('uidInput').value = remote.uid;
+  }
+  if (!remote.prog) return false;
   let changed = false;
   Object.keys(remote.prog).forEach(id => {
     const r = remote.prog[id], l = prog[id];
