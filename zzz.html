@@ -295,11 +295,13 @@
   }
   .cc.on{border-color:var(--el);color:var(--el);background:color-mix(in srgb,var(--el) 16%,transparent)}
   .skl{display:flex;gap:5px;flex-wrap:wrap}
-  .skb{background:var(--pan2);border:1px solid var(--line);border-radius:9px;padding:5px 7px;text-align:center;min-width:58px}
-  .skb input{width:100%;background:transparent;border:none;color:var(--tx);font-size:14px;
-    font-weight:800;text-align:center;outline:none;font-family:inherit}
+  .skb{background:var(--pan2);border:1px solid var(--line);border-radius:9px;padding:6px 9px;min-width:62px}
+  .skv{display:flex;align-items:center;justify-content:center;gap:6px}
+  .skv svg{flex:none}
+  .skb input{width:26px;background:transparent;border:none;color:var(--tx);font-size:15px;
+    font-weight:800;text-align:left;outline:none;font-family:inherit;padding:0}
   .skb input:focus{color:var(--acc)}
-  .skb .sl{font-size:8.5px;color:var(--tx3);margin-top:1px}
+  .skb .sl{font-size:8.5px;color:var(--tx3);margin-top:2px;text-align:center}
   .mind{background:var(--pan2);border:1px solid var(--line);border-radius:9px;padding:5px 9px;text-align:center}
   .mind b{display:block;font-size:14px;font-weight:800}
   .mind span{font-size:8.5px;color:var(--tx3)}
@@ -633,7 +635,8 @@ function iconImg(src, fallbackSvg, size, title) {
   const s = size || 14;
   return '<span class="ic" style="width:' + s + 'px;height:' + s + 'px" title="' + esc(title || '') + '">' +
     (src ? '<img src="' + esc(src) + '" width="' + s + '" height="' + s + '" alt="" loading="lazy" ' +
-           'decoding="async" onerror="this.parentNode.classList.add(\'nf\');this.remove()">' : '') +
+           'decoding="async" onerror="this.parentNode.classList.add(\'nf\');this.remove()" ' +
+           'onload="if(this.naturalWidth<4){this.parentNode.classList.add(\'nf\');this.remove()}">' : '') +
     '<i>' + fallbackSvg + '</i></span>';
 }
 function elIcon(el, size) {
@@ -646,11 +649,34 @@ function profIcon(pr, size, col) {
   return iconImg(W_PR[pr] ? wikiSrc(W_PR[pr], 64) : '',
     svgW(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size), size, PROF[pr] || pr);
 }
-function statIcon(k, size) {
-  return W_ST[k] ? iconImg(wikiSrc(W_ST[k], 48), '', size || 13, '') : '';
+const ST_PATH = {
+  hp:'<path d="M12 21S3.5 15.4 3.5 9.3A4.8 4.8 0 0 1 12 6.4a4.8 4.8 0 0 1 8.5 2.9C20.5 15.4 12 21 12 21z"/>',
+  atk:'<path d="M14.6 2.4 21.6 9.4 9.4 21.6l-4-1-1-4zM2.4 21.6l3.5-3.5"/><path d="M16 2h6v6z"/>',
+  def:'<path d="M12 2 4 5.6v6c0 5 3.4 8.9 8 10.4 4.6-1.5 8-5.4 8-10.4v-6z"/>',
+  im:'<path d="M13.6 1.6 5 13.4h5.3l-1.4 9 8.6-12.2h-5.3z"/>',
+  cr:'<path d="M12 2 9.2 9.2 2 12l7.2 2.8L12 22l2.8-7.2L22 12l-7.2-2.8z"/>',
+  cd:'<path d="M12 1.6 14.4 9h7.8l-6.3 4.6 2.4 7.4-6.3-4.6-6.3 4.6 2.4-7.4L1.8 9h7.8z"/>',
+  ap:'<path d="M12 1.5a10.5 10.5 0 1 0 0 21 10.5 10.5 0 0 0 0-21zm0 3.2a7.3 7.3 0 0 1 7.3 7.3c0 1.3-1.2 1.7-2.4 1.7s-2.1-1.3-3.3-1.3-1.9 1.3-3.2 1.3-2.1-1.3-3.3-1.3-2.3.4-2.3-.4A7.3 7.3 0 0 1 12 4.7z"/>',
+  am:'<path d="M12 1.5 3 6v6c0 5.2 3.7 9.3 9 10.5 5.3-1.2 9-5.3 9-10.5V6z"/><circle cx="12" cy="11.5" r="3.2" fill="#0b0d11"/>',
+  pen:'<path d="M3 12h13l-3.4-3.4L14 7.2 19.8 13 14 18.8l-1.4-1.4L16 14H3z"/>',
+  penp:'<path d="M3 12h11l-2.8-2.8L12.6 8 17 12.4 12.6 16.8l-1.4-1.4L14 12.6H3z"/><path d="M18 5h4v4h-4zM18 15h4v4h-4z" opacity=".7"/>',
+  er:'<path d="M13.6 1.6 5 13.4h5.3l-1.4 9 8.6-12.2h-5.3z"/><path d="M19 2h3v3h-3z" opacity=".6"/>',
+  dmg:''
+};
+function statIcon(k, size, col) {
+  if (k === 'dmg') return '';
+  if (!ST_PATH[k]) return '';
+  return svgW(ST_PATH[k], col || '#7f8697', size || 13);
 }
-function skillIcon(i, size) {
-  return W_SK[String(i)] ? iconImg(wikiSrc(W_SK[String(i)], 48), '', size || 18, '') : '';
+const SK_PATH = {
+  0:'<circle cx="12" cy="12" r="10"/><path d="M12 4v16M4 12h16" fill="none" stroke="#0b0d11" stroke-width="2"/>',
+  1:'<path d="M12 2 2 20h20z"/><path d="M12 7 6 18h12z" fill="#0b0d11"/>',
+  2:'<path d="M12 1.6 3 6v6.4C3 17.8 6.7 22 12 23.2 17.3 22 21 17.8 21 12.4V6z"/>',
+  3:'<path d="M12 1.6 14.4 9h7.8l-6.3 4.6 2.4 7.4-6.3-4.6-6.3 4.6 2.4-7.4L1.8 9h7.8z"/>',
+  5:'<circle cx="12" cy="12" r="10"/><path d="M12 6a6 6 0 1 0 6 6" fill="none" stroke="#0b0d11" stroke-width="2.4"/>'
+};
+function skillIcon(i, size, col) {
+  return SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
 }
 
 // ─────────────── состояние ───────────────
@@ -1041,12 +1067,45 @@ const MAIN_OPTS = {
       ['31402','Контроль аномалии %',750]]
 };
 const SHORT = {
-  '11103':'HP', '11102':'HP%', '12103':'Атака', '12102':'Атака%', '13103':'Защита', '13102':'Защита%',
-  '20103':'Крит', '21103':'Кр.урон', '31203':'Знание', '31403':'Контроль', '31402':'Контроль%',
-  '12203':'Импульс', '12202':'Импульс%', '23203':'Пробив', '23103':'Пробив%', '30503':'Энергия',
-  '31503':'Физ.урон', '31603':'Огн.урон', '31703':'Лед.урон', '31803':'Эл.урон',
-  '31903':'Эф.урон', '32303':'Возд.урон'
+  '11101':'HP','11102':'HP','11103':'HP','11105':'HP',
+  '12101':'Сила атаки','12102':'Сила атаки','12103':'Сила атаки','12105':'Сила атаки',
+  '13101':'Защита','13102':'Защита','13103':'Защита','13105':'Защита',
+  '20101':'Шанс крита','20103':'Шанс крита','20105':'Шанс крита',
+  '21101':'Крит. урон','21103':'Крит. урон','21105':'Крит. урон',
+  '23101':'Процент пробивания','23103':'Процент пробивания',
+  '23201':'Пробивание','23203':'Пробивание','23205':'Пробивание',
+  '12201':'Импульс','12202':'Импульс','12203':'Импульс','12205':'Импульс',
+  '30501':'Восст. энергии','30502':'Восст. энергии','30503':'Восст. энергии','30505':'Восст. энергии',
+  '31201':'Знание аномалии','31203':'Знание аномалии',
+  '31401':'Контроль аномалии','31402':'Контроль аномалии','31403':'Контроль аномалии',
+  '31501':'Бонус физ. урона','31503':'Бонус физ. урона',
+  '31601':'Бонус огн. урона','31603':'Бонус огн. урона',
+  '31701':'Бонус лед. урона','31703':'Бонус лед. урона',
+  '31801':'Бонус элек. урона','31803':'Бонус элек. урона',
+  '31901':'Бонус эфир. урона','31903':'Бонус эфир. урона',
+  '32301':'Бонус возд. урона','32303':'Бонус возд. урона',
+  '30601':'Лечение','30603':'Лечение','30605':'Лечение'
 };
+// у процентных характеристик знак % уже входит в значение — в названии его быть не должно
+// какие характеристики измеряются в процентах — на справочник не полагаемся,
+// иначе при неполных данных вылезет сырое число вроде «+800»
+const PCT_IDS = {};
+['20101','20103','20105','21101','21103','21105','23101','23103','23105',
+ '31501','31503','31505','31601','31603','31605','31701','31703','31705',
+ '31801','31803','31805','31901','31903','31905','32301','32303','32305',
+ '30601','30603','30605','31301','31303','31305','32201','32203','32205'
+].forEach(k => PCT_IDS[k] = 1);
+function isPctProp(pid) {
+  const k = String(pid);
+  if (PCT_IDS[k]) return true;
+  if (/^\d{5}$/.test(k) && (k.slice(-1) === '2' || k.slice(-1) === '4')) return true;
+  const pr = DB.props && DB.props[k];
+  return !!(pr && pr.f && pr.f.indexOf('%') !== -1);
+}
+function propValue(pid, raw) {
+  if (String(pid) === '30503' || String(pid) === '30501') return (raw / 100).toFixed(2);
+  return isPctProp(pid) ? (raw / 100).toFixed(1) + '%' : String(Math.round(raw));
+}
 function shortName(pid) { return SHORT[String(pid)] || (DB.props && DB.props[String(pid)] ? DB.props[String(pid)].n : '—'); }
 // В игре у доп-характеристики показывают «+N» — это сколько раз она усилилась при
 // прокачке диска. У Enka это PropertyLevel, где 1 = выпала и ни разу не усилилась.
@@ -1174,7 +1233,7 @@ function renderSheet() {
           (isPct ? d.toFixed(1) : (isEr ? d.toFixed(2) : Math.round(d))) + '</span>';
       }
       h += '<div class="st' + cls + (man ? ' man' : '') + '">' +
-        '<span class="lab">' + statIcon(k, 13) + esc(r[1]) + '</span>' +
+        '<span class="lab">' + (k === 'dmg' ? elIcon(el, 14) : statIcon(k, 13)) + esc(r[1]) + '</span>' +
         (curTab === 'now'
           ? '<input class="curin" data-k="' + k + '" value="' + esc(disp) +
             '" title="расчёт: ' + esc(calcDisp) + '. Можно вписать своё значение из игры">'
@@ -1246,9 +1305,9 @@ function renderSheet() {
       '<span style="font-size:11px;color:var(--tx3);margin-left:6px">ядро ' + (p.core || 0) + '/6</span>' +
       '</div><div class="skl">';
     SKILL_IDX.forEach(o => {
-      h += '<div class="skb">' + skillIcon(o.i, 20) +
+      h += '<div class="skb"><div class="skv">' + skillIcon(o.i, 22) +
            '<input type="number" class="sk" data-i="' + o.i + '" min="1" max="' +
-           SKILL_MAX + '" value="' + ((p.sk && p.sk[o.i]) || 1) + '">' +
+           SKILL_MAX + '" value="' + ((p.sk && p.sk[o.i]) || 1) + '"></div>' +
            '<div class="sl">' + esc(o.n) + '</div></div>';
     });
     h += '<div class="mind"><b>M' + (p.mind || 0) + '</b><span>М.Картина</span></div></div></div>';
@@ -1384,11 +1443,7 @@ function openInfo(kind, slot) {
       let bon = '';
       if (su && su.bonus) {
         bon = Object.keys(su.bonus).map(pid =>
-          shortName(pid) + ' +' + (function () {
-            const pr = DB.props && DB.props[pid];
-            const pct = pr && pr.f && pr.f.indexOf('%') !== -1;
-            return pct ? (su.bonus[pid] / 100).toFixed(1) + '%' : Math.round(su.bonus[pid]);
-          })()).join(', ');
+          shortName(pid) + ' +' + propValue(pid, su.bonus[pid])).join(', ');
       }
       h += '<div class="bonus" style="margin-top:9px">' +
         '<b>2 предмета' + (have >= 2 ? ' ✓' : '') + ':</b> ' + (bon || 'нет данных') + '<br>' +
