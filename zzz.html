@@ -88,9 +88,14 @@
     font-size:11.5px;padding:5px 11px;border-radius:7px;transition:.12s;user-select:none;
     display:inline-flex;align-items:center;gap:5px;
   }
+  .chip.f-el,.chip.f-pr{padding:5px 8px}
   .chip:hover{border-color:var(--acc);color:var(--tx)}
   .chip.on{border-color:var(--c,var(--acc));background:color-mix(in srgb,var(--c,var(--acc)) 14%,transparent);color:var(--c,#ffb3b3)}
   .chip svg{display:block;flex:none}
+  .ic{display:inline-grid;place-items:center;position:relative;flex:none;vertical-align:-2px}
+  .ic img{display:block;object-fit:contain;width:100%;height:100%}
+  .ic i{display:none;line-height:0}
+  .ic.nf i{display:block}
   .fsep{width:1px;height:16px;background:var(--line);margin:0 4px}
 
   /* ── сетка агентов ── */
@@ -195,7 +200,8 @@
   .stg{display:grid;grid-template-columns:1fr 1fr;gap:1px 18px}
   .st{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;
     padding:4px 0;border-bottom:1px solid #ffffff08;font-size:12px}
-  .st .lab{color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .st .lab{color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    display:flex;align-items:center;gap:6px}
   .st .val{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
   .st .curin{
     width:66px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--tx);
@@ -530,8 +536,8 @@ const ELEM = {
   zhenzhenassault: { ru: 'Штурм', c: '#ff7a7a' }
 };
 const PROF = {
-  attack:  'Атака',   stun:    'Оглушение', anomaly: 'Аномалия',
-  support: 'Поддержка', defense: 'Защита',  rupture: 'Разрыв'
+  attack:  'Нападение', stun:    'Устрашение', anomaly: 'Аномалия',
+  support: 'Поддержка', defense: 'Защита',     rupture: 'Разрыв'
 };
 // характеристики, которые ведём вручную/целями
 const STATS = [
@@ -570,6 +576,16 @@ const SKILL_IDX = [
 ];
 const SKILL_MAX = 12, CORE_MAX = 6, LVL_MAX = 60, WENG_MAX = 60;
 
+
+// ─────────────── официальные значки ───────────────
+// Вики отдаёт файлы по адресу, где папки — первые символы MD5 от имени файла.
+// Если конкретного файла там нет, подставляется нарисованный запасной значок.
+const WIKI = 'https://static.wikia.nocookie.net/zenless-zone-zero/images/';
+const W_EL = {'physical':'c/ce/Icon_Physical.png', 'fire':'0/0a/Icon_Fire.png', 'ice':'5/52/Icon_Ice.png', 'electric':'1/1c/Icon_Electric.png', 'ether':'d/d2/Icon_Ether.png', 'wind':'a/a7/Icon_Wind.png', 'frost':'8/88/Icon_Frost.png', 'auricink':'3/31/Icon_Auric_Ink.png', 'auricether':'3/31/Icon_Auric_Ink.png', 'firefrost':'8/88/Icon_Frost.png', 'lumiflux':'4/4e/Icon_Lumina.png', 'lumen':'4/4e/Icon_Lumina.png', 'zhenzhenassault':'c/ce/Icon_Physical.png'};
+const W_PR = {'attack':'3/30/Icon_Attack.png', 'stun':'5/53/Icon_Stun.png', 'anomaly':'d/d2/Icon_Anomaly.png', 'support':'2/2f/Icon_Support.png', 'defense':'f/fb/Icon_Defense.png', 'rupture':'e/ef/Icon_Rupture.png'};
+const W_ST = {'hp':'d/d7/Icon_HP.png', 'atk':'6/69/Icon_ATK.png', 'def':'0/0d/Icon_DEF.png', 'im':'7/7e/Icon_Impact.png', 'cr':'f/ff/Icon_CRIT_Rate.png', 'cd':'b/b2/Icon_CRIT_DMG.png', 'ap':'2/25/Icon_Anomaly_Proficiency.png', 'am':'c/c9/Icon_Anomaly_Mastery.png', 'pen':'0/0e/Icon_PEN.png', 'penp':'f/f4/Icon_PEN_Ratio.png', 'er':'5/58/Icon_Energy_Regen.png', 'dmg':'d/d2/Icon_Ether.png'};
+const W_SK = {'0':'b/bb/Icon_Basic_Attack.png', '1':'b/bb/Icon_Dodge.png', '2':'f/f3/Icon_Assist.png', '3':'d/dd/Icon_Special_Attack.png', '5':'2/20/Icon_Chain_Attack.png', '6':'b/bc/Icon_Core_Skill.png'};
+function wikiSrc(p, size) { return WIKI + p + '/revision/latest/scale-to-width-down/' + (size || 48); }
 
 // ─────────────── значки стихий и ролей ───────────────
 // Рисуем сами: у Enka иконок стихий нет, а вики их автоматически не отдаёт.
@@ -613,12 +629,28 @@ const PROF_PATH = {
   // раскол — «Разрыв»
   rupture: '<path d="M13.4 1 6 12.2h4.3L9.1 23l8.9-13.1h-5z" /><path d="M3 3.6 5.2 6 3.6 7.6 1.2 5.4zM19.8 16.4 22 18.8l-1.6 1.6-2.4-2.2z" opacity=".7"/>'
 };
+function iconImg(src, fallbackSvg, size, title) {
+  const s = size || 14;
+  return '<span class="ic" style="width:' + s + 'px;height:' + s + 'px" title="' + esc(title || '') + '">' +
+    (src ? '<img src="' + esc(src) + '" width="' + s + '" height="' + s + '" alt="" loading="lazy" ' +
+           'decoding="async" onerror="this.parentNode.classList.add(\'nf\');this.remove()">' : '') +
+    '<i>' + fallbackSvg + '</i></span>';
+}
 function elIcon(el, size) {
   const c = (ELEM[el] && ELEM[el].c) || '#8b92a3';
-  return svgW(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size);
+  const nm = (ELEM[el] && ELEM[el].ru) || el;
+  return iconImg(W_EL[el] ? wikiSrc(W_EL[el], 64) : '',
+    svgW(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size), size, nm);
 }
 function profIcon(pr, size, col) {
-  return svgW(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size);
+  return iconImg(W_PR[pr] ? wikiSrc(W_PR[pr], 64) : '',
+    svgW(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size), size, PROF[pr] || pr);
+}
+function statIcon(k, size) {
+  return W_ST[k] ? iconImg(wikiSrc(W_ST[k], 48), '', size || 13, '') : '';
+}
+function skillIcon(i, size) {
+  return W_SK[String(i)] ? iconImg(wikiSrc(W_SK[String(i)], 48), '', size || 18, '') : '';
 }
 
 // ─────────────── состояние ───────────────
@@ -866,13 +898,13 @@ function renderFilters() {
     const on = ui.el.indexOf(e) !== -1 ? ' on' : '';
     const c = (ELEM[e] && ELEM[e].c) || '#e53e3e';
     h += '<span class="chip f-el' + on + '" data-v="' + esc(e) + '" style="--c:' + c + '">' +
-         elIcon(e, 13) + esc((ELEM[e] && ELEM[e].ru) || e) + '</span>';
+         elIcon(e, 18) + '</span>';
   });
   h += '<span class="fsep"></span><span class="cap">роль</span>';
   Object.keys(prs).forEach(pr => {
     const on = ui.pr.indexOf(pr) !== -1 ? ' on' : '';
     h += '<span class="chip f-pr' + on + '" data-v="' + esc(pr) + '">' +
-         profIcon(pr, 13, on ? '#ffd54a' : '#8b92a3') + esc(PROF[pr] || pr) + '</span>';
+         profIcon(pr, 18, on ? '#ffd54a' : '#8b92a3') + '</span>';
   });
   h += '<span class="fsep"></span>';
   h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">есть у меня</span>';
@@ -1092,8 +1124,8 @@ function renderSheet() {
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
     (art ? '<img src="' + esc(art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
     '<div class="who"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span>' +
-      '<div class="tags"><span class="tg el">' + elIcon(el, 12) + ' ' + esc((ELEM[el] && ELEM[el].ru) || el) + '</span>' +
-      '<span class="tg">' + profIcon(a.prof, 12, '#e9ecf3') + ' ' + esc(PROF[a.prof] || a.prof) + '</span>' +
+      '<div class="tags"><span class="tg el">' + elIcon(el, 16) + '</span>' +
+      '<span class="tg">' + profIcon(a.prof, 16, '#e9ecf3') + '</span>' +
       '<span class="tg">' + esc(a.rarity) + '-ранг</span>' +
       (p.have ? '<span class="tg">готово ' + pctOf(curId) + '%</span>' : '') +
     '</div></div></div><div class="hbody">';
@@ -1142,7 +1174,7 @@ function renderSheet() {
           (isPct ? d.toFixed(1) : (isEr ? d.toFixed(2) : Math.round(d))) + '</span>';
       }
       h += '<div class="st' + cls + (man ? ' man' : '') + '">' +
-        '<span class="lab">' + esc(r[1]) + '</span>' +
+        '<span class="lab">' + statIcon(k, 13) + esc(r[1]) + '</span>' +
         (curTab === 'now'
           ? '<input class="curin" data-k="' + k + '" value="' + esc(disp) +
             '" title="расчёт: ' + esc(calcDisp) + '. Можно вписать своё значение из игры">'
@@ -1214,7 +1246,8 @@ function renderSheet() {
       '<span style="font-size:11px;color:var(--tx3);margin-left:6px">ядро ' + (p.core || 0) + '/6</span>' +
       '</div><div class="skl">';
     SKILL_IDX.forEach(o => {
-      h += '<div class="skb"><input type="number" class="sk" data-i="' + o.i + '" min="1" max="' +
+      h += '<div class="skb">' + skillIcon(o.i, 20) +
+           '<input type="number" class="sk" data-i="' + o.i + '" min="1" max="' +
            SKILL_MAX + '" value="' + ((p.sk && p.sk[o.i]) || 1) + '">' +
            '<div class="sl">' + esc(o.n) + '</div></div>';
     });

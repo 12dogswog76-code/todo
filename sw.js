@@ -1,5 +1,5 @@
 // service worker «Мои дела»: уведомления + офлайн-режим (PWA) + Web Push
-const CACHE = 'moi-dela-v7';
+const CACHE = 'moi-dela-v8';
 const ASSETS = ['./', './index.html', './money.html', './zzz.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
@@ -18,7 +18,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // картинки ZZZ с enka.network — кладём в кэш, чтобы трекер работал и без сети
-  if (url.hostname === 'enka.network' && url.pathname.indexOf('/ui/zzz/') === 0) {
+  if ((url.hostname === 'enka.network' && url.pathname.indexOf('/ui/zzz/') === 0) ||
+      (url.hostname === 'static.wikia.nocookie.net' && url.pathname.indexOf('/zenless-zone-zero/') === 0)) {
     e.respondWith(
       caches.open(CACHE).then(c => c.match(e.request).then(hit =>
         hit || fetch(e.request).then(r => { c.put(e.request, r.clone()); return r; }).catch(() => hit)
