@@ -12,7 +12,7 @@
     color-scheme: dark;
     --bg:#08090c; --pan:#111318; --pan2:#171a21; --line:#242832;
     --tx:#e9ecf3; --tx2:#8b92a3; --tx3:#5a6070;
-    --acc:#e53e3e; --ok:#4ade80; --warn:#fbbf24; --info:#60a5fa; --gold:#ffd54a;
+    --acc:#4ade80; --ok:#4ade80; --warn:#fbbf24; --info:#60a5fa; --gold:#ffd54a;
     --el:#e53e3e;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -41,7 +41,7 @@
   }
   .logo .mark{
     width:30px;height:30px;flex:none;display:grid;place-items:center;font-size:15px;
-    background:linear-gradient(135deg,var(--acc),#7a1d1d);
+    background:linear-gradient(135deg,#4ade80,#166534);
     clip-path:polygon(22% 0,100% 0,78% 100%,0 100%);
   }
   .logo small{display:block;font-size:10px;font-weight:500;color:var(--tx3);letter-spacing:.3px}
@@ -57,7 +57,7 @@
     font-size:12px;padding:7px 13px;border-radius:8px;transition:.13s;font-family:inherit;
   }
   .tbtn:hover{border-color:var(--acc);color:var(--tx)}
-  .tbtn.on{background:#e53e3e1a;border-color:var(--acc);color:#ffb3b3}
+  .tbtn.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0}
 
   /* ── сводка ── */
   .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:10px;margin-bottom:16px}
@@ -99,7 +99,7 @@
   .fsep{width:1px;height:16px;background:var(--line);margin:0 4px}
 
   /* ── сетка агентов ── */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px}
   .card{
     position:relative;cursor:pointer;background:var(--pan);
     border:1px solid var(--line);overflow:hidden;
@@ -109,7 +109,7 @@
   }
   .card:hover{border-color:var(--el);transform:translateY(-3px)}
   .card .ph{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0b0d11}
-  .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;image-rendering:auto}
   .card .ph::after{
     content:'';position:absolute;inset:0;
     background:linear-gradient(180deg,transparent 22%,#08090cb3 46%,#08090cf7 72%,#08090c 100%);
@@ -118,6 +118,12 @@
   .card.no:hover .ph img{opacity:.75}
   .card.no .nmb b{color:#cfd4e0}
 
+  .fav{
+    position:absolute;left:6px;bottom:52px;z-index:3;font-size:17px;line-height:1;cursor:pointer;
+    color:#ffffff3d;text-shadow:0 1px 4px #000;transition:.12s;
+  }
+  .fav:hover{color:#ffd54a99;transform:scale(1.15)}
+  .fav.on{color:var(--gold);text-shadow:0 0 8px #ffd54a80,0 1px 3px #000}
   .rk{
     position:absolute;top:0;left:0;font-size:10.5px;font-weight:800;padding:3px 9px 4px;
     clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);
@@ -135,13 +141,14 @@
   .nmb b{display:block;font-size:13.5px;font-weight:800;line-height:1.2;color:#fff;text-shadow:0 1px 2px #000,0 2px 10px #000}
   .nmb span{display:block;font-size:9.5px;color:#bcc2d2;text-shadow:0 1px 3px #000}
   .pcirc{
-    position:absolute;right:8px;bottom:34px;width:34px;height:34px;border-radius:50%;
-    display:grid;place-items:center;font-size:10.5px;font-weight:800;
-    background:conic-gradient(var(--el) calc(var(--p)*1%),#ffffff14 0);
+    position:absolute;right:8px;bottom:36px;width:38px;height:38px;border-radius:50%;
+    display:grid;place-items:center;font-size:11px;font-weight:800;z-index:3;
+    background:conic-gradient(var(--el) calc(var(--p)*1%),#ffffff1f 0);
+    box-shadow:0 2px 10px #000a;
   }
   .pcirc i{
-    position:absolute;inset:3px;border-radius:50%;background:#0e1015;display:grid;place-items:center;
-    font-style:normal;font-size:10px;
+    position:absolute;inset:3px;border-radius:50%;background:#0b0d11;display:grid;place-items:center;
+    font-style:normal;font-size:11px;color:#fff;text-shadow:0 1px 3px #000;
   }
   .cbars{padding:8px 9px 9px;display:flex;flex-direction:column;gap:4px}
   .cb{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--tx3)}
@@ -185,7 +192,7 @@
     font-size:12px;padding:6px 15px;border-radius:8px;transition:.12s;font-family:inherit;
   }
   .htab:hover{border-color:var(--acc);color:var(--tx)}
-  .htab.on{background:#e53e3e1a;border-color:var(--acc);color:#ffb3b3;font-weight:600}
+  .htab.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0;font-weight:600}
 
   .sect{margin-bottom:14px}
   .sect>h4{
@@ -319,13 +326,16 @@
   .frow select:focus,.frow input:focus{border-color:var(--acc)}
   .frow input[type=text]{flex:1;min-width:160px}
 
-  .foot2{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);
+  .foot2{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);
     background:var(--pan2)}
   .foot2 button{background:var(--pan);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
     font-size:12.5px;padding:8px 18px;border-radius:8px;font-family:inherit;transition:.12s}
   .foot2 button:hover{border-color:var(--acc);color:var(--tx)}
-  .foot2 button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
-  .foot2 button.pri:hover{background:#ff5252}
+  .foot2 button.ghost{background:transparent;border-color:transparent;color:var(--tx3);opacity:.55;font-size:11.5px}
+  .foot2 button.ghost:hover{opacity:1;border-color:var(--line);color:var(--tx2)}
+  .htab.favon{border-color:var(--gold);color:var(--gold);background:#ffd54a1a}
+  .foot2 button.pri{background:var(--acc);border-color:var(--acc);color:#06240f;font-weight:700}
+  .foot2 button.pri:hover{background:#6ee79a}
 
   /* выбор картинками */
   .pickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:5px;
@@ -333,7 +343,7 @@
   .pick{border:1px solid var(--line);border-radius:9px;padding:4px 2px;cursor:pointer;text-align:center;
     background:var(--pan2);transition:.1s}
   .pick:hover{border-color:var(--acc)}
-  .pick.on{border-color:var(--acc);background:#e53e3e1a}
+  .pick.on{border-color:var(--acc);background:#4ade801f}
   .pick img{width:36px;height:36px;object-fit:contain;display:block;margin:0 auto}
   .pick span{display:block;font-size:8px;color:var(--tx3);line-height:1.15;margin-top:2px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -342,7 +352,7 @@
   .mp{border:1px solid var(--line);border-radius:999px;background:var(--pan2);color:var(--tx2);
     font-size:11px;padding:5px 11px;cursor:pointer;transition:.1s}
   .mp:hover{border-color:var(--acc)}
-  .mp.on{border-color:var(--acc);background:#e53e3e1a;color:#ffb3b3;font-weight:600}
+  .mp.on{border-color:var(--acc);background:#4ade801f;color:#a7f3c0;font-weight:600}
   .picksearch{width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:8px;
     color:var(--tx);padding:6px 10px;font-size:12px;outline:none;margin-bottom:6px;font-family:inherit}
   .picksearch:focus{border-color:var(--acc)}
@@ -357,7 +367,7 @@
   .prow button{background:var(--pan2);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
     font-size:12px;padding:7px 14px;border-radius:8px;font-family:inherit}
   .prow button:hover{border-color:var(--acc);color:var(--tx)}
-  .prow button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+  .prow button.pri{background:var(--acc);border-color:var(--acc);color:#06240f;font-weight:700}
 
   /* панели */
   .panel{background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:14px;
@@ -380,17 +390,6 @@
   .empty{text-align:center;color:var(--tx3);padding:40px 12px;font-size:13px}
   .foot{margin-top:26px;text-align:center;color:var(--tx3);font-size:11.5px}
   .foot a{color:var(--tx2);text-decoration:none}.foot a:hover{color:var(--acc)}
-
-  /* светлая тема */
-  body.light{
-    --bg:#f4f5f8;--pan:#ffffff;--pan2:#f7f8fa;--line:#dfe2e8;
-    --tx:#12141a;--tx2:#5b6273;--tx3:#8b92a3;
-    background:linear-gradient(180deg,#f7f8fa,#eceef3);
-  }
-  body.light .card .ph::after{background:linear-gradient(180deg,transparent 45%,#ffffffe8 100%)}
-  body.light .nmb b{text-shadow:none}
-  body.light .hart{background:linear-gradient(180deg,#eef0f4,#e2e5ec)}
-  body.light .hart::after{background:linear-gradient(180deg,transparent 55%,#ffffffe8 100%)}
 
   @media(max-width:860px){
     .hero{grid-template-columns:1fr}
@@ -419,7 +418,6 @@
     <button class="tbtn" id="enkaBtn">⟳ Импорт из игры</button>
     <button class="tbtn" id="cloudBtn">☁ Облако</button>
     <button class="tbtn" id="ioBtn">↕ Данные</button>
-    <button class="tbtn" id="themeBtn">☀</button>
     <button class="tbtn" id="helpBtn">?</button>
   </div>
 
@@ -431,6 +429,8 @@
     Проверь интернет и обнови страницу. Если не помогает — база соберётся при следующем открытии,
     либо собери её локально скриптом <code>build-zzz-db.ps1</code> (тогда всё будет работать офлайн).
   </div>
+
+  <div id="panelZone"></div>
 
   <div id="main" style="display:none">
     <div class="sum" id="summary"></div>
@@ -593,7 +593,7 @@ const W_EL = {'physical':'c/ce/Icon_Physical.png', 'fire':'0/0a/Icon_Fire.png', 
 const W_PR = {'attack':'3/30/Icon_Attack.png', 'stun':'5/53/Icon_Stun.png', 'anomaly':'d/d2/Icon_Anomaly.png', 'support':'2/2f/Icon_Support.png', 'defense':'f/fb/Icon_Defense.png', 'rupture':'e/ef/Icon_Rupture.png'};
 const W_ST = {'hp':'d/d7/Icon_HP.png', 'atk':'6/69/Icon_ATK.png', 'def':'0/0d/Icon_DEF.png', 'im':'7/7e/Icon_Impact.png', 'cr':'f/ff/Icon_CRIT_Rate.png', 'cd':'b/b2/Icon_CRIT_DMG.png', 'ap':'2/25/Icon_Anomaly_Proficiency.png', 'am':'c/c9/Icon_Anomaly_Mastery.png', 'pen':'0/0e/Icon_PEN.png', 'penp':'f/f4/Icon_PEN_Ratio.png', 'er':'5/58/Icon_Energy_Regen.png', 'dmg':'d/d2/Icon_Ether.png'};
 const W_SK = {'0':'b/bb/Icon_Basic_Attack.png', '1':'b/bb/Icon_Dodge.png', '2':'5/56/Icon_Assist_Attack.png', '3':'d/df/Icon_EX_Special_Attack.png', '5':'c/cd/Icon_Ultimate_Colored.png', '6':'b/bc/Icon_Core_Skill.png'};
-function wikiSrc(p, size) { return WIKI + p + '/revision/latest/scale-to-width-down/' + (size || 48); }
+function wikiSrc(p) { return WIKI + p + '/revision/latest'; }
 
 // ─────────────── значки стихий и ролей ───────────────
 // Рисуем сами: у Enka иконок стихий нет, а вики их автоматически не отдаёт.
@@ -648,11 +648,11 @@ function iconImg(src, fallbackSvg, size, title) {
 function elIcon(el, size) {
   const c = (ELEM[el] && ELEM[el].c) || '#8b92a3';
   const nm = (ELEM[el] && ELEM[el].ru) || el;
-  return iconImg(W_EL[el] ? wikiSrc(W_EL[el], 64) : '',
+  return iconImg(W_EL[el] ? wikiSrc(W_EL[el]) : '',
     svgW(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size), size, nm);
 }
 function profIcon(pr, size, col) {
-  return iconImg(W_PR[pr] ? wikiSrc(W_PR[pr], 64) : '',
+  return iconImg(W_PR[pr] ? wikiSrc(W_PR[pr]) : '',
     svgW(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size), size, PROF[pr] || pr);
 }
 const ST_PATH = {
@@ -684,7 +684,7 @@ const SK_PATH = {
 function skillIcon(i, size, col) {
   const fb = SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
   const k = String(i);
-  return W_SK[k] ? iconImg(wikiSrc(W_SK[k], 64), fb, size || 20, '') : fb;
+  return W_SK[k] ? iconImg(wikiSrc(W_SK[k]), fb, size || 20, '') : fb;
 }
 
 // ─────────────── состояние ───────────────
@@ -698,7 +698,7 @@ try { prog = JSON.parse(localStorage.getItem(LS)) || {}; } catch (e) { prog = {}
 try { Object.assign(ui, JSON.parse(localStorage.getItem(LS + '_ui')) || {}); } catch (e) {}
 try { sync = JSON.parse(localStorage.getItem(LS + '_sync')); } catch (e) {}
 
-if (theme === 'light') document.body.classList.add('light');
+
 
 function blank() {
   return {
@@ -706,7 +706,7 @@ function blank() {
     sk: { 0: 1, 1: 1, 2: 1, 3: 1, 5: 1 },
     w: { id: 0, lvl: 0, br: 0, phase: 1 },
     promo: 0, plan: { w: null, discs: [] }, manual: {}, core2: {},
-    discs: [], disc: {}, cur: {}, goal: {}, note: '', mod: Date.now()
+    fav: false, discs: [], disc: {}, cur: {}, goal: {}, note: '', mod: Date.now()
   };
 }
 function P(id) {
@@ -741,7 +741,7 @@ const ENKA_RAW = 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/
 const ENKA_CDN = 'https://enka.network';
 const DB_KEY = LS + '_db';
 const DB_TTL = 7 * 24 * 3600 * 1000;   // раз в неделю обновляем сама
-const DB_VER = 2;                      // растёт, когда меняется состав базы — старый кэш отбрасываем
+const DB_VER = 3;                      // растёт, когда меняется состав базы — старый кэш отбрасываем
 
 // Запасные имена — на случай, если в локализации Enka ключ имени не найдётся.
 // Ключ — нормализованное имя (в т.ч. внутреннее: у ZZZ оно часто отличается от игрового,
@@ -969,10 +969,15 @@ function visible() {
 
 function render() {
   const list = visible().slice().sort((x, y) => {
-    const px = pctOf(x.id), py = pctOf(y.id);
+    const fx = prog[x.id] && prog[x.id].fav ? 1 : 0;
+    const fy = prog[y.id] && prog[y.id].fav ? 1 : 0;
+    if (fx !== fy) return fy - fx;                       // избранные вперёд
     const hx = prog[x.id] && prog[x.id].have ? 1 : 0;
     const hy = prog[y.id] && prog[y.id].have ? 1 : 0;
-    if (hx !== hy) return hy - hx;
+    if (hx !== hy) return hy - hx;                       // потом те, что есть
+    const rx = x.rarity === 'S' ? 1 : 0, ry = y.rarity === 'S' ? 1 : 0;
+    if (rx !== ry) return ry - rx;                       // S всегда выше A
+    const px = pctOf(x.id), py = pctOf(y.id);
     if (px !== py) return py - px;
     return (x.ru || '').localeCompare(y.ru || '', 'ru');
   });
@@ -980,7 +985,14 @@ function render() {
   $('grid').innerHTML = list.map(cardHTML).join('');
   $('emptyMsg').style.display = list.length ? 'none' : 'block';
   document.querySelectorAll('.card').forEach(c => {
-    c.onclick = () => openAgent(+c.dataset.id);
+    c.onclick = e => {
+      if (e.target && e.target.dataset && e.target.dataset.fav) {
+        const id = +e.target.dataset.fav, pp = P(id);
+        pp.fav = !pp.fav; pp.mod = Date.now(); save(id); render();
+        return;
+      }
+      openAgent(+c.dataset.id);
+    };
   });
   renderSummary();
 }
@@ -1026,6 +1038,7 @@ function cardHTML(a) {
       '<span class="elb">' + elIcon(el, 14) + '</span>' +
       '<span class="prb" title="' + esc(PROF[a.prof] || a.prof) + '">' + profIcon(a.prof, 14, '#e9ecf3') + '</span>' +
       (have ? '<div class="pcirc" style="--p:' + pc + '"><i>' + pc + '</i></div>' : '') +
+      '<span class="fav' + (p && p.fav ? ' on' : '') + '" data-fav="' + a.id + '" title="в избранное">★</span>' +
       '<div class="nmb"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span></div>' +
     '</div>' + bars + '</div>';
 }
@@ -1213,7 +1226,8 @@ function renderSheet() {
       '<button class="htab' + (curTab === 'now' ? ' on' : '') + '" data-tab="now">Сейчас</button>' +
       '<button class="htab' + (curTab === 'plan' ? ' on' : '') + '" data-tab="plan">План</button>' +
       '<span style="flex:1"></span>' +
-      '<button class="htab" id="haveTog" title="убрать из трекера">✓ есть</button></div>';
+      '<button class="htab' + (p.fav ? ' favon' : '') + '" id="favTog" title="в избранное">' +
+        (p.fav ? '★ в избранном' : '☆ в избранное') + '</button></div>';
 
     // ── характеристики ──
     const rows = [
@@ -1345,7 +1359,10 @@ function renderSheet() {
   }
 
   h += '</div></div>';
-  h += '<div class="foot2"><button onclick="closeModal()">Закрыть</button>' +
+  h += '<div class="foot2">' +
+       (p.have ? '<button id="haveTog" class="ghost">убрать из трекера</button>' : '') +
+       '<span style="flex:1"></span>' +
+       '<button onclick="closeModal()">Закрыть</button>' +
        '<button class="pri" id="saveBtn">Сохранить</button></div>';
 
   $('sheet').innerHTML = h;
@@ -1359,8 +1376,11 @@ function bindSheet() {
   const a = DB.byId[curId], p = P(curId);
   const tog = $('haveTog');
   if (tog) tog.onclick = () => {
+    if (p.have && !confirm('Убрать ' + (DB.byId[curId] || {}).ru + ' из трекера? Прогресс сотрётся.')) return;
     p.have = !p.have; p.mod = Date.now(); save(curId); renderSheet(); render();
   };
+  const ft = $('favTog');
+  if (ft) ft.onclick = () => { p.fav = !p.fav; p.mod = Date.now(); save(curId); renderSheet(); render(); };
   const sb = $('saveBtn');
   if (sb) sb.onclick = () => { applySheet(); closeModal(); render(); };
   if (!p.have) return;
@@ -1581,7 +1601,7 @@ function openEditor(kind, slot) {
            'усилилась при прокачке диска. Значение пересчитывается само.</div>';
     }
 
-    h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #e53e3e;background:#e53e3e;color:#fff">' +
+    h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #4ade80;background:#4ade80;color:#06240f">' +
          (isPlan ? 'Добавить в план' : 'Сохранить слот') + '</button>' +
          '<button id="edDel">Очистить</button><button id="edCancel">Отмена</button></div>';
     if (isPlan) h += '<div class="hint">Плановый диск считается прокачанным полностью. ' +
@@ -1602,7 +1622,7 @@ function openEditor(kind, slot) {
         (ed.br === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select> ' +
       'Фаза <select id="edWPh">' + [1,2,3,4,5].map(v => '<option value="' + v + '"' +
         (ed.phase === v ? ' selected' : '') + '>P' + v + '</option>').join('') + '</select></div>';
-    h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #e53e3e;background:#e53e3e;color:#fff">Сохранить</button>' +
+    h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #4ade80;background:#4ade80;color:#06240f">Сохранить</button>' +
          '<button id="edDel">Очистить</button><button id="edCancel">Отмена</button></div>';
     const sig = a && a.weapon ? DB.engById[a.weapon] : null;
     if (sig) h += '<div class="hint">Сигнатурное для этого агента: <b>' + esc(sig.ru || sig.en) + '</b></div>';
@@ -2113,6 +2133,8 @@ $('rebuildDb').onclick = async () => {
 
 // ─────────────── панели, тема, поиск ───────────────
 function togglePanel(id) {
+  const zone = $('panelZone');
+  if (zone && $(id) && $(id).parentNode !== zone) zone.appendChild($(id));
   ['enkaPanel', 'cloudPanel', 'ioPanel', 'helpPanel'].forEach(p => {
     if (p !== id) $(p).classList.remove('open');
   });
@@ -2127,16 +2149,7 @@ $('cloudBtn').onclick = () => { togglePanel('cloudPanel'); cloudUI(); };
 $('ioBtn').onclick    = () => togglePanel('ioPanel');
 $('helpBtn').onclick  = () => togglePanel('helpPanel');
 
-function themeLabel() {
-  $('themeBtn').textContent = (theme === 'light' ? '🌙 Тёмная тема' : '☀️ Светлая тема');
-}
-$('themeBtn').onclick = () => {
-  theme = (theme === 'light' ? 'dark' : 'light');
-  document.body.classList.toggle('light', theme === 'light');
-  localStorage.setItem(LS + '_theme', theme);
-  themeLabel();
-};
-themeLabel();
+
 
 $('searchInput').value = ui.q || '';
 $('searchInput').oninput = e => { ui.q = e.target.value; save(); render(); };
