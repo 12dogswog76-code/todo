@@ -740,6 +740,7 @@ function save(touch) {
 const ENKA_RAW = 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/';
 const ENKA_CDN = 'https://enka.network';
 const DB_KEY = LS + '_db';
+let EXTRA = null;   // досбор с gachabase: прибавки ядра, описания комплектов и оружия
 const DB_TTL = 7 * 24 * 3600 * 1000;   // раз в неделю обновляем сама
 const DB_VER = 4;                      // растёт, когда меняется состав базы — старый кэш отбрасываем
 
@@ -894,7 +895,15 @@ async function loadDb(force) {
 const DB_LANG = 'ru';
 loadDb(false);
 
+function loadExtra() {
+  return fetch('zzz-extra.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(x => { if (x) EXTRA = x; })
+    .catch(() => {});
+}
+
 function boot() {
+  if (!EXTRA) { loadExtra().then(() => { if (EXTRA) render(); }); }
   DB.byId = {};
   DB.agents.forEach(a => { DB.byId[a.id] = a; });
   DB.suitById = {};
@@ -1457,6 +1466,7 @@ const CORE_KNOWN = {
 function coreBonusOf(id, p) {
   const own = (p && p.core2) || {};
   if (Object.keys(own).some(k => +own[k])) return own;   // своё важнее
+  if (EXTRA && EXTRA.core && EXTRA.core[id]) return EXTRA.core[id];
   return CORE_KNOWN[id] || {};
 }
 
@@ -1469,7 +1479,7 @@ function cbSum(p) {
 }
 function coreBonusHTML(p) {
   const own = p.core2 || {};
-  const auto = CORE_KNOWN[curId] || {};
+  const auto = (EXTRA && EXTRA.core && EXTRA.core[curId]) || CORE_KNOWN[curId] || {};
   const c = Object.keys(own).some(k => +own[k]) ? own : auto;
   return '<div class="editbox" style="margin:8px 0">' +
     '<div class="cap2">ЧТО ДОБАВЛЯЕТ ПРОКАЧАННОЕ ЯДРО</div>' +
@@ -1479,7 +1489,7 @@ function coreBonusHTML(p) {
       '<input type="number" step="any" class="cbin" data-k="' + r[0] + '" value="' +
         (c[r[0]] == null ? '' : esc(c[r[0]])) + '" style="width:66px;text-align:right">' +
       '</div>').join('') + '</div>' +
-    '<div class="hint">' + (CORE_KNOWN[curId] && !Object.keys(own).some(k => +own[k])
+    '<div class="hint">' + ((EXTRA && EXTRA.core && EXTRA.core[curId] || CORE_KNOWN[curId]) && !Object.keys(own).some(k => +own[k])
       ? 'Подставлено из справочника для этого агента. Можно переписать своими числами.'
       : 'Возьми из раздела Core Skill на gachabase.net — там указано, что даёт ядро на максимуме. ' +
         'Вписывай итог за все открытые ступени.') + ' Учтётся в расчёте и уедет в облако.</div></div>';
@@ -1522,12 +1532,14 @@ function openInfo(kind, slot) {
         bon = Object.keys(su.bonus).map(pid =>
           shortName(pid) + ' +' + propValue(pid, su.bonus[pid])).join(', ');
       }
+      const ex = (EXTRA && EXTRA.suits && EXTRA.suits[d.suit]) || null;
       h += '<div class="bonus" style="margin-top:9px">' +
-        '<b>2 предмета' + (have >= 2 ? ' ✓' : '') + ':</b> ' + (bon || 'нет данных') + '<br>' +
-        '<b>4 предмета' + (have >= 4 ? ' ✓' : '') + ':</b> особый эффект комплекта — ' +
-        (su && su.en ? '<a href="https://zenless-zone-zero.fandom.com/wiki/' +
-          esc(su.en.replace(/ /g, '_')) + '" target="_blank" rel="noopener" ' +
-          'style="color:var(--gold)">открыть описание на вики ↗</a>' : 'смотри в игре') + '<br>' +
+        '<b>2 предмета' + (have >= 2 ? ' ✓' : '') + ':</b> ' +
+        ((ex && ex.s2) ? esc(ex.s2) : (bon || 'нет данных')) + '<br>' +
+        '<b>4 предмета' + (have >= 4 ? ' ✓' : '') + ':</b> ' +
+        ((ex && ex.s4) ? esc(ex.s4)
+          : (su && su.en ? '<a href="https://zzz.gachabase.net/drive-discs" target="_blank" ' +
+             'rel="noopener" style="color:var(--gold)">описание на gachabase ↗</a>' : 'смотри в игре')) + '<br>' +
         '<span style="color:var(--tx3)">надето предметов этого комплекта: ' + have + ' из 6</span></div>';
     }
     h += '<div class="prow"><button id="infoEdit" class="pri">✎ Изменить</button>' +
@@ -1550,9 +1562,12 @@ function openInfo(kind, slot) {
       h += '<div class="bonus" style="margin-top:9px">' +
         '<b>Уровень:</b> ' + (wSrc.w.lvl || 0) + ' · <b>прорыв:</b> ' + (wSrc.w.br || 0) +
         ' · <b>фаза:</b> P' + (wSrc.w.phase || 1) + '<br>' +
-        (w.en ? '<a href="https://zenless-zone-zero.fandom.com/wiki/' +
-          esc(w.en.replace(/ /g, '_')) + '" target="_blank" rel="noopener" ' +
-          'style="color:var(--gold)">описание пассивного умения на вики ↗</a><br>' : '') +
+        (function () {
+          const exw = (EXTRA && EXTRA.engines && EXTRA.engines[w.id]) || null;
+          if (exw && exw.desc) return '<div style="margin-top:6px;color:var(--tx2)">' + esc(exw.desc) + '</div>';
+          return w.en ? '<a href="https://zzz.gachabase.net/w-engines" target="_blank" rel="noopener" ' +
+                 'style="color:var(--gold)">описание умения на gachabase ↗</a><br>' : '';
+        })() +
         '<span style="color:var(--tx3)">Фаза P' + (wSrc.w.phase || 1) + ' усиливает эффект умения.</span></div>';
     }
     h += '<div class="prow"><button id="infoEdit" class="pri">✎ Изменить</button>' +
