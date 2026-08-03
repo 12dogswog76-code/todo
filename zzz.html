@@ -17,15 +17,18 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
-    background:
-      radial-gradient(1200px 600px at 15% -10%, #1b1f2a 0%, transparent 60%),
-      radial-gradient(900px 500px at 90% 0%, #1a1520 0%, transparent 55%),
-      linear-gradient(180deg,#08090c 0%,#0d0f14 60%,#12141a 100%);
-    background-attachment:fixed;
+    background:#0a0b0f;
     color:var(--tx);
     font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
     min-height:100vh; padding:22px 18px 70px;
     -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(1200px 600px at 15% -10%,#1b1f2a 0%,transparent 60%),
+      radial-gradient(900px 500px at 90% 0%,#1a1520 0%,transparent 55%),
+      linear-gradient(180deg,#08090c 0%,#0d0f14 60%,#12141a 100%);
   }
   .wrap{max-width:1160px;margin:0 auto}
   @media(min-width:1400px){.wrap{max-width:1320px}}
@@ -94,20 +97,21 @@
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
   .card{
     position:relative;cursor:pointer;background:var(--pan);
-    border:1px solid var(--line);overflow:hidden;transition:.16s;
+    border:1px solid var(--line);overflow:hidden;
+    transition:border-color .16s,transform .16s;
+    content-visibility:auto;contain-intrinsic-size:auto 300px;
     clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);
   }
   .card:hover{border-color:var(--el);transform:translateY(-3px)}
   .card .ph{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0b0d11}
-  .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;
-    transition:transform .3s}
-  .card:hover .ph img{transform:scale(1.06)}
+  .card .ph img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
   .card .ph::after{
     content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,transparent 45%,#0b0d11f0 100%);
+    background:linear-gradient(180deg,transparent 52%,#0b0d11f2 100%);
   }
-  .card.no{filter:grayscale(.85) brightness(.62)}
-  .card.no:hover{filter:grayscale(.3) brightness(.85)}
+  .card.no .ph img{opacity:.4}
+  .card.no:hover .ph img{opacity:.75}
+  .card.no .nmb b{color:var(--tx2)}
 
   .rk{
     position:absolute;top:0;left:0;font-size:10.5px;font-weight:800;padding:3px 9px 4px;
@@ -142,7 +146,7 @@
 
   /* ── модалка ── */
   .modal{display:none;position:fixed;inset:0;background:#000000cc;z-index:100;
-    align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto;backdrop-filter:blur(3px)}
+    align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto}
   .modal.open{display:flex}
   .sheet{width:100%;max-width:1000px;background:var(--pan);border:1px solid var(--line);
     border-radius:14px;overflow:hidden}
@@ -832,7 +836,7 @@ function cardHTML(a) {
   const p = prog[a.id], have = !!(p && p.have), pc = pctOf(a.id);
   const el = (a.element || [])[0] || '';
   const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
-  const pic = imgUrl('agents', a.art || a.icon);
+  const pic = imgUrl('agents', a.icon || a.art);   // в списке — лёгкая иконка, не большой арт
   const short = ((ELEM[el] && ELEM[el].ru) || el || '?').slice(0, 2);
 
   let bars = '';
@@ -854,7 +858,8 @@ function cardHTML(a) {
   return '<div class="card' + (have ? '' : ' no') + '" data-id="' + a.id +
     '" style="--el:' + col + '">' +
     '<div class="ph">' +
-      (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+      (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy" decoding="async" ' +
+        'onerror="this.style.display=\'none\'">' : '') +
       '<span class="rk ' + esc(a.rarity) + '">' + esc(a.rarity) + '</span>' +
       '<span class="elb">' + esc(short) + '</span>' +
       (have ? '<div class="pcirc" style="--p:' + pc + '"><i>' + pc + '</i></div>' : '') +
