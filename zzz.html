@@ -310,6 +310,25 @@
       <b>Важно:</b> Enka отдаёт только тех агентов, кого ты поставил в <b>витрину профиля</b> в игре
       (обычно до 6 штук). Хочешь загрузить других — поменяй витрину в игре, подожди пару минут и нажми «Загрузить» ещё раз.
     </div>
+
+    <div id="manualBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #2a2d35">
+      <div class="hint" style="margin-top:0">
+        <b>Enka не отдаёт данные напрямую сайту</b> (защита от запросов с чужих доменов).
+        Обходится в три шага — вручную это 10 секунд:
+        <ol>
+          <li><a id="enkaLink" href="#" target="_blank" rel="noopener" style="color:#ff9d9d">открой свои данные на enka.network</a> — откроется страница с текстом</li>
+          <li>выдели всё и скопируй: <b>Ctrl+A</b>, затем <b>Ctrl+C</b></li>
+          <li>вставь сюда и нажми «Применить»</li>
+        </ol>
+      </div>
+      <textarea id="manualJson" placeholder='Сюда вставить скопированный текст (начинается с {"PlayerInfo":...)'
+        style="width:100%;height:90px;background:#121317;border:1px solid #33363e;border-radius:9px;
+               color:#e8eaf0;padding:9px 12px;font-size:12px;font-family:Consolas,monospace;outline:none"></textarea>
+      <div class="prow" style="margin-top:8px">
+        <button id="manualGo" class="pri">Применить</button>
+        <button id="manualPaste">Вставить из буфера</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── панель: облако ── -->
@@ -1052,41 +1071,17 @@ function applyEnka(av) {
   return a;
 }
 
-$('enkaGo').onclick = async () => {
-  const uid = $('uidInput').value.trim().replace(/\D/g, '');
-  if (!uid) { $('enkaMsg').innerHTML = '<b>Впиши UID.</b> Он виден в игре внизу экрана профиля.'; return; }
-  localStorage.setItem(LS + '_uid', uid);
-  $('enkaMsg').textContent = 'Гружу профиль…';
+function enkaApiUrl(uid) { return 'https://enka.network/api/zzz/uid/' + uid + '/'; }
 
-  const urls = [
-    'https://enka.network/api/zzz/uid/' + uid + '/',
-    'https://corsproxy.io/?https://enka.network/api/zzz/uid/' + uid + '/'
-  ];
-  let data = null, lastErr = '';
-  for (const u of urls) {
-    try {
-      const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
-      if (!r.ok) { lastErr = 'HTTP ' + r.status; continue; }
-      data = await r.json();
-      break;
-    } catch (e) { lastErr = e.message; }
-  }
-  if (!data) {
-    $('enkaMsg').innerHTML = '<b>Не получилось загрузить.</b> ' + esc(lastErr) +
-      '<br>Возможно, браузер блокирует запрос к чужому домену. Открой ' +
-      '<a href="https://enka.network/zzz/' + esc(uid) + '/" target="_blank" rel="noopener" style="color:#ff9d9d">свой профиль на enka.network</a> ' +
-      'и проверь, что витрина видна.';
-    return;
-  }
-
-  const list = (data.PlayerInfo && data.PlayerInfo.ShowcaseDetail &&
-                data.PlayerInfo.ShowcaseDetail.AvatarList) || [];
+// раскладываем полученный ответ по агентам
+function useEnkaData(data) {
+  const show = (data && data.PlayerInfo && data.PlayerInfo.ShowcaseDetail) || null;
+  const list = (show && show.AvatarList) || [];
   if (!list.length) {
     $('enkaMsg').innerHTML = '<b>Витрина пустая.</b> Зайди в игру → профиль → добавь агентов в витрину, ' +
       'подожди пару минут и попробуй снова.';
-    return;
+    return false;
   }
-
   const done = [], skip = [];
   list.forEach(av => {
     const a = applyEnka(av);
@@ -1094,15 +1089,77 @@ $('enkaGo').onclick = async () => {
   });
   save();
   render();
-
-  const nick = (data.PlayerInfo && data.PlayerInfo.ShowcaseDetail &&
-                data.PlayerInfo.ShowcaseDetail.SocialDetail &&
-                data.PlayerInfo.ShowcaseDetail.SocialDetail.ProfileDetail &&
-                data.PlayerInfo.ShowcaseDetail.SocialDetail.ProfileDetail.Nickname) || '';
+  const nick = (show.SocialDetail && show.SocialDetail.ProfileDetail &&
+                show.SocialDetail.ProfileDetail.Nickname) || '';
+  $('manualBox').style.display = 'none';
   $('enkaMsg').innerHTML = '<b>Готово' + (nick ? ', ' + esc(nick) : '') + '.</b> Загружено: ' +
     esc(done.join(', ')) +
     (skip.length ? '<br>Не нашлись в базе (id ' + esc(skip.join(', ')) +
-      ') — пересобери базу скриптом build-zzz-db.ps1.' : '');
+      ') — нажми «⟳ Обновить список агентов» в панели «↕ Импорт / экспорт».' : '');
+  return true;
+}
+
+$('enkaGo').onclick = async () => {
+  const uid = $('uidInput').value.trim().replace(/\D/g, '');
+  if (!uid) { $('enkaMsg').innerHTML = '<b>Впиши UID.</b> Он виден в игре внизу экрана профиля.'; return; }
+  localStorage.setItem(LS + '_uid', uid);
+  $('enkaMsg').textContent = 'Гружу профиль…';
+  const api = enkaApiUrl(uid);
+
+  // Enka режет запросы с чужих доменов, поэтому пробуем несколько зеркал-посредников
+  const tries = [
+    api,
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(api),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(api),
+    'https://corsproxy.io/?' + encodeURIComponent(api)
+  ];
+  let data = null, lastErr = '';
+  for (const u of tries) {
+    try {
+      const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+      if (!r.ok) { lastErr = 'HTTP ' + r.status; continue; }
+      const t = await r.text();
+      const j = JSON.parse(t);
+      if (j && j.PlayerInfo) { data = j; break; }
+      lastErr = 'ответ без данных профиля';
+    } catch (e) { lastErr = e.message || String(e); }
+  }
+
+  if (data) { useEnkaData(data); return; }
+
+  // автоматика не прошла — показываем ручной путь
+  $('enkaLink').href = api;
+  $('manualBox').style.display = 'block';
+  $('enkaMsg').innerHTML = '<b>Автоматически не вышло</b> (' + esc(lastErr) +
+    '). Enka не отвечает на запросы с чужого сайта — забери данные вручную, это быстро:';
+};
+
+$('manualPaste').onclick = async () => {
+  try {
+    const t = await navigator.clipboard.readText();
+    $('manualJson').value = t;
+  } catch (e) {
+    $('manualJson').focus();
+  }
+};
+
+$('manualGo').onclick = () => {
+  const raw = $('manualJson').value.trim();
+  if (!raw) { $('enkaMsg').innerHTML = '<b>Поле пустое.</b> Вставь скопированный текст.'; return; }
+  let data = null;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    // вдруг скопировалось с лишним текстом вокруг — вырежем объект
+    const i = raw.indexOf('{'), j = raw.lastIndexOf('}');
+    if (i !== -1 && j > i) { try { data = JSON.parse(raw.slice(i, j + 1)); } catch (e2) {} }
+  }
+  if (!data || !data.PlayerInfo) {
+    $('enkaMsg').innerHTML = '<b>Это не похоже на данные Enka.</b> Нужен текст, который начинается с ' +
+      '<code>{"PlayerInfo"</code>. Открой ссылку выше, выдели всё (Ctrl+A) и скопируй целиком.';
+    return;
+  }
+  if (useEnkaData(data)) $('manualJson').value = '';
 };
 
 const savedUid = localStorage.getItem(LS + '_uid');
