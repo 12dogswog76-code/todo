@@ -119,11 +119,11 @@
 
   .bars { margin-top: 7px; display: flex; flex-direction: column; gap: 4px; }
   .bar { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #7a8090; }
-  .bar b { width: 14px; flex: none; font-weight: 400; }
+  .bar b { width: 50px; flex: none; font-weight: 400; }
   .track { flex: 1; height: 4px; background: #ffffff10; border-radius: 2px; overflow: hidden; }
   .fill { height: 100%; background: #e53e3e; border-radius: 2px; transition: width .2s; }
   .fill.full { background: #4caf7d; }
-  .bar span { width: 30px; text-align: right; flex: none; }
+  .bar span { width: 42px; text-align: right; flex: none; }
 
   /* ── модалка ── */
   .modal {
@@ -242,6 +242,114 @@
   .foot { margin-top: 26px; text-align: center; color: #5a6070; font-size: 12px; }
   .foot a { color: #7a8090; text-decoration: none; }
   .foot a:hover { color: #e53e3e; }
+
+  /* ── карточка агента в стиле Enka ── */
+  .sheet.big { max-width: 900px; padding: 0; overflow: hidden; }
+  .hero {
+    display: grid; grid-template-columns: 232px 1fr; gap: 0;
+    background: linear-gradient(135deg, #1a1d24, #101216);
+    position: relative;
+  }
+  .hero .art {
+    position: relative; min-height: 268px; overflow: hidden;
+    background: #0d0f13; display: flex; align-items: flex-end; justify-content: center;
+  }
+  .hero .art img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+  .hero .art .nm {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 12px 10px;
+    background: linear-gradient(180deg, transparent, #0b0b0de8);
+  }
+  .hero .art .nm b { font-size: 17px; display: block; }
+  .hero .art .nm span { font-size: 11px; color: #8a90a0; }
+  .hero .art .lv {
+    position: absolute; top: 8px; left: 8px; background: #0b0b0dcc;
+    padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700;
+  }
+  .hero .info { padding: 14px 16px; }
+
+  .htabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .htab {
+    border: 1px solid #33363e; background: transparent; color: #9aa0ae; cursor: pointer;
+    border-radius: 8px; padding: 6px 14px; font-size: 12.5px; transition: all .12s;
+  }
+  .htab:hover { border-color: #e53e3e; color: #e8eaf0; }
+  .htab.on { background: #e53e3e22; border-color: #e53e3e; color: #ff9d9d; font-weight: 600; }
+
+  .statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 16px; }
+  .st {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 7px; align-items: center;
+    padding: 4px 0; border-bottom: 1px solid #ffffff08; font-size: 12.5px;
+  }
+  .st .lab { color: #9aa0ae; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st .val { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .st .goalin {
+    width: 62px; background: #0b0b0d; border: 1px solid #2a2d35; border-radius: 6px;
+    color: #8a90a0; padding: 2px 5px; font-size: 11.5px; text-align: right; outline: none;
+  }
+  .st .goalin:focus { border-color: #e53e3e; color: #e8eaf0; }
+  .st.hit .val { color: #4caf7d; }
+  .st.miss .val { color: #ffb454; }
+  .st .sub { font-size: 10px; color: #5a6070; font-weight: 400; }
+
+  .discrow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 4px; }
+  .dcard {
+    background: #0d0f13; border: 1px solid #2a2d35; border-radius: 10px; padding: 7px 5px;
+    text-align: center; cursor: pointer; transition: border-color .12s; position: relative;
+  }
+  .dcard:hover { border-color: #e53e3e; }
+  .dcard.plan { border-style: dashed; border-color: #4a5060; }
+  .dcard.plan.set { border-color: #7fb8ff; background: #7fb8ff12; }
+  .dcard .sn { font-size: 9.5px; color: #5a6070; }
+  .dcard img { width: 30px; height: 30px; object-fit: contain; margin: 2px 0; }
+  .dcard .mn { font-size: 10.5px; color: #e8eaf0; font-weight: 600; line-height: 1.2; }
+  .dcard .st2 { font-size: 9.5px; color: #8a90a0; line-height: 1.25; margin-top: 1px; }
+  .dcard .lvl {
+    position: absolute; top: 3px; right: 4px; font-size: 9px; color: #7a8090;
+  }
+  .dcard.empty .mn { color: #4a4f5a; }
+
+  .wrow {
+    display: flex; align-items: center; gap: 10px; background: #0d0f13;
+    border: 1px solid #2a2d35; border-radius: 10px; padding: 8px 10px; cursor: pointer;
+  }
+  .wrow:hover { border-color: #e53e3e; }
+  .wrow.plan { border-style: dashed; }
+  .wrow img { width: 38px; height: 38px; object-fit: contain; flex: none; }
+  .wrow .wn { font-size: 12.5px; font-weight: 600; }
+  .wrow .wd { font-size: 10.5px; color: #8a90a0; margin-top: 1px; }
+  .wrow .wp { margin-left: auto; font-size: 11px; color: #7a8090; text-align: right; flex: none; }
+
+  .skrow { display: flex; gap: 5px; flex-wrap: wrap; }
+  .skbox {
+    background: #0d0f13; border: 1px solid #2a2d35; border-radius: 9px;
+    padding: 5px 8px; text-align: center; min-width: 62px;
+  }
+  .skbox .sv { font-size: 14px; font-weight: 700; }
+  .skbox .sl { font-size: 9.5px; color: #7a8090; margin-top: 1px; }
+  .skbox input {
+    width: 38px; background: transparent; border: none; color: #e8eaf0;
+    font-size: 14px; font-weight: 700; text-align: center; outline: none; font-family: inherit;
+  }
+  .skbox input:focus { color: #ff9d9d; }
+
+  .diff2 { font-size: 11px; color: #7fb8ff; margin-left: 4px; }
+
+  /* редактор диска / оружия */
+  .editbox { background: #0d0f13; border: 1px solid #2a2d35; border-radius: 12px; padding: 12px; margin-top: 8px; }
+  .editbox .row { margin-bottom: 8px; }
+  .editbox select, .editbox input[type=number] {
+    background: #15171c; border: 1px solid #33363e; border-radius: 8px; color: #e8eaf0;
+    padding: 6px 9px; font-size: 12.5px; outline: none; font-family: inherit; color-scheme: dark;
+  }
+  .editbox select { min-width: 150px; cursor: pointer; }
+  .editbox select:focus, .editbox input:focus { border-color: #e53e3e; }
+
+  @media (max-width: 720px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero .art { min-height: 190px; }
+    .statgrid { grid-template-columns: 1fr; }
+    .discrow { grid-template-columns: repeat(3, 1fr); }
+  }
 
   /* ── светлая тема ── */
   body.light { background: linear-gradient(180deg, #f7f8fa 0%, #e9ebef 100%); color: #1c1e24; }
@@ -464,7 +572,8 @@ function blank() {
   return {
     have: false, lvl: 0, core: 0, mind: 0,
     sk: { 0: 1, 1: 1, 2: 1, 3: 1, 5: 1 },
-    w: { id: 0, lvl: 0, phase: 1 },
+    w: { id: 0, lvl: 0, br: 0, phase: 1 },
+    promo: 0, plan: { w: null, discs: [] },
     discs: [], disc: {}, cur: {}, goal: {}, note: '', mod: Date.now()
   };
 }
@@ -472,7 +581,11 @@ function P(id) {
   if (!prog[id]) prog[id] = blank();
   const p = prog[id];
   if (!p.sk) p.sk = { 0:1, 1:1, 2:1, 3:1, 5:1 };
-  if (!p.w) p.w = { id: 0, lvl: 0, phase: 1 };
+  if (!p.w) p.w = { id: 0, lvl: 0, br: 0, phase: 1 };
+  if (p.w.br == null) p.w.br = p.w.lvl >= 60 ? 5 : Math.max(0, Math.floor((p.w.lvl || 0) / 10) - 1);
+  if (!p.plan) p.plan = { w: null, discs: [] };
+  if (!Array.isArray(p.plan.discs)) p.plan.discs = [];
+  if (p.promo == null) p.promo = p.lvl ? Math.max(0, Math.ceil(p.lvl / 10) - 1) : 0;
   if (!p.cur) p.cur = {};
   if (!p.goal) p.goal = {};
   if (!Array.isArray(p.discs)) p.discs = [];
@@ -586,7 +699,7 @@ async function loadDb(force) {
       const fb = NAMES[norm(nEn)] || NAMES[norm(tail)] || null;
       if (!nEn) nEn = fb ? fb[1] : tail;
       if (!nRu) nRu = fb ? fb[0] : nEn;
-      const bp = a.BaseProps || {};
+      const bp = a.BaseProps || {}, gp = a.GrowthProps || {}, pp = a.PromotionProps || [];
       return {
         id: +id, ru: nRu, en: nEn,
         rarity: (+a.Rarity >= 4 ? 'S' : 'A'),
@@ -597,7 +710,12 @@ async function loadDb(force) {
         art:  a.Image ? ENKA_CDN + a.Image : '',
         base: { hp:+bp['11101']||0, atk:+bp['12101']||0, def:+bp['13101']||0,
                 im:+bp['12201']||0, ap:+bp['31201']||0, am:+bp['31401']||0,
-                cr:+bp['20101']||0, cd:+bp['21101']||0 }
+                cr:+bp['20101']||0, cd:+bp['21101']||0, er:+bp['30501']||0,
+                pen:+bp['23101']||0, sp:+bp['32001']||0 },
+        // рост по уровню (значения ×10000) и прибавки за ступени прорыва —
+        // без них не посчитать статы на 60 уровне
+        growth: { hp:+gp['11101']||0, atk:+gp['12101']||0, def:+gp['13101']||0 },
+        promo: (pp || []).map(x => ({ hp:+(x['11101']||0), atk:+(x['12101']||0), def:+(x['13101']||0) }))
       };
     }).filter(a => a.en);
 
@@ -755,14 +873,14 @@ function cardHTML(a) {
       const w = Math.min(100, Math.round(val / max * 100));
       return '<div class="bar"><b>' + lab + '</b><div class="track"><div class="fill' +
              (w >= 100 ? ' full' : '') + '" style="width:' + w + '%"></div></div><span>' +
-             val + '</span></div>';
+             val + '/' + max + '</span></div>';
     };
     let sk = 0; SKILL_IDX.forEach(o => sk += Math.min(SKILL_MAX, (p.sk && p.sk[o.i]) || 1));
     bars = '<div class="bars">' +
-      mk('Ур', p.lvl || 0, LVL_MAX) +
-      mk('Яд', p.core || 0, CORE_MAX) +
-      mk('Нв', sk, SKILL_MAX * SKILL_IDX.length) +
-      mk('W', (p.w && p.w.lvl) || 0, WENG_MAX) +
+      mk('Уровень', p.lvl || 0, LVL_MAX) +
+      mk('Ядро', p.core || 0, CORE_MAX) +
+      mk('Навыки', sk, SKILL_MAX * SKILL_IDX.length) +
+      mk('Оружие', (p.w && p.w.lvl) || 0, WENG_MAX) +
       '</div>';
   }
 
@@ -808,194 +926,361 @@ function renderSummary() {
 }
 
 // ─────────────── карточка агента ───────────────
-let curId = null;
+let curId = null, curTab = 'now', editing = null;
 
-function openAgent(id) {
-  curId = id;
-  const a = DB.byId[id], p = P(id);
+// какие основные характеристики бывают в каждом слоте (значение — база при Ур.0)
+const MAIN_OPTS = {
+  1: [['11103','HP',550]],
+  2: [['12103','Сила атаки',79]],
+  3: [['13103','Защита',46]],
+  4: [['20103','Шанс крит. попадания',600], ['21103','Крит. урон',1200],
+      ['12102','Сила атаки %',750], ['11102','HP %',750], ['13102','Защита %',1200],
+      ['31203','Знание аномалии',23]],
+  5: [['31503','Бонус физ. урона',750], ['31603','Бонус огн. урона',750],
+      ['31703','Бонус лед. урона',750], ['31803','Бонус элек. урона',750],
+      ['31903','Бонус эфир. урона',750], ['32303','Бонус возд. урона',750],
+      ['23103','Процент пробивания',600], ['12102','Сила атаки %',750],
+      ['11102','HP %',750], ['13102','Защита %',1200]],
+  6: [['12102','Сила атаки %',750], ['11102','HP %',750], ['13102','Защита %',1200],
+      ['30503','Восст. энергии',600], ['12202','Импульс %',450],
+      ['31402','Контроль аномалии %',750]]
+};
+function mainName(pid) {
+  for (const s in MAIN_OPTS) {
+    const f = MAIN_OPTS[s].find(o => o[0] === String(pid));
+    if (f) return f[1];
+  }
+  const pr = DB.props && DB.props[String(pid)];
+  return pr ? pr.n : '—';
+}
+function mainText(pid, base, lvl) {
+  if (!pid) return '';
+  const pr = DB.props && DB.props[String(pid)];
+  const pct = pr && pr.f && pr.f.indexOf('%') !== -1;
+  const v = (+base || 0) * (1 + 0.2 * (lvl || 0));
+  if (String(pid) === '30503') return (v / 100).toFixed(1);
+  return pct ? (v / 100).toFixed(1) + '%' : String(Math.round(v));
+}
+
+function planDiscs(p) {
+  // плановая сборка: берём текущие диски и заменяем те, что задал пользователь
+  const cur = p.discs || [], pl = (p.plan && p.plan.discs) || [];
+  const out = [];
+  for (let s = 1; s <= 6; s++) {
+    const q = pl.find(x => x.slot === s);
+    const c = cur.find(x => x.slot === s);
+    if (q) out.push({ slot: s, suit: q.suit, lvl: 15, mainP: q.mainP, mainV: q.mainV,
+                      subs: (c && c.subs) || [] });     // сабстаты оставляем от текущего
+    else if (c) out.push(c);
+  }
+  return out;
+}
+function planProg(p) {
+  const q = (p.plan && p.plan.w) || null;
+  if (!q || !q.id) return p;
+  return Object.assign({}, p, { w: { id: q.id, lvl: q.lvl != null ? q.lvl : 60,
+                                     br: q.br != null ? q.br : 5, phase: q.phase || 1 } });
+}
+
+function openAgent(id) { curId = id; curTab = 'now'; editing = null; renderSheet(); }
+
+function renderSheet() {
+  const a = DB.byId[curId], p = P(curId);
   const el = (a.element || [])[0] || '';
-  const pic = imgUrl('agents', a.icon);
+  const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
+  const art = imgUrl('agents', a.art || a.icon);
 
-  let h = '<div class="shead">' +
-    (pic ? '<img class="pic" src="' + esc(pic) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
-    '<div><h2>' + esc(a.ru) + '</h2><div class="sub">' +
-      '<span style="color:' + ((ELEM[el] && ELEM[el].c) || '#aab0c0') + '">' +
-        esc((ELEM[el] && ELEM[el].ru) || el) + '</span>· ' +
-      esc(PROF[a.prof] || a.prof) + ' · ранг ' + esc(a.rarity) +
-      (a.en && a.en !== a.ru ? ' · ' + esc(a.en) : '') +
-    '</div></div>' +
-    '<button class="xbtn" onclick="closeModal()">✕</button></div>';
+  let h = '<div class="hero"><div class="art">' +
+    (art ? '<img src="' + esc(art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
+    (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
+    '<div class="nm"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) +
+      ' · ' + esc((ELEM[el] && ELEM[el].ru) || el) + ' · ' + esc(PROF[a.prof] || a.prof) +
+      ' · ' + esc(a.rarity) + '</span></div></div><div class="info">';
 
-  // есть у меня
-  h += '<div class="sect"><label class="chip' + (p.have ? ' on' : '') + '" id="haveTog" style="font-size:13px">' +
-       (p.have ? '✓ есть у меня' : '＋ отметить, что есть') + '</label></div>';
+  if (!p.have) {
+    h += '<div style="padding:22px 4px;color:#8a90a0;font-size:13px;line-height:1.6">' +
+         'Этого агента у тебя пока нет в трекере.<br>Отметь, если он у тебя есть — ' +
+         'появятся прокачка, диски и характеристики.</div>' +
+         '<button class="htab on" id="haveTog" style="font-size:13px;padding:8px 16px">＋ Есть у меня</button>';
+  } else {
+    const nowT  = calcTotals(a, p, p.discs);
+    const planT = calcTotals(a, planProg(p), planDiscs(p));
+    const T = curTab === 'plan' ? planT : nowT;
 
-  if (p.have) {
-    // уровень / ядро / мандрагоры
-    h += '<div class="sect"><h3>Прокачка</h3>' +
-      '<div class="row"><label>Уровень</label>' +
-        '<select class="num" id="fLvl">' +
-          [0,10,20,30,40,50,60].map(v => '<option value="' + v + '"' +
-            (p.lvl === v ? ' selected' : '') + '>' + (v || '—') + '</option>').join('') +
-        '</select>' +
-      '</div>' +
-      '<div class="row"><label>Ядро навыка</label><div class="steps" id="fCore">' +
-        ['—','A','B','C','D','E','F'].map((t, i) =>
-          '<div class="step' + (p.core === i ? ' on' : '') + '" data-v="' + i + '">' + t + '</div>').join('') +
-      '</div></div>' +
-      '<div class="row"><label>Мандрагоры</label><div class="steps" id="fMind">' +
-        [0,1,2,3,4,5,6].map(i =>
-          '<div class="step' + (p.mind === i ? ' on' : '') + '" data-v="' + i + '">M' + i + '</div>').join('') +
-      '</div></div>' +
-    '</div>';
+    h += '<div class="htabs">' +
+      '<button class="htab' + (curTab === 'now' ? ' on' : '') + '" data-tab="now">Сейчас</button>' +
+      '<button class="htab' + (curTab === 'plan' ? ' on' : '') + '" data-tab="plan">План</button>' +
+      '<button class="htab" id="haveTog" style="margin-left:auto">✓ есть</button></div>';
 
-    // навыки
-    h += '<div class="sect"><h3>Навыки (макс. ' + SKILL_MAX + ')</h3>';
-    SKILL_IDX.forEach(o => {
-      h += '<div class="row"><label>' + esc(o.n) + '</label>' +
-           '<input type="number" class="num sk" data-i="' + o.i + '" min="1" max="' + SKILL_MAX +
-           '" value="' + ((p.sk && p.sk[o.i]) || 1) + '"></div>';
+    // характеристики
+    const rows = [
+      ['hp','HP',0], ['ap','Знание аномалии',0], ['atk','Сила атаки',0], ['am','Контроль аномалии',0],
+      ['def','Защита',0], ['penp','Процент пробивания',1], ['im','Импульс',0], ['pen','Пробивание',0],
+      ['cr','Шанс крит. попадания',1], ['er','Восст. энергии',2], ['cd','Крит. урон',1], ['dmg','Бонус стихии',1]
+    ];
+    h += '<div class="statgrid">';
+    rows.forEach(r => {
+      const k = r[0], isPct = r[2] === 1, isEr = r[2] === 2;
+      let v = T[k] || 0;
+      const disp = isPct ? v.toFixed(1) + '%' : (isEr ? v.toFixed(2) : Math.round(v));
+      const goal = p.goal[k];
+      let cls = '', extra = '';
+      if (goal != null && goal !== '') cls = (v >= +goal ? ' hit' : ' miss');
+      if (curTab === 'plan') {
+        const was = nowT[k] || 0, d = v - was;
+        if (Math.abs(d) > 0.05) extra = '<span class="diff2">' + (d > 0 ? '+' : '') +
+          (isPct ? d.toFixed(1) : (isEr ? d.toFixed(2) : Math.round(d))) + '</span>';
+      }
+      h += '<div class="st' + cls + '"><span class="lab">' + esc(r[1]) + '</span>' +
+        '<span class="val">' + esc(disp) + extra + '</span>' +
+        '<input class="goalin" data-k="' + k + '" value="' +
+          (goal == null ? '' : esc(goal)) + '" placeholder="цель" title="сколько хочешь достичь">' +
+        '</div>';
     });
     h += '</div>';
 
-    // W-Engine
-    const eng = DB.engById[p.w.id];
-    h += '<div class="sect"><h3>W-Engine</h3>' +
-      '<div class="row"><label>Модель</label>' +
-        '<select class="num" id="fEng" style="min-width:190px">' +
-          '<option value="0">— не выбран —</option>' +
-          (DB.engines || []).slice().sort((x, y) => (x.ru || '').localeCompare(y.ru || '', 'ru'))
-            .map(w => '<option value="' + w.id + '"' + (p.w.id === w.id ? ' selected' : '') + '>' +
-                 esc((w.ru || w.en || ('#' + w.id))) + ' · ' + esc(w.rarity) + '</option>').join('') +
-        '</select></div>' +
-      '<div class="row"><label>Уровень</label>' +
-        '<input type="number" class="num" id="fEngLvl" min="0" max="60" value="' + (p.w.lvl || 0) + '">' +
-        '<label style="min-width:auto;margin-left:8px">Фаза</label>' +
-        '<select class="num" id="fEngPh">' +
-          [1,2,3,4,5].map(v => '<option value="' + v + '"' +
-            ((p.w.phase || 1) === v ? ' selected' : '') + '>P' + v + '</option>').join('') +
-        '</select></div>' +
-      (a.weapon && DB.engById[a.weapon]
-        ? '<div class="hint" style="margin-top:2px">Сигнатурный: <b>' +
-          esc(DB.engById[a.weapon].ru || DB.engById[a.weapon].en) + '</b></div>' : '') +
-    '</div>';
+    // оружие
+    const wSrc = curTab === 'plan' ? planProg(p) : p;
+    const w = DB.engById[wSrc.w.id];
+    h += '<h3 style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280">W-Engine</h3>' +
+      '<div class="wrow' + (curTab === 'plan' ? ' plan' : '') + '" id="wEdit">' +
+        (w && w.icon ? '<img src="' + esc(imgUrl('engines', w.icon)) + '" alt="" onerror="this.style.display=\'none\'">' : '<img alt="">') +
+        '<div><div class="wn">' + esc(w ? (w.ru || w.en) : 'не выбран — нажми, чтобы указать') + '</div>' +
+        '<div class="wd">' + (w ? esc(w.rarity) + '-ранг · ' + esc(PROF[w.prof] || w.prof) : 'нажми, чтобы выбрать') + '</div></div>' +
+        (w ? '<div class="wp">Ур. ' + (wSrc.w.lvl || 0) + '<br>фаза P' + (wSrc.w.phase || 1) + '</div>' : '') +
+      '</div>';
 
     // диски
-    h += '<div class="sect"><h3>Диски</h3><div class="discgrid">';
-    for (let s = 1; s <= 6; s++) {
-      const d = (p.discs || []).find(x => x.slot === s);
+    const list = curTab === 'plan' ? planDiscs(p) : (p.discs || []);
+    const plSet = (p.plan && p.plan.discs) || [];
+    h += '<h3 style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280">' +
+         'Диски' + (curTab === 'plan' ? ' — нажми на слот, чтобы задать желаемый' : ' — нажми, чтобы поправить') + '</h3>';
+    h += '<div class="discrow">';
+    for (let sl = 1; sl <= 6; sl++) {
+      const d = list.find(x => x.slot === sl);
       const suit = d && DB.suitById[d.suit];
-      h += '<div class="disc' + (d ? '' : ' empty') + '">' +
-        '<div class="sl">слот ' + s + '</div>' +
+      const isPlan = curTab === 'plan' && plSet.some(x => x.slot === sl);
+      h += '<div class="dcard' + (d ? '' : ' empty') + (curTab === 'plan' ? ' plan' : '') +
+           (isPlan ? ' set' : '') + '" data-slot="' + sl + '">' +
+        '<div class="sn">' + sl + '</div>' +
         (suit && suit.icon ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
-        '<div class="nm">' + esc(suit ? (suit.ru || suit.en) : '—') + '</div>' +
-        (d && d.main ? '<div class="ms">' + esc(d.main) + '</div>' : '') +
+        (d && d.lvl ? '<div class="lvl">+' + d.lvl + '</div>' : '') +
+        '<div class="mn">' + esc(d ? mainText(d.mainP, d.mainV, d.lvl) : '—') + '</div>' +
+        '<div class="st2">' + esc(d ? (suit ? (suit.ru || suit.en) : '') : 'пусто') + '</div>' +
       '</div>';
     }
     h += '</div>';
-    // какие комплекты собраны (4+2 и т.п.)
+
+    // комплекты
     const cnt = {};
-    (p.discs || []).forEach(d => { if (d.suit) cnt[d.suit] = (cnt[d.suit] || 0) + 1; });
-    const sets = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
-    if (sets.length) {
-      h += '<div class="hint" style="margin-top:7px">Комплекты: ' + sets.map(sid => {
-        const s = DB.suitById[sid], n = cnt[sid];
-        const nm = esc(s ? (s.ru || s.en) : ('#' + sid));
-        const strong = n >= 4 ? ' style="color:#4caf7d"' : (n >= 2 ? ' style="color:#c8ccd6"' : '');
-        return '<b' + strong + '>' + nm + ' ×' + n + '</b>';
-      }).join(' · ') + '</div>';
-    }
-    h += '<div class="hint">Диски заполняются кнопкой «⟳ Импорт из игры» — вручную их вбивать долго.</div></div>';
+    list.forEach(d => { if (d && d.suit) cnt[d.suit] = (cnt[d.suit] || 0) + 1; });
+    const setsTxt = Object.keys(cnt).sort((x, y) => cnt[y] - cnt[x]).map(sid => {
+      const s = DB.suitById[sid], n = cnt[sid];
+      const c = n >= 4 ? '#4caf7d' : (n >= 2 ? '#c8ccd6' : '#6b7280');
+      return '<b style="color:' + c + '">' + esc(s ? (s.ru || s.en) : '#' + sid) + ' ' + n + '/4</b>';
+    }).join(' · ');
+    if (setsTxt) h += '<div class="hint" style="margin-top:6px">' + setsTxt + '</div>';
 
-    // характеристики: моё / цель / вклад дисков
-    const dsc = p.disc || {};
-    const fmtD = (k, pct) => {
-      const v = dsc[k];
-      if (!v) return '';
-      return pct ? '+' + (v / 100).toFixed(1) : '+' + Math.round(v);
-    };
-    h += '<div class="sect"><h3>Характеристики</h3>' +
-      '<table class="stats2"><tr><th>показатель</th><th>сейчас</th><th>цель</th><th></th><th>с дисков</th></tr>';
-    STATS.forEach(s => {
-      const cv = p.cur[s.k], gv = p.goal[s.k];
-      let diff = '', dcls = '';
-      if (cv != null && gv != null && gv !== '') {
-        const d = (+cv) - (+gv);
-        if (d >= 0) { diff = '✓'; dcls = 'ok'; }
-        else { diff = (s.pct ? (d).toFixed(1) : Math.round(d)); dcls = 'no'; }
-      }
-      h += '<tr><td>' + esc(s.n) + (s.pct ? ' %' : '') + '</td>' +
-        '<td class="n"><input type="number" step="any" class="st-cur" data-k="' + s.k + '" value="' +
-          (cv == null ? '' : esc(cv)) + '"></td>' +
-        '<td class="n"><input type="number" step="any" class="st-goal goal" data-k="' + s.k + '" value="' +
-          (gv == null ? '' : esc(gv)) + '"></td>' +
-        '<td class="diff ' + dcls + '">' + diff + '</td>' +
-        '<td class="diff" style="color:#6b7280">' + esc(fmtD(s.k, s.pct)) + '</td></tr>';
+    // навыки и ядро
+    h += '<h3 style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280">Навыки и ядро</h3>' +
+         '<div class="skrow">';
+    SKILL_IDX.forEach(o => {
+      h += '<div class="skbox"><input type="number" class="sk" data-i="' + o.i + '" min="1" max="' +
+           SKILL_MAX + '" value="' + ((p.sk && p.sk[o.i]) || 1) + '">' +
+           '<div class="sl">' + esc(o.n) + '</div></div>';
     });
-    h += '</table><div class="hint">«Сейчас» и «цель» вписываешь сам — итоговые числа бери из игры ' +
-         'или со своей карточки на enka.network. Колонка <b>«с дисков»</b> считается точно ' +
-         'при импорте: это чистый вклад надетых дисков, по нему видно качество сборки.</div></div>';
+    h += '<div class="skbox"><div class="sv">' + (p.core || 0) + '/6</div><div class="sl">ядро</div></div>' +
+         '<div class="skbox"><div class="sv">M' + (p.mind || 0) + '</div><div class="sl">мандрагоры</div></div>' +
+         '</div>';
 
-    // заметка
-    h += '<div class="sect"><h3>Заметка</h3>' +
-      '<input type="text" id="fNote" class="num" style="width:100%" value="' + esc(p.note || '') + '" ' +
-      'placeholder="например: ждёт сигнатурку, или мейн для Шию"></div>';
+    h += '<div class="row" style="margin-top:10px"><label style="min-width:auto;font-size:12px;color:#9aa0ae">Уровень</label>' +
+      '<select class="num" id="fLvl">' + [0,10,20,30,40,50,60].map(v =>
+        '<option value="' + v + '"' + (p.lvl === v ? ' selected' : '') + '>' + (v || '—') + '</option>').join('') +
+      '</select>' +
+      '<label style="min-width:auto;font-size:12px;color:#9aa0ae;margin-left:6px">Ядро</label>' +
+      '<select class="num" id="fCore">' + [0,1,2,3,4,5,6].map(v =>
+        '<option value="' + v + '"' + (p.core === v ? ' selected' : '') + '>' + (['—','A','B','C','D','E','F'][v]) + '</option>').join('') +
+      '</select>' +
+      '<label style="min-width:auto;font-size:12px;color:#9aa0ae;margin-left:6px">Мандрагоры</label>' +
+      '<select class="num" id="fMind">' + [0,1,2,3,4,5,6].map(v =>
+        '<option value="' + v + '"' + (p.mind === v ? ' selected' : '') + '>M' + v + '</option>').join('') +
+      '</select></div>';
+
+    h += '<div class="row" style="margin-top:6px"><input type="text" id="fNote" class="num" style="width:100%" value="' +
+         esc(p.note || '') + '" placeholder="заметка: например «ждёт сигнатурку»"></div>';
+
+    h += '<div class="hint" style="margin-top:8px">Характеристики считаются из уровня, ' +
+         'прорыва, оружия и дисков — сверено с игрой. <b>Знание и контроль аномалии</b> показаны ' +
+         'без прибавки от прокачанного ядра (её нет в открытых данных), так что в игре они будут выше.</div>';
+    h += '<div id="editZone"></div>';
   }
 
-  h += '<div class="btns"><button onclick="closeModal()">Закрыть</button>' +
+  h += '</div></div>';
+  h += '<div class="btns" style="padding:0 16px 14px"><button onclick="closeModal()">Закрыть</button>' +
        '<button class="pri" id="saveBtn">Сохранить</button></div>';
 
+  $('sheet').className = 'sheet big';
   $('sheet').innerHTML = h;
   $('modal').classList.add('open');
   bindSheet();
+  if (editing) openEditor(editing.kind, editing.slot);
 }
 
 function bindSheet() {
+  const a = DB.byId[curId], p = P(curId);
+  const tog = $('haveTog');
+  if (tog) tog.onclick = () => {
+    p.have = !p.have; p.mod = Date.now(); save(curId); renderSheet(); render();
+  };
+  const sb = $('saveBtn');
+  if (sb) sb.onclick = () => { applySheet(); closeModal(); render(); };
+  if (!p.have) return;
+
+  document.querySelectorAll('.htab[data-tab]').forEach(b => b.onclick = () => {
+    applySheet(); curTab = b.dataset.tab; editing = null; renderSheet();
+  });
+  document.querySelectorAll('.dcard').forEach(c => c.onclick = () => {
+    applySheet(); editing = { kind: 'disc', slot: +c.dataset.slot }; renderSheet();
+  });
+  const we = $('wEdit');
+  if (we) we.onclick = () => { applySheet(); editing = { kind: 'weapon' }; renderSheet(); };
+  document.querySelectorAll('.goalin').forEach(i => i.onchange = () => applySheet());
+}
+
+// сохраняем то, что введено в полях, не закрывая карточку
+function applySheet() {
+  const p = prog[curId]; if (!p || !p.have) return;
+  const lv = $('fLvl'); if (lv) p.lvl = +lv.value || 0;
+  const co = $('fCore'); if (co) p.core = +co.value || 0;
+  const mi = $('fMind'); if (mi) p.mind = +mi.value || 0;
+  document.querySelectorAll('.sk').forEach(i => {
+    p.sk[+i.dataset.i] = Math.max(1, Math.min(SKILL_MAX, +i.value || 1));
+  });
+  document.querySelectorAll('.goalin').forEach(i => {
+    const v = i.value.trim();
+    if (v === '') delete p.goal[i.dataset.k]; else p.goal[i.dataset.k] = +v;
+  });
+  const nt = $('fNote'); if (nt) p.note = nt.value.trim();
+  const t = calcTotals(DB.byId[curId], p, p.discs);
+  p.cur = { hp:t.hp, atk:t.atk, def:t.def, cr:Math.round(t.cr*10)/10, cd:Math.round(t.cd*10)/10,
+            ap:t.ap, am:t.am, im:t.im, pen:t.pen, er:t.er, dmg:Math.round(t.dmg*10)/10 };
+  save(curId);
+}
+
+// ── редакторы диска и оружия ──
+function openEditor(kind, slot) {
+  const z = $('editZone'); if (!z) return;
   const p = P(curId);
+  const isPlan = curTab === 'plan';
+  let h = '<div class="editbox">';
 
-  $('haveTog').onclick = () => {
-    p.have = !p.have;
-    p.mod = Date.now();
-    save(curId);
-    openAgent(curId);
-    render();
-  };
+  if (kind === 'disc') {
+    const src = isPlan ? ((p.plan && p.plan.discs) || []) : (p.discs || []);
+    const d = src.find(x => x.slot === slot) ||
+              (isPlan ? (p.discs || []).find(x => x.slot === slot) : null) || {};
+    h += '<div style="font-size:12.5px;font-weight:600;margin-bottom:8px">' +
+         (isPlan ? 'Каким хочу видеть слот ' : 'Слот ') + slot + '</div>';
+    h += '<div class="row"><select id="edSuit"><option value="">— сет не выбран —</option>' +
+      (DB.suits || []).slice().sort((x, y) => (x.ru || x.en || '').localeCompare(y.ru || y.en || '', 'ru'))
+        .map(s => '<option value="' + s.id + '"' + (+d.suit === s.id ? ' selected' : '') + '>' +
+             esc(s.ru || s.en || ('#' + s.id)) + '</option>').join('') + '</select></div>';
+    h += '<div class="row"><select id="edMain">' +
+      (MAIN_OPTS[slot] || []).map(o => '<option value="' + o[0] + '|' + o[2] + '"' +
+        (String(d.mainP) === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') +
+      '</select>';
+    if (!isPlan) h += ' <input type="number" id="edLvl" min="0" max="15" value="' + (d.lvl != null ? d.lvl : 15) +
+                      '" style="width:64px" title="уровень прокачки диска">';
+    h += '</div>';
+    h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #e53e3e;background:#e53e3e;color:#fff">' +
+         (isPlan ? 'Добавить в план' : 'Сохранить слот') + '</button>' +
+         '<button id="edDel">Очистить</button><button id="edCancel">Отмена</button></div>';
+    if (isPlan) h += '<div class="hint">Плановый диск считается прокачанным до +15. ' +
+                     'Доп. характеристики берутся от текущего диска — сравнивается именно основная.</div>';
+  } else {
+    const cur = isPlan ? ((p.plan && p.plan.w) || {}) : p.w;
+    h += '<div style="font-size:12.5px;font-weight:600;margin-bottom:8px">' +
+         (isPlan ? 'Какое оружие хочу' : 'W-Engine') + '</div>';
+    h += '<div class="row"><select id="edEng" style="min-width:220px"><option value="0">— не выбрано —</option>' +
+      (DB.engines || []).slice().sort((x, y) => {
+        if (x.rarity !== y.rarity) return x.rarity === 'S' ? -1 : (y.rarity === 'S' ? 1 : 0);
+        return (x.ru || x.en || '').localeCompare(y.ru || y.en || '', 'ru');
+      }).map(w => '<option value="' + w.id + '"' + (+cur.id === w.id ? ' selected' : '') + '>' +
+           esc(w.rarity) + ' · ' + esc(w.ru || w.en || ('#' + w.id)) + '</option>').join('') + '</select></div>';
+    h += '<div class="row"><label style="font-size:12px;color:#9aa0ae">Уровень</label> ' +
+      '<input type="number" id="edWLvl" min="0" max="60" value="' + (cur.lvl != null ? cur.lvl : 60) + '" style="width:64px"> ' +
+      '<label style="font-size:12px;color:#9aa0ae;margin-left:6px">Прорыв</label> ' +
+      '<select id="edWBr">' + [0,1,2,3,4,5].map(v => '<option value="' + v + '"' +
+        ((cur.br != null ? cur.br : 5) === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select> ' +
+      '<label style="font-size:12px;color:#9aa0ae;margin-left:6px">Фаза</label> ' +
+      '<select id="edWPh">' + [1,2,3,4,5].map(v => '<option value="' + v + '"' +
+        ((cur.phase || 1) === v ? ' selected' : '') + '>P' + v + '</option>').join('') + '</select></div>';
+    h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #e53e3e;background:#e53e3e;color:#fff">Сохранить</button>' +
+         '<button id="edDel">Очистить</button><button id="edCancel">Отмена</button></div>';
+    if (a_sig(p)) h += '<div class="hint">Сигнатурное для этого агента: <b>' + esc(a_sig(p)) + '</b></div>';
+  }
+  h += '</div>';
+  z.innerHTML = h;
+  try { z.scrollIntoView({ block: 'nearest' }); } catch (e) {}
 
-  if (!p.have) { $('saveBtn').onclick = closeModal; return; }
+  $('edCancel').onclick = () => { editing = null; renderSheet(); };
+  $('edDel').onclick = () => { clearSlot(kind, slot, isPlan); editing = null; save(curId); renderSheet(); render(); };
+  $('edSave').onclick = () => { saveSlot(kind, slot, isPlan); editing = null; save(curId); renderSheet(); render(); };
+}
 
-  const core = $('fCore'), mind = $('fMind');
-  core.querySelectorAll('.step').forEach(s => s.onclick = () => {
-    p.core = +s.dataset.v;
-    core.querySelectorAll('.step').forEach(x => x.classList.remove('on'));
-    s.classList.add('on');
-  });
-  mind.querySelectorAll('.step').forEach(s => s.onclick = () => {
-    p.mind = +s.dataset.v;
-    mind.querySelectorAll('.step').forEach(x => x.classList.remove('on'));
-    s.classList.add('on');
-  });
+function a_sig(p) {
+  const a = DB.byId[curId];
+  const w = a && a.weapon ? DB.engById[a.weapon] : null;
+  return w ? (w.ru || w.en) : '';
+}
 
-  $('saveBtn').onclick = () => {
-    p.lvl = +$('fLvl').value || 0;
-    document.querySelectorAll('.sk').forEach(i => {
-      p.sk[+i.dataset.i] = Math.max(1, Math.min(SKILL_MAX, +i.value || 1));
-    });
-    p.w.id    = +$('fEng').value || 0;
-    p.w.lvl   = Math.max(0, Math.min(60, +$('fEngLvl').value || 0));
-    p.w.phase = +$('fEngPh').value || 1;
-    document.querySelectorAll('.st-cur').forEach(i => {
-      const v = i.value.trim();
-      if (v === '') delete p.cur[i.dataset.k]; else p.cur[i.dataset.k] = +v;
-    });
-    document.querySelectorAll('.st-goal').forEach(i => {
-      const v = i.value.trim();
-      if (v === '') delete p.goal[i.dataset.k]; else p.goal[i.dataset.k] = +v;
-    });
-    p.note = $('fNote').value.trim();
-    save(curId);
-    closeModal();
-    render();
-  };
+function clearSlot(kind, slot, isPlan) {
+  const p = P(curId);
+  if (kind === 'disc') {
+    if (isPlan) { if (p.plan && p.plan.discs) p.plan.discs = p.plan.discs.filter(x => x.slot !== slot); }
+    else p.discs = (p.discs || []).filter(x => x.slot !== slot);
+  } else {
+    if (isPlan) { if (p.plan) p.plan.w = null; }
+    else p.w = { id: 0, lvl: 0, br: 0, phase: 1 };
+  }
+  refreshCur(p);
+  p.mod = Date.now();
+}
+
+function saveSlot(kind, slot, isPlan) {
+  const p = P(curId);
+  if (!p.plan) p.plan = { w: null, discs: [] };
+  if (kind === 'disc') {
+    const suit = +$('edSuit').value || 0;
+    const mv = ($('edMain').value || '').split('|');
+    const rec = { slot: slot, suit: suit, mainP: mv[0] || '', mainV: +mv[1] || 0,
+                  lvl: isPlan ? 15 : (+($('edLvl') || {}).value || 0) };
+    if (isPlan) {
+      p.plan.discs = (p.plan.discs || []).filter(x => x.slot !== slot);
+      p.plan.discs.push(rec);
+    } else {
+      const old = (p.discs || []).find(x => x.slot === slot);
+      rec.subs = (old && old.subs) || [];
+      p.discs = (p.discs || []).filter(x => x.slot !== slot);
+      p.discs.push(rec);
+      p.discs.sort((x, y) => x.slot - y.slot);
+      p.disc = discSum(p.discs);
+    }
+  } else {
+    const rec = { id: +$('edEng').value || 0, lvl: +$('edWLvl').value || 0,
+                  br: +$('edWBr').value || 0, phase: +$('edWPh').value || 1 };
+    if (isPlan) p.plan.w = rec.id ? rec : null;
+    else p.w = rec;
+  }
+  refreshCur(p);
+  p.mod = Date.now();
+}
+
+// пересчёт колонки «сейчас» после любой правки снаряжения
+function refreshCur(p) {
+  const a = DB.byId[curId]; if (!a) return;
+  const t = calcTotals(a, p, p.discs);
+  p.cur = { hp:t.hp, atk:t.atk, def:t.def, cr:Math.round(t.cr*10)/10, cd:Math.round(t.cd*10)/10,
+            ap:t.ap, am:t.am, im:t.im, pen:t.pen, er:t.er, dmg:Math.round(t.dmg*10)/10 };
 }
 
 function closeModal() { $('modal').classList.remove('open'); curId = null; }
@@ -1003,33 +1288,82 @@ $('modal').onclick = e => { if (e.target === $('modal')) closeModal(); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 // ─────────────── импорт из игры (Enka) ───────────────
-function statFromDiscs(av) {
-  // складываем мейн- и сабстаты всех надетых дисков + бонусы собранных комплектов
-  const acc = {};
-  const add = (k, v) => { if (!k) return; acc[k] = (acc[k] || 0) + v; };
-  const cnt = {};
-  (av.EquippedList || []).forEach(eq => {
-    const e = eq.Equipment; if (!e) return;
-    const suit = Math.floor((e.Id || 0) / 100) * 100;
-    cnt[suit] = (cnt[suit] || 0) + 1;
-    (e.MainPropertyList || []).forEach(mp => {
-      const mult = 1 + 0.2 * (e.Level || 0);          // мейн растёт с уровня диска
-      add(PROP2STAT[String(mp.PropertyId)], (mp.PropertyValue || 0) * mult);
-    });
-    (e.RandomPropertyList || []).forEach(rp => {
-      add(PROP2STAT[String(rp.PropertyId)], (rp.PropertyValue || 0) * (rp.PropertyLevel || 1));
-    });
+
+// ─────────────── полный расчёт характеристик ───────────────
+// Формулы выведены из данных Enka и сверены с игрой:
+//   стат = (база агента + вклад оружия) × (1 + сумма процентов) + плоские прибавки
+//   ATK оружия  = база × (1 + 0.155×уровень + 0.9×ступень прорыва)
+//   доп. стат оружия = база × (1 + 0.3×ступень прорыва)
+function weaponBonus(p) {
+  const w = p && p.w && p.w.id ? DB.engById[p.w.id] : null;
+  if (!w) return { atk: 0, sec: null };
+  const lvl = Math.max(0, p.w.lvl || 0), br = Math.max(0, p.w.br || 0);
+  const atk = w.main ? (+w.main.v || 0) * (1 + 0.1558 * lvl + 0.9 * br) : 0;
+  const sec = w.sec ? { p: String(w.sec.p), v: (+w.sec.v || 0) * (1 + 0.3 * br) } : null;
+  return { atk: atk, sec: sec };
+}
+
+function baseAt(a, p) {
+  const b = a.base || {}, g = a.growth || {}, pr = a.promo || [];
+  const lvl = Math.max(1, p.lvl || 1);
+  const pi = Math.max(0, Math.min(pr.length - 1, p.promo != null ? p.promo : Math.ceil(lvl / 10) - 1));
+  const st = pr[pi] || {};
+  const grow = k => (g[k] || 0) * (lvl - 1) / 10000;
+  return {
+    hp:  (b.hp || 0) + grow('hp')  + (st.hp || 0),
+    atk: (b.atk || 0) + grow('atk') + (st.atk || 0),
+    def: (b.def || 0) + grow('def') + (st.def || 0),
+    im: b.im || 0, ap: b.ap || 0, am: b.am || 0,
+    cr: b.cr || 500, cd: b.cd || 5000, er: b.er || 0, pen: b.pen || 0
+  };
+}
+
+// суммирует всё, что дают диски (мейн + сабстаты + бонусы комплектов) для набора дисков
+function discSum(discs) {
+  const acc = {}, cnt = {};
+  const add = (k, v) => { if (k) acc[k] = (acc[k] || 0) + v; };
+  (discs || []).forEach(d => {
+    if (!d) return;
+    if (d.suit) cnt[d.suit] = (cnt[d.suit] || 0) + 1;
+    if (d.mainP) add(PROP2STAT[String(d.mainP)], (+d.mainV || 0) * (1 + 0.2 * (d.lvl || 0)));
+    (d.subs || []).forEach(s => add(PROP2STAT[String(s.p)], (+s.v || 0) * (s.l || 1)));
   });
-  // бонус за комплект из 2 предметов (данные Enka содержат именно его)
-  if (typeof DB !== 'undefined' && DB && DB.suitById) {
+  if (DB && DB.suitById) {
     Object.keys(cnt).forEach(sid => {
       if (cnt[sid] < 2) return;
       const s = DB.suitById[sid];
-      if (!s || !s.bonus) return;
-      Object.keys(s.bonus).forEach(pid => add(PROP2STAT[pid], s.bonus[pid]));
+      if (s && s.bonus) Object.keys(s.bonus).forEach(pid => add(PROP2STAT[pid], s.bonus[pid]));
     });
   }
   return acc;
+}
+
+// итоговые характеристики агента: сборка = набор дисков (текущий или плановый)
+function calcTotals(a, p, discs) {
+  const b = baseAt(a, p), w = weaponBonus(p), d = discSum(discs);
+  if (w.sec) {                       // доп. стат оружия кладём в общую кучу
+    const k = PROP2STAT[w.sec.p];
+    if (k) d[k] = (d[k] || 0) + w.sec.v;
+  }
+  const pc = k => (d[k] || 0) / 10000;      // проценты хранятся ×10000
+  const flat = k => d[k] || 0;
+  const atkBase = b.atk + w.atk;
+  return {
+    hp:  Math.round(b.hp  * (1 + pc('hpp'))  + flat('hp')),
+    atk: Math.round(atkBase * (1 + pc('atkp')) + flat('atk')),
+    def: Math.round(b.def * (1 + pc('defp')) + flat('def')),
+    cr:  (b.cr / 100) + (flat('cr') / 100),
+    cd:  (b.cd / 100) + (flat('cd') / 100),
+    ap:  Math.round(b.ap + flat('ap')),
+    am:  Math.round(b.am * (1 + pc('amp'))),
+    im:  Math.round(b.im * (1 + pc('imp')) + flat('im')),
+    pen: Math.round(flat('pen')),
+    penp: flat('penp') / 100,
+    er:  Math.round((b.er + flat('er')) / 100 * 100) / 100,
+    dmg: flat('dmg') / 100,
+    _weaponAtk: Math.round(w.atk),
+    _baseAtk: Math.round(b.atk)
+  };
 }
 
 function applyEnka(av) {
@@ -1045,28 +1379,37 @@ function applyEnka(av) {
     if (SKILL_IDX.some(o => o.i === s.Index)) p.sk[s.Index] = s.Level || 1;
   });
 
+  p.promo = av.PromotionLevel != null ? av.PromotionLevel : p.promo;
+
   if (av.Weapon) {
     p.w.id    = av.Weapon.Id || 0;
     p.w.lvl   = av.Weapon.Level || 0;
+    p.w.br    = av.Weapon.BreakLevel || 0;
     p.w.phase = av.Weapon.UpgradeLevel || 1;
   }
 
   p.discs = (av.EquippedList || []).map(eq => {
     const e = eq.Equipment; if (!e) return null;
-    const suit = Math.floor((e.Id || 0) / 100) * 100;
-    let main = '';
-    const mp = (e.MainPropertyList || [])[0];
-    if (mp) {
-      const pr = DB.props && DB.props[String(mp.PropertyId)];
-      const isPct = pr && pr.f && pr.f.indexOf('%') !== -1;
-      const val = (mp.PropertyValue || 0) * (1 + 0.2 * (e.Level || 0));
-      main = isPct ? (val / 100).toFixed(1) + '%' : String(Math.round(val));
-    }
-    return { slot: eq.Slot, suit: suit, lvl: e.Level || 0, main: main };
+    const mp = (e.MainPropertyList || [])[0] || null;
+    return {
+      slot: eq.Slot,
+      suit: Math.floor((e.Id || 0) / 100) * 100,
+      lvl: e.Level || 0,
+      mainP: mp ? String(mp.PropertyId) : '',
+      mainV: mp ? (mp.PropertyValue || 0) : 0,
+      subs: (e.RandomPropertyList || []).map(r =>
+        ({ p: String(r.PropertyId), v: r.PropertyValue || 0, l: r.PropertyLevel || 1 }))
+    };
   }).filter(Boolean);
 
-  // точный вклад надетых дисков (мейн + сабстаты) — считается без допущений
-  p.disc = statFromDiscs(av);
+  p.disc = discSum(p.discs);          // точный вклад надетых дисков
+  const t = calcTotals(a, p, p.discs); // и итоговые характеристики
+  p.cur = {
+    hp: t.hp, atk: t.atk, def: t.def,
+    cr: Math.round(t.cr * 10) / 10, cd: Math.round(t.cd * 10) / 10,
+    ap: t.ap, am: t.am, im: t.im, pen: t.pen,
+    er: t.er, dmg: Math.round(t.dmg * 10) / 10
+  };
   p.mod = Date.now();
   return a;
 }
