@@ -282,6 +282,16 @@
   }
   .st .lab { color: #9aa0ae; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .st .val { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .st .curin {
+    width: 68px; background: transparent; border: 1px solid transparent; border-radius: 6px;
+    color: #e8eaf0; padding: 2px 5px; font-size: 12.5px; text-align: right; outline: none;
+    font-weight: 600; font-variant-numeric: tabular-nums; font-family: inherit;
+  }
+  .st .curin:hover { border-color: #2a2d35; }
+  .st .curin:focus { border-color: #e53e3e; background: #0b0b0d; }
+  .st.man .curin { color: #7fb8ff; }
+  .st.hit .curin { color: #4caf7d; }
+  .st.miss .curin { color: #ffb454; }
   .st .goalin {
     width: 62px; background: #0b0b0d; border: 1px solid #2a2d35; border-radius: 6px;
     color: #8a90a0; padding: 2px 5px; font-size: 11.5px; text-align: right; outline: none;
@@ -301,8 +311,12 @@
   .dcard.plan.set { border-color: #7fb8ff; background: #7fb8ff12; }
   .dcard .sn { font-size: 9.5px; color: #5a6070; }
   .dcard img { width: 30px; height: 30px; object-fit: contain; margin: 2px 0; }
-  .dcard .mn { font-size: 10.5px; color: #e8eaf0; font-weight: 600; line-height: 1.2; }
-  .dcard .st2 { font-size: 9.5px; color: #8a90a0; line-height: 1.25; margin-top: 1px; }
+  .dcard .mn { font-size: 12.5px; color: #ffd95e; font-weight: 700; line-height: 1.2; }
+  .dcard .mnl { font-size: 9px; color: #8a90a0; line-height: 1.2; margin-bottom: 3px; }
+  .dcard .st2 {
+    font-size: 9.5px; color: #9aa0ae; line-height: 1.45; margin-top: 3px;
+    border-top: 1px solid #ffffff10; padding-top: 3px; text-align: left;
+  }
   .dcard .lvl {
     position: absolute; top: 3px; right: 4px; font-size: 9px; color: #7a8090;
   }
@@ -333,6 +347,33 @@
   .skbox input:focus { color: #ff9d9d; }
 
   .diff2 { font-size: 11px; color: #7fb8ff; margin-left: 4px; }
+
+  .pickgrid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 5px;
+    max-height: 208px; overflow-y: auto; padding: 2px; margin-bottom: 8px;
+  }
+  .pick {
+    border: 1px solid #2a2d35; border-radius: 9px; padding: 4px 2px; cursor: pointer;
+    text-align: center; background: #15171c; transition: all .1s;
+  }
+  .pick:hover { border-color: #e53e3e; }
+  .pick.on { border-color: #e53e3e; background: #e53e3e22; }
+  .pick img { width: 36px; height: 36px; object-fit: contain; display: block; margin: 0 auto; }
+  .pick span { display: block; font-size: 8.5px; color: #8a90a0; line-height: 1.15; margin-top: 2px;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pick.on span { color: #ff9d9d; }
+  .mainpick { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  .mp {
+    border: 1px solid #2a2d35; border-radius: 999px; background: #15171c; color: #9aa0ae;
+    font-size: 11.5px; padding: 5px 11px; cursor: pointer; transition: all .1s;
+  }
+  .mp:hover { border-color: #e53e3e; }
+  .mp.on { border-color: #e53e3e; background: #e53e3e22; color: #ff9d9d; font-weight: 600; }
+  .picksearch {
+    width: 100%; background: #15171c; border: 1px solid #33363e; border-radius: 8px;
+    color: #e8eaf0; padding: 6px 10px; font-size: 12.5px; outline: none; margin-bottom: 6px;
+  }
+  .picksearch:focus { border-color: #e53e3e; }
 
   /* редактор диска / оружия */
   .editbox { background: #0d0f13; border: 1px solid #2a2d35; border-radius: 12px; padding: 12px; margin-top: 8px; }
@@ -573,7 +614,7 @@ function blank() {
     have: false, lvl: 0, core: 0, mind: 0,
     sk: { 0: 1, 1: 1, 2: 1, 3: 1, 5: 1 },
     w: { id: 0, lvl: 0, br: 0, phase: 1 },
-    promo: 0, plan: { w: null, discs: [] },
+    promo: 0, plan: { w: null, discs: [] }, manual: {},
     discs: [], disc: {}, cur: {}, goal: {}, note: '', mod: Date.now()
   };
 }
@@ -584,6 +625,7 @@ function P(id) {
   if (!p.w) p.w = { id: 0, lvl: 0, br: 0, phase: 1 };
   if (p.w.br == null) p.w.br = p.w.lvl >= 60 ? 5 : Math.max(0, Math.floor((p.w.lvl || 0) / 10) - 1);
   if (!p.plan) p.plan = { w: null, discs: [] };
+  if (!p.manual) p.manual = {};
   if (!Array.isArray(p.plan.discs)) p.plan.discs = [];
   if (p.promo == null) p.promo = p.lvl ? Math.max(0, Math.ceil(p.lvl / 10) - 1) : 0;
   if (!p.cur) p.cur = {};
@@ -607,6 +649,7 @@ const ENKA_RAW = 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/
 const ENKA_CDN = 'https://enka.network';
 const DB_KEY = LS + '_db';
 const DB_TTL = 7 * 24 * 3600 * 1000;   // раз в неделю обновляем сама
+const DB_VER = 2;                      // растёт, когда меняется состав базы — старый кэш отбрасываем
 
 // Запасные имена — на случай, если в локализации Enka ключ имени не найдётся.
 // Ключ — нормализованное имя (в т.ч. внутреннее: у ZZZ оно часто отличается от игрового,
@@ -669,7 +712,7 @@ async function loadDb(force) {
     // 2) кэш в браузере
     try {
       const c = JSON.parse(localStorage.getItem(DB_KEY));
-      if (c && c.agents && c.agents.length && (Date.now() - (c.ts || 0) < DB_TTL)) {
+      if (c && c.ver === DB_VER && c.agents && c.agents.length && (Date.now() - (c.ts || 0) < DB_TTL)) {
         DB = c; boot();
         return;
       }
@@ -739,7 +782,7 @@ async function loadDb(force) {
       if (props[p] && props[p].Name) pmap[p] = { n: props[p].Name, f: props[p].Format || '' };
     });
 
-    DB = { v: 1, ts: Date.now(), built: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    DB = { v: 1, ver: DB_VER, ts: Date.now(), built: new Date().toISOString().slice(0, 16).replace('T', ' '),
            source: 'enka.network', agents, suits, engines, props: pmap };
     try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch (e) {}
     boot();
@@ -747,7 +790,7 @@ async function loadDb(force) {
     // последняя попытка — просроченный кэш лучше, чем ничего
     try {
       const c = JSON.parse(localStorage.getItem(DB_KEY));
-      if (c && c.agents && c.agents.length) { DB = c; boot(); return; }
+      if (c && c.ver === DB_VER && c.agents && c.agents.length) { DB = c; boot(); return; }
     } catch (e2) {}
     $('noDb').style.display = 'block';
     $('noDbErr').textContent = e.message || String(e);
@@ -926,7 +969,7 @@ function renderSummary() {
 }
 
 // ─────────────── карточка агента ───────────────
-let curId = null, curTab = 'now', editing = null;
+let curId = null, curTab = 'now', editing = null, ed = null;
 
 // какие основные характеристики бывают в каждом слоте (значение — база при Ур.0)
 const MAIN_OPTS = {
@@ -945,6 +988,21 @@ const MAIN_OPTS = {
       ['30503','Восст. энергии',600], ['12202','Импульс %',450],
       ['31402','Контроль аномалии %',750]]
 };
+const SHORT = {
+  '11103':'HP', '11102':'HP%', '12103':'Атака', '12102':'Атака%', '13103':'Защита', '13102':'Защита%',
+  '20103':'Крит', '21103':'Кр.урон', '31203':'Знание', '31403':'Контроль', '31402':'Контроль%',
+  '12203':'Импульс', '12202':'Импульс%', '23203':'Пробив', '23103':'Пробив%', '30503':'Энергия',
+  '31503':'Физ.урон', '31603':'Огн.урон', '31703':'Лед.урон', '31803':'Эл.урон',
+  '31903':'Эф.урон', '32303':'Возд.урон'
+};
+function shortName(pid) { return SHORT[String(pid)] || (DB.props && DB.props[String(pid)] ? DB.props[String(pid)].n : '—'); }
+function subText(sp) {
+  const pr = DB.props && DB.props[String(sp.p)];
+  const pct = pr && pr.f && pr.f.indexOf('%') !== -1;
+  const v = (+sp.v || 0) * (sp.l || 1);
+  return shortName(sp.p) + ' ' + (pct ? (v / 100).toFixed(1) + '%' : Math.round(v));
+}
+
 function mainName(pid) {
   for (const s in MAIN_OPTS) {
     const f = MAIN_OPTS[s].find(o => o[0] === String(pid));
@@ -1022,6 +1080,7 @@ function renderSheet() {
     rows.forEach(r => {
       const k = r[0], isPct = r[2] === 1, isEr = r[2] === 2;
       let v = T[k] || 0;
+      if (curTab === 'now' && p.manual && p.manual[k] != null) v = p.manual[k];
       const disp = isPct ? v.toFixed(1) + '%' : (isEr ? v.toFixed(2) : Math.round(v));
       const goal = p.goal[k];
       let cls = '', extra = '';
@@ -1031,8 +1090,15 @@ function renderSheet() {
         if (Math.abs(d) > 0.05) extra = '<span class="diff2">' + (d > 0 ? '+' : '') +
           (isPct ? d.toFixed(1) : (isEr ? d.toFixed(2) : Math.round(d))) + '</span>';
       }
-      h += '<div class="st' + cls + '"><span class="lab">' + esc(r[1]) + '</span>' +
-        '<span class="val">' + esc(disp) + extra + '</span>' +
+      const man = p.manual && p.manual[k] != null ? p.manual[k] : null;
+      const shown = man != null ? man : disp;
+      const editable = curTab === 'now';
+      h += '<div class="st' + cls + (man != null ? ' man' : '') + '">' +
+        '<span class="lab">' + esc(r[1]) + '</span>' +
+        (editable
+          ? '<input class="curin" data-k="' + k + '" value="' + esc(shown) +
+            '" title="расчёт: ' + esc(disp) + '. Можно вписать своё значение из игры">'
+          : '<span class="val">' + esc(disp) + extra + '</span>') +
         '<input class="goalin" data-k="' + k + '" value="' +
           (goal == null ? '' : esc(goal)) + '" placeholder="цель" title="сколько хочешь достичь">' +
         '</div>';
@@ -1060,13 +1126,15 @@ function renderSheet() {
       const d = list.find(x => x.slot === sl);
       const suit = d && DB.suitById[d.suit];
       const isPlan = curTab === 'plan' && plSet.some(x => x.slot === sl);
+      const subs = (d && d.subs || []).map(sp => '<div>' + esc(subText(sp)) + '</div>').join('');
       h += '<div class="dcard' + (d ? '' : ' empty') + (curTab === 'plan' ? ' plan' : '') +
-           (isPlan ? ' set' : '') + '" data-slot="' + sl + '">' +
+           (isPlan ? ' set' : '') + '" data-slot="' + sl + '" title="' +
+           esc(d && suit ? (suit.ru || suit.en) : '') + '">' +
         '<div class="sn">' + sl + '</div>' +
         (suit && suit.icon ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
-        (d && d.lvl ? '<div class="lvl">+' + d.lvl + '</div>' : '') +
         '<div class="mn">' + esc(d ? mainText(d.mainP, d.mainV, d.lvl) : '—') + '</div>' +
-        '<div class="st2">' + esc(d ? (suit ? (suit.ru || suit.en) : '') : 'пусто') + '</div>' +
+        '<div class="mnl">' + esc(d ? shortName(d.mainP) : 'пусто') + '</div>' +
+        (subs ? '<div class="st2">' + subs + '</div>' : '') +
       '</div>';
     }
     h += '</div>';
@@ -1109,6 +1177,10 @@ function renderSheet() {
     h += '<div class="row" style="margin-top:6px"><input type="text" id="fNote" class="num" style="width:100%" value="' +
          esc(p.note || '') + '" placeholder="заметка: например «ждёт сигнатурку»"></div>';
 
+    const oldDiscs = (p.discs || []).length && !(p.discs || []).some(x => x && x.mainP);
+    if (oldDiscs) h += '<div class="warn" style="margin:10px 0;padding:10px;font-size:12.5px">' +
+      '<b>Диски записаны в старом виде</b> — их характеристики не учитываются в расчёте. ' +
+      'Нажми «⟳ Импорт из игры» ещё раз, и всё встанет на место.</div>';
     h += '<div class="hint" style="margin-top:8px">Характеристики считаются из уровня, ' +
          'прорыва, оружия и дисков — сверено с игрой. <b>Знание и контроль аномалии</b> показаны ' +
          'без прибавки от прокачанного ядра (её нет в открытых данных), так что в игре они будут выше.</div>';
@@ -1145,6 +1217,7 @@ function bindSheet() {
   const we = $('wEdit');
   if (we) we.onclick = () => { applySheet(); editing = { kind: 'weapon' }; renderSheet(); };
   document.querySelectorAll('.goalin').forEach(i => i.onchange = () => applySheet());
+  document.querySelectorAll('.curin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
 }
 
 // сохраняем то, что введено в полях, не закрывая карточку
@@ -1160,10 +1233,19 @@ function applySheet() {
     const v = i.value.trim();
     if (v === '') delete p.goal[i.dataset.k]; else p.goal[i.dataset.k] = +v;
   });
+  if (!p.manual) p.manual = {};
+  const calc = calcTotals(DB.byId[curId], p, p.discs);
+  document.querySelectorAll('.curin').forEach(i => {
+    const k = i.dataset.k, raw = i.value.replace(',', '.').replace('%', '').trim();
+    if (raw === '') { delete p.manual[k]; return; }
+    const v = parseFloat(raw);
+    if (isNaN(v)) { delete p.manual[k]; return; }
+    // совпало с расчётом — не засоряем ручными значениями
+    const c = calc[k] || 0;
+    if (Math.abs(c - v) < 0.05) delete p.manual[k]; else p.manual[k] = v;
+  });
   const nt = $('fNote'); if (nt) p.note = nt.value.trim();
-  const t = calcTotals(DB.byId[curId], p, p.discs);
-  p.cur = { hp:t.hp, atk:t.atk, def:t.def, cr:Math.round(t.cr*10)/10, cd:Math.round(t.cd*10)/10,
-            ap:t.ap, am:t.am, im:t.im, pen:t.pen, er:t.er, dmg:Math.round(t.dmg*10)/10 };
+  refreshCur(p);
   save(curId);
 }
 
@@ -1178,53 +1260,98 @@ function openEditor(kind, slot) {
     const src = isPlan ? ((p.plan && p.plan.discs) || []) : (p.discs || []);
     const d = src.find(x => x.slot === slot) ||
               (isPlan ? (p.discs || []).find(x => x.slot === slot) : null) || {};
+    ed = { kind: 'disc', slot: slot, suit: +d.suit || 0,
+           mainP: String(d.mainP || (MAIN_OPTS[slot][0] || [])[0] || ''),
+           mainV: +d.mainV || (MAIN_OPTS[slot][0] || [])[2] || 0,
+           lvl: d.lvl != null ? d.lvl : 15 };
+
     h += '<div style="font-size:12.5px;font-weight:600;margin-bottom:8px">' +
-         (isPlan ? 'Каким хочу видеть слот ' : 'Слот ') + slot + '</div>';
-    h += '<div class="row"><select id="edSuit"><option value="">— сет не выбран —</option>' +
-      (DB.suits || []).slice().sort((x, y) => (x.ru || x.en || '').localeCompare(y.ru || y.en || '', 'ru'))
-        .map(s => '<option value="' + s.id + '"' + (+d.suit === s.id ? ' selected' : '') + '>' +
-             esc(s.ru || s.en || ('#' + s.id)) + '</option>').join('') + '</select></div>';
-    h += '<div class="row"><select id="edMain">' +
-      (MAIN_OPTS[slot] || []).map(o => '<option value="' + o[0] + '|' + o[2] + '"' +
-        (String(d.mainP) === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') +
-      '</select>';
-    if (!isPlan) h += ' <input type="number" id="edLvl" min="0" max="15" value="' + (d.lvl != null ? d.lvl : 15) +
-                      '" style="width:64px" title="уровень прокачки диска">';
-    h += '</div>';
+         (isPlan ? 'Каким хочу видеть слот ' + slot : 'Слот ' + slot) + '</div>';
+    h += '<div style="font-size:10.5px;color:#6b7280;margin-bottom:4px">КОМПЛЕКТ</div>';
+    h += '<div class="pickgrid" id="pkSuit">' + (DB.suits || []).slice()
+      .sort((x, y) => (x.ru || x.en || '').localeCompare(y.ru || y.en || '', 'ru'))
+      .map(su => '<div class="pick' + (ed.suit === su.id ? ' on' : '') + '" data-id="' + su.id +
+        '" title="' + esc(su.ru || su.en) + '">' +
+        (su.icon ? '<img src="' + esc(imgUrl('discs', su.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<img alt="">') +
+        '<span>' + esc(su.ru || su.en || ('#' + su.id)) + '</span></div>').join('') + '</div>';
+
+    h += '<div style="font-size:10.5px;color:#6b7280;margin-bottom:4px">ОСНОВНАЯ ХАРАКТЕРИСТИКА</div>';
+    h += '<div class="mainpick" id="pkMain">' + (MAIN_OPTS[slot] || []).map(o =>
+      '<div class="mp' + (ed.mainP === o[0] ? ' on' : '') + '" data-p="' + o[0] + '" data-v="' + o[2] + '">' +
+      esc(o[1]) + '</div>').join('') + '</div>';
+
+    if (!isPlan) h += '<div class="row" style="font-size:12px;color:#9aa0ae">Уровень диска ' +
+      '<input type="number" id="edLvl" min="0" max="15" value="' + ed.lvl + '" style="width:60px"></div>';
+
     h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #e53e3e;background:#e53e3e;color:#fff">' +
          (isPlan ? 'Добавить в план' : 'Сохранить слот') + '</button>' +
          '<button id="edDel">Очистить</button><button id="edCancel">Отмена</button></div>';
-    if (isPlan) h += '<div class="hint">Плановый диск считается прокачанным до +15. ' +
-                     'Доп. характеристики берутся от текущего диска — сравнивается именно основная.</div>';
+    if (isPlan) h += '<div class="hint">Плановый диск считается прокачанным полностью. ' +
+                     'Доп. характеристики берутся от нынешнего диска — сравнивается основная.</div>';
   } else {
     const cur = isPlan ? ((p.plan && p.plan.w) || {}) : p.w;
+    const a = DB.byId[curId];
+    ed = { kind: 'weapon', id: +cur.id || 0, lvl: cur.lvl != null ? cur.lvl : 60,
+           br: cur.br != null ? cur.br : 5, phase: cur.phase || 1, q: '' };
+
     h += '<div style="font-size:12.5px;font-weight:600;margin-bottom:8px">' +
          (isPlan ? 'Какое оружие хочу' : 'W-Engine') + '</div>';
-    h += '<div class="row"><select id="edEng" style="min-width:220px"><option value="0">— не выбрано —</option>' +
-      (DB.engines || []).slice().sort((x, y) => {
-        if (x.rarity !== y.rarity) return x.rarity === 'S' ? -1 : (y.rarity === 'S' ? 1 : 0);
-        return (x.ru || x.en || '').localeCompare(y.ru || y.en || '', 'ru');
-      }).map(w => '<option value="' + w.id + '"' + (+cur.id === w.id ? ' selected' : '') + '>' +
-           esc(w.rarity) + ' · ' + esc(w.ru || w.en || ('#' + w.id)) + '</option>').join('') + '</select></div>';
-    h += '<div class="row"><label style="font-size:12px;color:#9aa0ae">Уровень</label> ' +
-      '<input type="number" id="edWLvl" min="0" max="60" value="' + (cur.lvl != null ? cur.lvl : 60) + '" style="width:64px"> ' +
-      '<label style="font-size:12px;color:#9aa0ae;margin-left:6px">Прорыв</label> ' +
-      '<select id="edWBr">' + [0,1,2,3,4,5].map(v => '<option value="' + v + '"' +
-        ((cur.br != null ? cur.br : 5) === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select> ' +
-      '<label style="font-size:12px;color:#9aa0ae;margin-left:6px">Фаза</label> ' +
-      '<select id="edWPh">' + [1,2,3,4,5].map(v => '<option value="' + v + '"' +
-        ((cur.phase || 1) === v ? ' selected' : '') + '>P' + v + '</option>').join('') + '</select></div>';
+    h += '<input class="picksearch" id="pkQ" placeholder="поиск по названию — или сразу выбери картинкой">';
+    h += '<div class="pickgrid" id="pkEng"></div>';
+    h += '<div class="row" style="font-size:12px;color:#9aa0ae">Уровень ' +
+      '<input type="number" id="edWLvl" min="0" max="60" value="' + ed.lvl + '" style="width:58px"> ' +
+      'Прорыв <select id="edWBr">' + [0,1,2,3,4,5].map(v => '<option value="' + v + '"' +
+        (ed.br === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select> ' +
+      'Фаза <select id="edWPh">' + [1,2,3,4,5].map(v => '<option value="' + v + '"' +
+        (ed.phase === v ? ' selected' : '') + '>P' + v + '</option>').join('') + '</select></div>';
     h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #e53e3e;background:#e53e3e;color:#fff">Сохранить</button>' +
          '<button id="edDel">Очистить</button><button id="edCancel">Отмена</button></div>';
-    if (a_sig(p)) h += '<div class="hint">Сигнатурное для этого агента: <b>' + esc(a_sig(p)) + '</b></div>';
+    const sig = a && a.weapon ? DB.engById[a.weapon] : null;
+    if (sig) h += '<div class="hint">Сигнатурное для этого агента: <b>' + esc(sig.ru || sig.en) + '</b></div>';
   }
   h += '</div>';
   z.innerHTML = h;
   try { z.scrollIntoView({ block: 'nearest' }); } catch (e) {}
 
-  $('edCancel').onclick = () => { editing = null; renderSheet(); };
-  $('edDel').onclick = () => { clearSlot(kind, slot, isPlan); editing = null; save(curId); renderSheet(); render(); };
-  $('edSave').onclick = () => { saveSlot(kind, slot, isPlan); editing = null; save(curId); renderSheet(); render(); };
+  if (kind === 'disc') {
+    z.querySelectorAll('#pkSuit .pick').forEach(c => c.onclick = () => {
+      ed.suit = +c.dataset.id;
+      z.querySelectorAll('#pkSuit .pick').forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+    });
+    z.querySelectorAll('#pkMain .mp').forEach(c => c.onclick = () => {
+      ed.mainP = c.dataset.p; ed.mainV = +c.dataset.v;
+      z.querySelectorAll('#pkMain .mp').forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+    });
+  } else {
+    const drawEngines = () => {
+      const q = (ed.q || '').toLowerCase();
+      const list = (DB.engines || []).filter(w =>
+        !q || (w.ru || '').toLowerCase().indexOf(q) !== -1 || (w.en || '').toLowerCase().indexOf(q) !== -1)
+        .sort((x, y) => {
+          if (x.rarity !== y.rarity) return x.rarity === 'S' ? -1 : (y.rarity === 'S' ? 1 : 0);
+          return (x.ru || x.en || '').localeCompare(y.ru || y.en || '', 'ru');
+        });
+      $('pkEng').innerHTML = list.map(w =>
+        '<div class="pick' + (ed.id === w.id ? ' on' : '') + '" data-id="' + w.id +
+        '" title="' + esc((w.ru || w.en) + ' · ' + w.rarity + '-ранг') + '">' +
+        (w.icon ? '<img src="' + esc(imgUrl('engines', w.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<img alt="">') +
+        '<span>' + esc(w.ru || w.en || ('#' + w.id)) + '</span></div>').join('') ||
+        '<div class="hint" style="grid-column:1/-1">ничего не нашлось</div>';
+      $('pkEng').querySelectorAll('.pick').forEach(c => c.onclick = () => {
+        ed.id = +c.dataset.id;
+        $('pkEng').querySelectorAll('.pick').forEach(x => x.classList.remove('on'));
+        c.classList.add('on');
+      });
+    };
+    drawEngines();
+    $('pkQ').oninput = e => { ed.q = e.target.value; drawEngines(); };
+  }
+
+  $('edCancel').onclick = () => { editing = null; ed = null; renderSheet(); };
+  $('edDel').onclick = () => { clearSlot(kind, slot, isPlan); editing = null; ed = null; save(curId); renderSheet(); render(); };
+  $('edSave').onclick = () => { saveSlot(kind, slot, isPlan); editing = null; ed = null; save(curId); renderSheet(); render(); };
 }
 
 function a_sig(p) {
@@ -1250,10 +1377,8 @@ function saveSlot(kind, slot, isPlan) {
   const p = P(curId);
   if (!p.plan) p.plan = { w: null, discs: [] };
   if (kind === 'disc') {
-    const suit = +$('edSuit').value || 0;
-    const mv = ($('edMain').value || '').split('|');
-    const rec = { slot: slot, suit: suit, mainP: mv[0] || '', mainV: +mv[1] || 0,
-                  lvl: isPlan ? 15 : (+($('edLvl') || {}).value || 0) };
+    const rec = { slot: slot, suit: ed.suit || 0, mainP: ed.mainP || '', mainV: ed.mainV || 0,
+                  lvl: isPlan ? 15 : Math.max(0, Math.min(15, +($('edLvl') || {}).value || 0)) };
     if (isPlan) {
       p.plan.discs = (p.plan.discs || []).filter(x => x.slot !== slot);
       p.plan.discs.push(rec);
@@ -1266,7 +1391,7 @@ function saveSlot(kind, slot, isPlan) {
       p.disc = discSum(p.discs);
     }
   } else {
-    const rec = { id: +$('edEng').value || 0, lvl: +$('edWLvl').value || 0,
+    const rec = { id: ed.id || 0, lvl: Math.max(0, Math.min(60, +$('edWLvl').value || 0)),
                   br: +$('edWBr').value || 0, phase: +$('edWPh').value || 1 };
     if (isPlan) p.plan.w = rec.id ? rec : null;
     else p.w = rec;
@@ -1281,6 +1406,7 @@ function refreshCur(p) {
   const t = calcTotals(a, p, p.discs);
   p.cur = { hp:t.hp, atk:t.atk, def:t.def, cr:Math.round(t.cr*10)/10, cd:Math.round(t.cd*10)/10,
             ap:t.ap, am:t.am, im:t.im, pen:t.pen, er:t.er, dmg:Math.round(t.dmg*10)/10 };
+  if (p.manual) Object.keys(p.manual).forEach(k => { p.cur[k] = p.manual[k]; });
 }
 
 function closeModal() { $('modal').classList.remove('open'); curId = null; }
