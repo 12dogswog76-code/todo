@@ -741,7 +741,7 @@ const ENKA_RAW = 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/
 const ENKA_CDN = 'https://enka.network';
 const DB_KEY = LS + '_db';
 const DB_TTL = 7 * 24 * 3600 * 1000;   // раз в неделю обновляем сама
-const DB_VER = 3;                      // растёт, когда меняется состав базы — старый кэш отбрасываем
+const DB_VER = 4;                      // растёт, когда меняется состав базы — старый кэш отбрасываем
 
 // Запасные имена — на случай, если в локализации Enka ключ имени не найдётся.
 // Ключ — нормализованное имя (в т.ч. внутреннее: у ZZZ оно часто отличается от игрового,
@@ -866,7 +866,9 @@ async function loadDb(force) {
                rarity: (+w.Rarity >= 4 ? 'S' : (+w.Rarity === 3 ? 'A' : 'B')),
                prof: PROF_MAP[w.ProfessionType] || String(w.ProfessionType || '').toLowerCase(),
                icon: w.ImagePath ? ENKA_CDN + w.ImagePath : '',
-               main: w.MainStat || null, sec: w.SecondaryStat || null };
+               // приводим к тому же виду, что и в скрипте сборки: {p, v}
+               main: w.MainStat ? { p: String(w.MainStat.PropertyId), v: +w.MainStat.PropertyValue || 0 } : null,
+               sec:  w.SecondaryStat ? { p: String(w.SecondaryStat.PropertyId), v: +w.SecondaryStat.PropertyValue || 0 } : null };
     });
 
     const pmap = {};
