@@ -12,7 +12,7 @@
     color-scheme: dark;
     --bg:#08090c; --pan:#111318; --pan2:#171a21; --line:#242832;
     --tx:#e9ecf3; --tx2:#8b92a3; --tx3:#5a6070;
-    --acc:#e53e3e; --ok:#4ade80; --warn:#fbbf24; --info:#60a5fa;
+    --acc:#e53e3e; --ok:#4ade80; --warn:#fbbf24; --info:#60a5fa; --gold:#ffd54a;
     --el:#e53e3e;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -66,10 +66,10 @@
     border:1px solid var(--line);padding:12px 14px;position:relative;overflow:hidden;
     clip-path:polygon(0 0,100% 0,100% 78%,calc(100% - 14px) 100%,0 100%);
   }
-  .sc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--acc);opacity:.7}
+  .sc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold);opacity:.8}
   .sc b{display:block;font-size:23px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
   .sc span{display:block;font-size:10.5px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
-  .sc.a b{color:var(--acc)} .sc.g b{color:var(--ok)}
+  .sc.a b{color:var(--gold)} .sc.g b{color:var(--ok)}
 
   /* ── поиск и фильтры ── */
   .search{position:relative;margin-bottom:11px}
@@ -90,7 +90,7 @@
   }
   .chip:hover{border-color:var(--acc);color:var(--tx)}
   .chip.on{border-color:var(--c,var(--acc));background:color-mix(in srgb,var(--c,var(--acc)) 14%,transparent);color:var(--c,#ffb3b3)}
-  .chip i{width:7px;height:7px;border-radius:50%;background:var(--c,var(--acc));display:inline-block;font-style:normal}
+  .chip svg{display:block;flex:none}
   .fsep{width:1px;height:16px;background:var(--line);margin:0 4px}
 
   /* ── сетка агентов ── */
@@ -104,10 +104,10 @@
   }
   .card:hover{border-color:var(--el);transform:translateY(-3px)}
   .card .ph{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0b0d11}
-  .card .ph img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+  .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .card .ph::after{
     content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,transparent 52%,#0b0d11f2 100%);
+    background:linear-gradient(180deg,transparent 34%,#08090ce6 62%,#08090c 100%);
   }
   .card.no .ph img{opacity:.4}
   .card.no:hover .ph img{opacity:.75}
@@ -119,14 +119,16 @@
   }
   .rk.S{background:linear-gradient(135deg,#ffca28,#c9971a);color:#2a1e00}
   .rk.A{background:linear-gradient(135deg,#c07af0,#7a3fb0);color:#fff}
-  .elb{
-    position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
-    display:grid;place-items:center;font-size:9.5px;font-weight:700;
-    background:#0b0d11cc;border:1px solid var(--el);color:var(--el);
+  .elb,.prb{
+    position:absolute;right:6px;width:24px;height:24px;border-radius:50%;
+    display:grid;place-items:center;background:#08090cd9;
   }
+  .elb{top:6px;border:1px solid var(--el)}
+  .prb{top:34px;border:1px solid #ffffff2e}
+  .elb svg,.prb svg{display:block}
   .nmb{position:absolute;left:9px;right:9px;bottom:7px}
-  .nmb b{display:block;font-size:13px;font-weight:700;line-height:1.15;text-shadow:0 1px 6px #000}
-  .nmb span{display:block;font-size:9.5px;color:var(--tx3)}
+  .nmb b{display:block;font-size:13.5px;font-weight:800;line-height:1.2;text-shadow:0 2px 8px #000,0 0 3px #000}
+  .nmb span{display:block;font-size:9.5px;color:#a8aec0;text-shadow:0 1px 4px #000}
   .pcirc{
     position:absolute;right:8px;bottom:34px;width:34px;height:34px;border-radius:50%;
     display:grid;place-items:center;font-size:10.5px;font-weight:800;
@@ -140,7 +142,7 @@
   .cb{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--tx3)}
   .cb b{width:46px;flex:none;font-weight:500}
   .cb .t{flex:1;height:3px;background:#ffffff12;border-radius:2px;overflow:hidden}
-  .cb .t i{display:block;height:100%;background:var(--el);border-radius:2px}
+  .cb .t i{display:block;height:100%;background:var(--warn);border-radius:2px}
   .cb .t i.full{background:var(--ok)}
   .cb span{width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
 
@@ -167,7 +169,8 @@
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
-  .hart .tg{font-size:9.5px;padding:2px 7px;border-radius:5px;background:#ffffff14;color:var(--tx)}
+  .hart .tg{font-size:9.5px;padding:3px 8px;border-radius:5px;background:#ffffff14;color:var(--tx);display:inline-flex;align-items:center;gap:4px}
+  .hart .tg svg{display:block}
   .hart .tg.el{background:color-mix(in srgb,var(--el) 26%,transparent);color:var(--el)}
 
   .hbody{padding:14px 16px 16px;min-width:0}
@@ -181,10 +184,12 @@
 
   .sect{margin-bottom:14px}
   .sect>h4{
-    font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--tx3);
-    margin-bottom:7px;display:flex;align-items:center;gap:7px;font-weight:600;
+    font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--gold);
+    margin-bottom:8px;display:flex;align-items:center;gap:8px;font-weight:700;
   }
-  .sect>h4::after{content:'';flex:1;height:1px;background:var(--line)}
+  .sect>h4::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px}
+  .sect>h4::after{content:'';flex:1;height:1px;
+    background:linear-gradient(90deg,#ffd54a44,transparent)}
 
   /* характеристики */
   .stg{display:grid;grid-template-columns:1fr 1fr;gap:1px 18px}
@@ -223,7 +228,22 @@
   .weng .wn{font-size:13px;font-weight:700;line-height:1.2}
   .weng .wd{font-size:10.5px;color:var(--tx3);margin-top:2px}
   .weng .wr{margin-left:auto;text-align:right;flex:none;font-size:10.5px;color:var(--tx2)}
-  .weng .wr b{display:block;font-size:13px;color:var(--tx);font-variant-numeric:tabular-nums}
+  .weng .wr b{display:block;font-size:13px;color:var(--gold);font-variant-numeric:tabular-nums}
+  .weng .edit{flex:none;color:var(--tx3);font-size:13px;cursor:pointer;padding:2px 4px}
+  .weng .edit:hover{color:var(--gold)}
+  .infobox{background:#0b0d11;border:1px solid var(--line);border-radius:11px;padding:12px;margin-top:9px}
+  .infobox h5{font-size:12.5px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+  .infobox h5 img{width:26px;height:26px;object-fit:contain}
+  .infobox .sub{font-size:10.5px;color:var(--tx3);margin-bottom:8px}
+  .infobox .bonus{font-size:11.5px;line-height:1.6;color:var(--tx2)}
+  .infobox .bonus b{color:var(--gold)}
+  .infobox .stlist{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;margin-top:8px;font-size:11.5px}
+  .infobox .stlist div{display:flex;gap:6px;align-items:center;color:var(--tx2)}
+  .infobox .stlist em{margin-left:auto;font-style:normal;color:var(--tx);font-weight:600}
+  .infobox .stlist .rl{color:var(--gold);font-weight:700;font-size:10px}
+  .infobox .mainst{background:#ffd54a12;border:1px solid #ffd54a33;border-radius:8px;
+    padding:6px 9px;margin-top:8px;font-size:12px;display:flex;align-items:center;gap:8px}
+  .infobox .mainst em{margin-left:auto;font-style:normal;color:var(--gold);font-weight:800}
 
   /* диски */
   .drow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
@@ -240,6 +260,13 @@
   .dcard .mnl{font-size:8.5px;color:var(--tx3);line-height:1.2;margin-bottom:4px}
   .dcard .st2{font-size:9px;color:var(--tx2);line-height:1.5;text-align:left;
     border-top:1px solid #ffffff0f;padding-top:4px;display:flex;flex-direction:column;gap:1px}
+  .dcard .st2 span{display:flex;align-items:center;gap:3px}
+  .dcard .st2 em{margin-left:auto;font-style:normal;color:var(--tx)}
+  .dcard .st2 .rl{color:var(--gold);font-weight:700;font-size:8px}
+  .dcard .edit{position:absolute;top:3px;right:4px;font-size:10px;color:var(--tx3);
+    opacity:0;transition:.12s;cursor:pointer}
+  .dcard:hover .edit{opacity:1}
+  .dcard .edit:hover{color:var(--gold)}
   .dcard.empty .mn{color:var(--tx3)}
   .setline{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;font-size:10.5px}
   .setpill{display:inline-flex;align-items:center;gap:5px;background:var(--pan2);
@@ -300,6 +327,11 @@
     color:var(--tx);padding:6px 10px;font-size:12px;outline:none;margin-bottom:6px;font-family:inherit}
   .picksearch:focus{border-color:var(--acc)}
   .editbox{background:#0b0d11;border:1px solid var(--line);border-radius:11px;padding:12px;margin-top:9px}
+  .subrow{display:grid;grid-template-columns:1fr auto 62px;gap:6px;align-items:center;margin-bottom:5px}
+  .subrow select{background:var(--pan2);border:1px solid var(--line);border-radius:7px;color:var(--tx);
+    padding:5px 7px;font-size:11.5px;outline:none;font-family:inherit;color-scheme:dark;min-width:0}
+  .subrow select:focus{border-color:var(--acc)}
+  .subrow .sbV{font-size:11.5px;color:var(--gold);text-align:right;font-weight:600}
   .editbox .cap2{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
   .prow{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
   .prow button{background:var(--pan2);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
@@ -395,7 +427,7 @@
     </div>
     <div class="hint" id="enkaMsg">
       Данные берутся с <b>enka.network</b> — из витрины профиля. Подтянутся уровень, ядро,
-      навыки, мандрагоры, W-Engine и все 6 дисков со статами.<br>
+      навыки, М.Картины, W-Engine и все 6 дисков со статами.<br>
       <b>Важно:</b> Enka отдаёт только тех агентов, кого ты поставил в <b>витрину профиля</b> в игре
       (обычно до 6 штук). Нужны другие — поменяй витрину, подожди пару минут и нажми «Загрузить» снова.
     </div>
@@ -483,7 +515,12 @@ const ELEM = {
   ether:    { ru: 'Эфир',       c: '#ff8fce' },
   wind:     { ru: 'Ветер',      c: '#8fd6a8' },
   lumiflux: { ru: 'Люмифлюкс',  c: '#ffd95e' },
-  auricink: { ru: 'Аурчернила', c: '#b197fc' }
+  lumen:    { ru: 'Люмен',      c: '#ffe680' },
+  auricink: { ru: 'Аурчернила', c: '#b197fc' },
+  auricether:{ ru: 'Аурэфир',   c: '#c9a7ff' },
+  frost:    { ru: 'Мороз',      c: '#9fe8ff' },
+  firefrost:{ ru: 'Огнемороз',  c: '#ff9a76' },
+  zhenzhenassault: { ru: 'Штурм', c: '#ff7a7a' }
 };
 const PROF = {
   attack:  'Атака',   stun:    'Оглушение', anomaly: 'Аномалия',
@@ -525,6 +562,43 @@ const SKILL_IDX = [
   { i: 5, n: 'Цепная атака' }
 ];
 const SKILL_MAX = 12, CORE_MAX = 6, LVL_MAX = 60, WENG_MAX = 60;
+
+
+// ─────────────── значки стихий и ролей ───────────────
+function svg(inner, col, size) {
+  return '<svg viewBox="0 0 24 24" width="' + (size || 14) + '" height="' + (size || 14) +
+    '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    inner + '</svg>';
+}
+const EL_PATH = {
+  physical: '<path d="M4 12h6l2-5 2 10 2-5h4"/>',
+  fire:     '<path d="M12 3s5 4.5 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 1.5 1 2.5 2 2.5s1-3-1-7z"/>',
+  ice:      '<path d="M12 2v20M4 7l16 10M20 7L4 17"/>',
+  electric: '<path d="M13 2 5 14h6l-2 8 8-12h-6z"/>',
+  ether:    '<path d="M12 3c5 0 9 4 9 9s-4 9-9 9-9-4-9-9"/><circle cx="12" cy="12" r="3"/>',
+  wind:     '<path d="M3 8h11a3 3 0 1 0-3-3M3 14h14a3 3 0 1 1-3 3"/>',
+  frost:    '<path d="M12 2v20M5 8l14 8M19 8 5 16"/><path d="M9 5l3 3 3-3"/>',
+  firefrost:'<path d="M12 3s4 4 4 8a4 4 0 0 1-8 0"/><path d="M4 14h16M6 10l12 8"/>',
+  auricink: '<path d="M12 3c4 5 6 7.5 6 10a6 6 0 0 1-12 0c0-2.5 2-5 6-10z"/>',
+  auricether:'<path d="M12 3c4 5 6 7.5 6 10a6 6 0 0 1-12 0c0-2.5 2-5 6-10z"/><circle cx="12" cy="13" r="2"/>',
+  lumiflux: '<path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/><circle cx="12" cy="12" r="3"/>',
+  lumen:    '<path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="4"/>'
+};
+const PROF_PATH = {
+  attack:  '<path d="M14 3 21 10 10 21l-4-1-1-4z"/><path d="M3 21l4-4"/>',
+  stun:    '<path d="M14 4h6v6M20 4 9 15"/><path d="M4 20l6-6"/><circle cx="6" cy="18" r="3"/>',
+  anomaly: '<path d="M12 21c-4 0-7-3-7-7s3-8 7-11c-2 5 1 6 3 8s3 3 3 5-2 5-6 5z"/>',
+  support: '<path d="M12 21s-8-5-8-11a4 4 0 0 1 8-2 4 4 0 0 1 8 2c0 6-8 11-8 11z"/>',
+  defense: '<path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z"/>',
+  rupture: '<path d="M12 2 9 9l-6 1 5 4-2 8 6-4 6 4-2-8 5-4-6-1z"/>'
+};
+function elIcon(el, size) {
+  const c = (ELEM[el] && ELEM[el].c) || '#8b92a3';
+  return svg(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size);
+}
+function profIcon(pr, size, col) {
+  return svg(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size);
+}
 
 // ─────────────── состояние ───────────────
 let DB = null;                      // база из zzz-db.json
@@ -771,12 +845,13 @@ function renderFilters() {
     const on = ui.el.indexOf(e) !== -1 ? ' on' : '';
     const c = (ELEM[e] && ELEM[e].c) || '#e53e3e';
     h += '<span class="chip f-el' + on + '" data-v="' + esc(e) + '" style="--c:' + c + '">' +
-         '<i></i>' + esc((ELEM[e] && ELEM[e].ru) || e) + '</span>';
+         elIcon(e, 13) + esc((ELEM[e] && ELEM[e].ru) || e) + '</span>';
   });
   h += '<span class="fsep"></span><span class="cap">роль</span>';
   Object.keys(prs).forEach(pr => {
     const on = ui.pr.indexOf(pr) !== -1 ? ' on' : '';
-    h += '<span class="chip f-pr' + on + '" data-v="' + esc(pr) + '">' + esc(PROF[pr] || pr) + '</span>';
+    h += '<span class="chip f-pr' + on + '" data-v="' + esc(pr) + '">' +
+         profIcon(pr, 13, on ? '#ffd54a' : '#8b92a3') + esc(PROF[pr] || pr) + '</span>';
   });
   h += '<span class="fsep"></span>';
   h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">есть у меня</span>';
@@ -836,8 +911,7 @@ function cardHTML(a) {
   const p = prog[a.id], have = !!(p && p.have), pc = pctOf(a.id);
   const el = (a.element || [])[0] || '';
   const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
-  const pic = imgUrl('agents', a.icon || a.art);   // в списке — лёгкая иконка, не большой арт
-  const short = ((ELEM[el] && ELEM[el].ru) || el || '?').slice(0, 2);
+  const pic = imgUrl('agents', a.art || a.icon);
 
   let bars = '';
   if (have) {
@@ -861,7 +935,8 @@ function cardHTML(a) {
       (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy" decoding="async" ' +
         'onerror="this.style.display=\'none\'">' : '') +
       '<span class="rk ' + esc(a.rarity) + '">' + esc(a.rarity) + '</span>' +
-      '<span class="elb">' + esc(short) + '</span>' +
+      '<span class="elb">' + elIcon(el, 14) + '</span>' +
+      '<span class="prb" title="' + esc(PROF[a.prof] || a.prof) + '">' + profIcon(a.prof, 14, '#e9ecf3') + '</span>' +
       (have ? '<div class="pcirc" style="--p:' + pc + '"><i>' + pc + '</i></div>' : '') +
       '<div class="nmb"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span></div>' +
     '</div>' + bars + '</div>';
@@ -893,7 +968,7 @@ function renderSummary() {
 }
 
 // ─────────────── карточка агента ───────────────
-let curId = null, curTab = 'now', editing = null, ed = null;
+let curId = null, curTab = 'now', editing = null, ed = null, info = null;
 
 // какие основные характеристики бывают в каждом слоте (значение — база при Ур.0)
 const MAIN_OPTS = {
@@ -920,11 +995,31 @@ const SHORT = {
   '31903':'Эф.урон', '32303':'Возд.урон'
 };
 function shortName(pid) { return SHORT[String(pid)] || (DB.props && DB.props[String(pid)] ? DB.props[String(pid)].n : '—'); }
-function subText(sp) {
+// В игре у доп-характеристики показывают «+N» — это сколько раз она усилилась при
+// прокачке диска. У Enka это PropertyLevel, где 1 = выпала и ни разу не усилилась.
+function subVal(sp) {
   const pr = DB.props && DB.props[String(sp.p)];
   const pct = pr && pr.f && pr.f.indexOf('%') !== -1;
   const v = (+sp.v || 0) * (sp.l || 1);
-  return shortName(sp.p) + ' ' + (pct ? (v / 100).toFixed(1) + '%' : Math.round(v));
+  return pct ? (v / 100).toFixed(1) + '%' : String(Math.round(v));
+}
+function subRolls(sp) { return Math.max(0, (sp.l || 1) - 1); }
+function subText(sp) {
+  const r = subRolls(sp);
+  return shortName(sp.p) + (r ? ' +' + r : '') + ' ' + subVal(sp);
+}
+
+// доп-характеристики, которые вообще бывают на дисках (значение — за один прок)
+const SUB_OPTS = [
+  ['20103','Шанс крита',240], ['21103','Крит. урон',480],
+  ['12102','Сила атаки %',300], ['12103','Сила атаки',19],
+  ['11102','HP %',300], ['11103','HP',112],
+  ['13102','Защита %',480], ['13103','Защита',15],
+  ['31203','Знание аномалии',9], ['23203','Пробивание',9]
+];
+function subBase(pid) {
+  const f = SUB_OPTS.find(o => o[0] === String(pid));
+  return f ? f[2] : 0;
 }
 
 function mainName(pid) {
@@ -964,7 +1059,7 @@ function planProg(p) {
                                      br: q.br != null ? q.br : 5, phase: q.phase || 1 } });
 }
 
-function openAgent(id) { curId = id; curTab = 'now'; editing = null; renderSheet(); }
+function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; renderSheet(); }
 
 function renderSheet() {
   const a = DB.byId[curId], p = P(curId);
@@ -976,8 +1071,8 @@ function renderSheet() {
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
     (art ? '<img src="' + esc(art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
     '<div class="who"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span>' +
-      '<div class="tags"><span class="tg el">' + esc((ELEM[el] && ELEM[el].ru) || el) + '</span>' +
-      '<span class="tg">' + esc(PROF[a.prof] || a.prof) + '</span>' +
+      '<div class="tags"><span class="tg el">' + elIcon(el, 12) + ' ' + esc((ELEM[el] && ELEM[el].ru) || el) + '</span>' +
+      '<span class="tg">' + profIcon(a.prof, 12, '#e9ecf3') + ' ' + esc(PROF[a.prof] || a.prof) + '</span>' +
       '<span class="tg">' + esc(a.rarity) + '-ранг</span>' +
       (p.have ? '<span class="tg">готово ' + pctOf(curId) + '%</span>' : '') +
     '</div></div></div><div class="hbody">';
@@ -1047,8 +1142,10 @@ function renderSheet() {
         '<div><div class="wn">' + esc(w ? (w.ru || w.en) : 'не выбран') + '</div>' +
         '<div class="wd">' + (w ? esc(w.rarity) + '-ранг · ' + esc(PROF[w.prof] || w.prof)
                                 : 'нажми, чтобы указать') + '</div></div>' +
-        (w ? '<div class="wr"><b>' + Math.round(wb.atk) + '</b>атака · Ур.' + (wSrc.w.lvl || 0) +
-             ' · P' + (wSrc.w.phase || 1) + '</div>' : '') +
+        (w ? '<div class="wr"><b>' + Math.round(wb.atk) + '</b>' +
+             (wb.sec ? esc(shortName(wb.sec.p)) + ' ' + esc(secText(wb.sec)) + ' · ' : '') +
+             'Ур.' + (wSrc.w.lvl || 0) + ' · P' + (wSrc.w.phase || 1) + '</div>' : '') +
+        '<span class="edit" id="wEditBtn" title="изменить">✎</span>' +
       '</div></div>';
 
     // ── диски ──
@@ -1059,11 +1156,16 @@ function renderSheet() {
       const d = list.find(x => x.slot === sl);
       const suit = d && DB.suitById[d.suit];
       const isPlan = curTab === 'plan' && plSet.some(x => x.slot === sl);
-      const subs = (d && d.subs || []).map(sp => '<span>' + esc(subText(sp)) + '</span>').join('');
+      const subs = (d && d.subs || []).map(sp => {
+        const r = subRolls(sp);
+        return '<span>' + esc(shortName(sp.p)) +
+          (r ? '<b class="rl">+' + r + '</b>' : '') +
+          '<em>' + esc(subVal(sp)) + '</em></span>';
+      }).join('');
       h += '<div class="dcard' + (d ? '' : ' empty') + (curTab === 'plan' ? ' plan' : '') +
            (isPlan ? ' set' : '') + '" data-slot="' + sl + '" title="' +
            esc(d && suit ? (suit.ru || suit.en) : 'слот ' + sl) + '">' +
-        '<span class="sn">' + sl + '</span>' +
+        '<span class="sn">' + sl + '</span><span class="edit" data-edit="' + sl + '">✎</span>' +
         (suit && suit.icon ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">'
                            : '<img alt="">') +
         '<div class="mn">' + esc(d ? mainText(d.mainP, d.mainV, d.lvl) : '—') + '</div>' +
@@ -1095,7 +1197,7 @@ function renderSheet() {
            SKILL_MAX + '" value="' + ((p.sk && p.sk[o.i]) || 1) + '">' +
            '<div class="sl">' + esc(o.n) + '</div></div>';
     });
-    h += '<div class="mind"><b>M' + (p.mind || 0) + '</b><span>мандрагоры</span></div></div></div>';
+    h += '<div class="mind"><b>M' + (p.mind || 0) + '</b><span>М.Картина</span></div></div></div>';
 
     // ── правки ──
     h += '<div class="sect"><div class="frow">' +
@@ -1103,7 +1205,7 @@ function renderSheet() {
         '<option value="' + v + '"' + (p.lvl === v ? ' selected' : '') + '>' + (v || '—') + '</option>').join('') + '</select>' +
       'Ядро <select id="fCore">' + [0,1,2,3,4,5,6].map(v =>
         '<option value="' + v + '"' + (p.core === v ? ' selected' : '') + '>' + ['—','A','B','C','D','E','F'][v] + '</option>').join('') + '</select>' +
-      'Мандрагоры <select id="fMind">' + [0,1,2,3,4,5,6].map(v =>
+      'М.Картина <select id="fMind">' + [0,1,2,3,4,5,6].map(v =>
         '<option value="' + v + '"' + (p.mind === v ? ' selected' : '') + '>M' + v + '</option>').join('') + '</select>' +
       '<input type="text" id="fNote" value="' + esc(p.note || '') + '" placeholder="заметка"></div></div>';
 
@@ -1111,9 +1213,10 @@ function renderSheet() {
     if (oldDiscs) h += '<div class="warn" style="margin:10px 0;padding:10px;font-size:12px">' +
       '<b>Диски записаны в старом виде</b> — их характеристики не учитываются. ' +
       'Нажми «⟳ Импорт из игры» ещё раз.</div>';
-    h += '<div class="hint">Характеристики считаются из уровня, прорыва, оружия и дисков. ' +
-         '<b>Знание и контроль аномалии</b> — без прибавки от прокачанного ядра (её нет в открытых данных), ' +
-         'поэтому в игре они выше. Любое число можно поправить руками — оно станет голубым.</div>';
+    h += '<div class="hint">Считается из уровня, прорыва, оружия и дисков — сходится с игрой. ' +
+         '<b>Знание и контроль аномалии</b> будут ниже: их поднимает прокачанное ядро, а Enka отдаёт ' +
+         'только названия умений, без цифр — взять эту прибавку неоткуда. ' +
+         'Впиши значение из игры руками, оно станет голубым и запомнится.</div>';
     h += '<div id="editZone"></div>';
   }
 
@@ -1124,6 +1227,7 @@ function renderSheet() {
   $('sheet').innerHTML = h;
   $('modal').classList.add('open');
   bindSheet();
+  if (info) openInfo(info.kind, info.slot);
   if (editing) openEditor(editing.kind, editing.slot);
 }
 
@@ -1140,11 +1244,24 @@ function bindSheet() {
   document.querySelectorAll('.htab[data-tab]').forEach(b => b.onclick = () => {
     applySheet(); curTab = b.dataset.tab; editing = null; renderSheet();
   });
-  document.querySelectorAll('.dcard').forEach(c => c.onclick = () => {
-    applySheet(); editing = { kind: 'disc', slot: +c.dataset.slot }; renderSheet();
+  document.querySelectorAll('.dcard').forEach(c => {
+    c.onclick = e => {
+      applySheet();
+      const isEdit = e.target && e.target.classList && e.target.classList.contains('edit');
+      const sl = +c.dataset.slot;
+      if (isEdit) { editing = { kind: 'disc', slot: sl }; info = null; }
+      else { info = (info && info.kind === 'disc' && info.slot === sl) ? null : { kind: 'disc', slot: sl }; editing = null; }
+      renderSheet();
+    };
   });
   const we = $('wEdit');
-  if (we) we.onclick = () => { applySheet(); editing = { kind: 'weapon' }; renderSheet(); };
+  if (we) we.onclick = e => {
+    applySheet();
+    const isEdit = e.target && e.target.classList && e.target.classList.contains('edit');
+    if (isEdit) { editing = { kind: 'weapon' }; info = null; }
+    else { info = (info && info.kind === 'weapon') ? null : { kind: 'weapon' }; editing = null; }
+    renderSheet();
+  };
   document.querySelectorAll('.goalin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
   document.querySelectorAll('.curin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
 }
@@ -1178,6 +1295,84 @@ function applySheet() {
   save(curId);
 }
 
+// ── описание диска или оружия (раскрывается по клику) ──
+function openInfo(kind, slot) {
+  const z = $('editZone'); if (!z) return;
+  const p = P(curId);
+  const list = curTab === 'plan' ? planDiscs(p) : (p.discs || []);
+  let h = '<div class="infobox">';
+
+  if (kind === 'disc') {
+    const d = list.find(x => x.slot === slot);
+    const su = d && DB.suitById[d.suit];
+    if (!d) {
+      h += '<h5>Слот ' + slot + ' — пусто</h5><div class="sub">Нажми ✎, чтобы указать диск вручную, ' +
+           'или загрузи всё разом кнопкой «⟳ Импорт из игры».</div>';
+    } else {
+      h += '<h5>' + (su && su.icon ? '<img src="' + esc(imgUrl('discs', su.icon)) + '" alt="">' : '') +
+           esc(su ? (su.ru || su.en) : 'комплект неизвестен') + '</h5>' +
+           '<div class="sub">слот ' + slot + ' · уровень +' + (d.lvl || 0) + '</div>';
+      h += '<div class="mainst">' + esc(mainName(d.mainP)) +
+           '<em>' + esc(mainText(d.mainP, d.mainV, d.lvl)) + '</em></div>';
+      if ((d.subs || []).length) {
+        h += '<div class="stlist">' + d.subs.map(sp => {
+          const r = subRolls(sp);
+          return '<div>' + esc(shortName(sp.p)) + (r ? '<span class="rl">+' + r + '</span>' : '') +
+                 '<em>' + esc(subVal(sp)) + '</em></div>';
+        }).join('') + '</div>';
+      }
+      const cnt = {};
+      list.forEach(x => { if (x && x.suit) cnt[x.suit] = (cnt[x.suit] || 0) + 1; });
+      const have = cnt[d.suit] || 0;
+      let bon = '';
+      if (su && su.bonus) {
+        bon = Object.keys(su.bonus).map(pid =>
+          shortName(pid) + ' +' + (function () {
+            const pr = DB.props && DB.props[pid];
+            const pct = pr && pr.f && pr.f.indexOf('%') !== -1;
+            return pct ? (su.bonus[pid] / 100).toFixed(1) + '%' : Math.round(su.bonus[pid]);
+          })()).join(', ');
+      }
+      h += '<div class="bonus" style="margin-top:9px">' +
+        '<b>2 предмета' + (have >= 2 ? ' ✓' : '') + ':</b> ' + (bon || 'нет данных') + '<br>' +
+        '<b>4 предмета' + (have >= 4 ? ' ✓' : '') + ':</b> особый эффект комплекта — ' +
+        'его описание Enka не отдаёт, смотри в игре<br>' +
+        '<span style="color:var(--tx3)">надето предметов этого комплекта: ' + have + ' из 6</span></div>';
+    }
+    h += '<div class="prow"><button id="infoEdit" class="pri">✎ Изменить</button>' +
+         '<button id="infoClose">Свернуть</button></div>';
+  } else {
+    const wSrc = curTab === 'plan' ? planProg(p) : p;
+    const w = DB.engById[wSrc.w.id];
+    const wb = weaponBonus(wSrc);
+    if (!w) {
+      h += '<h5>W-Engine не выбран</h5><div class="sub">Нажми ✎, чтобы указать.</div>';
+    } else {
+      const a = DB.byId[curId];
+      h += '<h5>' + (w.icon ? '<img src="' + esc(imgUrl('engines', w.icon)) + '" alt="">' : '') +
+           esc(w.ru || w.en) + '</h5>' +
+           '<div class="sub">' + esc(w.rarity) + '-ранг · для роли «' + esc(PROF[w.prof] || w.prof) + '»' +
+           (a && a.weapon === w.id ? ' · сигнатурное для этого агента' : '') + '</div>';
+      h += '<div class="mainst">Сила атаки<em>' + Math.round(wb.atk) + '</em></div>';
+      if (wb.sec) h += '<div class="mainst">' + esc(mainName(wb.sec.p)) +
+        '<em>' + esc(secText(wb.sec)) + '</em></div>';
+      h += '<div class="bonus" style="margin-top:9px">' +
+        '<b>Уровень:</b> ' + (wSrc.w.lvl || 0) + ' · <b>прорыв:</b> ' + (wSrc.w.br || 0) +
+        ' · <b>фаза:</b> P' + (wSrc.w.phase || 1) + '<br>' +
+        '<span style="color:var(--tx3)">Текст пассивного умения Enka не отдаёт — ' +
+        'фаза P' + (wSrc.w.phase || 1) + ' усиливает его эффект.</span></div>';
+    }
+    h += '<div class="prow"><button id="infoEdit" class="pri">✎ Изменить</button>' +
+         '<button id="infoClose">Свернуть</button></div>';
+  }
+
+  h += '</div>';
+  z.innerHTML = h;
+  try { z.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+  $('infoClose').onclick = () => { info = null; renderSheet(); };
+  $('infoEdit').onclick = () => { info = null; editing = { kind: kind, slot: slot }; renderSheet(); };
+}
+
 // ── редакторы диска и оружия ──
 function openEditor(kind, slot) {
   const z = $('editZone'); if (!z) return;
@@ -1209,8 +1404,25 @@ function openEditor(kind, slot) {
       '<div class="mp' + (ed.mainP === o[0] ? ' on' : '') + '" data-p="' + o[0] + '" data-v="' + o[2] + '">' +
       esc(o[1]) + '</div>').join('') + '</div>';
 
-    if (!isPlan) h += '<div class="row" style="font-size:12px;color:#9aa0ae">Уровень диска ' +
-      '<input type="number" id="edLvl" min="0" max="15" value="' + ed.lvl + '" style="width:60px"></div>';
+    if (!isPlan) {
+      h += '<div class="row" style="font-size:12px;color:var(--tx2)">Уровень диска ' +
+        '<input type="number" id="edLvl" min="0" max="15" value="' + ed.lvl + '" style="width:60px"></div>';
+      ed.subs = (d.subs || []).slice(0, 4).map(x => ({ p: String(x.p), l: x.l || 1 }));
+      while (ed.subs.length < 4) ed.subs.push({ p: '', l: 1 });
+      h += '<div class="cap2" style="margin-top:8px">ДОП. ХАРАКТЕРИСТИКИ И ПРОКИ</div>';
+      h += '<div id="pkSubs">' + ed.subs.map((sb, ix) =>
+        '<div class="subrow" data-ix="' + ix + '">' +
+          '<select class="sbP"><option value="">— пусто —</option>' +
+          SUB_OPTS.map(o => '<option value="' + o[0] + '"' + (sb.p === o[0] ? ' selected' : '') + '>' +
+            esc(o[1]) + '</option>').join('') + '</select>' +
+          '<select class="sbL">' + [1,2,3,4,5,6].map(v => '<option value="' + v + '"' +
+            ((sb.l || 1) === v ? ' selected' : '') + '>' + ((v - 1) ? '+' + (v - 1) : 'без проков') +
+            '</option>').join('') + '</select>' +
+          '<span class="sbV">' + esc(sb.p ? subVal({ p: sb.p, v: subBase(sb.p), l: sb.l }) : '—') + '</span>' +
+        '</div>').join('') + '</div>';
+      h += '<div class="hint" style="margin-top:2px">«+N» — сколько раз характеристика ' +
+           'усилилась при прокачке диска. Значение пересчитывается само.</div>';
+    }
 
     h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #e53e3e;background:#e53e3e;color:#fff">' +
          (isPlan ? 'Добавить в план' : 'Сохранить слот') + '</button>' +
@@ -1252,6 +1464,18 @@ function openEditor(kind, slot) {
       ed.mainP = c.dataset.p; ed.mainV = +c.dataset.v;
       z.querySelectorAll('#pkMain .mp').forEach(x => x.classList.remove('on'));
       c.classList.add('on');
+    });
+    z.querySelectorAll('.subrow').forEach(row => {
+      const ix = +row.dataset.ix;
+      const upd = () => {
+        const pv = row.querySelector('.sbP').value;
+        const lv = +row.querySelector('.sbL').value || 1;
+        ed.subs[ix] = { p: pv, l: lv };
+        row.querySelector('.sbV').textContent =
+          pv ? subVal({ p: pv, v: subBase(pv), l: lv }) : '—';
+      };
+      row.querySelector('.sbP').onchange = upd;
+      row.querySelector('.sbL').onchange = upd;
     });
   } else {
     const drawEngines = () => {
@@ -1313,7 +1537,9 @@ function saveSlot(kind, slot, isPlan) {
       p.plan.discs.push(rec);
     } else {
       const old = (p.discs || []).find(x => x.slot === slot);
-      rec.subs = (old && old.subs) || [];
+      rec.subs = (ed.subs || []).filter(x => x && x.p)
+        .map(x => ({ p: x.p, v: subBase(x.p), l: x.l || 1 }));
+      if (!rec.subs.length && old) rec.subs = old.subs || [];
       p.discs = (p.discs || []).filter(x => x.slot !== slot);
       p.discs.push(rec);
       p.discs.sort((x, y) => x.slot - y.slot);
@@ -1356,6 +1582,13 @@ function weaponBonus(p) {
   const atk = w.main ? (+w.main.v || 0) * (1 + 0.1558 * lvl + 0.9 * br) : 0;
   const sec = w.sec ? { p: String(w.sec.p), v: (+w.sec.v || 0) * (1 + 0.3 * br) } : null;
   return { atk: atk, sec: sec };
+}
+
+function secText(sec) {
+  const pr = DB.props && DB.props[String(sec.p)];
+  const pct = pr && pr.f && pr.f.indexOf('%') !== -1;
+  if (String(sec.p) === '30503') return (sec.v / 100).toFixed(2);
+  return pct ? (sec.v / 100).toFixed(1) + '%' : String(Math.round(sec.v));
 }
 
 function baseAt(a, p) {
