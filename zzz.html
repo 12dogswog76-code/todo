@@ -526,6 +526,7 @@
       <button id="cloudNow" style="display:none">Синхронизировать сейчас</button>
       <button id="cloudOff" style="display:none">Отключить</button>
       <button id="cloudTest">Проверить связь</button>
+      <button id="cloudNp">Хранилище npoint</button>
     </div>
     <div class="hint" id="cloudMsg"></div>
     <div class="hint" id="cloudDiag" style="color:var(--tx3);font-family:Consolas,monospace;font-size:11px;white-space:pre-wrap"></div>
@@ -575,9 +576,10 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v32';
+const APP_VER = 'v33';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
+const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -2515,14 +2517,15 @@ function cloudLog(msg) {
 }
 
 function cloudUI() {
-  const on = !!(sync && sync.key && sync.bin);
+  const on = !!(sync && ((sync.key && sync.bin) || sync.np));
   $('cloudCopy').style.display = on ? '' : 'none';
   $('cloudNow').style.display  = on ? '' : 'none';
   $('cloudOff').style.display  = on ? '' : 'none';
   $('cloudKey').style.display     = on ? 'none' : '';
   $('cloudConnect').style.display = on ? 'none' : '';
   $('cloudInfo').innerHTML = on
-    ? 'Облако подключено ✓ Скопируй код подключения и вставь его на других устройствах.'
+    ? 'Облако подключено ✓ ' + (sync.np ? 'Хранилище: npoint. ' : 'Хранилище: jsonbin. ') +
+      'Скопируй код подключения и вставь его на других устройствах.'
     : 'Хранилище <b>отдельное от задач и денег</b> — они друг друга не затрут.<br>' +
       'На первом устройстве вставь Master Key с jsonbin.io, на остальных — код подключения.';
 }
@@ -2531,14 +2534,23 @@ function scheduleSync() {
   clearTimeout(pushTimer);
   pushTimer = setTimeout(cloudPush, 1500);
 }
+// адрес и заголовки для текущего хранилища
+function cloudUrl(forWrite) {
+  if (sync && sync.np) return NP + '/' + sync.np;
+  return JB + '/' + sync.bin + (forWrite ? '' : '/latest?meta=false');
+}
+function cloudHead() {
+  return (sync && sync.np) ? { 'Content-Type': 'application/json' }
+                           : { 'Content-Type': 'application/json', 'X-Master-Key': sync.key };
+}
 async function cloudPush() {
   if (!sync) return false;
   setCloud('cloud-sync', 'отправка…');
   try {
     const body = payload();
-    await cloudFetch(JB + '/' + sync.bin, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.key },
+    await cloudFetch(cloudUrl(true), {
+      method: sync.np ? 'POST' : 'PUT',
+      headers: cloudHead(),
       body: JSON.stringify(body)
     });
     setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
@@ -2573,8 +2585,7 @@ async function cloudSync(quiet) {
   setCloud('cloud-sync', 'синхронизация…');
   let data = null;
   try {
-    const r = await cloudFetch(JB + '/' + sync.bin + '/latest?meta=false',
-                               { headers: { 'X-Master-Key': sync.key } });
+    const r = await cloudFetch(cloudUrl(false), { headers: cloudHead() });
     data = await r.json();
   } catch (e) {
     setCloud('cloud-err', 'нет связи с облаком');
@@ -2622,9 +2633,10 @@ $('cloudConnect').onclick = async () => {
   const v = $('cloudKey').value.trim();
   if (!v) { $('cloudMsg').textContent = 'Вставь Master Key или код подключения.'; return; }
   let conf = null;
-  if (v[0] === '{') { try { const o = JSON.parse(v); if (o.k && o.b) conf = { key: o.k, bin: o.b }; } catch (e) {} }
+  const parse = o => (o && o.n) ? { np: o.n } : ((o && o.k && o.b) ? { key: o.k, bin: o.b } : null);
+  if (v[0] === '{') { try { conf = parse(JSON.parse(v)); } catch (e) {} }
   if (!conf && !v.startsWith('$')) {
-    try { const o = JSON.parse(atob(v)); if (o.k && o.b) conf = { key: o.k, bin: o.b }; } catch (e) {}
+    try { conf = parse(JSON.parse(atob(v))); } catch (e) {}
   }
   if (conf) {
     sync = conf;
@@ -2657,13 +2669,43 @@ $('cloudConnect').onclick = async () => {
   }
 };
 $('cloudCopy').onclick = () => {
-  const code = btoa(JSON.stringify({ k: sync.key, b: sync.bin }));
+  const code = btoa(JSON.stringify(sync.np ? { n: sync.np } : { k: sync.key, b: sync.bin }));
   navigator.clipboard.writeText(code)
     .then(() => $('cloudMsg').textContent = 'Код скопирован ✓ Вставь его на другом устройстве.')
     .catch(() => { $('cloudKey').style.display = ''; $('cloudKey').value = code; });
 };
 // Проверка, что вообще доступно из этой сети: сам jsonbin и каждый прокси.
 // Нужна, когда синхронизация не проходит и непонятно, что блокируется.
+// npoint не требует ни регистрации, ни ключа — просто заводим бин и работаем с ним.
+// Нужен там, где jsonbin закрыт сетью: у корпоративного интернета и части операторов.
+$('cloudNp').onclick = async () => {
+  const msg = $('cloudMsg'), box = $('cloudDiag');
+  if (sync && sync.np) {
+    msg.textContent = 'Уже на npoint. Код подключения — та же кнопка выше.';
+    return;
+  }
+  msg.textContent = 'Создаю хранилище на npoint…';
+  try {
+    const r = await fetch(NP, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload())
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const id = d.id || d.token || (d.api_url || '').split('/').pop();
+    if (!id) throw new Error('не вернулся идентификатор');
+    sync = { np: id };
+    localStorage.setItem(LS + '_sync', JSON.stringify(sync));
+    cloudUI();
+    msg.textContent = 'Готово ✓ Скопируй код подключения и вставь на других устройствах.';
+    box.textContent = 'хранилище npoint: ' + id;
+  } catch (e) {
+    msg.textContent = 'Не вышло создать хранилище на npoint.';
+    box.textContent = cloudErrText(e);
+  }
+};
+
 $('cloudTest').onclick = async () => {
   const box = $('cloudDiag');
   const url = JB + '/' + ((sync && sync.bin) || 'test') + '/latest?meta=false';
@@ -2691,13 +2733,13 @@ $('cloudTest').onclick = async () => {
     try {
       // без ограничения по времени зависший запрос держит всю проверку
       const ac = new AbortController();
-      const tm = setTimeout(() => ac.abort(), 6000);
+      const tm = setTimeout(() => ac.abort(), 15000);
       const r = await fetch(u, { headers: head, signal: ac.signal });
       clearTimeout(tm);
       out.push((r.ok ? '✓ ' : '× ') + name + ' — HTTP ' + r.status + ', ' + (Date.now() - t0) + ' мс');
     } catch (e) {
       const why = /abort/i.test(String(e && e.name) + String(e && e.message))
-        ? 'нет ответа за 6 сек' : (isNetErr(e) ? 'запрос не ушёл' : (e.message || e));
+        ? 'нет ответа за 15 сек' : (isNetErr(e) ? 'запрос не ушёл' : (e.message || e));
       out.push('× ' + name + ' — ' + why);
     }
     box.textContent = out.join('\n');
