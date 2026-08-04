@@ -575,7 +575,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v31';
+const APP_VER = 'v32';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -2670,11 +2670,15 @@ $('cloudTest').onclick = async () => {
   const head = (sync && sync.key) ? { 'X-Master-Key': sync.key } : {};
   // кандидаты в запасное хранилище: проверяем, до чего эта сеть вообще достаёт
   const ALT = [
+    ['api.npoint.io',         'https://api.npoint.io/'],
+    ['jsonstorage.net',       'https://api.jsonstorage.net/v1/json'],
+    ['api.jsonsilo.com',      'https://api.jsonsilo.com/'],
+    ['extendsclass.com',      'https://api.extendsclass.com/json-storage/bin/0'],
+    ['keyvalue.immanuel.co',  'https://keyvalue.immanuel.co/api/KeyVal/GetAppKey'],
     ['api.github.com',        'https://api.github.com/rate_limit'],
     ['raw.githubusercontent', 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/README.md'],
     ['jsonblob.com',          'https://jsonblob.com/api/jsonBlob/0'],
     ['kvdb.io',               'https://kvdb.io/ping'],
-    ['api.npoint.io',         'https://api.npoint.io/'],
     ['enka.network',          'https://enka.network/api/zzz/uid/1502024259/']
   ];
   const items = [['напрямую api.jsonbin.io', url]]
@@ -2685,10 +2689,16 @@ $('cloudTest').onclick = async () => {
   for (const [name, u] of items) {
     const t0 = Date.now();
     try {
-      const r = await fetch(u, { headers: head });
+      // без ограничения по времени зависший запрос держит всю проверку
+      const ac = new AbortController();
+      const tm = setTimeout(() => ac.abort(), 6000);
+      const r = await fetch(u, { headers: head, signal: ac.signal });
+      clearTimeout(tm);
       out.push((r.ok ? '✓ ' : '× ') + name + ' — HTTP ' + r.status + ', ' + (Date.now() - t0) + ' мс');
     } catch (e) {
-      out.push('× ' + name + ' — ' + (isNetErr(e) ? 'запрос не ушёл' : (e.message || e)));
+      const why = /abort/i.test(String(e && e.name) + String(e && e.message))
+        ? 'нет ответа за 6 сек' : (isNetErr(e) ? 'запрос не ушёл' : (e.message || e));
+      out.push('× ' + name + ' — ' + why);
     }
     box.textContent = out.join('\n');
   }
