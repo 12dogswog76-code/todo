@@ -575,7 +575,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v30';
+const APP_VER = 'v31';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -2668,8 +2668,18 @@ $('cloudTest').onclick = async () => {
   const box = $('cloudDiag');
   const url = JB + '/' + ((sync && sync.bin) || 'test') + '/latest?meta=false';
   const head = (sync && sync.key) ? { 'X-Master-Key': sync.key } : {};
-  const items = [['напрямую api.jsonbin.io', url]].concat(
-    CLOUD_PROXY.map((f, i) => ['прокси ' + (i + 1) + ': ' + f('x').split('/')[2], f(url)]));
+  // кандидаты в запасное хранилище: проверяем, до чего эта сеть вообще достаёт
+  const ALT = [
+    ['api.github.com',        'https://api.github.com/rate_limit'],
+    ['raw.githubusercontent', 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/README.md'],
+    ['jsonblob.com',          'https://jsonblob.com/api/jsonBlob/0'],
+    ['kvdb.io',               'https://kvdb.io/ping'],
+    ['api.npoint.io',         'https://api.npoint.io/'],
+    ['enka.network',          'https://enka.network/api/zzz/uid/1502024259/']
+  ];
+  const items = [['напрямую api.jsonbin.io', url]]
+    .concat(CLOUD_PROXY.map((f, i) => ['прокси ' + (i + 1) + ': ' + f('x').split('/')[2], f(url)]))
+    .concat(ALT.map(a => ['хранилище ' + a[0], a[1]]));
   box.textContent = 'Проверяю…';
   const out = [];
   for (const [name, u] of items) {
@@ -2683,9 +2693,11 @@ $('cloudTest').onclick = async () => {
     box.textContent = out.join('\n');
   }
   out.push('');
-  out.push(out.some(x => x[0] === '✓')
-    ? 'Рабочий путь есть — синхронизация должна проходить.'
-    : 'Из этой сети недоступно ничего. Нужен свой прокси или другое хранилище.');
+  const okJb = out.slice(0, 1 + CLOUD_PROXY.length).some(x => x[0] === '✓');
+  out.push(okJb
+    ? 'Путь к jsonbin есть — синхронизация должна проходить.'
+    : 'jsonbin недоступен ни напрямую, ни через прокси. Смотри строки «хранилище» — ' +
+      'на чём стоит ✓, туда и переедем.');
   box.textContent = out.join('\n');
 };
 
