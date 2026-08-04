@@ -592,7 +592,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v43';
+const APP_VER = 'v44';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1526,8 +1526,9 @@ function planDiscs(p) {
   for (let s = 1; s <= 6; s++) {
     const q = pl.find(x => x.slot === s);
     const c = cur.find(x => x.slot === s);
+    // доп. характеристики берём заданные в плане, а если их не задавали — текущие
     if (q) out.push({ slot: s, suit: q.suit, lvl: 15, mainP: q.mainP, mainV: q.mainV,
-                      subs: (c && c.subs) || [] });     // сабстаты оставляем от текущего
+                      subs: (q.subs && q.subs.length) ? q.subs : ((c && c.subs) || []) });
     else if (c) out.push(c);
   }
   return out;
@@ -2076,9 +2077,11 @@ function openEditor(kind, slot) {
       '<div class="mp' + (ed.mainP === o[0] ? ' on' : '') + '" data-p="' + o[0] + '" data-v="' + o[2] + '">' +
       esc(o[1]) + '</div>').join('') + '</div>';
 
-    if (!isPlan) {
-      h += '<div class="row" style="font-size:12px;color:var(--tx2)">Уровень диска ' +
-        '<input type="number" id="edLvl" min="0" max="15" value="' + ed.lvl + '" style="width:60px"></div>';
+    {
+      if (!isPlan) {
+        h += '<div class="row" style="font-size:12px;color:var(--tx2)">Уровень диска ' +
+          '<input type="number" id="edLvl" min="0" max="15" value="' + ed.lvl + '" style="width:60px"></div>';
+      }
       ed.subs = (d.subs || []).slice(0, 4).map(x => ({ p: String(x.p), l: x.l || 1 }));
       while (ed.subs.length < 4) ed.subs.push({ p: '', l: 1 });
       h += '<div class="cap2" style="margin-top:8px">ДОП. ХАРАКТЕРИСТИКИ И ПРОКИ</div>';
@@ -2093,7 +2096,8 @@ function openEditor(kind, slot) {
           '<span class="sbV">' + esc(sb.p ? subVal({ p: sb.p, v: subBase(sb.p), l: sb.l }) : '—') + '</span>' +
         '</div>').join('') + '</div>';
       h += '<div class="hint" style="margin-top:2px">«+N» — сколько раз характеристика ' +
-           'усилилась при прокачке диска. Значение пересчитывается само.</div>';
+           'усилилась при прокачке диска. Значение пересчитывается само.' +
+           (isPlan ? ' В плане диск считается прокачанным до +15.' : '') + '</div>';
     }
 
     h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #4ade80;background:#4ade80;color:#06240f">' +
@@ -2234,13 +2238,13 @@ function saveSlot(kind, slot, isPlan) {
   if (kind === 'disc') {
     const rec = { slot: slot, suit: ed.suit || 0, mainP: ed.mainP || '', mainV: ed.mainV || 0,
                   lvl: isPlan ? 15 : Math.max(0, Math.min(15, +($('edLvl') || {}).value || 0)) };
+    rec.subs = (ed.subs || []).filter(x => x && x.p)
+      .map(x => ({ p: x.p, v: subBase(x.p), l: x.l || 1 }));
     if (isPlan) {
       p.plan.discs = (p.plan.discs || []).filter(x => x.slot !== slot);
       p.plan.discs.push(rec);
     } else {
       const old = (p.discs || []).find(x => x.slot === slot);
-      rec.subs = (ed.subs || []).filter(x => x && x.p)
-        .map(x => ({ p: x.p, v: subBase(x.p), l: x.l || 1 }));
       if (!rec.subs.length && old) rec.subs = old.subs || [];
       p.discs = (p.discs || []).filter(x => x.slot !== slot);
       p.discs.push(rec);
