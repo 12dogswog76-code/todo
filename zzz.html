@@ -512,6 +512,10 @@
       <input type="text" id="enkaUser" placeholder="ник на enka.network или ссылка на профиль" style="flex:1;min-width:200px;margin-bottom:0">
       <button id="enkaBuilds" class="pri">Загрузить все сборки</button>
     </div>
+    <div class="prow" style="margin-top:6px">
+      <button id="enkaLocal" class="pri">⤓ Загрузить с нашего сайта</button>
+      <span class="hint" id="enkaLocalMsg" style="margin:0;align-self:center"></span>
+    </div>
     <div class="hint" id="enkaMsg">
       Данные берутся с <b>enka.network</b> — из витрины профиля. Подтянутся уровень, ядро,
       навыки, М.Картины, W-Engine и все 6 дисков со статами.<br>
@@ -598,7 +602,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v46';
+const APP_VER = 'v48';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2532,6 +2536,67 @@ function useEnkaData(data) {
 
 // Сохранённые сборки из аккаунта на Enka: там лежат все агенты, а не только витрина.
 // Формат ответа: { "<id агента>": [ { live, name, avatar_data: {...как в витрине} } ] }
+// Готовый слепок данных Enka лежит рядом с сайтом: его раз в 6 часов обновляет
+// GitHub Actions. Запрос идёт на свой домен, поэтому работает в любой сети —
+// без прокси и без ручного копирования.
+function applyEnkaSnapshot(prof) {
+  let ok = 0;
+  const builds = prof.builds || null;
+  if (builds) {
+    Object.keys(builds).forEach(aid => {
+      const list = builds[aid] || [];
+      if (!list.length) return;
+      const b = list.filter(x => x.live)[0] || list.slice().sort((x, y) => (y.id || 0) - (x.id || 0))[0];
+      const av = b && b.avatar_data;
+      if (av && DB.byId[av.Id] && applyEnka(av)) ok++;
+    });
+  }
+  // витрина добирает тех, кого нет в сохранённых сборках
+  const av = (((prof.showcase || {}).PlayerInfo || {}).ShowcaseDetail || {}).AvatarList || [];
+  av.forEach(a => { if (DB.byId[a.Id] && applyEnka(a)) ok++; });
+  return ok;
+}
+
+$('enkaLocal').onclick = async () => {
+  const msg = $('enkaMsg');
+  msg.textContent = 'Читаю данные с сайта…';
+  try {
+    const r = await fetch('zzz-enka.json', { cache: 'no-cache' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    // в слепке может быть несколько профилей — свой и друзей
+    const profs = (d.profiles && d.profiles.length) ? d.profiles
+                : [{ uid: d.uid || '', nick: d.uid || 'профиль', showcase: d.showcase, builds: d.builds }];
+
+    let prof = profs[0];
+    if (profs.length > 1) {
+      const want = (($('uidInput') && $('uidInput').value.trim().replace(/\D/g, '')) ||
+                    localStorage.getItem(LS + '_uid') || '').trim();
+      const byUid = want ? profs.filter(x => String(x.uid) === want)[0] : null;
+      if (byUid) prof = byUid;
+      else {
+        const names = profs.map((x, i) => (i + 1) + ' — ' + (x.nick || x.user || x.uid)).join('\n');
+        const n = parseInt(prompt('В слепке несколько профилей, выбери номер:\n\n' + names, '1'), 10);
+        if (!n || !profs[n - 1]) { msg.textContent = 'Отменено.'; return; }
+        prof = profs[n - 1];
+      }
+    }
+
+    const ok = applyEnkaSnapshot(prof);
+    if (!ok) throw new Error('в профиле нет знакомых агентов');
+    if (prof.uid) { localStorage.setItem(LS + '_uid', prof.uid); if ($('uidInput')) $('uidInput').value = prof.uid; }
+
+    localStorage.setItem(LS, JSON.stringify(prog));
+    scheduleSync();
+    render();
+    msg.innerHTML = 'Загружено агентов: <b>' + ok + '</b> · профиль ' +
+      esc(prof.nick || prof.uid || '') + '. Слепок от ' + esc(d.built || '?') + ' UTC.';
+  } catch (e) {
+    msg.innerHTML = 'Не вышло: ' + esc(e.message || String(e)) +
+      '.<br>Похоже, слепок ещё не собран — запусти на GitHub задачу «ZZZ · данные с Enka».';
+  }
+};
+
 $('enkaBuilds').onclick = async () => {
   const raw = $('enkaUser').value.trim();
   if (!raw) {
