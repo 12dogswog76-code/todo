@@ -567,7 +567,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v23';
+const APP_VER = 'v24';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -628,7 +628,11 @@ const PRIORITY = {
   1571: ['cr','cd','er'],             // Норма
   1581: ['atk','ap']                  // Ремиэлла
 };
-function priOf(id) { return PRIORITY[id] || []; }
+function priOf(id, p) {
+  const own = p && Array.isArray(p.pri2) ? p.pri2 : null;
+  if (own && own.length) return own;
+  return PRIORITY[id] || [];
+}
 
 // Из чего сложилась характеристика — видно в подсказке у поля.
 // Нужно, чтобы сверять с игрой и сразу находить, какое слагаемое расходится.
@@ -673,7 +677,7 @@ function subsOf(id, p) {
   if (own && own.length) return own;                 // поправленный вручную список
   if (SUBS_FIX[id]) return SUBS_FIX[id];
   const s = (EXTRA && EXTRA.subs && EXTRA.subs[id]) || null;
-  return (s && s.length) ? s : priOf(id);
+  return (s && s.length) ? s : priOf(id, p);
 }
 // какие характеристики бывают доп. характеристиками на дисках — для правки
 // списка рекомендаций вручную
@@ -1084,16 +1088,73 @@ function boot() {
 }
 
 // ─────────────── расчёты ───────────────
+// Цель прокачки для агента. По умолчанию — максимум, но её можно занизить:
+// например, уклонение геймплейно не нужно — ставишь ему 1, и трекер перестаёт
+// считать это недоработкой. Цель 0 полностью исключает часть из процента.
+function tgtOf(p) {
+  const t = (p && p.tgt) || {};
+  const sk = {};
+  SKILL_IDX.forEach(o => {
+    const v = t.sk && t.sk[o.i] != null ? +t.sk[o.i] : SKILL_MAX;
+    sk[o.i] = Math.max(0, Math.min(SKILL_MAX, v));
+  });
+  return {
+    lvl:  t.lvl  != null ? Math.max(0, Math.min(LVL_MAX,  +t.lvl))  : LVL_MAX,
+    core: t.core != null ? Math.max(0, Math.min(CORE_MAX, +t.core)) : CORE_MAX,
+    w:    t.w    != null ? Math.max(0, Math.min(WENG_MAX, +t.w))    : WENG_MAX,
+    sk: sk
+  };
+}
+function tgtLabel(p) {
+  const t = tgtOf(p), off = [];
+  if (t.lvl !== LVL_MAX) off.push('ур.' + t.lvl);
+  if (t.core !== CORE_MAX) off.push('ядро ' + t.core);
+  if (t.w !== WENG_MAX) off.push('оруж.' + t.w);
+  SKILL_IDX.forEach(o => { if (t.sk[o.i] !== SKILL_MAX) off.push(o.n.toLowerCase() + ' ' + t.sk[o.i]); });
+  return off.length ? off.join(', ') : 'по максимуму';
+}
+function tgtHTML(p) {
+  const t = tgtOf(p);
+  let rows = '<div class="frow" style="gap:6px"><span style="flex:1;font-size:11.5px">Уровень</span>' +
+    '<input type="number" class="tgin" data-k="lvl" min="0" max="' + LVL_MAX + '" value="' + t.lvl +
+    '" style="width:60px;text-align:right"></div>' +
+    '<div class="frow" style="gap:6px"><span style="flex:1;font-size:11.5px">Ядро</span>' +
+    '<input type="number" class="tgin" data-k="core" min="0" max="' + CORE_MAX + '" value="' + t.core +
+    '" style="width:60px;text-align:right"></div>' +
+    '<div class="frow" style="gap:6px"><span style="flex:1;font-size:11.5px">Оружие</span>' +
+    '<input type="number" class="tgin" data-k="w" min="0" max="' + WENG_MAX + '" value="' + t.w +
+    '" style="width:60px;text-align:right"></div>';
+  SKILL_IDX.forEach(o => {
+    rows += '<div class="frow" style="gap:6px"><span style="flex:1;font-size:11.5px">' + esc(o.n) + '</span>' +
+      '<input type="number" class="tgin" data-k="sk' + o.i + '" min="0" max="' + SKILL_MAX +
+      '" value="' + t.sk[o.i] + '" style="width:60px;text-align:right"></div>';
+  });
+  return '<div class="editbox" style="margin:0 0 8px">' +
+    '<div class="cap2">ЦЕЛИ ПРОКАЧКИ</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">' +
+    rows + '</div>' +
+    '<div class="hint">Готовность считается относительно этих значений: выставленное = 100%. ' +
+    'Ноль убирает пункт из подсчёта совсем.' +
+    '<br><button id="tgtSave" class="pri" style="margin-top:6px;padding:5px 12px">Применить</button> ' +
+    '<button id="tgtReset" style="margin-top:6px;padding:5px 12px">Сбросить на максимум</button></div></div>';
+}
+
 function pctOf(id) {
   const p = prog[id];
   if (!p || !p.have) return 0;
-  const lvl  = Math.min(1, (p.lvl || 0) / LVL_MAX);
-  const core = Math.min(1, (p.core || 0) / CORE_MAX);
+  const t = tgtOf(p);
+  const parts = [];
+  if (t.lvl)  parts.push(Math.min(1, (p.lvl || 0) / t.lvl));
+  if (t.core) parts.push(Math.min(1, (p.core || 0) / t.core));
+  if (t.w)    parts.push(Math.min(1, ((p.w && p.w.lvl) || 0) / t.w));
   let s = 0, n = 0;
-  SKILL_IDX.forEach(o => { s += Math.min(SKILL_MAX, (p.sk && p.sk[o.i]) || 1); n += SKILL_MAX; });
-  const sk = n ? s / n : 0;
-  const w  = Math.min(1, ((p.w && p.w.lvl) || 0) / WENG_MAX);
-  return Math.round((lvl + core + sk + w) / 4 * 100);
+  SKILL_IDX.forEach(o => {
+    if (!t.sk[o.i]) return;                       // навык исключён из цели
+    s += Math.min(t.sk[o.i], (p.sk && p.sk[o.i]) || 1); n += t.sk[o.i];
+  });
+  if (n) parts.push(s / n);
+  if (!parts.length) return 100;
+  return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length * 100);
 }
 function isDone(id) { return pctOf(id) >= 100; }
 
@@ -1262,7 +1323,7 @@ function renderSummary() {
 }
 
 // ─────────────── карточка агента ───────────────
-let curId = null, curTab = 'now', editing = null, ed = null, info = null, cbOpen = false, modOpen = false;
+let curId = null, curTab = 'now', editing = null, ed = null, info = null, cbOpen = false, modOpen = false, tgtOpen = false;
 
 // какие основные характеристики бывают в каждом слоте (значение — база при Ур.0)
 const MAIN_OPTS = {
@@ -1386,7 +1447,7 @@ function planProg(p) {
                                      br: q.br != null ? q.br : 5, phase: q.phase || 1 } });
 }
 
-function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; cbOpen = false; modOpen = false; renderSheet(); }
+function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; cbOpen = false; modOpen = false; tgtOpen = false; renderSheet(); }
 
 function renderSheet() {
   const a = DB.byId[curId], p = P(curId);
@@ -1433,7 +1494,7 @@ function renderSheet() {
       ['def','Защита',0], ['penp','Процент пробивания',1], ['im','Импульс',0], ['pen','Пробивание',0],
       ['cr','Шанс крит. попадания',1], ['er','Восст. энергии',2], ['cd','Крит. урон',1], ['dmg','Бонус стихии',1]
     ];
-    const pri = priOf(curId);           // жёлтая подсветка
+    const pri = priOf(curId, p);        // жёлтая подсветка
     const mods = modifiersOf(curId, curTab === 'plan' ? planProg(p) : p);
     const modHint = Object.keys(mods.by).map(k => {
       const st = STATS.filter(x => x.k === k)[0];
@@ -1461,6 +1522,12 @@ function renderSheet() {
             '<input type="checkbox" class="modchk" data-k="' + o[0] + '"' +
             (cur.indexOf(o[0]) >= 0 ? ' checked' : '') + ' style="display:none">' +
             esc(o[1]) + '</label>').join('') + '</div>' +
+          '<div class="cap2" style="margin-top:10px">ПОДСВЕЧИВАТЬ ЖЁЛТЫМ (как в игре)</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
+          STATS.map(o => '<label class="tg2' + (priOf(curId, p).indexOf(o.k) >= 0 ? ' on' : '') + '">' +
+            '<input type="checkbox" class="prichk" data-k="' + o.k + '"' +
+            (priOf(curId, p).indexOf(o.k) >= 0 ? ' checked' : '') + ' style="display:none">' +
+            esc(o.n) + '</label>').join('') + '</div>' +
           '<div class="hint">По этому набору считаются модификаторы — так же, как в игре. ' +
           'С сайта подтянулось: ' + (auto.length ? esc(auto.join(', ')) : '—') +
           '. Отметь как в игре, если не совпало.' +
@@ -1555,7 +1622,11 @@ function renderSheet() {
     h += '<div class="drop" id="infoD"></div></div>';
 
     // ── ядро и навыки ──
-    h += '<div class="sect"><h4>Ядро и навыки</h4>' +
+    h += '<div class="sect"><h4>Ядро и навыки' +
+      '<button id="tgtBtn" class="modbadge" style="cursor:pointer" title="Свои цели прокачки. ' +
+      'Готовность считается относительно них: если уклонение агенту не нужно, ставишь ему 1 — ' +
+      'и трекер перестаёт считать это недоработкой.">🎯 цели: ' + tgtLabel(p) + '</button>' +
+      '</h4>' + (tgtOpen ? tgtHTML(p) : '') +
       '<div class="core" style="margin-bottom:8px">' +
       ['A','B','C','D','E','F'].map((t, idx) =>
         '<span class="cc' + ((p.core || 0) > idx ? ' on' : '') + '">' + t + '</span>').join('') +
@@ -1616,6 +1687,19 @@ function bindSheet() {
   if (ft) ft.onclick = () => { p.fav = !p.fav; p.mod = Date.now(); save(curId); renderSheet(); render(); };
   const sb = $('saveBtn');
   if (sb) sb.onclick = () => { applySheet(); closeModal(); render(); };
+  const tb = $('tgtBtn');
+  if (tb) tb.onclick = () => { applySheet(); tgtOpen = !tgtOpen; renderSheet(); };
+  const tsv = $('tgtSave');
+  if (tsv) tsv.onclick = () => {
+    const p2 = P(curId), t = { sk: {} };
+    document.querySelectorAll('.tgin').forEach(i => {
+      const k = i.dataset.k, v = Math.max(0, +i.value || 0);
+      if (k.indexOf('sk') === 0) t.sk[k.slice(2)] = v; else t[k] = v;
+    });
+    p2.tgt = t; save(curId); tgtOpen = false; renderSheet(); render();
+  };
+  const trs = $('tgtReset');
+  if (trs) trs.onclick = () => { const p2 = P(curId); delete p2.tgt; save(curId); tgtOpen = false; renderSheet(); render(); };
   const mb = $('modBadge');
   if (mb) mb.onclick = () => { modOpen = !modOpen; renderSheet(); };
   const ms = $('modSave');
@@ -1623,11 +1707,13 @@ function bindSheet() {
     const p2 = P(curId);
     p2.subs2 = [].slice.call(document.querySelectorAll('.modchk'))
       .filter(i => i.checked).map(i => i.dataset.k);
+    p2.pri2 = [].slice.call(document.querySelectorAll('.prichk'))
+      .filter(i => i.checked).map(i => i.dataset.k);
     save(curId); modOpen = false; renderSheet();
   };
   const ma = $('modAuto');
-  if (ma) ma.onclick = () => { const p2 = P(curId); delete p2.subs2; save(curId); modOpen = false; renderSheet(); };
-  document.querySelectorAll('.modchk').forEach(i => {
+  if (ma) ma.onclick = () => { const p2 = P(curId); delete p2.subs2; delete p2.pri2; save(curId); modOpen = false; renderSheet(); };
+  document.querySelectorAll('.modchk, .prichk').forEach(i => {
     i.onchange = () => i.parentNode.classList.toggle('on', i.checked);
   });
   const mr = $('manReset');
