@@ -175,22 +175,23 @@
   .sheet{width:100%;max-width:1000px;background:var(--pan);border:1px solid var(--line);
     border-radius:14px;overflow:hidden}
 
-  .hero{display:grid;grid-template-columns:290px 1fr;align-items:start}
+  .hero{display:grid;grid-template-columns:290px 1fr}
   .hart{
-    /* высота фиксированная: раньше блок тянулся за правой колонкой, и при раскрытии
-       описания диска или оружия арт скачком увеличивался */
-    position:sticky;top:0;height:560px;
-    background:linear-gradient(180deg,#151820,#0b0d11);overflow:hidden;
+    position:relative;background:linear-gradient(180deg,#151820,#0b0d11);overflow:hidden;min-height:420px;
   }
-  .hart::after{content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,transparent 50%,#0b0d11f2 100%),
+  /* Высота картинки считается от её пропорций, а не от длины правой колонки.
+     Раньше стояло height:100%, и при раскрытии описания диска или оружия окно
+     становилось выше, а вместе с ним скачком увеличивался и арт. */
+  .hart .art{width:100%;height:auto;display:block}
+  .hart::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,transparent 40%,#0b0d11d9 62%,#0b0d11 78%),
                radial-gradient(60% 40% at 50% 0%,color-mix(in srgb,var(--el) 22%,transparent),transparent 70%)}
-  .hart img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .hart img{width:100%;height:auto;display:block}
   .hart .lv{
     position:absolute;top:10px;left:10px;background:#0b0d11d9;border:1px solid var(--el);
     color:var(--el);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;z-index:2;
   }
-  .hart .who{position:absolute;left:14px;right:14px;bottom:14px;z-index:2}
+  .hart .who{position:relative;z-index:2;margin:-92px 14px 0;padding-bottom:14px}
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
@@ -406,9 +407,11 @@
 
   @media(max-width:860px){
     .hero{grid-template-columns:1fr}
-    /* фиксированная высота, а не min-height: иначе арт растягивается на пол-экрана
-       в натуральную величину и object-fit:cover не обрезает его по верху */
+    /* на телефоне колонка во всю ширину: показываем только верх арта, иначе он
+       занимает пол-экрана */
     .hart{min-height:0;height:290px}
+    .hart img{height:100%;object-fit:cover;object-position:top center}
+    .hart .who{position:absolute;left:14px;right:14px;bottom:14px;margin:0;padding:0}
     .stg{grid-template-columns:1fr}
     .drow{grid-template-columns:repeat(3,1fr)}
     /* «убрать из трекера» переносилось по буквам и ломало нижнюю панель */
@@ -543,7 +546,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v4';
+const APP_VER = 'v5';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -742,7 +745,7 @@ const ST_PATH = {
 function statIcon(k, size, col) {
   if (k === 'dmg') return '';
   if (!ST_PATH[k]) return '';
-  return iconImg(uiIcon('st-' + k), svgW(ST_PATH[k], col || '#7f8697', size || 13), size || 13, '');
+  return svgW(ST_PATH[k], col || '#7f8697', size || 13);
 }
 const SK_PATH = {
   // клинок — обычная атака
