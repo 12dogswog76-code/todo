@@ -342,6 +342,14 @@
   .dcard .edit{position:absolute;top:3px;right:4px;font-size:10px;color:var(--tx3);
     opacity:0;transition:.12s;cursor:pointer}
   .dcard:hover .edit{opacity:1}
+  /* оценка диска — уступает место карандашу при наведении */
+  .dcard .dq{position:absolute;top:3px;right:5px;font-size:10px;font-weight:800;
+    line-height:1;transition:.12s}
+  .dcard:hover .dq{opacity:0}
+  .dq.qSp{color:var(--gold)} .dq.qS{color:var(--ok)} .dq.qA{color:var(--info)}
+  .dq.qB{color:var(--tx2)} .dq.qC,.dq.qD{color:var(--tx3)}
+  .dqbar{height:2px;border-radius:2px;background:#ffffff14;margin-top:4px;overflow:hidden}
+  .dqbar i{display:block;height:100%;border-radius:2px}
   .dcard .edit:hover{color:var(--gold)}
   .dcard.empty .mn{color:var(--tx3)}
   .setline{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;font-size:10.5px}
@@ -612,7 +620,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v49';
+const APP_VER = 'v50';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -775,6 +783,66 @@ function modifiersOf(id, p) {
     });
   });
   return out;
+}
+
+// ── оценка дисков ───────────────────────────────────────────────────────────
+// Диск S-ранга на +15 держит 4 доп. характеристики и 9 «прокруток»: четыре
+// стартовые плюс пять усилений. Считаем, сколько из них ушло в характеристики,
+// которые агенту действительно нужны, — остальное потрачено впустую.
+// Оценка всегда под конкретного агента: один и тот же диск для Санны и для
+// Ремиэллы получит разные буквы.
+const DISC_MAX_ROLLS = 9;
+// пороги подобраны под реальность: рекомендуемых характеристик у агента обычно
+// две-три, поэтому собрать все девять прокруток в них невозможно.
+const DISC_GRADES = [[78,'S+','Sp'],[65,'S','S'],[50,'A','A'],[36,'B','B'],[22,'C','C'],[0,'D','D']];
+function discGrade(pct) {
+  for (let i = 0; i < DISC_GRADES.length; i++) {
+    if (pct >= DISC_GRADES[i][0]) return { g: DISC_GRADES[i][1], c: DISC_GRADES[i][2] };
+  }
+  return { g: 'D', c: 'D' };
+}
+// Главный стат: у слотов 1–3 он всегда один и тот же, выбирать не из чего —
+// засчитываем. У 4–6 смотрим, нужен ли он агенту. Бонус стихии и процент
+// пробивания считаем удачными всегда: на пятом слоте это почти безальтернативно.
+function discMainOk(d, keys, pri) {
+  if (!d || !d.mainP) return false;
+  if ((d.slot || 0) <= 3) return true;
+  const k = PROP2STAT[String(d.mainP)] || '';
+  if (!k) return false;
+  if (k === 'dmg' || k === 'penp') return true;
+  return keys.indexOf(k) >= 0 || pri.indexOf(k) >= 0;
+}
+function discScore(d, keys, pri) {
+  if (!d || !Array.isArray(d.subs) || !d.subs.length) return null;
+  let tot = 0, good = 0;
+  const by = [];
+  d.subs.forEach(s => {
+    if (!s || !s.p) return;
+    const n = Math.max(1, +s.l || 1);
+    tot += n;
+    if (isModSub(s, keys)) { good += n; by.push(shortName(s.p) + ' ×' + n); }
+  });
+  const mo = discMainOk(d, keys, pri);
+  const pct = Math.round(Math.min(1, good / DISC_MAX_ROLLS) * (mo ? 1 : 0.6) * 100);
+  const gr = discGrade(pct);
+  return { pct: pct, grade: gr.g, cls: gr.c, good: good, tot: tot, mainOk: mo, by: by };
+}
+function discHint(sc, d) {
+  if (!sc) return '';
+  return 'Оценка диска для этого агента: ' + sc.grade + ' (' + sc.pct + '%)\n' +
+    'Полезных прокруток: ' + sc.good + ' из ' + sc.tot + ' выпавших, максимум ' + DISC_MAX_ROLLS + '\n' +
+    (sc.by.length ? 'В зачёт идут: ' + sc.by.join(', ') + '\n' : 'Ни одна доп. характеристика агенту не нужна\n') +
+    'Главная характеристика: ' + (sc.mainOk ? 'подходит' : 'не нужна агенту, оценка снижена на 40%');
+}
+function buildScore(list, keys, pri) {
+  let sum = 0, n = 0;
+  for (let s = 1; s <= 6; s++) {
+    const d = (list || []).filter(x => x && x.slot === s)[0];
+    const r = d ? discScore(d, keys, pri) : null;
+    sum += r ? r.pct : 0;
+    if (d) n++;
+  }
+  return { pct: Math.round(sum / 6), filled: n };
 }
 
 // какие PropertyId из Enka в какой наш стат складываются
@@ -1749,27 +1817,42 @@ function renderSheet() {
     // ── диски ──
     const list = curTab === 'plan' ? planDiscs(p) : (p.discs || []);
     const plSet = (p.plan && p.plan.discs) || [];
-    h += '<div class="sect"><h4>Диски' + (curTab === 'plan' ? ' — задай желаемый' : '') + '</h4><div class="drow">';
+    const mk = modKeys(curId, p);   // нужные агенту доп. характеристики
+    const bs = buildScore(list, mk, pri);
+    const bg = discGrade(bs.pct);
+    h += '<div class="sect"><h4>Диски' + (curTab === 'plan' ? ' — задай желаемый' : '') +
+      (bs.filled ? '<span class="modbadge" title="' + esc(
+        'Средняя оценка шести слотов под этого агента. Считается по доп. характеристикам:\n' +
+        'у диска максимум ' + DISC_MAX_ROLLS + ' прокруток, в зачёт идут только нужные агенту.\n' +
+        'Пустой слот считается нулём. Список нужных характеристик правится кнопкой ' +
+        '«модификаторы» в блоке характеристик.') + '">сборка <b class="dq q' + bg.c + '">' +
+        bg.g + '</b> · ' + bs.pct + '%</span>' : '') +
+      '</h4><div class="drow">';
     for (let sl = 1; sl <= 6; sl++) {
       const d = list.find(x => x.slot === sl);
       const suit = d && DB.suitById[d.suit];
       const isPlan = curTab === 'plan' && plSet.some(x => x.slot === sl);
-      const mk = modKeys(curId, p);
+      const sc = discScore(d, mk, pri);
       const subs = (d && d.subs || []).map(sp => {
         const r = subRolls(sp);
         return '<span' + (isModSub(sp, mk) ? ' class="good"' : '') + '>' + esc(shortName(sp.p)) +
           (r ? '<b class="rl">+' + r + '</b>' : '') +
           '<em>' + esc(subVal(sp)) + '</em></span>';
       }).join('');
+      const cvar = { Sp: 'gold', S: 'ok', A: 'info', B: 'tx2', C: 'tx3', D: 'tx3' };
       h += '<div class="dcard' + (d ? '' : ' empty') + (curTab === 'plan' ? ' plan' : '') +
            (isPlan ? ' set' : '') + '" data-slot="' + sl + '" title="' +
-           esc(d && suit ? (suit.ru || suit.en) : 'слот ' + sl) + '">' +
+           esc((d && suit ? (suit.ru || suit.en) : 'слот ' + sl) +
+               (sc ? '\n\n' + discHint(sc, d) : '')) + '">' +
         '<span class="sn">' + sl + '</span><span class="edit" data-edit="' + sl + '">✎</span>' +
+        (sc ? '<span class="dq q' + sc.cls + '">' + sc.grade + '</span>' : '') +
         (suit && suit.icon ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">'
                            : '<img alt="">') +
         '<div class="mn">' + esc(d ? mainText(d.mainP, d.mainV, d.lvl) : '—') + '</div>' +
         '<div class="mnl">' + esc(d ? shortName(d.mainP) : 'пусто') + '</div>' +
-        (subs ? '<div class="st2">' + subs + '</div>' : '') + '</div>';
+        (subs ? '<div class="st2">' + subs + '</div>' : '') +
+        (sc ? '<div class="dqbar"><i style="width:' + sc.pct + '%;background:var(--' +
+              cvar[sc.cls] + ')"></i></div>' : '') + '</div>';
     }
     h += '</div>';
 
