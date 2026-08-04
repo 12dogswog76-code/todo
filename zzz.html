@@ -558,7 +558,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v15';
+const APP_VER = 'v16';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -1640,13 +1640,20 @@ function coreBonusOf(id, p) {
 }
 
 const CB_ROWS = [['atk','Базовая атака'],['hp','Базовое HP'],['def','Базовая защита'],
+                 ['atkp','Сила атаки, %'],['hpp','HP, %'],['defp','Защита, %'],
                  ['ap','Знание аномалии'],['am','Контроль аномалии'],['im','Импульс'],
                  ['cr','Шанс крита, %'],['cd','Крит. урон, %'],
                  ['penp','Проц. пробивания, %'],['er','Восст. энергии']];
 function cbSum(p) {
   const c = coreBonusOf(curId, p);
-  const t = CB_ROWS.filter(r => +c[r[0]]).map(r => r[1].split(',')[0] + ' +' + c[r[0]]);
-  return t.length ? t.join(', ') : '';
+  const t = CB_ROWS.filter(r => +c[r[0]]).map(r => {
+    const nm = r[1].split(',')[0];
+    const pct = /p$/.test(r[0]) && ['atkp','hpp','defp'].indexOf(r[0]) >= 0;
+    return nm + ' +' + c[r[0]] + (pct ? '%' : '');
+  });
+  const lvl = Math.max(0, Math.min(6, (p && p.core) || 0));
+  const step = ' · ступень ' + ('—ABCDEF'[lvl] || '—') + ' из F';
+  return t.length ? t.join(', ') + step : '';
 }
 function coreBonusHTML(p) {
   const own = p.core2 || {};
