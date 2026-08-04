@@ -247,7 +247,6 @@
     padding:2px 5px;font-size:11px;text-align:right;outline:none;font-family:inherit;
   }
   .st .goalin:focus{border-color:var(--acc);color:var(--tx)}
-  .st.man .curin{color:var(--tx);box-shadow:inset 2px 0 0 var(--info)}
   .st.hit .curin,.st.hit .val{color:var(--ok)}
   .st.miss .curin,.st.miss .val{color:var(--warn)}
   .st .gbar{grid-column:1/-1;height:2px;background:#ffffff10;border-radius:2px;overflow:hidden;margin-top:-2px}
@@ -420,7 +419,9 @@
     .hero{grid-template-columns:1fr}
     /* на телефоне колонка во всю ширину: показываем только верх арта, иначе он
        занимает пол-экрана */
-    .hart{position:static;min-height:0;height:290px}
+    /* position обязателен: фигура внутри позиционируется абсолютно,
+       при static она выпадает из колонки и перекрывает характеристики */
+    .hart{position:relative;min-height:0;height:290px}
     .hart .hfig{height:100%}
     .hart .who{top:auto;bottom:14px;transform:none;padding-bottom:0}
     .stg{grid-template-columns:1fr}
@@ -557,7 +558,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v10';
+const APP_VER = 'v11';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
