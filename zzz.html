@@ -564,7 +564,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v19';
+const APP_VER = 'v20';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -629,8 +629,11 @@ function priOf(id) { return PRIORITY[id] || []; }
 
 // Из чего сложилась характеристика — видно в подсказке у поля.
 // Нужно, чтобы сверять с игрой и сразу находить, какое слагаемое расходится.
-function statHint(k, T, calcDisp) {
-  const base = 'Расчёт: ' + calcDisp + '. Можно вписать своё значение из игры.';
+function statHint(k, T, calcDisp, isMan) {
+  const base = isMan
+    ? 'Показано вписанное вручную значение, расчёт его не меняет.\nРасчёт даёт: ' + calcDisp +
+      '. Очисти поле, чтобы вернуть расчётное.'
+    : 'Расчёт: ' + calcDisp + '. Можно вписать своё значение из игры.';
   const pt = T && T._parts && T._parts[k];
   if (!pt) return base;
   const rows = [
@@ -1409,7 +1412,13 @@ function renderSheet() {
       const st = STATS.filter(x => x.k === k)[0];
       return (st ? st.n : k) + ': ' + mods.by[k];
     }).join(', ');
+    const manCount = Object.keys(p.manual || {}).filter(k => p.manual[k] != null).length;
     h += '<div class="sect"><h4>Характеристики' +
+      (manCount && curTab === 'now'
+        ? '<button id="manReset" class="modbadge" style="cursor:pointer;border-color:var(--warn);' +
+          'color:var(--warn)" title="Сейчас ' + manCount + ' значений вписаны руками и перекрывают ' +
+          'расчёт. Нажми, чтобы вернуть расчётные.">↺ вписано вручную: ' + manCount + '</button>'
+        : '') +
       (pri.length ? '<span class="modbadge" title="Сумма рекомендуемых доп. характеристик на дисках ' +
         'и их удачных улучшений — как в игре.' + (modHint ? '\n' + modHint : '') +
         '">Модификаторы <b>' + mods.sum + '</b></span>' : '') +
@@ -1439,7 +1448,7 @@ function renderSheet() {
         '<span class="lab">' + (k === 'dmg' ? elIcon(el, 14) : statIcon(k, 13)) + esc(r[1]) + '</span>' +
         (curTab === 'now'
           ? '<input class="curin" data-k="' + k + '" value="' + esc(disp) +
-            '" title="' + esc(statHint(k, T, calcDisp)) + '">'
+            '" title="' + esc(statHint(k, T, calcDisp, man)) + '">'
           : '<span class="val">' + esc(disp) + extra + '</span>') +
         '<input class="goalin" data-k="' + k + '" value="' +
           (goal == null ? '' : esc(goal)) + '" placeholder="цель">' + bar + '</div>';
@@ -1562,6 +1571,14 @@ function bindSheet() {
   if (ft) ft.onclick = () => { p.fav = !p.fav; p.mod = Date.now(); save(curId); renderSheet(); render(); };
   const sb = $('saveBtn');
   if (sb) sb.onclick = () => { applySheet(); closeModal(); render(); };
+  const mr = $('manReset');
+  if (mr) mr.onclick = () => {
+    const p2 = P(curId);
+    p2.manual = {};
+    refreshCur(p2);
+    save(curId);
+    renderSheet();
+  };
   if (!p.have) return;
 
   document.querySelectorAll('.htab[data-tab]').forEach(b => b.onclick = () => {
