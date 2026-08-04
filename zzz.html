@@ -558,7 +558,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v14';
+const APP_VER = 'v15';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -1618,11 +1618,25 @@ function applySheet() {
 const CORE_KNOWN = {
   1581: { ap: 54, atk: 75 }        // Ремиэлла: Anomaly Proficiency +54, Base ATK +75
 };
+// Прибавки от ядра копятся по ступеням, а в справочнике лежит итог за все шесть.
+// Схема одинаковая у всех агентов: базовая характеристика растёт на ступенях A, C, E
+// (по трети итога), вторая прибавка — на B, D, F. Поэтому при ядре D агент получает
+// две трети: у Санны это 50 к базовой атаке и 14% вместо 75 и 21%.
+const CORE_BASE_KEYS = ['atk', 'hp', 'def'];
 function coreBonusOf(id, p) {
   const own = (p && p.core2) || {};
-  if (Object.keys(own).some(k => +own[k])) return own;   // своё важнее
-  if (EXTRA && EXTRA.core && EXTRA.core[id]) return EXTRA.core[id];
-  return CORE_KNOWN[id] || {};
+  if (Object.keys(own).some(k => +own[k])) return own;   // вписанное вручную берём как есть
+  const full = (EXTRA && EXTRA.core && EXTRA.core[id]) || CORE_KNOWN[id] || {};
+  const lvl = Math.max(0, Math.min(6, (p && p.core) || 0));
+  if (lvl >= 6) return full;
+  const odd  = Math.ceil(lvl / 2) / 3;    // сколько получено на A, C, E
+  const even = Math.floor(lvl / 2) / 3;   // сколько получено на B, D, F
+  const out = {};
+  Object.keys(full).forEach(k => {
+    const share = CORE_BASE_KEYS.indexOf(k) >= 0 ? odd : even;
+    out[k] = Math.round((+full[k] || 0) * share * 100) / 100;
+  });
+  return out;
 }
 
 const CB_ROWS = [['atk','Базовая атака'],['hp','Базовое HP'],['def','Базовая защита'],
