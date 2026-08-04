@@ -525,9 +525,10 @@
       <button id="cloudCopy" style="display:none">Скопировать код подключения</button>
       <button id="cloudNow" style="display:none">Синхронизировать сейчас</button>
       <button id="cloudOff" style="display:none">Отключить</button>
+      <button id="cloudTest">Проверить связь</button>
     </div>
     <div class="hint" id="cloudMsg"></div>
-    <div class="hint" id="cloudDiag" style="color:var(--tx3);font-family:Consolas,monospace;font-size:11px"></div>
+    <div class="hint" id="cloudDiag" style="color:var(--tx3);font-family:Consolas,monospace;font-size:11px;white-space:pre-wrap"></div>
   </div>
 
   <div class="panel" id="modPanel">
@@ -574,7 +575,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v29';
+const APP_VER = 'v30';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -2464,7 +2465,11 @@ function progCount(o) {
 // Тогда пробуем те же прокси, что и для импорта из игры.
 const CLOUD_PROXY = [
   u => 'https://corsproxy.io/?' + encodeURIComponent(u),
-  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
+  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://cors.eu.org/' + u,
+  u => 'https://test.cors.workers.dev/?' + u,
+  u => 'https://api.cors.lol/?url=' + encodeURIComponent(u)
 ];
 function isNetErr(e) {
   return /Failed to fetch|NetworkError|Load failed|ERR_|timeout/i.test(String((e && e.message) || e));
@@ -2657,6 +2662,33 @@ $('cloudCopy').onclick = () => {
     .then(() => $('cloudMsg').textContent = 'Код скопирован ✓ Вставь его на другом устройстве.')
     .catch(() => { $('cloudKey').style.display = ''; $('cloudKey').value = code; });
 };
+// Проверка, что вообще доступно из этой сети: сам jsonbin и каждый прокси.
+// Нужна, когда синхронизация не проходит и непонятно, что блокируется.
+$('cloudTest').onclick = async () => {
+  const box = $('cloudDiag');
+  const url = JB + '/' + ((sync && sync.bin) || 'test') + '/latest?meta=false';
+  const head = (sync && sync.key) ? { 'X-Master-Key': sync.key } : {};
+  const items = [['напрямую api.jsonbin.io', url]].concat(
+    CLOUD_PROXY.map((f, i) => ['прокси ' + (i + 1) + ': ' + f('x').split('/')[2], f(url)]));
+  box.textContent = 'Проверяю…';
+  const out = [];
+  for (const [name, u] of items) {
+    const t0 = Date.now();
+    try {
+      const r = await fetch(u, { headers: head });
+      out.push((r.ok ? '✓ ' : '× ') + name + ' — HTTP ' + r.status + ', ' + (Date.now() - t0) + ' мс');
+    } catch (e) {
+      out.push('× ' + name + ' — ' + (isNetErr(e) ? 'запрос не ушёл' : (e.message || e)));
+    }
+    box.textContent = out.join('\n');
+  }
+  out.push('');
+  out.push(out.some(x => x[0] === '✓')
+    ? 'Рабочий путь есть — синхронизация должна проходить.'
+    : 'Из этой сети недоступно ничего. Нужен свой прокси или другое хранилище.');
+  box.textContent = out.join('\n');
+};
+
 $('cloudNow').onclick = async () => {
   $('cloudMsg').textContent = 'Синхронизирую…';
   await cloudSync();
