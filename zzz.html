@@ -175,23 +175,24 @@
   .sheet{width:100%;max-width:1000px;background:var(--pan);border:1px solid var(--line);
     border-radius:14px;overflow:hidden}
 
-  .hero{display:grid;grid-template-columns:290px 1fr}
+  .hero{display:grid;grid-template-columns:290px 1fr;align-items:start}
   .hart{
-    position:relative;background:linear-gradient(180deg,#151820,#0b0d11);overflow:hidden;min-height:420px;
+    /* Высота задана явно и одинакова для всех агентов. Если тянуть её за правой
+       колонкой (height:100%), арт скачком увеличивается при раскрытии описания
+       диска или оружия; если считать от пропорций картинки — у каждого агента
+       выходит свой размер. Прилипает при прокрутке, чтобы оставаться на виду. */
+    position:sticky;top:0;height:min(780px,80vh);
+    background:linear-gradient(180deg,#151820,#0b0d11);overflow:hidden;
   }
-  /* Высота картинки считается от её пропорций, а не от длины правой колонки.
-     Раньше стояло height:100%, и при раскрытии описания диска или оружия окно
-     становилось выше, а вместе с ним скачком увеличивался и арт. */
-  .hart .art{width:100%;height:auto;display:block}
   .hart::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 40%,#0b0d11d9 62%,#0b0d11 78%),
                radial-gradient(60% 40% at 50% 0%,color-mix(in srgb,var(--el) 22%,transparent),transparent 70%)}
-  .hart img{width:100%;height:auto;display:block}
+  .hart img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .hart .lv{
     position:absolute;top:10px;left:10px;background:#0b0d11d9;border:1px solid var(--el);
     color:var(--el);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;z-index:2;
   }
-  .hart .who{position:relative;z-index:2;margin:-92px 14px 0;padding-bottom:14px}
+  .hart .who{position:absolute;left:14px;right:14px;bottom:14px;z-index:2}
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
@@ -409,9 +410,7 @@
     .hero{grid-template-columns:1fr}
     /* на телефоне колонка во всю ширину: показываем только верх арта, иначе он
        занимает пол-экрана */
-    .hart{min-height:0;height:290px}
-    .hart img{height:100%;object-fit:cover;object-position:top center}
-    .hart .who{position:absolute;left:14px;right:14px;bottom:14px;margin:0;padding:0}
+    .hart{position:static;min-height:0;height:290px}
     .stg{grid-template-columns:1fr}
     .drow{grid-template-columns:repeat(3,1fr)}
     /* «убрать из трекера» переносилось по буквам и ломало нижнюю панель */
@@ -546,7 +545,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v6';
+const APP_VER = 'v7';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -716,6 +715,10 @@ const PROF_PATH = {
 // запрос зависал без ошибки, и вместо значка оставался пустой квадрат.
 // Если файла нет, показываем нарисованный кодом запасной вариант.
 function uiIcon(name) { return name ? 'img/zzz/ui/' + name + '.png' : ''; }
+// У части стихий в базе Enka своё внутреннее имя, а значок в игре тот же:
+// мороз у Мияби, аура-тушь у Исюань, люмен у Ремиэллы, остриё у Е Шуньгуан.
+const EL_ALIAS = { firefrost: 'frost', auricether: 'auricink', lumen: 'lumiflux',
+                   zhenzhenassault: 'honededge' };
 function iconImg(src, fallbackSvg, size, title) {
   const s = size || 14;
   return '<span class="ic" style="width:' + s + 'px;height:' + s + 'px" title="' + esc(title || '') + '">' +
@@ -728,7 +731,7 @@ function iconImg(src, fallbackSvg, size, title) {
 function elIcon(el, size) {
   const c = (ELEM[el] && ELEM[el].c) || '#8b92a3';
   const nm = (ELEM[el] && ELEM[el].ru) || el;
-  return iconImg(uiIcon('el-' + el),
+  return iconImg(uiIcon('el-' + (EL_ALIAS[el] || el)),
     svgW(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size), size, nm);
 }
 function profIcon(pr, size, col) {
