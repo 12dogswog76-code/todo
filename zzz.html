@@ -558,7 +558,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v11';
+const APP_VER = 'v12';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -657,7 +657,7 @@ const PROP2STAT = {
   '31203': 'ap',  '31403': 'am', '31402': 'amp',
   '12203': 'im',  '12202': 'imp',
   '23203': 'pen', '23103': 'penp',
-  '30503': 'er',
+  '30502': 'erp', '30503': 'er',
   '31503': 'dmg', '31603': 'dmg', '31703': 'dmg',
   '31803': 'dmg', '31903': 'dmg', '32303': 'dmg'
 };
@@ -1999,11 +1999,13 @@ function calcTotals(a, p, discs) {
     cr:  (b.cr / 100) + (flat('cr') / 100) + (+cb.cr || 0),
     cd:  (b.cd / 100) + (flat('cd') / 100) + (+cb.cd || 0),
     ap:  Math.round(b.ap + flat('ap') + (+cb.ap || 0)),
-    am:  Math.round(b.am * (1 + pc('amp')) + (+cb.am || 0)),
+    am:  Math.round(b.am * (1 + pc('amp')) + flat('am') + (+cb.am || 0)),
     im:  Math.round(b.im * (1 + pc('imp')) + flat('im') + (+cb.im || 0)),
     pen: Math.round(flat('pen')),
     penp: flat('penp') / 100 + (+cb.penp || 0),
-    er:  Math.round(((b.er + flat('er')) / 100 + (+cb.er || 0)) * 100) / 100,
+    // восстановление энергии: процентная прибавка умножает базу,
+    // плоская добавляется сверху
+    er:  Math.round(((b.er / 100) * (1 + pc('erp')) + flat('er') / 100 + (+cb.er || 0)) * 100) / 100,
     dmg: flat('dmg') / 100,
     _weaponAtk: Math.round(w.atk),
     _baseAtk: Math.round(b.atk)
