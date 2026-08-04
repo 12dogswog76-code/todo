@@ -163,6 +163,14 @@
     background:conic-gradient(var(--el) calc(var(--p)*1%),#ffffff1f 0);
     box-shadow:0 2px 10px #000a;
   }
+  /* число модификаторов под кольцом готовности */
+  .modc{
+    position:absolute;right:8px;bottom:20px;z-index:4;min-width:18px;height:16px;padding:0 5px;
+    border-radius:9px;background:#0b0d11e6;border:1px solid var(--gold);color:var(--gold);
+    font-size:10px;font-weight:800;display:grid;place-items:center;line-height:1;
+    box-shadow:0 2px 8px #000a;
+  }
+  .card.no .modc{opacity:.5}
   .pcirc i{
     position:absolute;inset:3px;border-radius:50%;background:#0b0d11;display:grid;place-items:center;
     font-style:normal;font-size:11px;color:#fff;text-shadow:0 1px 3px #000;
@@ -581,7 +589,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v39';
+const APP_VER = 'v41';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1215,6 +1223,12 @@ function renderFilters() {
   h += '<span class="fsep"></span>';
   h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">есть у меня</span>';
   h += '<span class="chip f-todo' + (ui.todo ? ' on' : '') + '">недокачанные</span>';
+  h += '<span class="fsep"></span><span style="font-size:10px;color:var(--tx3);letter-spacing:.5px">СОРТИРОВКА</span>';
+  [['ready', 'по готовности'], ['new', 'сначала новые'], ['mods', 'по модификаторам']]
+    .forEach(o => {
+      h += '<span class="chip f-sort' + ((ui.sort || 'ready') === o[0] ? ' on' : '') +
+           '" data-v="' + o[0] + '">' + o[1] + '</span>';
+    });
   $('filters').innerHTML = h;
 
   const tog = (arr, v) => { const i = arr.indexOf(v); if (i === -1) arr.push(v); else arr.splice(i, 1); };
@@ -1222,6 +1236,9 @@ function renderFilters() {
   document.querySelectorAll('.f-pr').forEach(c => c.onclick = () => { tog(ui.pr, c.dataset.v); save(); renderFilters(); render(); });
   document.querySelector('.f-have').onclick = () => { ui.have = !ui.have; save(); renderFilters(); render(); };
   document.querySelector('.f-todo').onclick = () => { ui.todo = !ui.todo; save(); renderFilters(); render(); };
+  document.querySelectorAll('.f-sort').forEach(c => c.onclick = () => {
+    ui.sort = c.dataset.v; save(); renderFilters(); render();
+  });
 }
 
 function visible() {
@@ -1239,6 +1256,7 @@ function visible() {
 }
 
 function render() {
+  const mode = ui.sort || 'ready';
   const list = visible().slice().sort((x, y) => {
     const fx = prog[x.id] && prog[x.id].fav ? 1 : 0;
     const fy = prog[y.id] && prog[y.id].fav ? 1 : 0;
@@ -1246,6 +1264,18 @@ function render() {
     const hx = prog[x.id] && prog[x.id].have ? 1 : 0;
     const hy = prog[y.id] && prog[y.id].have ? 1 : 0;
     if (hx !== hy) return hy - hx;                       // потом те, что есть
+    if (mode === 'new') {
+      // сначала новые: по времени получения из Enka, а без него — по номеру агента,
+      // они выдаются по порядку появления в игре
+      const gx = (prog[x.id] && prog[x.id].got) || 0, gy = (prog[y.id] && prog[y.id].got) || 0;
+      if (gx !== gy) return gy - gx;
+      if (x.id !== y.id) return y.id - x.id;
+      return (x.ru || '').localeCompare(y.ru || '', 'ru');
+    }
+    if (mode === 'mods') {
+      const mx = modifiersOf(x.id, prog[x.id]).sum, my = modifiersOf(y.id, prog[y.id]).sum;
+      if (mx !== my) return my - mx;
+    }
     const rx = x.rarity === 'S' ? 1 : 0, ry = y.rarity === 'S' ? 1 : 0;
     if (rx !== ry) return ry - rx;                       // S всегда выше A
     const px = pctOf(x.id), py = pctOf(y.id);
@@ -1296,6 +1326,7 @@ function img(src, cls, alt) {
 
 function cardHTML(a) {
   const p = prog[a.id], have = !!(p && p.have), pc = pctOf(a.id);
+  const mods = have ? modifiersOf(a.id, p).sum : 0;
   const el = (a.element || [])[0] || '';
   const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
   const pic = agentPic(a, 'card'), picAlt = picFallback(a);
@@ -1326,6 +1357,8 @@ function cardHTML(a) {
       '<span class="elb">' + elIcon(el, 14) + '</span>' +
       '<span class="prb" title="' + esc(PROF[a.prof] || a.prof) + '">' + profIcon(a.prof, 14, '#e9ecf3') + '</span>' +
       (have ? '<div class="pcirc" style="--p:' + pc + '"><i>' + pc + '</i></div>' : '') +
+      (have && mods ? '<span class="modc" title="Модификаторы: сумма рекомендуемых доп. ' +
+        'характеристик на дисках и их удачных улучшений">' + mods + '</span>' : '') +
       '<span class="fav' + (p && p.fav ? ' on' : '') + '" data-fav="' + a.id + '" title="в избранное">★</span>' +
       '<div class="nmb"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span></div>' +
     '</div>' + bars + '</div>';
@@ -2386,6 +2419,8 @@ function applyEnka(av) {
   });
 
   p.promo = av.PromotionLevel != null ? av.PromotionLevel : p.promo;
+  // когда агент получен — по этому полю работает сортировка «сначала новые»
+  if (av.ObtainmentTimestamp) p.got = av.ObtainmentTimestamp;
 
   if (av.Weapon) {
     p.w.id    = av.Weapon.Id || 0;
