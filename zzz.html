@@ -38,6 +38,7 @@
   .top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
   .logo{
     display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;letter-spacing:.5px;
+    flex-wrap:wrap;min-width:0;
   }
   .logo .mark{
     width:30px;height:30px;flex:none;display:grid;place-items:center;font-size:15px;
@@ -48,6 +49,8 @@
   .top .sp{flex:1}
   .top a.back{color:var(--tx2);text-decoration:none;font-size:12.5px}
   .top a.back:hover{color:var(--acc)}
+  .ver{font-size:10px;font-weight:700;color:var(--tx3);background:#ffffff10;border:1px solid var(--line);
+       padding:2px 7px;border-radius:20px;letter-spacing:.4px;white-space:nowrap}
   #cloudDot{width:8px;height:8px;border-radius:50%;background:#3a3f4a;display:inline-block;margin-left:2px}
   #cloudDot.cloud-ok{background:var(--ok)} #cloudDot.cloud-err{background:var(--acc)}
   #cloudDot.cloud-sync{background:var(--warn)}
@@ -393,9 +396,16 @@
 
   @media(max-width:860px){
     .hero{grid-template-columns:1fr}
-    .hart{min-height:230px}
+    /* фиксированная высота, а не min-height: иначе арт растягивается на пол-экрана
+       в натуральную величину и object-fit:cover не обрезает его по верху */
+    .hart{min-height:0;height:290px}
     .stg{grid-template-columns:1fr}
     .drow{grid-template-columns:repeat(3,1fr)}
+    /* «убрать из трекера» переносилось по буквам и ломало нижнюю панель */
+    .foot2{flex-wrap:wrap;padding:10px 12px}
+    .foot2 span{display:none}
+    .foot2 button{flex:1 1 auto;white-space:nowrap;text-align:center}
+    .foot2 button.ghost{order:3;flex-basis:100%;padding:8px 0}
   }
   @media(max-width:560px){
     body{padding:14px 10px 54px}
@@ -411,6 +421,7 @@
     <div class="logo">
       <span class="mark">⚔</span>
       <span>ZZZ Трекер<small id="stats">загрузка…</small></span>
+      <span class="ver" id="appVer" title="версия трекера"></span>
       <span id="cloudDot" title="облако не подключено"></span>
     </div>
     <span class="sp"></span>
@@ -479,6 +490,7 @@
       <button id="cloudOff" style="display:none">Отключить</button>
     </div>
     <div class="hint" id="cloudMsg"></div>
+    <div class="hint" id="cloudDiag" style="color:var(--tx3);font-family:Consolas,monospace;font-size:11px"></div>
   </div>
 
   <div class="panel" id="ioPanel">
@@ -520,6 +532,8 @@
 
 <script>
 'use strict';
+// Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
+const APP_VER = 'v1';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -586,14 +600,9 @@ const SKILL_MAX = 12, CORE_MAX = 6, LVL_MAX = 60, WENG_MAX = 60;
 
 
 // ─────────────── официальные значки ───────────────
-// Вики отдаёт файлы по адресу, где папки — первые символы MD5 от имени файла.
-// Если конкретного файла там нет, подставляется нарисованный запасной значок.
-const WIKI = 'https://static.wikia.nocookie.net/zenless-zone-zero/images/';
-const W_EL = {'physical':'c/ce/Icon_Physical.png', 'fire':'0/0a/Icon_Fire.png', 'ice':'5/52/Icon_Ice.png', 'electric':'1/1c/Icon_Electric.png', 'ether':'d/d2/Icon_Ether.png', 'wind':'a/a7/Icon_Wind.png', 'frost':'8/88/Icon_Frost.png', 'auricink':'3/31/Icon_Auric_Ink.png', 'auricether':'3/31/Icon_Auric_Ink.png', 'firefrost':'8/88/Icon_Frost.png', 'lumiflux':'9/9d/Icon_Lumiflux.png', 'lumen':'9/9d/Icon_Lumiflux.png', 'zhenzhenassault':'3/3e/Icon_Honed_Edge.png', 'honededge':'3/3e/Icon_Honed_Edge.png'};
-const W_PR = {'attack':'3/30/Icon_Attack.png', 'stun':'5/53/Icon_Stun.png', 'anomaly':'d/d2/Icon_Anomaly.png', 'support':'2/2f/Icon_Support.png', 'defense':'f/fb/Icon_Defense.png', 'rupture':'e/ef/Icon_Rupture.png'};
-const W_ST = {'hp':'d/d7/Icon_HP.png', 'atk':'6/69/Icon_ATK.png', 'def':'0/0d/Icon_DEF.png', 'im':'7/7e/Icon_Impact.png', 'cr':'f/ff/Icon_CRIT_Rate.png', 'cd':'b/b2/Icon_CRIT_DMG.png', 'ap':'2/25/Icon_Anomaly_Proficiency.png', 'am':'c/c9/Icon_Anomaly_Mastery.png', 'pen':'0/0e/Icon_PEN.png', 'penp':'f/f4/Icon_PEN_Ratio.png', 'er':'5/58/Icon_Energy_Regen.png', 'dmg':'d/d2/Icon_Ether.png'};
-const W_SK = {'0':'b/bb/Icon_Basic_Attack.png', '1':'b/bb/Icon_Dodge.png', '2':'5/56/Icon_Assist_Attack.png', '3':'d/df/Icon_EX_Special_Attack.png', '5':'c/cd/Icon_Ultimate_Colored.png', '6':'b/bc/Icon_Core_Skill.png'};
-function wikiSrc(p) { return WIKI + p + '/revision/latest'; }
+// Все значки трекера рисуются кодом (SVG ниже) — никаких внешних картинок.
+// Так они выглядят одинаково на ПК и на телефоне и не зависят от того,
+// доступен ли сторонний сайт с мобильного интернета.
 
 // ─────────────── значки стихий и ролей ───────────────
 // Рисуем сами: у Enka иконок стихий нет, а вики их автоматически не отдаёт.
@@ -637,22 +646,23 @@ const PROF_PATH = {
   // раскол — «Разрыв»
   rupture: '<path d="M13.4 1 6 12.2h4.3L9.1 23l8.9-13.1h-5z" /><path d="M3 3.6 5.2 6 3.6 7.6 1.2 5.4zM19.8 16.4 22 18.8l-1.6 1.6-2.4-2.2z" opacity=".7"/>'
 };
+// Иконки рисуются только кодом (SVG). Раньше они грузились с фэндом-вики, и на
+// мобильном интернете запросы просто зависали — вместо стихий и навыков были
+// квадраты-заглушки, а запасной SVG не показывался, потому что ошибки не было.
+// Первый параметр (адрес картинки) больше не используется, оставлен для совместимости.
 function iconImg(src, fallbackSvg, size, title) {
   const s = size || 14;
-  return '<span class="ic" style="width:' + s + 'px;height:' + s + 'px" title="' + esc(title || '') + '">' +
-    (src ? '<img src="' + esc(src) + '" width="' + s + '" height="' + s + '" alt="" loading="lazy" ' +
-           'decoding="async" onerror="this.parentNode.classList.add(\'nf\');this.remove()" ' +
-           'onload="if(this.naturalWidth<4){this.parentNode.classList.add(\'nf\');this.remove()}">' : '') +
-    '<i>' + fallbackSvg + '</i></span>';
+  return '<span class="ic nf" style="width:' + s + 'px;height:' + s + 'px" title="' +
+    esc(title || '') + '"><i>' + fallbackSvg + '</i></span>';
 }
 function elIcon(el, size) {
   const c = (ELEM[el] && ELEM[el].c) || '#8b92a3';
   const nm = (ELEM[el] && ELEM[el].ru) || el;
-  return iconImg(W_EL[el] ? wikiSrc(W_EL[el]) : '',
+  return iconImg('',
     svgW(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size), size, nm);
 }
 function profIcon(pr, size, col) {
-  return iconImg(W_PR[pr] ? wikiSrc(W_PR[pr]) : '',
+  return iconImg('',
     svgW(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size), size, PROF[pr] || pr);
 }
 const ST_PATH = {
@@ -675,16 +685,22 @@ function statIcon(k, size, col) {
   return svgW(ST_PATH[k], col || '#7f8697', size || 13);
 }
 const SK_PATH = {
-  0:'<circle cx="12" cy="12" r="10"/><path d="M12 4v16M4 12h16" fill="none" stroke="#0b0d11" stroke-width="2"/>',
-  1:'<path d="M12 2 2 20h20z"/><path d="M12 7 6 18h12z" fill="#0b0d11"/>',
-  2:'<path d="M12 1.6 3 6v6.4C3 17.8 6.7 22 12 23.2 17.3 22 21 17.8 21 12.4V6z"/>',
+  // клинок — обычная атака
+  0:'<path d="M14.6 2.2 21.8 9.4 9.6 21.6l-4.2-1-1-4.2z"/><path d="M15.6 1.2h7.2v7.2z" opacity=".65"/>',
+  // двойной шеврон — уклонение
+  1:'<path d="M5.4 3.6 13 12l-7.6 8.4V3.6z"/><path d="M12.4 3.6 20 12l-7.6 8.4V3.6z" opacity=".6"/>',
+  // щит с галочкой — помощь
+  2:'<path d="M12 1.6 3 6v6.4C3 17.8 6.7 22 12 23.2 17.3 22 21 17.8 21 12.4V6z"/>' +
+    '<path d="m8.4 12 2.6 2.6 4.8-4.8" fill="none" stroke="#0b0d11" stroke-width="2.2" stroke-linecap="round"/>',
+  // звезда — особая атака
   3:'<path d="M12 1.6 14.4 9h7.8l-6.3 4.6 2.4 7.4-6.3-4.6-6.3 4.6 2.4-7.4L1.8 9h7.8z"/>',
-  5:'<circle cx="12" cy="12" r="10"/><path d="M12 6a6 6 0 1 0 6 6" fill="none" stroke="#0b0d11" stroke-width="2.4"/>'
+  // молния в кольце — цепная атака и суперспособность
+  5:'<circle cx="12" cy="12" r="10.2" opacity=".28"/><path d="M13.4 1.6 5.6 13.2h4.8L9 22.4l8-11.6h-5z"/>',
+  // шестерёнка — ядро
+  6:'<path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6zm9.2 5-2.1-.5a7.4 7.4 0 0 0-.7-1.7l1.2-1.8-1.9-1.9-1.8 1.2a7.4 7.4 0 0 0-1.7-.7L13.7 2h-2.6l-.5 2.1a7.4 7.4 0 0 0-1.7.7L7.1 3.6 5.2 5.5l1.2 1.8a7.4 7.4 0 0 0-.7 1.7L2.8 12v2.6l2.1.5c.2.6.4 1.2.7 1.7l-1.2 1.8 1.9 1.9 1.8-1.2c.5.3 1.1.5 1.7.7l.5 2.1h2.6l.5-2.1c.6-.2 1.2-.4 1.7-.7l1.8 1.2 1.9-1.9-1.2-1.8c.3-.5.5-1.1.7-1.7l2.1-.5z"/>'
 };
 function skillIcon(i, size, col) {
-  const fb = SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
-  const k = String(i);
-  return W_SK[k] ? iconImg(wikiSrc(W_SK[k]), fb, size || 20, '') : fb;
+  return SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
 }
 
 // ─────────────── состояние ───────────────
@@ -912,9 +928,10 @@ function boot() {
   (DB.engines || []).forEach(w => { DB.engById[w.id] = w; });
 
   $('main').style.display = 'block';
+  if ($('appVer')) $('appVer').textContent = APP_VER;
   renderFilters();
   render();
-  if (sync) cloudPull();
+  if (sync) setTimeout(() => cloudSync(true), 250);
   cloudUI();
 }
 
@@ -1013,6 +1030,22 @@ function imgUrl(kind, v) {
   return /^https?:/.test(v) ? v : 'img/zzz/' + kind + '/' + v;
 }
 
+// Арт агента в нужном размере: card_<id>.webp (480px, плитка списка) и
+// hero_<id>.webp (высота 1200, модалка). Полный art_*.png весит до 2 МБ —
+// именно его декодирование тормозило скролл. Если webp нет (или база собрана
+// не скриптом, а из сети), возвращаем исходный адрес.
+function agentPic(a, kind) {
+  const v = a.art || a.icon || '';
+  if (!v || /^https?:/.test(v)) return v;
+  const m = /^art_(\d+)\.png$/i.exec(v);
+  return m ? 'img/zzz/agents/' + kind + '_' + m[1] + '.webp' : 'img/zzz/agents/' + v;
+}
+// подстраховка: если webp не отдался — подставляем исходный png
+function picFallback(a) {
+  const v = a.art || a.icon || '';
+  return (!v || /^https?:/.test(v)) ? '' : 'img/zzz/agents/' + v;
+}
+
 function img(src, cls, alt) {
   if (!src) return '';
   return '<img class="' + cls + '" src="' + esc(src) + '" alt="' + esc(alt || '') + '" loading="lazy" onerror="this.style.display=\'none\'">';
@@ -1022,7 +1055,7 @@ function cardHTML(a) {
   const p = prog[a.id], have = !!(p && p.have), pc = pctOf(a.id);
   const el = (a.element || [])[0] || '';
   const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
-  const pic = imgUrl('agents', a.art || a.icon);
+  const pic = agentPic(a, 'card'), picAlt = picFallback(a);
 
   let bars = '';
   if (have) {
@@ -1043,8 +1076,9 @@ function cardHTML(a) {
   return '<div class="card' + (have ? '' : ' no') + '" data-id="' + a.id +
     '" style="--el:' + col + '">' +
     '<div class="ph">' +
-      (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy" decoding="async" ' +
-        'onerror="this.style.display=\'none\'">' : '') +
+      (pic ? '<img src="' + esc(pic) + '" alt="" width="480" height="480" loading="lazy" decoding="async" ' +
+        'data-alt="' + esc(picAlt) + '" onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
+        '{this.src=this.dataset.alt}else{this.style.display=\'none\'}">' : '') +
       '<span class="rk ' + esc(a.rarity) + '">' + esc(a.rarity) + '</span>' +
       '<span class="elb">' + elIcon(el, 14) + '</span>' +
       '<span class="prb" title="' + esc(PROF[a.prof] || a.prof) + '">' + profIcon(a.prof, 14, '#e9ecf3') + '</span>' +
@@ -1210,11 +1244,13 @@ function renderSheet() {
   const a = DB.byId[curId], p = P(curId);
   const el = (a.element || [])[0] || '';
   const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
-  const art = imgUrl('agents', a.art || a.icon);
+  const art = agentPic(a, 'hero'), artAlt = picFallback(a);
 
   let h = '<div class="hero" style="--el:' + col + '"><div class="hart">' +
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
-    (art ? '<img src="' + esc(art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
+    (art ? '<img src="' + esc(art) + '" alt="" decoding="async" data-alt="' + esc(artAlt) + '" ' +
+      'onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
+      '{this.src=this.dataset.alt}else{this.style.display=\'none\'}">' : '') +
     '<div class="who"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span>' +
       '<div class="tags"><span class="tg el">' + elIcon(el, 16) + '</span>' +
       '<span class="tg">' + profIcon(a.prof, 16, '#e9ecf3') + '</span>' +
@@ -2018,6 +2054,19 @@ function payload() {
   return { v: 1, prog: prog, uid: localStorage.getItem(LS + '_uid') || '', t: Date.now() };
 }
 
+// сколько агентов реально заполнено (пустые болванки не считаем)
+function progCount(o) {
+  if (!o) return 0;
+  return Object.keys(o).filter(k => {
+    const p = o[k];
+    return p && (p.have || p.lvl || p.core || p.fav || (p.discs && p.discs.length));
+  }).length;
+}
+function cloudLog(msg) {
+  const el = $('cloudDiag');
+  if (el) el.textContent = msg;
+}
+
 function cloudUI() {
   const on = !!(sync && sync.key && sync.bin);
   $('cloudCopy').style.display = on ? '' : 'none';
@@ -2036,18 +2085,24 @@ function scheduleSync() {
   pushTimer = setTimeout(cloudPush, 1500);
 }
 async function cloudPush() {
-  if (!sync) return;
+  if (!sync) return false;
   setCloud('cloud-sync', 'отправка…');
   try {
+    const body = payload();
     const r = await fetch(JB + '/' + sync.bin, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.key },
-      body: JSON.stringify(payload())
+      body: JSON.stringify(body)
     });
-    if (!r.ok) throw new Error(r.status);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
+    cloudLog('отправлено в облако: ' + progCount(body.prog) + ' агентов · ' +
+             new Date().toTimeString().slice(0, 8));
+    return true;
   } catch (e) {
     setCloud('cloud-err', 'нет связи с облаком — сохранено локально');
+    cloudLog('отправка не прошла: ' + (e.message || e));
+    return false;
   }
 }
 function mergeProg(remote) {
@@ -2064,21 +2119,60 @@ function mergeProg(remote) {
   });
   return changed;
 }
-async function cloudPull() {
+// Забирает из облака и сразу отдаёт назад то, что локально свежее.
+// Раньше был только забор, причём вручную по кнопке — из-за этого второе
+// устройство могло сколько угодно «синхронизироваться» и не отдавать своё.
+async function cloudSync(quiet) {
   if (!sync) return;
-  setCloud('cloud-sync', 'загрузка…');
+  setCloud('cloud-sync', 'синхронизация…');
+  let data = null;
   try {
-    const r = await fetch(JB + '/' + sync.bin + '/latest', { headers: { 'X-Master-Key': sync.key } });
-    if (!r.ok) throw new Error(r.status);
-    const data = await r.json();
-    if (mergeProg(data.record)) {
-      localStorage.setItem(LS, JSON.stringify(prog));
-      if (!$('modal').classList.contains('open')) render();
-    }
-    setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
+    const r = await fetch(JB + '/' + sync.bin + '/latest?meta=false',
+                          { headers: { 'X-Master-Key': sync.key } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    data = await r.json();
   } catch (e) {
     setCloud('cloud-err', 'нет связи с облаком');
+    cloudLog('облако не ответило: ' + (e.message || e) +
+             (String(e.message).indexOf('401') >= 0 ? ' — ключ не подошёл, вставь код подключения заново' : ''));
+    return;
   }
+  // jsonbin с ?meta=false отдаёт запись как есть, без обёртки record
+  const rec = (data && data.record) ? data.record : data;
+  const remoteN = progCount(rec && rec.prog);
+  const localN  = progCount(prog);
+
+  if (!rec || typeof rec !== 'object' || !('prog' in rec)) {
+    setCloud('cloud-err', 'в облаке не данные трекера');
+    cloudLog('В этом хранилище нет прогресса ZZZ. Похоже, вставлен код подключения ' +
+             'от задач или денег — у ZZZ свой отдельный код.');
+    return;
+  }
+
+  const changed = mergeProg(rec);
+  if (changed) {
+    localStorage.setItem(LS, JSON.stringify(prog));
+    if (!$('modal').classList.contains('open')) render();
+  }
+  // локальное свежее — вернём в облако, иначе второе устройство своё потеряет
+  const newLocalN = progCount(prog);
+  let pushed = false;
+  if (newLocalN > remoteN || hasNewerLocal(rec)) pushed = await cloudPush();
+
+  if (!pushed) setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
+  if (!quiet) {
+    cloudLog('в облаке было: ' + remoteN + ' · локально было: ' + localN +
+             ' · стало: ' + newLocalN + (pushed ? ' · своё отправлено' : '') +
+             ' · ' + new Date().toTimeString().slice(0, 8));
+  }
+}
+// есть ли локальные записи свежее облачных
+function hasNewerLocal(rec) {
+  const rp = (rec && rec.prog) || {};
+  return Object.keys(prog).some(id => {
+    const l = prog[id], r = rp[id];
+    return l && (l.have || l.lvl || l.core) && (!r || (l.mod || 0) > (r.mod || 0));
+  });
 }
 $('cloudConnect').onclick = async () => {
   const v = $('cloudKey').value.trim();
@@ -2092,7 +2186,7 @@ $('cloudConnect').onclick = async () => {
     sync = conf;
     localStorage.setItem(LS + '_sync', JSON.stringify(sync));
     cloudUI(); $('cloudMsg').textContent = 'Подключаюсь…';
-    await cloudPull(); render();
+    await cloudSync(); render();
     $('cloudMsg').textContent = 'Готово ✓ Данные объединены с облаком.';
     return;
   }
@@ -2124,7 +2218,11 @@ $('cloudCopy').onclick = () => {
     .then(() => $('cloudMsg').textContent = 'Код скопирован ✓ Вставь его на другом устройстве.')
     .catch(() => { $('cloudKey').style.display = ''; $('cloudKey').value = code; });
 };
-$('cloudNow').onclick = async () => { await cloudPull(); $('cloudMsg').textContent = 'Синхронизировано ✓'; };
+$('cloudNow').onclick = async () => {
+  $('cloudMsg').textContent = 'Синхронизирую…';
+  await cloudSync();
+  $('cloudMsg').textContent = 'Синхронизировано ✓ Подробности ниже.';
+};
 $('cloudOff').onclick = () => {
   if (!confirm('Отключить облако? Данные останутся в этом браузере.')) return;
   sync = null; localStorage.removeItem(LS + '_sync');
@@ -2190,8 +2288,8 @@ $('searchInput').value = ui.q || '';
 $('searchInput').oninput = e => { ui.q = e.target.value; save(); render(); };
 
 // периодическая подтяжка облака
-document.addEventListener('visibilitychange', () => { if (!document.hidden && sync) cloudPull(); });
-setInterval(() => { if (sync && !document.hidden && !$('modal').classList.contains('open')) cloudPull(); }, 180000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && sync) cloudSync(); });
+setInterval(() => { if (sync && !document.hidden && !$('modal').classList.contains('open')) cloudSync(); }, 180000);
 
 // service worker
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

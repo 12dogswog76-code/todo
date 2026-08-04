@@ -1,9 +1,16 @@
-// service worker «Мои дела»: уведомления + офлайн-режим (PWA) + Web Push
-const CACHE = 'moi-dela-v16';
-const ASSETS = ['./', './index.html', './money.html', './zzz.html', './manifest.json', './icon.svg'];
+// ВНИМАНИЕ: это устаревшая копия. Источник правды — репозиторий 12dogswog76-code/todo. НЕ деплоить.
+// service worker «Мои дела»: уведомления + офлайн-режим (PWA)
+// v5: страницы кэшируются каждая под своим адресом (задачи / деньги / ZZZ) + картинки ZZZ
+// v8: карточки агентов переведены на card_*.webp / hero_*.webp вместо полноразмерных
+// art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
+// работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
+const CACHE = 'moi-dela-v8';
+const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json', './zzz-extra.json', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {})
+  );
   self.skipWaiting();
 });
 
@@ -17,57 +24,55 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // картинки ZZZ с enka.network — кладём в кэш, чтобы трекер работал и без сети
-  if ((url.hostname === 'enka.network' && url.pathname.indexOf('/ui/zzz/') === 0) ||
-      (url.hostname === 'static.wikia.nocookie.net' && url.pathname.indexOf('/zenless-zone-zero/') === 0)) {
-    e.respondWith(
-      caches.open(CACHE).then(c => c.match(e.request).then(hit =>
-        hit || fetch(e.request).then(r => { c.put(e.request, r.clone()); return r; }).catch(() => hit)
-      ))
-    );
-    return;
-  }
+  // облако и прочие чужие домены не трогаем
   if (url.origin !== location.origin || e.request.method !== 'GET') return;
+
   if (e.request.mode === 'navigate') {
+    // страница: сеть в приоритете, офлайн — из кэша
     e.respondWith(
       fetch(e.request)
-        .then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
+        .then(r => {
+          const copy = r.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy));
+          return r;
+        })
         .catch(() => caches.match(e.request).then(m => m || caches.match('./index.html')))
     );
     return;
   }
+
+  // картинки ZZZ: кэш в приоритете (их много, они не меняются)
+  if (url.pathname.indexOf('/img/zzz/') !== -1) {
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(r => {
+        if (r.ok) { const c2 = r.clone(); caches.open(CACHE).then(c => c.put(e.request, c2)); }
+        return r;
+      }).catch(() => cached))
+    );
+    return;
+  }
+
+  // остальное (иконка, манифест): кэш в приоритете, фоном обновляем
   e.respondWith(
     caches.match(e.request).then(cached => {
-      const net = fetch(e.request).then(r => { caches.open(CACHE).then(c => c.put(e.request, r.clone())); return r; }).catch(() => cached);
+      const net = fetch(e.request).then(r => {
+        caches.open(CACHE).then(c => c.put(e.request, r.clone()));
+        return r;
+      }).catch(() => cached);
       return cached || net;
     })
   );
 });
 
-// === Web Push: показать уведомление ===
-self.addEventListener('push', e => {
-  let d = {};
-  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: 'Мои дела', body: e.data ? e.data.text() : '' }; }
-  const title = d.title || 'Мои дела';
-  const opts = {
-    body: d.body || '',
-    icon: './icon.svg',
-    badge: './icon.svg',
-    tag: d.tag || undefined,
-    renotify: !!d.tag,
-    data: { url: d.url || 'https://alextask.ru' }
-  };
-  e.waitUntil(self.registration.showNotification(title, opts));
-});
-
 // клик по уведомлению — открыть/сфокусировать сайт
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || './';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
-      for (const w of ws) { if ('focus' in w) { try { w.navigate(url); } catch (_) {} return w.focus(); } }
-      return clients.openWindow(url);
+      for (const w of ws) {
+        if ('focus' in w) return w.focus();
+      }
+      return clients.openWindow('./');
     })
   );
 });
