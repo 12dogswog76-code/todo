@@ -574,7 +574,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v28';
+const APP_VER = 'v29';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -2459,6 +2459,35 @@ function progCount(o) {
   }).length;
 }
 // Понятный текст вместо кода ошибки: по нему сразу видно, что делать.
+// В части сетей (мобильный оператор, рабочий вайфай, VPN) прямой запрос к
+// api.jsonbin.io не проходит вовсе — браузер отдаёт «Failed to fetch».
+// Тогда пробуем те же прокси, что и для импорта из игры.
+const CLOUD_PROXY = [
+  u => 'https://corsproxy.io/?' + encodeURIComponent(u),
+  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
+];
+function isNetErr(e) {
+  return /Failed to fetch|NetworkError|Load failed|ERR_|timeout/i.test(String((e && e.message) || e));
+}
+// один запрос: сначала напрямую, при сетевой ошибке — через прокси по очереди
+async function cloudFetch(url, opt) {
+  try {
+    const r = await fetch(url, opt);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r;
+  } catch (e) {
+    if (!isNetErr(e)) throw e;
+    for (let i = 0; i < CLOUD_PROXY.length; i++) {
+      try {
+        const r = await fetch(CLOUD_PROXY[i](url), opt);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        cloudLog('прямой запрос не прошёл, работаю через прокси');
+        return r;
+      } catch (e2) { if (i === CLOUD_PROXY.length - 1) throw e; }
+    }
+    throw e;
+  }
+}
 function cloudErrText(e) {
   const m = String((e && e.message) || e);
   if (m.indexOf('401') >= 0)
@@ -2469,10 +2498,10 @@ function cloudErrText(e) {
            'и при необходимости создай новый ключ, потом подключись им заново.';
   if (m.indexOf('429') >= 0)
     return 'Слишком много запросов (429). Подожди минуту и нажми синхронизацию ещё раз.';
-  if (/Failed to fetch|NetworkError|Load failed/i.test(m))
-    return 'Запрос не ушёл: браузер не смог достучаться до api.jsonbin.io. ' +
-           'Чаще всего мешает VPN, блокировщик рекламы или мобильный оператор. ' +
-           'Попробуй выключить VPN или сменить сеть.';
+  if (isNetErr(e))
+    return 'Не достучаться до api.jsonbin.io ни напрямую, ни через прокси. ' +
+           'Мешает сеть: VPN, блокировщик или ограничения оператора. ' +
+           'Попробуй выключить VPN либо переключиться на другую сеть.';
   return 'Облако не ответило: ' + m;
 }
 function cloudLog(msg) {
@@ -2502,12 +2531,11 @@ async function cloudPush() {
   setCloud('cloud-sync', 'отправка…');
   try {
     const body = payload();
-    const r = await fetch(JB + '/' + sync.bin, {
+    await cloudFetch(JB + '/' + sync.bin, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.key },
       body: JSON.stringify(body)
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
     setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
     cloudLog('отправлено в облако: ' + progCount(body.prog) + ' агентов · ' +
              new Date().toTimeString().slice(0, 8));
@@ -2540,9 +2568,8 @@ async function cloudSync(quiet) {
   setCloud('cloud-sync', 'синхронизация…');
   let data = null;
   try {
-    const r = await fetch(JB + '/' + sync.bin + '/latest?meta=false',
-                          { headers: { 'X-Master-Key': sync.key } });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const r = await cloudFetch(JB + '/' + sync.bin + '/latest?meta=false',
+                               { headers: { 'X-Master-Key': sync.key } });
     data = await r.json();
   } catch (e) {
     setCloud('cloud-err', 'нет связи с облаком');
