@@ -576,7 +576,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v35';
+const APP_VER = 'v36';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2079,11 +2079,15 @@ function openEditor(kind, slot) {
     const sig = a && a.weapon ? DB.engById[a.weapon] : null;
     if (sig) h += '<div class="hint">Сигнатурное для этого агента: <b>' + esc(sig.ru || sig.en) + '</b></div>';
     // блок с характеристиками и умением обновляется при смене оружия, уровня, прорыва и фазы
-    window.refreshEngInfo = function () {
+    window.refreshEngInfo = function (fromLvl) {
       const box = $('engInfo'); if (!box) return;
       const lvl = Math.max(0, Math.min(60, +($('edWLvl') || {}).value || 0));
-      const br  = +($('edWBr') || {}).value || 0;
-      const ph  = +($('edWPh') || {}).value || 1;
+      let br = +($('edWBr') || {}).value || 0;
+      const ph = +($('edWPh') || {}).value || 1;
+      // 60-й уровень без прорыва в игре недостижим: каждые 10 уровней требуют своего
+      // прорыва. При смене уровня подтягиваем минимально необходимый.
+      const need = Math.max(0, Math.min(5, Math.ceil(lvl / 10) - 1));
+      if (fromLvl && br < need) { br = need; const sel = $('edWBr'); if (sel) sel.value = String(br); }
       ed.lvl = lvl; ed.br = br; ed.phase = ph;
       box.innerHTML = ed.id ? engInfoHTML(ed.id, lvl, br, ph) : '';
     };
@@ -2093,7 +2097,10 @@ function openEditor(kind, slot) {
   // блок с умением обновляется при смене уровня, прорыва и фазы
   ['edWLvl', 'edWBr', 'edWPh'].forEach(id2 => {
     const el = $(id2);
-    if (el) { el.oninput = () => refreshEngInfo(); el.onchange = () => refreshEngInfo(); }
+    if (!el) return;
+    const fromLvl = id2 === 'edWLvl';
+    el.oninput = () => refreshEngInfo(fromLvl);
+    el.onchange = () => refreshEngInfo(fromLvl);
   });
 
   if (kind === 'disc') {
@@ -2245,7 +2252,9 @@ function engInfoHTML(id, lvl, br, phase) {
   return '<div class="editbox" style="margin:8px 0 0">' +
     '<div class="cap2">' + esc(w.ru || w.en) + ' · ' + esc(w.rarity) + '-ранг</div>' +
     (rows.length ? '<div style="font-size:11.5px;color:var(--tx2)">Ур.' + lvl + ' · прорыв ' + br +
-      ' — ' + rows.join(' · ') + '</div>' : '') +
+      ' — ' + rows.join(' · ') + '</div>' +
+      '<div class="hint" style="margin-top:2px">Сила атаки растёт от уровня и прорыва, ' +
+      'вторая характеристика — только от прорыва.</div>' : '') +
     (txt ? '<div style="margin-top:6px;font-size:11.5px;color:var(--tx2)">' +
       (ex.name ? '<b style="color:var(--gold)">' + esc(ex.name) + '.</b> ' : '') + esc(txt) +
       '</div>' : '<div class="hint">Описание умения ещё не собрано.</div>') + '</div>';
