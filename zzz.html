@@ -53,6 +53,9 @@
   .st.pri-stat .lab{color:var(--gold);font-weight:700}
   .st.pri-stat .lab svg{fill:var(--gold)}
   .st.pri-stat .val,.st.pri-stat .curin{color:var(--gold);font-weight:800}
+  .tg2{font-size:11px;padding:4px 10px;border-radius:7px;background:var(--pan2);
+    border:1px solid var(--line);color:var(--tx3);cursor:pointer;user-select:none}
+  .tg2.on{border-color:var(--gold);color:var(--gold);background:#ffffff0d}
   .modbadge{float:right;font-size:10.5px;font-weight:600;color:var(--tx3);letter-spacing:0;
     text-transform:none;background:#ffffff10;border:1px solid var(--line);padding:2px 9px;border-radius:20px}
   .modbadge b{color:var(--gold);font-size:12px;margin-left:3px}
@@ -564,7 +567,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v20';
+const APP_VER = 'v21';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -658,12 +661,20 @@ function statHint(k, T, calcDisp, isMan) {
 // Список для модификаторов — рекомендуемые доп. характеристики из гайда по сборке
 // (extra.subs). Подсвеченные жёлтым характеристики агента это другой список:
 // он показывает, к чему стремиться в итоге, и для подсчёта не годится.
-function subsOf(id) {
+function subsOf(id, p) {
+  const own = p && Array.isArray(p.subs2) ? p.subs2 : null;
+  if (own && own.length) return own;                 // поправленный вручную список
   const s = (EXTRA && EXTRA.subs && EXTRA.subs[id]) || null;
   return (s && s.length) ? s : priOf(id);
 }
+// какие характеристики бывают доп. характеристиками на дисках — для правки
+// списка рекомендаций вручную
+const MOD_OPTS = [['hp','HP'],['hpp','HP %'],['atk','Сила атаки'],['atkp','Сила атаки %'],
+                  ['def','Защита'],['defp','Защита %'],['cr','Шанс крита %'],['cd','Крит. урон %'],
+                  ['ap','Знание аномалии'],['am','Контроль аномалии'],['im','Импульс'],
+                  ['pen','Пробивание'],['penp','Проц. пробивания %']];
 function modifiersOf(id, p) {
-  const pri = subsOf(id);
+  const pri = subsOf(id, p);
   const out = { sum: 0, by: {} };
   if (!pri.length || !p || !Array.isArray(p.discs)) return out;
   p.discs.forEach(d => {
@@ -1235,7 +1246,7 @@ function renderSummary() {
 }
 
 // ─────────────── карточка агента ───────────────
-let curId = null, curTab = 'now', editing = null, ed = null, info = null, cbOpen = false;
+let curId = null, curTab = 'now', editing = null, ed = null, info = null, cbOpen = false, modOpen = false;
 
 // какие основные характеристики бывают в каждом слоте (значение — база при Ур.0)
 const MAIN_OPTS = {
@@ -1359,7 +1370,7 @@ function planProg(p) {
                                      br: q.br != null ? q.br : 5, phase: q.phase || 1 } });
 }
 
-function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; cbOpen = false; renderSheet(); }
+function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; cbOpen = false; modOpen = false; renderSheet(); }
 
 function renderSheet() {
   const a = DB.byId[curId], p = P(curId);
@@ -1419,10 +1430,28 @@ function renderSheet() {
           'color:var(--warn)" title="Сейчас ' + manCount + ' значений вписаны руками и перекрывают ' +
           'расчёт. Нажми, чтобы вернуть расчётные.">↺ вписано вручную: ' + manCount + '</button>'
         : '') +
-      (pri.length ? '<span class="modbadge" title="Сумма рекомендуемых доп. характеристик на дисках ' +
-        'и их удачных улучшений — как в игре.' + (modHint ? '\n' + modHint : '') +
-        '">Модификаторы <b>' + mods.sum + '</b></span>' : '') +
-      '</h4><div class="stg">';
+      '<button id="modBadge" class="modbadge" style="cursor:pointer" title="Сумма рекомендуемых ' +
+        'доп. характеристик на дисках и их удачных улучшений — как в игре.' +
+        (modHint ? '\n' + modHint : '') + '\n\nНажми, чтобы поправить список рекомендаций.">' +
+        'Модификаторы <b>' + mods.sum + '</b></button>' +
+      '</h4>' +
+      (modOpen ? (function () {
+        const cur = subsOf(curId, p);
+        const auto = (EXTRA && EXTRA.subs && EXTRA.subs[curId]) || [];
+        return '<div class="editbox" style="margin:0 0 8px">' +
+          '<div class="cap2">РЕКОМЕНДУЕМЫЕ ДОП. ХАРАКТЕРИСТИКИ</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
+          MOD_OPTS.map(o => '<label class="tg2' + (cur.indexOf(o[0]) >= 0 ? ' on' : '') + '">' +
+            '<input type="checkbox" class="modchk" data-k="' + o[0] + '"' +
+            (cur.indexOf(o[0]) >= 0 ? ' checked' : '') + ' style="display:none">' +
+            esc(o[1]) + '</label>').join('') + '</div>' +
+          '<div class="hint">По этому набору считаются модификаторы — так же, как в игре. ' +
+          'С сайта подтянулось: ' + (auto.length ? esc(auto.join(', ')) : '—') +
+          '. Отметь как в игре, если не совпало.' +
+          '<br><button id="modSave" class="pri" style="margin-top:6px;padding:5px 12px">Применить</button> ' +
+          '<button id="modAuto" style="margin-top:6px;padding:5px 12px">Вернуть с сайта</button></div></div>';
+      })() : '') +
+      '<div class="stg">';
     rows.forEach(r => {
       const k = r[0], isPct = r[2] === 1, isEr = r[2] === 2;
       let v = T[k] || 0;
@@ -1571,6 +1600,20 @@ function bindSheet() {
   if (ft) ft.onclick = () => { p.fav = !p.fav; p.mod = Date.now(); save(curId); renderSheet(); render(); };
   const sb = $('saveBtn');
   if (sb) sb.onclick = () => { applySheet(); closeModal(); render(); };
+  const mb = $('modBadge');
+  if (mb) mb.onclick = () => { modOpen = !modOpen; renderSheet(); };
+  const ms = $('modSave');
+  if (ms) ms.onclick = () => {
+    const p2 = P(curId);
+    p2.subs2 = [].slice.call(document.querySelectorAll('.modchk'))
+      .filter(i => i.checked).map(i => i.dataset.k);
+    save(curId); modOpen = false; renderSheet();
+  };
+  const ma = $('modAuto');
+  if (ma) ma.onclick = () => { const p2 = P(curId); delete p2.subs2; save(curId); modOpen = false; renderSheet(); };
+  document.querySelectorAll('.modchk').forEach(i => {
+    i.onchange = () => i.parentNode.classList.toggle('on', i.checked);
+  });
   const mr = $('manReset');
   if (mr) mr.onclick = () => {
     const p2 = P(curId);
@@ -2435,14 +2478,14 @@ $('cloudOff').onclick = () => {
 $('modTable').onclick = () => {
   const box = $('modBox');
   if (box.innerHTML) { box.innerHTML = ''; return; }
-  const rows = DB.agents.filter(a => subsOf(a.id).length && prog[a.id] && prog[a.id].have)
+  const rows = DB.agents.filter(a => subsOf(a.id, prog[a.id]).length && prog[a.id] && prog[a.id].have)
     .map(a => {
       const m = modifiersOf(a.id, prog[a.id]);
       const by = Object.keys(m.by).map(k => {
         const st = STATS.filter(x => x.k === k)[0];
         return (st ? st.n : k) + ' ' + m.by[k];
       }).join(', ');
-      return { n: a.ru, sum: m.sum, by: by || '—', rec: subsOf(a.id).join('/') };
+      return { n: a.ru, sum: m.sum, by: by || '—', rec: subsOf(a.id, prog[a.id]).join('/') };
     })
     .sort((x, y) => y.sum - x.sum);
   if (!rows.length) { box.innerHTML = '<div class="hint">Нет агентов с заданными приоритетами.</div>'; return; }
