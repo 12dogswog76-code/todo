@@ -576,7 +576,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v34';
+const APP_VER = 'v35';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2026,7 +2026,8 @@ function openEditor(kind, slot) {
         (su.icon ? '<img src="' + esc(imgUrl('discs', su.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<img alt="">') +
         '<span>' + esc(su.ru || su.en || ('#' + su.id)) + '</span></div>').join('') + '</div>';
 
-    h += '<div style="font-size:10.5px;color:#6b7280;margin-bottom:4px">ОСНОВНАЯ ХАРАКТЕРИСТИКА</div>';
+    h += '<div id="suitInfo">' + (ed.suit ? suitInfoHTML(ed.suit) : '') + '</div>';
+    h += '<div style="font-size:10.5px;color:#6b7280;margin:8px 0 4px">ОСНОВНАЯ ХАРАКТЕРИСТИКА</div>';
     h += '<div class="mainpick" id="pkMain">' + (MAIN_OPTS[slot] || []).map(o =>
       '<div class="mp' + (ed.mainP === o[0] ? ' on' : '') + '" data-p="' + o[0] + '" data-v="' + o[2] + '">' +
       esc(o[1]) + '</div>').join('') + '</div>';
@@ -2074,17 +2075,33 @@ function openEditor(kind, slot) {
         (ed.phase === v ? ' selected' : '') + '>P' + v + '</option>').join('') + '</select></div>';
     h += '<div class="prow"><button id="edSave" class="pri" style="border:1px solid #4ade80;background:#4ade80;color:#06240f">Сохранить</button>' +
          '<button id="edDel">Очистить</button><button id="edCancel">Отмена</button></div>';
+    h += '<div id="engInfo">' + (ed.id ? engInfoHTML(ed.id, ed.lvl, ed.br, ed.phase) : '') + '</div>';
     const sig = a && a.weapon ? DB.engById[a.weapon] : null;
     if (sig) h += '<div class="hint">Сигнатурное для этого агента: <b>' + esc(sig.ru || sig.en) + '</b></div>';
+    // блок с характеристиками и умением обновляется при смене оружия, уровня, прорыва и фазы
+    window.refreshEngInfo = function () {
+      const box = $('engInfo'); if (!box) return;
+      const lvl = Math.max(0, Math.min(60, +($('edWLvl') || {}).value || 0));
+      const br  = +($('edWBr') || {}).value || 0;
+      const ph  = +($('edWPh') || {}).value || 1;
+      ed.lvl = lvl; ed.br = br; ed.phase = ph;
+      box.innerHTML = ed.id ? engInfoHTML(ed.id, lvl, br, ph) : '';
+    };
   }
   h += '</div>';
   z.innerHTML = h;
+  // блок с умением обновляется при смене уровня, прорыва и фазы
+  ['edWLvl', 'edWBr', 'edWPh'].forEach(id2 => {
+    const el = $(id2);
+    if (el) { el.oninput = () => refreshEngInfo(); el.onchange = () => refreshEngInfo(); }
+  });
 
   if (kind === 'disc') {
     z.querySelectorAll('#pkSuit .pick').forEach(c => c.onclick = () => {
       ed.suit = +c.dataset.id;
       z.querySelectorAll('#pkSuit .pick').forEach(x => x.classList.remove('on'));
       c.classList.add('on');
+      const box = $('suitInfo'); if (box) box.innerHTML = suitInfoHTML(ed.suit);
     });
     z.querySelectorAll('#pkMain .mp').forEach(c => c.onclick = () => {
       ed.mainP = c.dataset.p; ed.mainV = +c.dataset.v;
@@ -2129,6 +2146,7 @@ function openEditor(kind, slot) {
         ed.id = +c.dataset.id;
         $('pkEng').querySelectorAll('.pick').forEach(x => x.classList.remove('on'));
         c.classList.add('on');
+        refreshEngInfo();
       });
     };
     drawEngines();
@@ -2208,6 +2226,45 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 //   стат = (база агента + вклад оружия) × (1 + сумма процентов) + плоские прибавки
 //   ATK оружия  = база × (1 + 0.155×уровень + 0.9×ступень прорыва)
 //   доп. стат оружия = база × (1 + 0.3×ступень прорыва)
+// Что показывать под списком при выборе: у оружия — характеристики на выбранном
+// уровне и пассивка под выбранную фазу, у комплекта — бонусы 2 и 4 предметов.
+function engInfoHTML(id, lvl, br, phase) {
+  const w = DB.engById && DB.engById[id];
+  if (!w) return '';
+  const wb = weaponBonus({ w: { id: id, lvl: lvl, br: br } });
+  const rows = [];
+  if (wb.atk) rows.push('Сила атаки <b>' + Math.round(wb.atk) + '</b>');
+  if (wb.sec) {
+    const k = PROP2STAT[wb.sec.p] || '';
+    const pct = /p$/.test(k) || ['cr','cd','dmg','penp'].indexOf(k) >= 0;
+    rows.push(statName(k.replace(/p$/, k === 'penp' ? 'p' : '')) + ' <b>' +
+      (pct ? (wb.sec.v / 100).toFixed(1) + '%' : Math.round(wb.sec.v)) + '</b>');
+  }
+  const ex = (EXTRA && EXTRA.engines && EXTRA.engines[id]) || null;
+  const txt = ex ? ((ex.p && ex.p[String(phase || 1)]) || ex.desc) : '';
+  return '<div class="editbox" style="margin:8px 0 0">' +
+    '<div class="cap2">' + esc(w.ru || w.en) + ' · ' + esc(w.rarity) + '-ранг</div>' +
+    (rows.length ? '<div style="font-size:11.5px;color:var(--tx2)">Ур.' + lvl + ' · прорыв ' + br +
+      ' — ' + rows.join(' · ') + '</div>' : '') +
+    (txt ? '<div style="margin-top:6px;font-size:11.5px;color:var(--tx2)">' +
+      (ex.name ? '<b style="color:var(--gold)">' + esc(ex.name) + '.</b> ' : '') + esc(txt) +
+      '</div>' : '<div class="hint">Описание умения ещё не собрано.</div>') + '</div>';
+}
+function suitInfoHTML(id) {
+  const su = DB.suitById && DB.suitById[id];
+  if (!su) return '';
+  const ex = (EXTRA && EXTRA.suits && EXTRA.suits[id]) || null;
+  let bon = '';
+  if (su.bonus) bon = Object.keys(su.bonus).map(pid =>
+    shortName(pid) + ' +' + propValue(pid, su.bonus[pid])).join(', ');
+  return '<div class="editbox" style="margin:8px 0 0">' +
+    '<div class="cap2">' + esc(su.ru || su.en) + '</div>' +
+    '<div style="font-size:11.5px;color:var(--tx2)"><b>2 предмета:</b> ' +
+      esc((ex && ex.s2) || bon || 'нет данных') + '</div>' +
+    '<div style="font-size:11.5px;color:var(--tx2);margin-top:4px"><b>4 предмета:</b> ' +
+      esc((ex && ex.s4) || 'нет данных') + '</div></div>';
+}
+
 function weaponBonus(p) {
   const w = p && p.w && p.w.id ? DB.engById[p.w.id] : null;
   if (!w) return { atk: 0, sec: null };
