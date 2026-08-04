@@ -564,7 +564,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v18';
+const APP_VER = 'v19';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -652,18 +652,25 @@ function statHint(k, T, calcDisp) {
 // Процентные варианты характеристик считаются заодно с плоскими.
 // Список явный: обрезать хвостовое «p» нельзя — «ap» (знание аномалии)
 // само оканчивается на p и превращалось в мусор.
-const SUB_BASE = { hpp: 'hp', atkp: 'atk', defp: 'def', amp: 'am', imp: 'im' };
+// Список для модификаторов — рекомендуемые доп. характеристики из гайда по сборке
+// (extra.subs). Подсвеченные жёлтым характеристики агента это другой список:
+// он показывает, к чему стремиться в итоге, и для подсчёта не годится.
+function subsOf(id) {
+  const s = (EXTRA && EXTRA.subs && EXTRA.subs[id]) || null;
+  return (s && s.length) ? s : priOf(id);
+}
 function modifiersOf(id, p) {
-  const pri = priOf(id);
+  const pri = subsOf(id);
   const out = { sum: 0, by: {} };
   if (!pri.length || !p || !Array.isArray(p.discs)) return out;
   p.discs.forEach(d => {
     if (!d || !Array.isArray(d.subs)) return;
     d.subs.forEach(s => {
       if (!s || !s.p) return;
-      let k = PROP2STAT[String(s.p)] || '';
-      k = SUB_BASE[k] || k;
-      if (pri.indexOf(k) < 0) return;
+      // сравниваем точно: «Сила атаки %» и плоская «Сила атаки» — разные строки,
+      // рекомендация обычно указывает только процентную
+      const k = PROP2STAT[String(s.p)] || '';
+      if (!k || pri.indexOf(k) < 0) return;
       const n = +s.l || 1;
       out.sum += n;
       out.by[k] = (out.by[k] || 0) + n;
@@ -1396,7 +1403,7 @@ function renderSheet() {
       ['def','Защита',0], ['penp','Процент пробивания',1], ['im','Импульс',0], ['pen','Пробивание',0],
       ['cr','Шанс крит. попадания',1], ['er','Восст. энергии',2], ['cd','Крит. урон',1], ['dmg','Бонус стихии',1]
     ];
-    const pri = priOf(curId);
+    const pri = priOf(curId);           // жёлтая подсветка
     const mods = modifiersOf(curId, curTab === 'plan' ? planProg(p) : p);
     const modHint = Object.keys(mods.by).map(k => {
       const st = STATS.filter(x => x.k === k)[0];
@@ -2411,14 +2418,14 @@ $('cloudOff').onclick = () => {
 $('modTable').onclick = () => {
   const box = $('modBox');
   if (box.innerHTML) { box.innerHTML = ''; return; }
-  const rows = DB.agents.filter(a => priOf(a.id).length && prog[a.id] && prog[a.id].have)
+  const rows = DB.agents.filter(a => subsOf(a.id).length && prog[a.id] && prog[a.id].have)
     .map(a => {
       const m = modifiersOf(a.id, prog[a.id]);
       const by = Object.keys(m.by).map(k => {
         const st = STATS.filter(x => x.k === k)[0];
         return (st ? st.n : k) + ' ' + m.by[k];
       }).join(', ');
-      return { n: a.ru, sum: m.sum, by: by || '—' };
+      return { n: a.ru, sum: m.sum, by: by || '—', rec: subsOf(a.id).join('/') };
     })
     .sort((x, y) => y.sum - x.sum);
   if (!rows.length) { box.innerHTML = '<div class="hint">Нет агентов с заданными приоритетами.</div>'; return; }
@@ -2427,10 +2434,12 @@ $('modTable').onclick = () => {
     '<table style="width:100%;border-collapse:collapse;font-size:11.5px">' +
     '<tr style="color:var(--tx3)"><th style="text-align:left;padding:3px 0">Агент</th>' +
     '<th style="text-align:right;padding:3px 8px">Сайт</th>' +
+    '<th style="text-align:left;padding:3px 8px">Рекомендации</th>' +
     '<th style="text-align:left;padding:3px 0">Из чего сложилось</th></tr>' +
     rows.map(r => '<tr style="border-top:1px solid var(--line)">' +
       '<td style="padding:3px 0">' + esc(r.n) + '</td>' +
       '<td style="text-align:right;padding:3px 8px;font-weight:700;color:var(--gold)">' + r.sum + '</td>' +
+      '<td style="padding:3px 8px;color:var(--tx3)">' + esc(r.rec) + '</td>' +
       '<td style="padding:3px 0;color:var(--tx2)">' + esc(r.by) + '</td></tr>').join('') +
     '</table></div>';
 };
