@@ -74,6 +74,10 @@
 
   /* ── сводка ── */
   .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:10px;margin-bottom:16px}
+  .sc.lead{display:flex;align-items:center;gap:11px}
+  .sc.lead img{width:46px;height:46px;border-radius:50%;object-fit:cover;flex:none;
+    border:2px solid var(--ok);background:#0b0d11}
+  .sc.lead > div{min-width:0}
   .sc{
     background:linear-gradient(160deg,var(--pan2),var(--pan));
     border:1px solid var(--line);padding:12px 14px;position:relative;overflow:hidden;
@@ -460,6 +464,7 @@
     <a class="back" href="./">← к задачам</a>
     <button class="tbtn" id="enkaBtn">⟳ Импорт из игры</button>
     <button class="tbtn" id="cloudBtn">☁ Облако</button>
+    <button class="tbtn" id="modBtn">📊 Модификаторы</button>
     <button class="tbtn" id="ioBtn">↕ Данные</button>
     <button class="tbtn" id="helpBtn">?</button>
   </div>
@@ -525,15 +530,17 @@
     <div class="hint" id="cloudDiag" style="color:var(--tx3);font-family:Consolas,monospace;font-size:11px"></div>
   </div>
 
+  <div class="panel" id="modPanel">
+    <div id="modBox"></div>
+  </div>
+
   <div class="panel" id="ioPanel">
     <div class="prow" style="margin-top:0">
       <button id="expFile">⇪ Скачать данные</button>
       <button id="impFile">⇩ Загрузить из файла</button>
       <button id="rebuildDb">⟳ Обновить список агентов</button>
-      <button id="modTable">📊 Сводка модификаторов</button>
       <button id="wipe">Очистить прогресс</button>
     </div>
-    <div id="modBox"></div>
     <div class="hint">В файл попадает только твой прогресс — база агентов и картинки в него не входят.<br>
       «Обновить список агентов» — когда вышел новый патч и появились новые персонажи
       (сам список обновляется раз в неделю).</div>
@@ -567,7 +574,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v27';
+const APP_VER = 'v28';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -672,6 +679,13 @@ const SUBS_FIX = {
   1491: ['atk', 'er'],   // Санна — сила атаки и восстановление энергии, в игре 16
   1581: ['atk', 'ap']    // Ремиэлла — сила атаки и знание аномалии, в игре 15
 };
+// человеческое название характеристики по её ключу
+function statName(k) {
+  const o = MOD_OPTS.filter(x => x[0] === k)[0];
+  if (o) return o[1];
+  const st = STATS.filter(x => x.k === k)[0];
+  return st ? st.n : k;
+}
 function subsOf(id, p) {
   const own = p && Array.isArray(p.subs2) ? p.subs2 : null;
   if (own && own.length) return own;                 // поправленный вручную список
@@ -1321,15 +1335,34 @@ function renderSummary() {
     }
   });
   const avg = have ? Math.round(sum / have) : 0;
+
+  // модификаторы: среднее по тем, у кого есть рекомендации, и лидер
+  let mSum = 0, mCnt = 0, best = null, bestVal = -1;
+  DB.agents.forEach(a => {
+    const p = prog[a.id];
+    if (!p || !p.have || !subsOf(a.id, p).length) return;
+    const v = modifiersOf(a.id, p).sum;
+    if (!v) return;
+    mSum += v; mCnt++;
+    if (v > bestVal) { bestVal = v; best = a; }
+  });
+  const mAvg = mCnt ? Math.round(mSum / mCnt) : 0;
+
   const cards = [
     ['', have + ' / ' + all, 'агентов есть'],
     ['a', avg + '%', 'средняя готовность'],
-    [done ? 'g' : '', String(done), 'прокачаны полностью'],
-    ['', String(lvlMax), 'на 60 уровне'],
-    ['', String(have - done), 'осталось докачать']
+    ['a', String(mAvg), 'средний модификатор']
   ];
-  $('summary').innerHTML = cards.map(c =>
+  let html = cards.map(c =>
     '<div class="sc ' + c[0] + '"><b>' + esc(c[1]) + '</b><span>' + esc(c[2]) + '</span></div>').join('');
+  if (best) {
+    const face = best.icon ? imgUrl('agents', best.icon) : '';
+    html += '<div class="sc g lead">' +
+      (face ? '<img src="' + esc(face) + '" alt="" title="' + esc(best.ru || best.en) +
+        '" onerror="this.style.display=\'none\'">' : '') +
+      '<div><b>' + bestVal + '</b><span>лидер модификации</span></div></div>';
+  }
+  $('summary').innerHTML = html;
   $('stats').textContent = 'база от ' + (DB.built || '?') + ' · ' + all + ' агентов · ' +
     (DB.suits || []).length + ' сетов · ' + (DB.engines || []).length + ' W-Engine';
 }
@@ -1508,10 +1541,7 @@ function renderSheet() {
     ];
     const pri = priOf(curId, p);        // жёлтая подсветка
     const mods = modifiersOf(curId, curTab === 'plan' ? planProg(p) : p);
-    const modHint = Object.keys(mods.by).map(k => {
-      const st = STATS.filter(x => x.k === k)[0];
-      return (st ? st.n : k) + ': ' + mods.by[k];
-    }).join(', ');
+    const modHint = Object.keys(mods.by).map(k => statName(k) + ': ' + mods.by[k]).join(', ');
     const manCount = Object.keys(p.manual || {}).filter(k => p.manual[k] != null).length;
     h += '<div class="sect"><h4>Характеристики' +
       (manCount && curTab === 'now'
@@ -1541,7 +1571,7 @@ function renderSheet() {
             (priOf(curId, p).indexOf(o.k) >= 0 ? ' checked' : '') + ' style="display:none">' +
             esc(o.n) + '</label>').join('') + '</div>' +
           '<div class="hint">По этому набору считаются модификаторы — так же, как в игре. ' +
-          'С сайта подтянулось: ' + (auto.length ? esc(auto.join(', ')) : '—') +
+          'С сайта подтянулось: ' + (auto.length ? esc(auto.map(statName).join(', ')) : '—') +
           '. Отметь как в игре, если не совпало.' +
           '<br><button id="modSave" class="pri" style="margin-top:6px;padding:5px 12px">Применить</button> ' +
           '<button id="modAuto" style="margin-top:6px;padding:5px 12px">Вернуть с сайта</button></div></div>';
@@ -2428,6 +2458,23 @@ function progCount(o) {
     return p && (p.have || p.lvl || p.core || p.fav || (p.discs && p.discs.length));
   }).length;
 }
+// Понятный текст вместо кода ошибки: по нему сразу видно, что делать.
+function cloudErrText(e) {
+  const m = String((e && e.message) || e);
+  if (m.indexOf('401') >= 0)
+    return 'Ключ не подошёл (401). Вставь код подключения заново.';
+  if (m.indexOf('403') >= 0)
+    return 'Доступ запрещён (403). Обычно это либо исчерпан месячный лимит запросов ' +
+           'у jsonbin, либо Master Key отозван. Проверь счётчик в личном кабинете jsonbin.io ' +
+           'и при необходимости создай новый ключ, потом подключись им заново.';
+  if (m.indexOf('429') >= 0)
+    return 'Слишком много запросов (429). Подожди минуту и нажми синхронизацию ещё раз.';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m))
+    return 'Запрос не ушёл: браузер не смог достучаться до api.jsonbin.io. ' +
+           'Чаще всего мешает VPN, блокировщик рекламы или мобильный оператор. ' +
+           'Попробуй выключить VPN или сменить сеть.';
+  return 'Облако не ответило: ' + m;
+}
 function cloudLog(msg) {
   const el = $('cloudDiag');
   if (el) el.textContent = msg;
@@ -2467,7 +2514,7 @@ async function cloudPush() {
     return true;
   } catch (e) {
     setCloud('cloud-err', 'нет связи с облаком — сохранено локально');
-    cloudLog('отправка не прошла: ' + (e.message || e));
+    cloudLog('Отправка не прошла. ' + cloudErrText(e));
     return false;
   }
 }
@@ -2499,8 +2546,7 @@ async function cloudSync(quiet) {
     data = await r.json();
   } catch (e) {
     setCloud('cloud-err', 'нет связи с облаком');
-    cloudLog('облако не ответило: ' + (e.message || e) +
-             (String(e.message).indexOf('401') >= 0 ? ' — ключ не подошёл, вставь код подключения заново' : ''));
+    cloudLog(cloudErrText(e));
     return;
   }
   // jsonbin с ?meta=false отдаёт запись как есть, без обёртки record
@@ -2596,17 +2642,15 @@ $('cloudOff').onclick = () => {
 };
 
 // ─────────────── импорт/экспорт файлом ───────────────
-$('modTable').onclick = () => {
+function drawModTable() {
   const box = $('modBox');
-  if (box.innerHTML) { box.innerHTML = ''; return; }
+  if (!box) return;
   const rows = DB.agents.filter(a => subsOf(a.id, prog[a.id]).length && prog[a.id] && prog[a.id].have)
     .map(a => {
       const m = modifiersOf(a.id, prog[a.id]);
-      const by = Object.keys(m.by).map(k => {
-        const st = STATS.filter(x => x.k === k)[0];
-        return (st ? st.n : k) + ' ' + m.by[k];
-      }).join(', ');
-      return { n: a.ru, sum: m.sum, by: by || '—', rec: subsOf(a.id, prog[a.id]).join('/') };
+      const by = Object.keys(m.by).map(k => statName(k) + ' ' + m.by[k]).join(', ');
+      return { n: a.ru, sum: m.sum, by: by || '—',
+               rec: subsOf(a.id, prog[a.id]).map(statName).join(', ') };
     })
     .sort((x, y) => y.sum - x.sum);
   if (!rows.length) { box.innerHTML = '<div class="hint">Нет агентов с заданными приоритетами.</div>'; return; }
@@ -2623,7 +2667,7 @@ $('modTable').onclick = () => {
       '<td style="padding:3px 8px;color:var(--tx3)">' + esc(r.rec) + '</td>' +
       '<td style="padding:3px 0;color:var(--tx2)">' + esc(r.by) + '</td></tr>').join('') +
     '</table></div>';
-};
+}
 
 $('expFile').onclick = () => {
   const blob = new Blob([JSON.stringify(payload(), null, 1)], { type: 'application/json' });
@@ -2663,17 +2707,19 @@ $('rebuildDb').onclick = async () => {
 function togglePanel(id) {
   const zone = $('panelZone');
   if (zone && $(id) && $(id).parentNode !== zone) zone.appendChild($(id));
-  ['enkaPanel', 'cloudPanel', 'ioPanel', 'helpPanel'].forEach(p => {
+  ['enkaPanel', 'cloudPanel', 'modPanel', 'ioPanel', 'helpPanel'].forEach(p => {
     if (p !== id) $(p).classList.remove('open');
   });
-  ['enkaBtn', 'cloudBtn', 'ioBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
+  ['enkaBtn', 'cloudBtn', 'modBtn', 'ioBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
   const wasOpen = $(id).classList.contains('open');
   $(id).classList.toggle('open', !wasOpen);
-  const map = { enkaPanel: 'enkaBtn', cloudPanel: 'cloudBtn', ioPanel: 'ioBtn', helpPanel: 'helpBtn' };
+  const map = { enkaPanel: 'enkaBtn', cloudPanel: 'cloudBtn', modPanel: 'modBtn',
+                ioPanel: 'ioBtn', helpPanel: 'helpBtn' };
   if (!wasOpen) $(map[id]).classList.add('on');
 }
 $('enkaBtn').onclick  = () => togglePanel('enkaPanel');
 $('cloudBtn').onclick = () => { togglePanel('cloudPanel'); cloudUI(); };
+$('modBtn').onclick   = () => { togglePanel('modPanel'); drawModTable(); };
 $('ioBtn').onclick    = () => togglePanel('ioPanel');
 $('helpBtn').onclick  = () => togglePanel('helpPanel');
 
