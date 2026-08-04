@@ -533,7 +533,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v1';
+const APP_VER = 'v2';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -1602,7 +1602,9 @@ function openInfo(kind, slot) {
         ' · <b>фаза:</b> P' + (wSrc.w.phase || 1) + '<br>' +
         (function () {
           const exw = (EXTRA && EXTRA.engines && EXTRA.engines[w.id]) || null;
-          if (exw && exw.desc) return '<div style="margin-top:6px;color:var(--tx2)">' + esc(exw.desc) + '</div>';
+          if (exw && exw.desc) return '<div style="margin-top:6px;color:var(--tx2)">' +
+            (exw.name ? '<b style="color:var(--gold)">' + esc(exw.name) + '.</b> ' : '') +
+            esc(exw.desc) + '</div>';
           return w.en ? '<a href="https://zzz.gachabase.net/w-engines" target="_blank" rel="noopener" ' +
                  'style="color:var(--gold)">описание умения на gachabase ↗</a><br>' : '';
         })() +
