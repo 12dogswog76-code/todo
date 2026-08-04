@@ -546,7 +546,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v5';
+const APP_VER = 'v6';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -613,20 +613,27 @@ function priOf(id) { return PRIORITY[id] || []; }
 // удачных улучшений для агента, на котором экипирован диск». То есть по всем шести
 // дискам берём только те доп. характеристики, что входят в приоритетные для агента,
 // и складываем их уровни (сама характеристика = 1, каждое улучшение = ещё 1).
+// Процентные варианты характеристик считаются заодно с плоскими.
+// Список явный: обрезать хвостовое «p» нельзя — «ap» (знание аномалии)
+// само оканчивается на p и превращалось в мусор.
+const SUB_BASE = { hpp: 'hp', atkp: 'atk', defp: 'def', amp: 'am', imp: 'im' };
 function modifiersOf(id, p) {
   const pri = priOf(id);
-  if (!pri.length || !p || !Array.isArray(p.discs)) return 0;
-  let sum = 0;
+  const out = { sum: 0, by: {} };
+  if (!pri.length || !p || !Array.isArray(p.discs)) return out;
   p.discs.forEach(d => {
     if (!d || !Array.isArray(d.subs)) return;
     d.subs.forEach(s => {
       if (!s || !s.p) return;
       let k = PROP2STAT[String(s.p)] || '';
-      k = k.replace(/p$/, '');          // hpp -> hp, atkp -> atk и т.д.
-      if (pri.indexOf(k) >= 0) sum += (+s.l || 1);
+      k = SUB_BASE[k] || k;
+      if (pri.indexOf(k) < 0) return;
+      const n = +s.l || 1;
+      out.sum += n;
+      out.by[k] = (out.by[k] || 0) + n;
     });
   });
-  return sum;
+  return out;
 }
 
 // какие PropertyId из Enka в какой наш стат складываются
@@ -1348,9 +1355,14 @@ function renderSheet() {
     ];
     const pri = priOf(curId);
     const mods = modifiersOf(curId, curTab === 'plan' ? planProg(p) : p);
+    const modHint = Object.keys(mods.by).map(k => {
+      const st = STATS.filter(x => x.k === k)[0];
+      return (st ? st.n : k) + ': ' + mods.by[k];
+    }).join(', ');
     h += '<div class="sect"><h4>Характеристики' +
-      (pri.length ? '<span class="modbadge" title="сумма рекомендуемых доп. характеристик на дисках ' +
-        'и их удачных улучшений — считается так же, как в игре">Модификаторы <b>' + mods + '</b></span>' : '') +
+      (pri.length ? '<span class="modbadge" title="Сумма рекомендуемых доп. характеристик на дисках ' +
+        'и их удачных улучшений — как в игре.' + (modHint ? '\n' + modHint : '') +
+        '">Модификаторы <b>' + mods.sum + '</b></span>' : '') +
       '</h4><div class="stg">';
     rows.forEach(r => {
       const k = r[0], isPct = r[2] === 1, isEr = r[2] === 2;
