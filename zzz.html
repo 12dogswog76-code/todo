@@ -197,11 +197,13 @@
     position:absolute;top:10px;left:10px;background:#0b0d11d9;border:1px solid var(--el);
     color:var(--el);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;z-index:2;
   }
-  .hart .who{position:absolute;left:14px;right:14px;bottom:14px;z-index:2}
+  /* низ блока с фигурой, а не низ колонки: иначе подпись уезжает под размытый фон */
+  .hart .who{position:absolute;left:14px;right:14px;top:min(780px,80vh);
+    transform:translateY(-100%);padding-bottom:14px;z-index:2}
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
-  .hart .tg{font-size:10px;line-height:1;height:22px;padding:0 9px;border-radius:6px;
+  .hart .tg{font-size:10.5px;line-height:26px;height:26px;padding:0 10px;border-radius:7px;
     background:#ffffff14;color:var(--tx);display:inline-flex;align-items:center;justify-content:center;gap:5px}
   .hart .tg svg{display:block}
   .hart .tg .ic{display:inline-flex;align-items:center;justify-content:center}
@@ -420,6 +422,7 @@
        занимает пол-экрана */
     .hart{position:static;min-height:0;height:290px}
     .hart .hfig{height:100%}
+    .hart .who{top:auto;bottom:14px;transform:none;padding-bottom:0}
     .stg{grid-template-columns:1fr}
     .drow{grid-template-columns:repeat(3,1fr)}
     /* «убрать из трекера» переносилось по буквам и ломало нижнюю панель */
@@ -554,7 +557,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v9';
+const APP_VER = 'v10';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
