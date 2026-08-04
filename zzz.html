@@ -558,7 +558,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v12';
+const APP_VER = 'v13';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -620,6 +620,23 @@ const PRIORITY = {
   1581: ['atk','ap']                  // Ремиэлла
 };
 function priOf(id) { return PRIORITY[id] || []; }
+
+// Из чего сложилась характеристика — видно в подсказке у поля.
+// Нужно, чтобы сверять с игрой и сразу находить, какое слагаемое расходится.
+function statHint(k, T, calcDisp) {
+  const base = 'Расчёт: ' + calcDisp + '. Можно вписать своё значение из игры.';
+  const pt = T && T._parts && T._parts[k];
+  if (!pt) return base;
+  const rows = [
+    'база агента' + (pt.agent != null ? ' ' + pt.agent : '') +
+      (pt.weapon ? ' + оружие ' + pt.weapon : '') +
+      (pt.core ? ' + ядро ' + pt.core : '') + ' = ' + pt.base,
+    'проценты с дисков и оружия: +' + (pt.pct * 100).toFixed(1) + '%',
+    'плоские прибавки: +' + Math.round(pt.flat),
+    'итог: ' + pt.base + ' × ' + (1 + pt.pct).toFixed(3) + ' + ' + Math.round(pt.flat) + ' = ' + calcDisp
+  ];
+  return base + '\n\n' + rows.join('\n');
+}
 
 // Модификаторы — как в игре: «сумма рекомендуемых доп. параметров и количество их
 // удачных улучшений для агента, на котором экипирован диск». То есть по всем шести
@@ -1408,7 +1425,7 @@ function renderSheet() {
         '<span class="lab">' + (k === 'dmg' ? elIcon(el, 14) : statIcon(k, 13)) + esc(r[1]) + '</span>' +
         (curTab === 'now'
           ? '<input class="curin" data-k="' + k + '" value="' + esc(disp) +
-            '" title="расчёт: ' + esc(calcDisp) + '. Можно вписать своё значение из игры">'
+            '" title="' + esc(statHint(k, T, calcDisp)) + '">'
           : '<span class="val">' + esc(disp) + extra + '</span>') +
         '<input class="goalin" data-k="' + k + '" value="' +
           (goal == null ? '' : esc(goal)) + '" placeholder="цель">' + bar + '</div>';
@@ -2008,7 +2025,13 @@ function calcTotals(a, p, discs) {
     er:  Math.round(((b.er / 100) * (1 + pc('erp')) + flat('er') / 100 + (+cb.er || 0)) * 100) / 100,
     dmg: flat('dmg') / 100,
     _weaponAtk: Math.round(w.atk),
-    _baseAtk: Math.round(b.atk)
+    _baseAtk: Math.round(b.atk),
+    _parts: {
+      hp:  { base: Math.round(hpBase),  pct: pc('hpp'),  flat: flat('hp'),  core: +cb.hp || 0 },
+      atk: { base: Math.round(atkBase), pct: pc('atkp'), flat: flat('atk'), core: +cb.atk || 0,
+             agent: Math.round(b.atk), weapon: Math.round(w.atk) },
+      def: { base: Math.round(defBase), pct: pc('defp'), flat: flat('def'), core: +cb.def || 0 }
+    }
   };
 }
 
