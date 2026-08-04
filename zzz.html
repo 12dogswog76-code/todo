@@ -49,6 +49,13 @@
   .top .sp{flex:1}
   .top a.back{color:var(--tx2);text-decoration:none;font-size:12.5px}
   .top a.back:hover{color:var(--acc)}
+  /* приоритетные характеристики агента — как жёлтая подсветка в игре */
+  .st.pri-stat .lab{color:var(--gold);font-weight:700}
+  .st.pri-stat .lab svg{fill:var(--gold)}
+  .st.pri-stat .val,.st.pri-stat .curin{color:var(--gold);font-weight:800}
+  .modbadge{float:right;font-size:10.5px;font-weight:600;color:var(--tx3);letter-spacing:0;
+    text-transform:none;background:#ffffff10;border:1px solid var(--line);padding:2px 9px;border-radius:20px}
+  .modbadge b{color:var(--gold);font-size:12px;margin-left:3px}
   .ver{font-size:10px;font-weight:700;color:var(--tx3);background:#ffffff10;border:1px solid var(--line);
        padding:2px 7px;border-radius:20px;letter-spacing:.4px;white-space:nowrap}
   #cloudDot{width:8px;height:8px;border-radius:50%;background:#3a3f4a;display:inline-block;margin-left:2px}
@@ -168,9 +175,12 @@
   .sheet{width:100%;max-width:1000px;background:var(--pan);border:1px solid var(--line);
     border-radius:14px;overflow:hidden}
 
-  .hero{display:grid;grid-template-columns:290px 1fr}
+  .hero{display:grid;grid-template-columns:290px 1fr;align-items:start}
   .hart{
-    position:relative;background:linear-gradient(180deg,#151820,#0b0d11);overflow:hidden;min-height:420px;
+    /* высота фиксированная: раньше блок тянулся за правой колонкой, и при раскрытии
+       описания диска или оружия арт скачком увеличивался */
+    position:sticky;top:0;height:560px;
+    background:linear-gradient(180deg,#151820,#0b0d11);overflow:hidden;
   }
   .hart::after{content:'';position:absolute;inset:0;
     background:linear-gradient(180deg,transparent 50%,#0b0d11f2 100%),
@@ -533,7 +543,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v3';
+const APP_VER = 'v4';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -575,6 +585,47 @@ const STATS = [
   { k: 'er',  n: 'Восст. энергии',     pct: false },
   { k: 'dmg', n: 'Бонус стихии',       pct: true  }
 ];
+// Приоритетные характеристики агента — те, что игра подсвечивает жёлтым на экране
+// «Базовые параметры». Заполняется по скриншотам из игры: у каждого агента свой набор.
+const PRIORITY = {
+  1091: ['atk','cr','cd'],            // Мияби
+  1221: ['atk','am','ap'],            // Янаги
+  1261: ['atk','am','ap'],            // Джейн
+  1321: ['atk','cr','cd'],            // Эвелин
+  1361: ['im','cr','cd'],             // Гашетка
+  1371: ['hp','cr','cd'],             // Исюань
+  1411: ['atk','am'],                 // Юдзуха
+  1431: ['atk','cr','cd'],            // Е Шуньгуан
+  1481: ['cr','er'],                  // Диалинь
+  1491: ['atk','er'],                 // Санна
+  1511: ['atk','am','ap'],            // Наньгун Юй
+  1551: ['atk','cr','cd'],            // Пироис
+  1561: ['atk','ap','er'],            // Велина
+  1571: ['cr','cd','er'],             // Норма
+  1581: ['atk','ap']                  // Ремиэлла
+};
+function priOf(id) { return PRIORITY[id] || []; }
+
+// Модификаторы — как в игре: «сумма рекомендуемых доп. параметров и количество их
+// удачных улучшений для агента, на котором экипирован диск». То есть по всем шести
+// дискам берём только те доп. характеристики, что входят в приоритетные для агента,
+// и складываем их уровни (сама характеристика = 1, каждое улучшение = ещё 1).
+function modifiersOf(id, p) {
+  const pri = priOf(id);
+  if (!pri.length || !p || !Array.isArray(p.discs)) return 0;
+  let sum = 0;
+  p.discs.forEach(d => {
+    if (!d || !Array.isArray(d.subs)) return;
+    d.subs.forEach(s => {
+      if (!s || !s.p) return;
+      let k = PROP2STAT[String(s.p)] || '';
+      k = k.replace(/p$/, '');          // hpp -> hp, atkp -> atk и т.д.
+      if (pri.indexOf(k) >= 0) sum += (+s.l || 1);
+    });
+  });
+  return sum;
+}
+
 // какие PropertyId из Enka в какой наш стат складываются
 const PROP2STAT = {
   '11103': 'hp',  '11102': 'hpp',
@@ -650,19 +701,28 @@ const PROF_PATH = {
 // мобильном интернете запросы просто зависали — вместо стихий и навыков были
 // квадраты-заглушки, а запасной SVG не показывался, потому что ошибки не было.
 // Первый параметр (адрес картинки) больше не используется, оставлен для совместимости.
+// Значки лежат рядом с сайтом в img/zzz/ui — качаются скриптом fetch-ui-icons.ps1.
+// Раньше они грузились прямо с фэндом-вики: на ПК работало, а на мобильном интернете
+// запрос зависал без ошибки, и вместо значка оставался пустой квадрат.
+// Если файла нет, показываем нарисованный кодом запасной вариант.
+function uiIcon(name) { return name ? 'img/zzz/ui/' + name + '.png' : ''; }
 function iconImg(src, fallbackSvg, size, title) {
   const s = size || 14;
-  return '<span class="ic nf" style="width:' + s + 'px;height:' + s + 'px" title="' +
-    esc(title || '') + '"><i>' + fallbackSvg + '</i></span>';
+  return '<span class="ic" style="width:' + s + 'px;height:' + s + 'px" title="' + esc(title || '') + '">' +
+    (src ? '<img src="' + esc(src) + '" width="' + s + '" height="' + s + '" alt="" ' +
+           'decoding="async" onerror="this.parentNode.classList.add(\'nf\');this.remove()" ' +
+           'onload="if(this.naturalWidth<4){this.parentNode.classList.add(\'nf\');this.remove()}">'
+         : '') +
+    '<i>' + fallbackSvg + '</i></span>';
 }
 function elIcon(el, size) {
   const c = (ELEM[el] && ELEM[el].c) || '#8b92a3';
   const nm = (ELEM[el] && ELEM[el].ru) || el;
-  return iconImg('',
+  return iconImg(uiIcon('el-' + el),
     svgW(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size), size, nm);
 }
 function profIcon(pr, size, col) {
-  return iconImg('',
+  return iconImg(uiIcon('pr-' + pr),
     svgW(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size), size, PROF[pr] || pr);
 }
 const ST_PATH = {
@@ -682,7 +742,7 @@ const ST_PATH = {
 function statIcon(k, size, col) {
   if (k === 'dmg') return '';
   if (!ST_PATH[k]) return '';
-  return svgW(ST_PATH[k], col || '#7f8697', size || 13);
+  return iconImg(uiIcon('st-' + k), svgW(ST_PATH[k], col || '#7f8697', size || 13), size || 13, '');
 }
 const SK_PATH = {
   // клинок — обычная атака
@@ -700,7 +760,8 @@ const SK_PATH = {
   6:'<path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6zm9.2 5-2.1-.5a7.4 7.4 0 0 0-.7-1.7l1.2-1.8-1.9-1.9-1.8 1.2a7.4 7.4 0 0 0-1.7-.7L13.7 2h-2.6l-.5 2.1a7.4 7.4 0 0 0-1.7.7L7.1 3.6 5.2 5.5l1.2 1.8a7.4 7.4 0 0 0-.7 1.7L2.8 12v2.6l2.1.5c.2.6.4 1.2.7 1.7l-1.2 1.8 1.9 1.9 1.8-1.2c.5.3 1.1.5 1.7.7l.5 2.1h2.6l.5-2.1c.6-.2 1.2-.4 1.7-.7l1.8 1.2 1.9-1.9-1.2-1.8c.3-.5.5-1.1.7-1.7l2.1-.5z"/>'
 };
 function skillIcon(i, size, col) {
-  return SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
+  const fb = SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
+  return iconImg(uiIcon('sk-' + i), fb, size || 20, '');
 }
 
 // ─────────────── состояние ───────────────
@@ -1282,7 +1343,12 @@ function renderSheet() {
       ['def','Защита',0], ['penp','Процент пробивания',1], ['im','Импульс',0], ['pen','Пробивание',0],
       ['cr','Шанс крит. попадания',1], ['er','Восст. энергии',2], ['cd','Крит. урон',1], ['dmg','Бонус стихии',1]
     ];
-    h += '<div class="sect"><h4>Характеристики</h4><div class="stg">';
+    const pri = priOf(curId);
+    const mods = modifiersOf(curId, curTab === 'plan' ? planProg(p) : p);
+    h += '<div class="sect"><h4>Характеристики' +
+      (pri.length ? '<span class="modbadge" title="сумма рекомендуемых доп. характеристик на дисках ' +
+        'и их удачных улучшений — считается так же, как в игре">Модификаторы <b>' + mods + '</b></span>' : '') +
+      '</h4><div class="stg">';
     rows.forEach(r => {
       const k = r[0], isPct = r[2] === 1, isEr = r[2] === 2;
       let v = T[k] || 0;
@@ -1303,7 +1369,8 @@ function renderSheet() {
         if (Math.abs(d) > 0.05) extra = '<span class="diff2">' + (d > 0 ? '+' : '') +
           (isPct ? d.toFixed(1) : (isEr ? d.toFixed(2) : Math.round(d))) + '</span>';
       }
-      h += '<div class="st' + cls + (man ? ' man' : '') + '">' +
+      const isPri = pri.indexOf(k) >= 0;
+      h += '<div class="st' + cls + (man ? ' man' : '') + (isPri ? ' pri-stat' : '') + '">' +
         '<span class="lab">' + (k === 'dmg' ? elIcon(el, 14) : statIcon(k, 13)) + esc(r[1]) + '</span>' +
         (curTab === 'now'
           ? '<input class="curin" data-k="' + k + '" value="' + esc(disp) +
