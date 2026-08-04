@@ -527,8 +527,10 @@
       <button id="expFile">⇪ Скачать данные</button>
       <button id="impFile">⇩ Загрузить из файла</button>
       <button id="rebuildDb">⟳ Обновить список агентов</button>
+      <button id="modTable">📊 Сводка модификаторов</button>
       <button id="wipe">Очистить прогресс</button>
     </div>
+    <div id="modBox"></div>
     <div class="hint">В файл попадает только твой прогресс — база агентов и картинки в него не входят.<br>
       «Обновить список агентов» — когда вышел новый патч и появились новые персонажи
       (сам список обновляется раз в неделю).</div>
@@ -562,7 +564,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v17';
+const APP_VER = 'v18';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -1630,10 +1632,14 @@ const CORE_KNOWN = {
 // две трети: у Санны это 50 к базовой атаке и 14% вместо 75 и 21%.
 const CORE_BASE_KEYS = ['atk', 'hp', 'def'];
 function coreBonusOf(id, p) {
-  const own = (p && p.core2) || {};
-  const full = Object.keys(own).some(k => +own[k])
-    ? own                                              // свои значения важнее справочника
-    : ((EXTRA && EXTRA.core && EXTRA.core[id]) || CORE_KNOWN[id] || {});
+  const auto = (EXTRA && EXTRA.core && EXTRA.core[id]) || CORE_KNOWN[id] || {};
+  const own0 = (p && p.core2) || {};
+  const own = {};
+  Object.keys(own0).forEach(k => {
+    // ровно то же, что в справочнике — значит это не своё значение, а осевшая копия
+    if (+own0[k] && Math.abs(+own0[k] - (+auto[k] || 0)) > 0.005) own[k] = +own0[k];
+  });
+  const full = Object.keys(own).length ? own : auto;
   const lvl = Math.max(0, Math.min(6, (p && p.core) || 0));
   if (lvl >= 6) return full;
   const odd  = Math.ceil(lvl / 2) / 3;    // сколько получено на A, C, E
@@ -2402,6 +2408,33 @@ $('cloudOff').onclick = () => {
 };
 
 // ─────────────── импорт/экспорт файлом ───────────────
+$('modTable').onclick = () => {
+  const box = $('modBox');
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  const rows = DB.agents.filter(a => priOf(a.id).length && prog[a.id] && prog[a.id].have)
+    .map(a => {
+      const m = modifiersOf(a.id, prog[a.id]);
+      const by = Object.keys(m.by).map(k => {
+        const st = STATS.filter(x => x.k === k)[0];
+        return (st ? st.n : k) + ' ' + m.by[k];
+      }).join(', ');
+      return { n: a.ru, sum: m.sum, by: by || '—' };
+    })
+    .sort((x, y) => y.sum - x.sum);
+  if (!rows.length) { box.innerHTML = '<div class="hint">Нет агентов с заданными приоритетами.</div>'; return; }
+  box.innerHTML = '<div class="editbox" style="margin:8px 0">' +
+    '<div class="cap2">МОДИФИКАТОРЫ ПО АГЕНТАМ</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:11.5px">' +
+    '<tr style="color:var(--tx3)"><th style="text-align:left;padding:3px 0">Агент</th>' +
+    '<th style="text-align:right;padding:3px 8px">Сайт</th>' +
+    '<th style="text-align:left;padding:3px 0">Из чего сложилось</th></tr>' +
+    rows.map(r => '<tr style="border-top:1px solid var(--line)">' +
+      '<td style="padding:3px 0">' + esc(r.n) + '</td>' +
+      '<td style="text-align:right;padding:3px 8px;font-weight:700;color:var(--gold)">' + r.sum + '</td>' +
+      '<td style="padding:3px 0;color:var(--tx2)">' + esc(r.by) + '</td></tr>').join('') +
+    '</table></div>';
+};
+
 $('expFile').onclick = () => {
   const blob = new Blob([JSON.stringify(payload(), null, 1)], { type: 'application/json' });
   const a = document.createElement('a');
