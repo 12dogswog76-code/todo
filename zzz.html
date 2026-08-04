@@ -320,6 +320,10 @@
   .dcard img{width:34px;height:34px;object-fit:contain;margin:6px auto 3px;display:block}
   .dcard .mn{font-size:12.5px;font-weight:800;color:var(--warn);line-height:1.15;font-variant-numeric:tabular-nums}
   .dcard .mnl{font-size:8.5px;color:var(--tx3);line-height:1.2;margin-bottom:4px}
+  /* доп. характеристики, которые идут в зачёт модификаторов */
+  .dcard .st2 span.good,.stlist div.good{color:var(--gold)}
+  .dcard .st2 span.good em,.stlist div.good em{color:var(--gold);font-weight:700}
+  .dcard .st2 span.good .rl,.stlist div.good .rl{color:var(--gold);opacity:1}
   .dcard .st2{font-size:9px;color:var(--tx2);line-height:1.5;text-align:left;
     border-top:1px solid #ffffff0f;padding-top:4px;display:flex;flex-direction:column;gap:1px}
   .dcard .st2 span{display:flex;align-items:center;gap:3px}
@@ -592,7 +596,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v44';
+const APP_VER = 'v45';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -724,6 +728,17 @@ const MOD_OPTS = [['hp','HP'],['hpp','HP %'],['atk','Сила атаки'],['atk
 // и импульсом. Отсюда и расхождения: у Санны половина набегала плоской атакой.
 const MOD_WIDE = { atk: ['atk','atkp'], hp: ['hp','hpp'], def: ['def','defp'],
                    am: ['am','amp'], im: ['im','imp'] };
+// Набор доп. характеристик, которые засчитываются агенту в модификаторы.
+// По нему подсвечиваем полезные строки на дисках.
+function modKeys(id, p) {
+  const out = [];
+  subsOf(id, p).forEach(k => (MOD_WIDE[k] || [k]).forEach(x => { if (out.indexOf(x) < 0) out.push(x); }));
+  return out;
+}
+function isModSub(sp, keys) {
+  const k = PROP2STAT[String(sp && sp.p)] || '';
+  return !!k && keys.indexOf(k) >= 0;
+}
 function modifiersOf(id, p) {
   const list = subsOf(id, p);
   const pri = [];
@@ -1682,9 +1697,10 @@ function renderSheet() {
       const d = list.find(x => x.slot === sl);
       const suit = d && DB.suitById[d.suit];
       const isPlan = curTab === 'plan' && plSet.some(x => x.slot === sl);
+      const mk = modKeys(curId, p);
       const subs = (d && d.subs || []).map(sp => {
         const r = subRolls(sp);
-        return '<span>' + esc(shortName(sp.p)) +
+        return '<span' + (isModSub(sp, mk) ? ' class="good"' : '') + '>' + esc(shortName(sp.p)) +
           (r ? '<b class="rl">+' + r + '</b>' : '') +
           '<em>' + esc(subVal(sp)) + '</em></span>';
       }).join('');
@@ -1975,9 +1991,11 @@ function openInfo(kind, slot) {
       h += '<div class="mainst">' + esc(mainName(d.mainP)) +
            '<em>' + esc(mainText(d.mainP, d.mainV, d.lvl)) + '</em></div>';
       if ((d.subs || []).length) {
+        const mk2 = modKeys(curId, p);
         h += '<div class="stlist">' + d.subs.map(sp => {
           const r = subRolls(sp);
-          return '<div>' + esc(shortName(sp.p)) + (r ? '<span class="rl">+' + r + '</span>' : '') +
+          return '<div' + (isModSub(sp, mk2) ? ' class="good"' : '') + '>' +
+                 esc(shortName(sp.p)) + (r ? '<span class="rl">+' + r + '</span>' : '') +
                  '<em>' + esc(subVal(sp)) + '</em></div>';
         }).join('') + '</div>';
       }
