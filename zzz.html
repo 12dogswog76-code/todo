@@ -195,9 +195,12 @@
   .hart .who{position:absolute;left:14px;right:14px;bottom:14px;z-index:2}
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
-  .hart .tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
-  .hart .tg{font-size:9.5px;padding:3px 8px;border-radius:5px;background:#ffffff14;color:var(--tx);display:inline-flex;align-items:center;gap:4px}
+  .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
+  .hart .tg{font-size:10px;line-height:1;height:22px;padding:0 9px;border-radius:6px;
+    background:#ffffff14;color:var(--tx);display:inline-flex;align-items:center;justify-content:center;gap:5px}
   .hart .tg svg{display:block}
+  .hart .tg .ic{display:inline-flex;align-items:center;justify-content:center}
+  .hart .tg .ic img{display:block}
   .hart .tg.el{background:color-mix(in srgb,var(--el) 26%,transparent);color:var(--el)}
 
   .hbody{padding:14px 16px 16px;min-width:0}
@@ -237,7 +240,7 @@
     padding:2px 5px;font-size:11px;text-align:right;outline:none;font-family:inherit;
   }
   .st .goalin:focus{border-color:var(--acc);color:var(--tx)}
-  .st.man .curin{color:var(--info)}
+  .st.man .curin{color:var(--tx);box-shadow:inset 2px 0 0 var(--info)}
   .st.hit .curin,.st.hit .val{color:var(--ok)}
   .st.miss .curin,.st.miss .val{color:var(--warn)}
   .st .gbar{grid-column:1/-1;height:2px;background:#ffffff10;border-radius:2px;overflow:hidden;margin-top:-2px}
@@ -545,7 +548,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v7';
+const APP_VER = 'v8';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
