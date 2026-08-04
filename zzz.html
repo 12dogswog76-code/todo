@@ -558,7 +558,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v13';
+const APP_VER = 'v14';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -631,7 +631,8 @@ function statHint(k, T, calcDisp) {
     'база агента' + (pt.agent != null ? ' ' + pt.agent : '') +
       (pt.weapon ? ' + оружие ' + pt.weapon : '') +
       (pt.core ? ' + ядро ' + pt.core : '') + ' = ' + pt.base,
-    'проценты с дисков и оружия: +' + (pt.pct * 100).toFixed(1) + '%',
+    'проценты: +' + (pt.pct * 100).toFixed(1) + '%' +
+      (pt.corePct ? ' (из них от ядра ' + pt.corePct + '%)' : ''),
     'плоские прибавки: +' + Math.round(pt.flat),
     'итог: ' + pt.base + ' × ' + (1 + pt.pct).toFixed(3) + ' + ' + Math.round(pt.flat) + ' = ' + calcDisp
   ];
@@ -2010,9 +2011,9 @@ function calcTotals(a, p, discs) {
   const hpBase  = b.hp + (+cb.hp || 0);
   const defBase = b.def + (+cb.def || 0);
   return {
-    hp:  Math.round(hpBase * (1 + pc('hpp')) + flat('hp')),
-    atk: Math.round(atkBase * (1 + pc('atkp')) + flat('atk')),
-    def: Math.round(defBase * (1 + pc('defp')) + flat('def')),
+    hp:  Math.round(hpBase * (1 + pc('hpp') + (+cb.hpp || 0) / 100) + flat('hp')),
+    atk: Math.round(atkBase * (1 + pc('atkp') + (+cb.atkp || 0) / 100) + flat('atk')),
+    def: Math.round(defBase * (1 + pc('defp') + (+cb.defp || 0) / 100) + flat('def')),
     cr:  (b.cr / 100) + (flat('cr') / 100) + (+cb.cr || 0),
     cd:  (b.cd / 100) + (flat('cd') / 100) + (+cb.cd || 0),
     ap:  Math.round(b.ap + flat('ap') + (+cb.ap || 0)),
@@ -2027,10 +2028,13 @@ function calcTotals(a, p, discs) {
     _weaponAtk: Math.round(w.atk),
     _baseAtk: Math.round(b.atk),
     _parts: {
-      hp:  { base: Math.round(hpBase),  pct: pc('hpp'),  flat: flat('hp'),  core: +cb.hp || 0 },
-      atk: { base: Math.round(atkBase), pct: pc('atkp'), flat: flat('atk'), core: +cb.atk || 0,
+      hp:  { base: Math.round(hpBase),  pct: pc('hpp') + (+cb.hpp || 0) / 100,
+             flat: flat('hp'),  core: +cb.hp || 0, corePct: +cb.hpp || 0 },
+      atk: { base: Math.round(atkBase), pct: pc('atkp') + (+cb.atkp || 0) / 100,
+             flat: flat('atk'), core: +cb.atk || 0, corePct: +cb.atkp || 0,
              agent: Math.round(b.atk), weapon: Math.round(w.atk) },
-      def: { base: Math.round(defBase), pct: pc('defp'), flat: flat('def'), core: +cb.def || 0 }
+      def: { base: Math.round(defBase), pct: pc('defp') + (+cb.defp || 0) / 100,
+             flat: flat('def'), core: +cb.def || 0, corePct: +cb.defp || 0 }
     }
   };
 }
