@@ -175,19 +175,24 @@
   .sheet{width:100%;max-width:1000px;background:var(--pan);border:1px solid var(--line);
     border-radius:14px;overflow:hidden}
 
-  .hero{display:grid;grid-template-columns:290px 1fr;align-items:start}
+  .hero{display:grid;grid-template-columns:290px 1fr}
   .hart{
-    /* Высота задана явно и одинакова для всех агентов. Если тянуть её за правой
-       колонкой (height:100%), арт скачком увеличивается при раскрытии описания
-       диска или оружия; если считать от пропорций картинки — у каждого агента
-       выходит свой размер. Прилипает при прокрутке, чтобы оставаться на виду. */
-    position:sticky;top:0;height:min(780px,80vh);
-    background:linear-gradient(180deg,#151820,#0b0d11);overflow:hidden;
+    position:relative;background:linear-gradient(180deg,#151820,#0b0d11);
+    overflow:hidden;min-height:420px;
   }
+  /* Персонаж — в блоке постоянной высоты: если растягивать его на всю колонку,
+     арт скачком увеличивается при раскрытии описания диска или оружия, а если
+     считать высоту от пропорций картинки — у каждого агента выходит свой размер. */
+  .hart .hfig{position:absolute;top:0;left:0;right:0;height:min(780px,80vh);overflow:hidden;z-index:1}
+  .hart .hfig img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .hart .hfig::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,transparent 70%,#0b0d1166 88%,#0b0d11b3 100%)}
+  /* остаток колонки закрываем размытым тем же артом, чтобы не было пустоты */
+  .hart .hbg{position:absolute;inset:0;background-size:cover;background-position:top center;
+    filter:blur(26px) brightness(.42) saturate(.85);transform:scale(1.2);z-index:0}
   .hart::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 40%,#0b0d11d9 62%,#0b0d11 78%),
                radial-gradient(60% 40% at 50% 0%,color-mix(in srgb,var(--el) 22%,transparent),transparent 70%)}
-  .hart img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .hart .lv{
     position:absolute;top:10px;left:10px;background:#0b0d11d9;border:1px solid var(--el);
     color:var(--el);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;z-index:2;
@@ -414,6 +419,7 @@
     /* на телефоне колонка во всю ширину: показываем только верх арта, иначе он
        занимает пол-экрана */
     .hart{position:static;min-height:0;height:290px}
+    .hart .hfig{height:100%}
     .stg{grid-template-columns:1fr}
     .drow{grid-template-columns:repeat(3,1fr)}
     /* «убрать из трекера» переносилось по буквам и ломало нижнюю панель */
@@ -548,7 +554,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v8';
+const APP_VER = 'v9';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -1324,10 +1330,13 @@ function renderSheet() {
   const art = agentPic(a, 'hero'), artAlt = picFallback(a);
 
   let h = '<div class="hero" style="--el:' + col + '"><div class="hart">' +
+    // низ колонки заполняем размытым тем же артом, чтобы не оставалось пустоты,
+    // когда правая колонка длиннее картинки
+    (art ? '<div class="hbg" style="background-image:url(' + esc(art) + ')"></div>' : '') +
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
-    (art ? '<img src="' + esc(art) + '" alt="" decoding="async" data-alt="' + esc(artAlt) + '" ' +
+    (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async" data-alt="' + esc(artAlt) + '" ' +
       'onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
-      '{this.src=this.dataset.alt}else{this.style.display=\'none\'}">' : '') +
+      '{this.src=this.dataset.alt}else{this.style.display=\'none\'}"></div>' : '') +
     '<div class="who"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span>' +
       '<div class="tags"><span class="tg el">' + elIcon(el, 16) + '</span>' +
       '<span class="tg">' + profIcon(a.prof, 16, '#e9ecf3') + '</span>' +
