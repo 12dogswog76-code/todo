@@ -362,6 +362,10 @@
   .foot2 button.pri:hover{background:#6ee79a}
 
   /* выбор картинками */
+  .pickhead{grid-column:1/-1;font-size:10.5px;font-weight:700;letter-spacing:.6px;
+    color:var(--tx3);margin:6px 0 2px;display:flex;align-items:center;gap:7px}
+  .pickhead::after{content:'';flex:1;height:1px;background:var(--line)}
+  .pickhead i{font-style:normal;color:var(--tx3);font-weight:500}
   .pickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:5px;
     max-height:200px;overflow-y:auto;padding:2px;margin-bottom:8px}
   .pick{border:1px solid var(--line);border-radius:9px;padding:4px 2px;cursor:pointer;text-align:center;
@@ -558,7 +562,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v16';
+const APP_VER = 'v17';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -1604,9 +1608,11 @@ function applySheet() {
     if (Math.abs(c - v) < 0.05) delete p.manual[k]; else p.manual[k] = v;
   });
   if (!p.core2) p.core2 = {};
+  const cbAuto = (EXTRA && EXTRA.core && EXTRA.core[curId]) || CORE_KNOWN[curId] || {};
   document.querySelectorAll('.cbin').forEach(i => {
-    const v = (i.value || '').trim();
-    if (v === '') delete p.core2[i.dataset.k]; else p.core2[i.dataset.k] = +v;
+    const k = i.dataset.k, v = (i.value || '').trim();
+    if (v === '' || Math.abs((+v) - (+cbAuto[k] || 0)) < 0.005) delete p.core2[k];
+    else p.core2[k] = +v;
   });
   const nt = $('fNote'); if (nt) p.note = nt.value.trim();
   refreshCur(p);
@@ -1625,8 +1631,9 @@ const CORE_KNOWN = {
 const CORE_BASE_KEYS = ['atk', 'hp', 'def'];
 function coreBonusOf(id, p) {
   const own = (p && p.core2) || {};
-  if (Object.keys(own).some(k => +own[k])) return own;   // вписанное вручную берём как есть
-  const full = (EXTRA && EXTRA.core && EXTRA.core[id]) || CORE_KNOWN[id] || {};
+  const full = Object.keys(own).some(k => +own[k])
+    ? own                                              // свои значения важнее справочника
+    : ((EXTRA && EXTRA.core && EXTRA.core[id]) || CORE_KNOWN[id] || {});
   const lvl = Math.max(0, Math.min(6, (p && p.core) || 0));
   if (lvl >= 6) return full;
   const odd  = Math.ceil(lvl / 2) / 3;    // сколько получено на A, C, E
@@ -1878,12 +1885,19 @@ function openEditor(kind, slot) {
           if (x.rarity !== y.rarity) return x.rarity === 'S' ? -1 : (y.rarity === 'S' ? 1 : 0);
           return (x.ru || x.en || '').localeCompare(y.ru || y.en || '', 'ru');
         });
-      $('pkEng').innerHTML = list.map(w =>
-        '<div class="pick' + (ed.id === w.id ? ' on' : '') + '" data-id="' + w.id +
+      // раскладываем по рангам: сплошной список из 95 позиций листать неудобно
+      const card = w => '<div class="pick' + (ed.id === w.id ? ' on' : '') + '" data-id="' + w.id +
         '" title="' + esc((w.ru || w.en) + ' · ' + w.rarity + '-ранг') + '">' +
         (w.icon ? '<img src="' + esc(imgUrl('engines', w.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<img alt="">') +
-        '<span>' + esc(w.ru || w.en || ('#' + w.id)) + '</span></div>').join('') ||
-        '<div class="hint" style="grid-column:1/-1">ничего не нашлось</div>';
+        '<span>' + esc(w.ru || w.en || ('#' + w.id)) + '</span></div>';
+      let out = '';
+      ['S', 'A', 'B'].forEach(rk => {
+        const part = list.filter(w => w.rarity === rk);
+        if (!part.length) return;
+        out += '<div class="pickhead">' + rk + '-ранг <i>' + part.length + '</i></div>' +
+               part.map(card).join('');
+      });
+      $('pkEng').innerHTML = out || '<div class="hint" style="grid-column:1/-1">ничего не нашлось</div>';
       $('pkEng').querySelectorAll('.pick').forEach(c => c.onclick = () => {
         ed.id = +c.dataset.id;
         $('pkEng').querySelectorAll('.pick').forEach(x => x.classList.remove('on'));
