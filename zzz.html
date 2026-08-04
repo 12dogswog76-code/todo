@@ -567,7 +567,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v26';
+const APP_VER = 'v27';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -854,9 +854,13 @@ const SK_PATH = {
   // шестерёнка — ядро
   6:'<path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6zm9.2 5-2.1-.5a7.4 7.4 0 0 0-.7-1.7l1.2-1.8-1.9-1.9-1.8 1.2a7.4 7.4 0 0 0-1.7-.7L13.7 2h-2.6l-.5 2.1a7.4 7.4 0 0 0-1.7.7L7.1 3.6 5.2 5.5l1.2 1.8a7.4 7.4 0 0 0-.7 1.7L2.8 12v2.6l2.1.5c.2.6.4 1.2.7 1.7l-1.2 1.8 1.9 1.9 1.8-1.2c.5.3 1.1.5 1.7.7l.5 2.1h2.6l.5-2.1c.6-.2 1.2-.4 1.7-.7l1.8 1.2 1.9-1.9-1.2-1.8c.3-.5.5-1.1.7-1.7l2.1-.5z"/>'
 };
+// номер навыка у Enka -> имя файла значка (0 базовая, 1 уклонение, 2 помощь,
+// 3 особая, 5 цепная — так называются скачанные картинки)
+const SKILL_ICON = { 0: '0', 2: '1', 6: '2', 1: '3', 3: '5' };
 function skillIcon(i, size, col) {
-  const fb = SK_PATH[i] ? svgW(SK_PATH[i], col || '#c8ccd6', size || 20) : '';
-  return iconImg(uiIcon('sk-' + i), fb, size || 20, '');
+  const n = SKILL_ICON[i] != null ? SKILL_ICON[i] : i;
+  const fb = SK_PATH[n] ? svgW(SK_PATH[n], col || '#c8ccd6', size || 20) : '';
+  return iconImg(uiIcon('sk-' + n), fb, size || 20, '');
 }
 
 // ─────────────── состояние ───────────────
@@ -1143,6 +1147,7 @@ function tgtHTML(p) {
     '<div class="hint">Готовность считается относительно этих значений: выставленное = 100%. ' +
     'Ноль убирает пункт из подсчёта совсем.' +
     '<br><button id="tgtSave" class="pri" style="margin-top:6px;padding:5px 12px">Применить</button> ' +
+    '<button id="tgtNow" style="margin-top:6px;padding:5px 12px">Принять текущее за 100%</button> ' +
     '<button id="tgtReset" style="margin-top:6px;padding:5px 12px">Сбросить на максимум</button></div></div>';
 }
 
@@ -1704,6 +1709,13 @@ function bindSheet() {
       if (k.indexOf('sk') === 0) t.sk[k.slice(2)] = v; else t[k] = v;
     });
     p2.tgt = t; save(curId); tgtOpen = false; renderSheet(); render();
+  };
+  const tnw = $('tgtNow');
+  if (tnw) tnw.onclick = () => {
+    const p2 = P(curId), sk = {};
+    SKILL_IDX.forEach(o => { sk[o.i] = (p2.sk && p2.sk[o.i]) || 1; });
+    p2.tgt = { lvl: p2.lvl || 0, core: p2.core || 0, w: (p2.w && p2.w.lvl) || 0, sk: sk };
+    save(curId); tgtOpen = false; renderSheet(); render();
   };
   const trs = $('tgtReset');
   if (trs) trs.onclick = () => { const p2 = P(curId); delete p2.tgt; save(curId); tgtOpen = false; renderSheet(); render(); };
