@@ -519,17 +519,19 @@
       <b>Все сборки</b> берут сохранённые сборки из твоего аккаунта на enka.network: там их
       сколько угодно, витрину менять не нужно. Аккаунт должен быть подтверждён, а сборки — сохранены.
     </div>
-    <div id="manualBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+    <div id="manualBox" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
       <div class="hint" style="margin-top:0">
-        <b>Enka не отдаёт данные напрямую сайту</b> (защита от запросов с чужих доменов).
-        Обходится в три шага:
+        <b>Если кнопки выше упёрлись в отказ</b> — Enka не всегда отвечает на запросы
+        с чужого сайта. Тогда забрать данные можно вручную, это быстро:
         <ol>
-          <li><a id="enkaLink" href="#" target="_blank" rel="noopener" style="color:#ffb3b3">открой свои данные на enka.network</a></li>
+          <li><a id="enkaLink" href="#" target="_blank" rel="noopener" style="color:var(--gold)">открыть витрину по UID</a>
+              &nbsp;·&nbsp;
+              <a id="enkaLinkB" href="#" target="_blank" rel="noopener" style="color:var(--gold)">открыть все сборки</a></li>
           <li>выдели всё и скопируй: <b>Ctrl+A</b>, затем <b>Ctrl+C</b></li>
           <li>вставь сюда и нажми «Применить»</li>
         </ol>
       </div>
-      <textarea id="manualJson" placeholder='Сюда вставить скопированный текст (начинается с {"PlayerInfo":...)'
+      <textarea id="manualJson" placeholder='Сюда вставить скопированный текст — и витрина, и сборки подойдут'
         style="width:100%;height:88px;background:var(--pan2);border:1px solid var(--line);border-radius:9px;
                color:var(--tx);padding:9px 12px;font-size:11.5px;font-family:Consolas,monospace;outline:none"></textarea>
       <div class="prow"><button id="manualGo" class="pri">Применить</button>
@@ -596,7 +598,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v45';
+const APP_VER = 'v46';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2486,6 +2488,23 @@ function applyEnka(av) {
 function enkaApiUrl(uid) { return 'https://enka.network/api/zzz/uid/' + uid + '/'; }
 
 // раскладываем полученный ответ по агентам
+// Ссылки на данные Enka всегда под рукой: и витрина по UID, и все сборки.
+function refreshEnkaLinks() {
+  const uid = ($('uidInput') && $('uidInput').value.trim().replace(/\D/g, '')) ||
+              localStorage.getItem(LS + '_uid') || '';
+  const a1 = $('enkaLink');
+  if (a1) a1.href = uid ? enkaApiUrl(uid) : 'https://enka.network/zzz/';
+  const raw = ($('enkaUser') && $('enkaUser').value.trim()) ||
+              localStorage.getItem(LS + '_enkauser') || '';
+  const m = raw.match(/enka\.network\/u\/([^\/]+)\/([^\/]+)/);
+  const user = m ? m[1] : raw.replace(/^@/, ''), hash = m ? m[2] : '';
+  const a2 = $('enkaLinkB');
+  if (a2) a2.href = user
+    ? 'https://enka.network/api/profile/' + encodeURIComponent(user) + '/hoyos/' +
+      (hash ? encodeURIComponent(hash) + '/builds/' : '')
+    : 'https://enka.network/';
+}
+
 function useEnkaData(data) {
   const show = (data && data.PlayerInfo && data.PlayerInfo.ShowcaseDetail) || null;
   const list = (show && show.AvatarList) || [];
@@ -2503,7 +2522,7 @@ function useEnkaData(data) {
   render();
   const nick = (show.SocialDetail && show.SocialDetail.ProfileDetail &&
                 show.SocialDetail.ProfileDetail.Nickname) || '';
-  $('manualBox').style.display = 'none';
+  refreshEnkaLinks();
   $('enkaMsg').innerHTML = '<b>Готово' + (nick ? ', ' + esc(nick) : '') + '.</b> Загружено: ' +
     esc(done.join(', ')) +
     (skip.length ? '<br>Не нашлись в базе (id ' + esc(skip.join(', ')) +
@@ -2605,11 +2624,10 @@ $('enkaGo').onclick = async () => {
 
   if (data) { useEnkaData(data); return; }
 
-  // автоматика не прошла — показываем ручной путь
-  $('enkaLink').href = api;
-  $('manualBox').style.display = 'block';
+  // автоматика не прошла — ручной путь и так на виду, просто подсказываем
+  refreshEnkaLinks();
   $('enkaMsg').innerHTML = '<b>Автоматически не вышло</b> (' + esc(lastErr) +
-    '). Enka не отвечает на запросы с чужого сайта — забери данные вручную, это быстро:';
+    '). Забери данные вручную по ссылке ниже.';
 };
 
 $('manualPaste').onclick = async () => {
@@ -2644,6 +2662,11 @@ const savedUid = localStorage.getItem(LS + '_uid');
 if (savedUid) $('uidInput').value = savedUid;
 const savedEnkaUser = localStorage.getItem(LS + '_enkauser');
 if (savedEnkaUser && $('enkaUser')) $('enkaUser').value = savedEnkaUser;
+['uidInput', 'enkaUser'].forEach(id2 => {
+  const el = $(id2);
+  if (el) el.oninput = () => refreshEnkaLinks();
+});
+refreshEnkaLinks();
 
 // ─────────────── облако (отдельный бин, как у денег) ───────────────
 function setCloud(cls, title) {
@@ -3037,7 +3060,7 @@ function togglePanel(id) {
                 ioPanel: 'ioBtn', helpPanel: 'helpBtn' };
   if (!wasOpen) $(map[id]).classList.add('on');
 }
-$('enkaBtn').onclick  = () => togglePanel('enkaPanel');
+$('enkaBtn').onclick  = () => { togglePanel('enkaPanel'); refreshEnkaLinks(); };
 $('cloudBtn').onclick = () => { togglePanel('cloudPanel'); cloudUI(); };
 $('modBtn').onclick   = () => { togglePanel('modPanel'); drawModTable(); };
 $('ioBtn').onclick    = () => togglePanel('ioPanel');
