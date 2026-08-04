@@ -14,6 +14,10 @@
     --tx:#e9ecf3; --tx2:#8b92a3; --tx3:#5a6070;
     --acc:#4ade80; --ok:#4ade80; --warn:#fbbf24; --info:#60a5fa; --gold:#ffd54a;
     --el:#e53e3e;
+    /* моноширинный для чисел — берём системный, чтобы ничего не подгружать */
+    --mono:ui-monospace,"Cascadia Mono","Segoe UI Mono",Consolas,"Roboto Mono",monospace;
+    /* объём панелей: светлая грань сверху-слева, тень снизу-справа, обе внутрь */
+    --glass:1px 1px 0 #ffffff0f inset, -2px -3px 14px #00000073 inset;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
@@ -23,13 +27,31 @@
     min-height:100vh; padding:22px 18px 70px;
     -webkit-font-smoothing:antialiased;
   }
+  /* Фон из двух неподвижных слоёв: снизу цветовые пятна, сверху почти невидимая
+     штриховка, которая очень медленно едет вбок — страница «дышит», даже когда
+     ничего не происходит. Узоры нарисованы градиентами, картинок нет, вес нулевой.
+     background-attachment:fixed намеренно не используем: именно он на телефонах
+     заставляет браузер перерисовывать фон на каждом кадре скролла. */
   body::before{
-    content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+    content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
     background:
       radial-gradient(1200px 600px at 15% -10%,#1b1f2a 0%,transparent 60%),
       radial-gradient(900px 500px at 90% 0%,#1a1520 0%,transparent 55%),
       linear-gradient(180deg,#08090c 0%,#0d0f14 60%,#12141a 100%);
   }
+  body::after{
+    content:'';position:fixed;inset:-60px;z-index:-1;pointer-events:none;
+    background:
+      repeating-linear-gradient(115deg,#ffffff07 0 1px,transparent 1px 9px),
+      repeating-linear-gradient(65deg,#ffffff05 0 1px,transparent 1px 23px),
+      repeating-linear-gradient(0deg,#ffffff03 0 1px,transparent 1px 72px);
+    background-size:240px 240px,240px 240px,100% 72px;
+  }
+  /* движение только на большом экране и только если человек не просил его отключить */
+  @media(min-width:900px) and (prefers-reduced-motion:no-preference){
+    body::after{animation:bgdrift 90s linear infinite}
+  }
+  @keyframes bgdrift{to{background-position:240px 0,-240px 0,0 0}}
   .wrap{max-width:1160px;margin:0 auto}
   @media(min-width:1400px){.wrap{max-width:1320px}}
   @media(min-width:1800px){.wrap{max-width:1520px}}
@@ -44,8 +66,16 @@
     width:30px;height:30px;flex:none;display:grid;place-items:center;font-size:15px;
     background:linear-gradient(135deg,#4ade80,#166534);
     clip-path:polygon(22% 0,100% 0,78% 100%,0 100%);
+    box-shadow:0 0 14px #4ade8040;
   }
-  .logo small{display:block;font-size:10px;font-weight:500;color:var(--tx3);letter-spacing:.3px}
+  /* название залито градиентом по самим буквам */
+  .logo>span:nth-of-type(2){
+    background:linear-gradient(135deg,#ffffff,#a8b4cc 55%,#6b7488);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
+  }
+  .logo small{display:block;font-size:10px;font-weight:500;color:var(--tx3);letter-spacing:.3px;
+    -webkit-text-fill-color:var(--tx3)}
   .top .sp{flex:1}
   .top a.back{color:var(--tx2);text-decoration:none;font-size:12.5px}
   .top a.back:hover{color:var(--acc)}
@@ -59,7 +89,7 @@
   .modbadge{float:right;font-size:10.5px;font-weight:600;color:var(--tx3);letter-spacing:0;
     text-transform:none;background:#ffffff10;border:1px solid var(--line);padding:2px 9px;border-radius:20px}
   .modbadge b{color:var(--gold);font-size:12px;margin-left:3px}
-  .ver{font-size:10px;font-weight:700;color:var(--tx3);background:#ffffff10;border:1px solid var(--line);
+  .ver{font-size:10px;font-weight:700;color:var(--tx3);background:#ffffff10;border:1px solid var(--line);font-family:var(--mono);
        padding:2px 7px;border-radius:20px;letter-spacing:.4px;white-space:nowrap}
   #cloudDot{width:8px;height:8px;border-radius:50%;background:#3a3f4a;display:inline-block;margin-left:2px}
   #cloudDot.cloud-ok{background:var(--ok)} #cloudDot.cloud-err{background:var(--acc)}
@@ -117,19 +147,32 @@
 
   /* ── сетка агентов ── */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px}
+  /* Вся палитра карточки выводится из одного цвета стихии, который приходит
+     в разметке как --el. Осветляем его, потом сильно затемняем — так получается
+     глубокий цветной тёмный, а не грязь. Никакого JS: считает сам CSS. */
   .card{
-    position:relative;cursor:pointer;background:var(--pan);
+    --cw:color-mix(in srgb,var(--el),#fff 22%);
+    --cmid:color-mix(in srgb,var(--cw),#000 76%);
+    --cdark:color-mix(in srgb,var(--cw),#000 89%);
+    position:relative;cursor:pointer;
+    background:linear-gradient(160deg,var(--cmid) 0%,var(--cdark) 58%,#0a0c10 100%);
     border:1px solid var(--line);overflow:hidden;
-    transition:border-color .16s,transform .16s;
+    box-shadow:var(--glass);
+    transition:border-color .16s,transform .16s,box-shadow .16s;
     content-visibility:auto;contain-intrinsic-size:auto 300px;
     clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);
   }
-  .card:hover{border-color:var(--el);transform:translateY(-3px)}
+  /* внешнее свечение в тон стихии — только при наведении, иначе 58 теней на экране
+     заметно подтормаживают скролл */
+  .card:hover{border-color:var(--el);transform:translateY(-3px);
+    box-shadow:var(--glass),0 8px 26px color-mix(in srgb,var(--el) 30%,transparent)}
+  .card.no{--cmid:color-mix(in srgb,var(--cw),#000 88%);--cdark:#0a0c10}
   .card .ph{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0b0d11}
   .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;image-rendering:auto}
+  /* низ фотографии гасим не в чёрный, а в цвет самой карточки — стыка не видно */
   .card .ph::after{
     content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,transparent 22%,#08090cb3 46%,#08090cf7 72%,#08090c 100%);
+    background:linear-gradient(180deg,transparent 22%,#08090cb3 46%,#0a0c10f0 74%,var(--cmid) 100%);
   }
   .card.no .ph img{opacity:.4}
   .card.no:hover .ph img{opacity:.75}
@@ -167,7 +210,8 @@
   .prb{border:1px solid #ffffff2e}
   .elb svg,.prb svg{display:block}
   .nmb{position:absolute;left:9px;right:9px;bottom:7px;z-index:2}
-  .nmb b{display:block;font-size:13.5px;font-weight:800;line-height:1.2;color:#fff;text-shadow:0 1px 2px #000,0 2px 10px #000}
+  .nmb b{display:block;font-size:13.5px;font-weight:800;line-height:1.2;color:#fff;
+    filter:drop-shadow(0 1px 2px #000) drop-shadow(0 2px 8px #000c)}
   .nmb span{display:block;font-size:9.5px;color:#bcc2d2;text-shadow:0 1px 3px #000}
   .pcirc{
     width:26px;height:26px;border-radius:50%;position:relative;
@@ -178,15 +222,15 @@
   /* число модификаторов под кольцом готовности */
   .modc{
     width:26px;height:26px;border-radius:50%;background:#0b0d11e6;
-    border:1px solid var(--gold);color:var(--gold);
+    border:1px solid var(--gold);color:var(--gold);font-family:var(--mono);
     font-size:11px;font-weight:800;display:grid;place-items:center;line-height:1;
-    box-shadow:0 2px 8px #000a;
+    box-shadow:0 2px 8px #000a,0 0 10px #ffd54a26;
   }
   .card.no .modc{opacity:.5}
   /* кольцо тоньше, чтобы число влезало в тот же размер, что и значки */
   .pcirc i{
     position:absolute;inset:2px;border-radius:50%;background:#0b0d11;display:grid;place-items:center;
-    font-style:normal;font-size:9.5px;color:#e6e9f2;text-shadow:0 1px 3px #000;
+    font-style:normal;font-size:9.5px;color:#e6e9f2;text-shadow:0 1px 3px #000;font-family:var(--mono);
   }
   .cbars{padding:8px 9px 9px;display:flex;flex-direction:column;gap:4px}
   .cb{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--tx3)}
@@ -194,14 +238,15 @@
   .cb .t{flex:1;height:3px;background:#ffffff12;border-radius:2px;overflow:hidden}
   .cb .t i{display:block;height:100%;background:var(--warn);border-radius:2px}
   .cb .t i.full{background:var(--ok)}
-  .cb span{width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+  .cb span{width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums;font-family:var(--mono)}
 
   /* ── модалка ── */
   .modal{display:none;position:fixed;inset:0;background:#000000cc;z-index:100;
     align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto}
   .modal.open{display:flex}
   .sheet{width:100%;max-width:1000px;background:var(--pan);border:1px solid var(--line);
-    border-radius:14px;overflow:hidden}
+    border-radius:16px;overflow:hidden;
+    box-shadow:var(--glass),0 24px 70px #000c}
 
   .hero{display:grid;grid-template-columns:290px 1fr}
   .hart{
@@ -231,8 +276,9 @@
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
-  .hart .tg{font-size:10.5px;line-height:26px;height:26px;padding:0 10px;border-radius:7px;
-    background:#ffffff14;color:var(--tx);display:inline-flex;align-items:center;justify-content:center;gap:5px}
+  .hart .tg{font-size:10.5px;line-height:26px;height:26px;padding:0 10px;border-radius:8px;
+    background:linear-gradient(180deg,#ffffff26,#ffffff0f);box-shadow:0 1px 0 #ffffff1a inset;
+    color:var(--tx);display:inline-flex;align-items:center;justify-content:center;gap:5px}
   .hart .tg svg{display:block}
   .hart .tg .ic{display:inline-flex;align-items:center;justify-content:center}
   .hart .tg .ic img{display:block}
@@ -245,7 +291,8 @@
     font-size:12px;padding:6px 15px;border-radius:8px;transition:.12s;font-family:inherit;
   }
   .htab:hover{border-color:var(--acc);color:var(--tx)}
-  .htab.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0;font-weight:600}
+  .htab.on{background:linear-gradient(180deg,#4ade8029,#4ade8014);border-color:var(--acc);
+    color:#a7f3c0;font-weight:600;box-shadow:0 1px 0 #ffffff14 inset,0 0 14px #4ade8024}
 
   .sect{margin-bottom:14px}
   .sect>h4{
@@ -262,7 +309,7 @@
     padding:4px 0;border-bottom:1px solid #ffffff08;font-size:12px}
   .st .lab{color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     display:flex;align-items:center;gap:6px}
-  .st .val{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+  .st .val{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono)}
   .st .curin{
     width:66px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--tx);
     padding:2px 5px;font-size:12px;text-align:right;outline:none;font-weight:700;
@@ -303,7 +350,8 @@
     to{opacity:1;transform:translateY(0);max-height:640px}
   }
   @media (prefers-reduced-motion:reduce){.drop>*{animation:none}}
-  .infobox{background:#0b0d11;border:1px solid var(--line);border-radius:11px;padding:12px;margin-top:9px}
+  .infobox{background:#0b0d11;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:9px;
+    box-shadow:var(--glass)}
   .infobox h5{font-size:12.5px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:8px}
   .infobox h5 img{width:26px;height:26px;object-fit:contain}
   .infobox .sub{font-size:10.5px;color:var(--tx3);margin-bottom:8px}
@@ -321,14 +369,17 @@
   .drow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
   .dcard{
     background:linear-gradient(170deg,var(--pan2),#0d0f14);border:1px solid var(--line);
-    border-radius:9px;padding:7px 5px 6px;text-align:center;cursor:pointer;transition:.12s;position:relative;
+    border-radius:12px;padding:7px 5px 6px;text-align:center;cursor:pointer;transition:.12s;position:relative;
+    box-shadow:var(--glass);
   }
-  .dcard:hover{border-color:var(--acc)}
+  .dcard:hover{border-color:var(--acc);
+    box-shadow:var(--glass),0 4px 16px #4ade8024}
   .dcard.plan{border-style:dashed}
   .dcard.plan.set{border-color:var(--info);background:linear-gradient(170deg,#1a2230,#0d0f14)}
   .dcard .sn{position:absolute;top:4px;left:6px;font-size:9px;color:var(--tx3);font-weight:700}
   .dcard img{width:34px;height:34px;object-fit:contain;margin:6px auto 3px;display:block}
-  .dcard .mn{font-size:12.5px;font-weight:800;color:var(--warn);line-height:1.15;font-variant-numeric:tabular-nums}
+  .dcard .mn{font-size:12.5px;font-weight:800;color:var(--warn);line-height:1.15;
+    font-variant-numeric:tabular-nums;font-family:var(--mono);letter-spacing:-.02em}
   .dcard .mnl{font-size:8.5px;color:var(--tx3);line-height:1.2;margin-bottom:4px}
   /* доп. характеристики, которые идут в зачёт модификаторов */
   .dcard .st2 span.good,.stlist div.good{color:var(--gold)}
@@ -337,26 +388,35 @@
   .dcard .st2{font-size:9px;color:var(--tx2);line-height:1.5;text-align:left;
     border-top:1px solid #ffffff0f;padding-top:4px;display:flex;flex-direction:column;gap:1px}
   .dcard .st2 span{display:flex;align-items:center;gap:3px}
-  .dcard .st2 em{margin-left:auto;font-style:normal;color:var(--tx)}
+  .dcard .st2 em{margin-left:auto;font-style:normal;color:var(--tx);font-family:var(--mono)}
   .dcard .st2 .rl{color:var(--gold);font-weight:700;font-size:8px}
   .dcard .edit{position:absolute;top:3px;right:4px;font-size:10px;color:var(--tx3);
     opacity:0;transition:.12s;cursor:pointer}
   .dcard:hover .edit{opacity:1}
   /* оценка диска — уступает место карандашу при наведении */
-  .dcard .dq{position:absolute;top:3px;right:5px;font-size:10px;font-weight:800;
-    line-height:1;transition:.12s}
+  .dcard .dq{position:absolute;top:3px;right:5px;font-size:11px;line-height:1;transition:.12s}
   .dcard:hover .dq{opacity:0}
-  .dq.qSp{color:var(--gold)} .dq.qS{color:var(--ok)} .dq.qA{color:var(--info)}
-  .dq.qB{color:var(--tx2)} .dq.qC,.dq.qD{color:var(--tx3)}
+  /* буквы залиты градиентом по самим глифам: S+ горячий оранжевый, дальше на спад */
+  .dq{font-weight:800;font-family:var(--mono);letter-spacing:-.02em;
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent}
+  .dq.qSp{background-image:linear-gradient(135deg,#fd8e12,#f95a14)}
+  .dq.qS {background-image:linear-gradient(135deg,#ffd54a,#e0a020)}
+  .dq.qA {background-image:linear-gradient(135deg,#0bd1d1,#0a8f9e)}
+  .dq.qB {background-image:linear-gradient(135deg,#c2c2c2,#747474)}
+  .dq.qC {background-image:linear-gradient(135deg,#8b92a3,#5a6070)}
+  .dq.qD {background-image:linear-gradient(135deg,#5a6070,#3a3f4a)}
   .dqbar{height:2px;border-radius:2px;background:#ffffff14;margin-top:4px;overflow:hidden}
   .dqbar i{display:block;height:100%;border-radius:2px}
   .dcard .edit:hover{color:var(--gold)}
   .dcard.empty .mn{color:var(--tx3)}
   .setline{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;font-size:10.5px}
-  .setpill{display:inline-flex;align-items:center;gap:5px;background:var(--pan2);
-    border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+  .setpill{display:inline-flex;align-items:center;gap:5px;
+    background:linear-gradient(180deg,#ffffff1a,#ffffff08);
+    border:1px solid var(--line);border-radius:8px;padding:3px 8px;
+    box-shadow:0 1px 0 #ffffff12 inset}
   .setpill img{width:15px;height:15px;object-fit:contain}
-  .setpill.full{border-color:var(--ok);color:var(--ok)}
+  .setpill.full{border-color:var(--ok);color:var(--ok);box-shadow:0 1px 0 #ffffff12 inset,0 0 12px #4ade8024}
 
   /* ядро и навыки */
   .core{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
@@ -398,7 +458,8 @@
   .foot2 button.ghost{background:transparent;border-color:transparent;color:var(--tx3);opacity:.55;font-size:11.5px}
   .foot2 button.ghost:hover{opacity:1;border-color:var(--line);color:var(--tx2)}
   .htab.favon{border-color:var(--gold);color:var(--gold);background:#ffd54a1a}
-  .foot2 button.pri{background:var(--acc);border-color:var(--acc);color:#06240f;font-weight:700}
+  .foot2 button.pri{background:linear-gradient(180deg,#63e694,var(--acc));border-color:var(--acc);
+    color:#06240f;font-weight:700;box-shadow:0 4px 16px #4ade8038}
   .foot2 button.pri:hover{background:#6ee79a}
 
   /* выбор картинками */
@@ -620,7 +681,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v50';
+const APP_VER = 'v51';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
