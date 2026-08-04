@@ -491,13 +491,18 @@
   <div class="panel" id="enkaPanel">
     <div class="prow" style="margin-top:0">
       <input type="text" id="uidInput" placeholder="UID аккаунта, например 1502024259" style="flex:1;min-width:200px;margin-bottom:0">
-      <button id="enkaGo" class="pri">Загрузить</button>
+      <button id="enkaGo" class="pri">Загрузить витрину</button>
+    </div>
+    <div class="prow" style="margin-top:6px">
+      <input type="text" id="enkaUser" placeholder="ник на enka.network или ссылка на профиль" style="flex:1;min-width:200px;margin-bottom:0">
+      <button id="enkaBuilds" class="pri">Загрузить все сборки</button>
     </div>
     <div class="hint" id="enkaMsg">
       Данные берутся с <b>enka.network</b> — из витрины профиля. Подтянутся уровень, ядро,
       навыки, М.Картины, W-Engine и все 6 дисков со статами.<br>
-      <b>Важно:</b> Enka отдаёт только тех агентов, кого ты поставил в <b>витрину профиля</b> в игре
-      (обычно до 6 штук). Нужны другие — поменяй витрину, подожди пару минут и нажми «Загрузить» снова.
+      <b>Витрина</b> отдаёт только тех, кто стоит в профиле в игре — обычно до шести.<br>
+      <b>Все сборки</b> берут сохранённые сборки из твоего аккаунта на enka.network: там их
+      сколько угодно, витрину менять не нужно. Аккаунт должен быть подтверждён, а сборки — сохранены.
     </div>
     <div id="manualBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
       <div class="hint" style="margin-top:0">
@@ -576,7 +581,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v38';
+const APP_VER = 'v39';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2443,6 +2448,72 @@ function useEnkaData(data) {
   return true;
 }
 
+// Сохранённые сборки из аккаунта на Enka: там лежат все агенты, а не только витрина.
+// Формат ответа: { "<id агента>": [ { live, name, avatar_data: {...как в витрине} } ] }
+$('enkaBuilds').onclick = async () => {
+  const raw = $('enkaUser').value.trim();
+  if (!raw) {
+    $('enkaMsg').innerHTML = '<b>Впиши ник с enka.network</b> или ссылку на свой профиль там.';
+    return;
+  }
+  localStorage.setItem(LS + '_enkauser', raw);
+  const m = raw.match(/enka\.network\/u\/([^\/]+)\/([^\/]+)/);
+  let user = m ? m[1] : raw.replace(/^@/, ''), hash = m ? m[2] : '';
+  $('enkaMsg').textContent = 'Ищу сохранённые сборки…';
+
+  const get = async (u) => {
+    const tries = [u,
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+      'https://corsproxy.io/?' + encodeURIComponent(u)];
+    for (const t of tries) {
+      try {
+        const r = await fetch(t, { headers: { 'Accept': 'application/json' } });
+        if (!r.ok) continue;
+        return JSON.parse(await r.text());
+      } catch (e) {}
+    }
+    return null;
+  };
+
+  try {
+    if (!hash) {
+      const hoyos = await get('https://enka.network/api/profile/' + encodeURIComponent(user) + '/hoyos/');
+      const keys = hoyos ? Object.keys(hoyos) : [];
+      // берём привязку к ZZZ, если их несколько
+      hash = keys.filter(k => {
+        const h = hoyos[k] || {};
+        return h.hoyo_type === 2 || String(h.hoyo_type) === '2' || keys.length === 1;
+      })[0] || keys[0] || '';
+      if (!hash) throw new Error('нет подтверждённых аккаунтов');
+    }
+    const builds = await get('https://enka.network/api/profile/' + encodeURIComponent(user) +
+                             '/hoyos/' + encodeURIComponent(hash) + '/builds/');
+    if (!builds || typeof builds !== 'object') throw new Error('сборки не пришли');
+
+    let ok = 0, skip = 0;
+    Object.keys(builds).forEach(aid => {
+      const list = builds[aid] || [];
+      if (!list.length) return;
+      // берём текущую сборку, если помечена live, иначе самую свежую
+      const b = list.filter(x => x.live)[0] || list.slice().sort((x, y) => (y.id || 0) - (x.id || 0))[0];
+      const av = b && b.avatar_data;
+      if (!av || !DB.byId[av.Id]) { skip++; return; }
+      if (applyEnka(av)) ok++;
+    });
+    localStorage.setItem(LS, JSON.stringify(prog));
+    scheduleSync();
+    render();
+    $('enkaMsg').innerHTML = ok
+      ? 'Загружено сборок: <b>' + ok + '</b>' + (skip ? ' · пропущено ' + skip : '') +
+        '. Профиль: ' + esc(user) + ' / ' + esc(hash)
+      : 'Сборок не нашлось. Проверь, что аккаунт подтверждён и сборки сохранены.';
+  } catch (e) {
+    $('enkaMsg').innerHTML = 'Не вышло: ' + esc(e.message || String(e)) +
+      '.<br>Проверь ник и что профиль на enka.network подтверждён.';
+  }
+};
+
 $('enkaGo').onclick = async () => {
   const uid = $('uidInput').value.trim().replace(/\D/g, '');
   if (!uid) { $('enkaMsg').innerHTML = '<b>Впиши UID.</b> Он виден в игре внизу экрана профиля.'; return; }
@@ -2508,6 +2579,8 @@ $('manualGo').onclick = () => {
 
 const savedUid = localStorage.getItem(LS + '_uid');
 if (savedUid) $('uidInput').value = savedUid;
+const savedEnkaUser = localStorage.getItem(LS + '_enkauser');
+if (savedEnkaUser && $('enkaUser')) $('enkaUser').value = savedEnkaUser;
 
 // ─────────────── облако (отдельный бин, как у денег) ───────────────
 function setCloud(cls, title) {
