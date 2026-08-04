@@ -567,7 +567,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v22';
+const APP_VER = 'v23';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const $ = id => document.getElementById(id);
@@ -661,9 +661,17 @@ function statHint(k, T, calcDisp, isMan) {
 // Список для модификаторов — рекомендуемые доп. характеристики из гайда по сборке
 // (extra.subs). Подсвеченные жёлтым характеристики агента это другой список:
 // он показывает, к чему стремиться в итоге, и для подсчёта не годится.
+// Правки к тому, что отдаёт gachabase: там местами указана «Сила атаки %»,
+// хотя в игре рекомендуется «Сила атаки» — а она покрывает и плоскую доп.
+// характеристику, и процентную. Сверено с игрой поимённо.
+const SUBS_FIX = {
+  1491: ['atk', 'er'],   // Санна — сила атаки и восстановление энергии, в игре 16
+  1581: ['atk', 'ap']    // Ремиэлла — сила атаки и знание аномалии, в игре 15
+};
 function subsOf(id, p) {
   const own = p && Array.isArray(p.subs2) ? p.subs2 : null;
   if (own && own.length) return own;                 // поправленный вручную список
+  if (SUBS_FIX[id]) return SUBS_FIX[id];
   const s = (EXTRA && EXTRA.subs && EXTRA.subs[id]) || null;
   return (s && s.length) ? s : priOf(id);
 }
