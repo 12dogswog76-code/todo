@@ -65,7 +65,7 @@
   .logo .mark{
     width:30px;height:30px;flex:none;display:grid;place-items:center;font-size:15px;
     background:linear-gradient(135deg,#4ade80,#166534);
-    clip-path:polygon(22% 0,100% 0,78% 100%,0 100%);
+    border-radius:9px;
     box-shadow:0 0 14px #4ade8040;
   }
   /* название залито градиентом по самим буквам */
@@ -110,10 +110,13 @@
   .sc.lead > div{min-width:0}
   .sc{
     background:linear-gradient(160deg,var(--pan2),var(--pan));
-    border:1px solid var(--line);padding:12px 14px;position:relative;overflow:hidden;
-    clip-path:polygon(0 0,100% 0,100% 78%,calc(100% - 14px) 100%,0 100%);
+    border:1px solid var(--line);padding:13px 16px;position:relative;overflow:hidden;
+    border-radius:16px;box-shadow:var(--glass);transition:.18s;
   }
-  .sc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold);opacity:.8}
+  .sc:hover{border-color:#ffffff24;box-shadow:var(--glass),0 6px 22px #0009}
+  .sc::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:3px;
+    border-radius:0 3px 3px 0;background:var(--gold);opacity:.85;
+    box-shadow:0 0 10px color-mix(in srgb,var(--gold) 60%,transparent)}
   .sc b{display:block;font-size:23px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
   .sc span{display:block;font-size:10.5px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
   .sc.a b{color:var(--gold)} .sc.g b{color:var(--ok)}
@@ -145,6 +148,41 @@
   .ic.nf i{display:block}
   .fsep{width:1px;height:16px;background:var(--line);margin:0 4px}
 
+  /* ── секции сетки: избранные отдельно от остальных ── */
+  #grid.split{display:block}
+  .gsec{margin-bottom:20px}
+  .gsec>h4{
+    display:flex;align-items:center;gap:9px;margin-bottom:10px;
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--tx3);
+  }
+  .gsec>h4::after{content:'';flex:1;height:1px;
+    background:linear-gradient(90deg,#ffffff1f,transparent)}
+  .gsec>h4 i{font-style:normal;font-size:10.5px;color:var(--tx3);background:#ffffff0f;
+    border:1px solid var(--line);border-radius:20px;padding:1px 9px;order:3}
+  .gsec>h4 .gstar{color:var(--gold);font-size:14px;text-shadow:0 0 10px #ffd54a80}
+  .gsec:first-child>h4{color:var(--gold)}
+  .gsec:first-child>h4::after{background:linear-gradient(90deg,#ffd54a3d,transparent)}
+
+  /* ── значки ранга: буква на объёмной плашке, а не просто цветной текст ── */
+  .rankb{
+    display:inline-grid;place-items:center;font-family:var(--mono);font-weight:800;
+    line-height:1;color:#fff;border-radius:9px;position:relative;
+    text-shadow:0 1px 2px #0009;
+    box-shadow:0 1px 0 #ffffff5c inset, 0 -2px 6px #0006 inset, 0 2px 7px #0009;
+  }
+  .rankb::after{content:'';position:absolute;left:2px;right:2px;top:2px;height:38%;
+    border-radius:7px 7px 60% 60%/7px 7px 100% 100%;
+    background:linear-gradient(180deg,#ffffff4d,#ffffff00);pointer-events:none}
+  .rankb.big{width:30px;height:30px;font-size:14px;letter-spacing:-.5px;border-radius:10px}
+  .rankb.sm{width:23px;height:23px;font-size:11px;letter-spacing:-.4px}
+  .rankb.rSp{background:linear-gradient(160deg,#7fd7ff,#1a8fd6);box-shadow:0 1px 0 #ffffff70 inset,0 -2px 6px #00000059 inset,0 2px 10px #1a8fd66b}
+  .rankb.rS {background:linear-gradient(160deg,#ffb43d,#f2620f);box-shadow:0 1px 0 #ffffff70 inset,0 -2px 6px #00000059 inset,0 2px 10px #f2620f6b}
+  .rankb.rSm{background:linear-gradient(160deg,#ffd76b,#e0951a)}
+  .rankb.rA {background:linear-gradient(160deg,#c6a2ff,#7a3fd0);box-shadow:0 1px 0 #ffffff70 inset,0 -2px 6px #00000059 inset,0 2px 10px #7a3fd06b}
+  .rankb.rB {background:linear-gradient(160deg,#8fc4ff,#2f6fc4)}
+  .rankb.rC {background:linear-gradient(160deg,#c8ccd6,#6d7381)}
+  .rankb.rD {background:linear-gradient(160deg,#8d93a1,#474c58)}
+
   /* ── сетка агентов ── */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px}
   /* Вся палитра карточки выводится из одного цвета стихии, который приходит
@@ -154,18 +192,28 @@
     --cw:color-mix(in srgb,var(--el),#fff 22%);
     --cmid:color-mix(in srgb,var(--cw),#000 76%);
     --cdark:color-mix(in srgb,var(--cw),#000 89%);
-    position:relative;cursor:pointer;
+    position:relative;cursor:pointer;border-radius:18px;
     background:linear-gradient(160deg,var(--cmid) 0%,var(--cdark) 58%,#0a0c10 100%);
     border:1px solid var(--line);overflow:hidden;
     box-shadow:var(--glass);
-    transition:border-color .16s,transform .16s,box-shadow .16s;
+    transition:border-color .18s,transform .18s,box-shadow .18s;
     content-visibility:auto;contain-intrinsic-size:auto 300px;
-    clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);
   }
-  /* внешнее свечение в тон стихии — только при наведении, иначе 58 теней на экране
-     заметно подтормаживают скролл */
-  .card:hover{border-color:var(--el);transform:translateY(-3px);
-    box-shadow:var(--glass),0 8px 26px color-mix(in srgb,var(--el) 30%,transparent)}
+  /* Свечение в тон стихии — только при наведении: 58 постоянных теней заметно
+     подтормаживают скролл. Зато при наведении не жалеем: два слоя света
+     наружу плюс подсвеченная грань внутри дают тот самый «пузырёк». */
+  .card:hover{
+    border-color:color-mix(in srgb,var(--el) 70%,#fff);
+    transform:translateY(-4px) scale(1.015);
+    box-shadow:
+      1px 1px 0 #ffffff26 inset,
+      -2px -3px 16px #00000073 inset,
+      0 0 0 1px color-mix(in srgb,var(--el) 55%,transparent),
+      0 6px 20px color-mix(in srgb,var(--el) 45%,transparent),
+      0 14px 46px color-mix(in srgb,var(--el) 28%,transparent);
+  }
+  .card:hover .ph img{transform:scale(1.04)}
+  .card .ph img{transition:transform .35s ease}
   .card.no{--cmid:color-mix(in srgb,var(--cw),#000 88%);--cdark:#0a0c10}
   .card .ph{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0b0d11}
   .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;image-rendering:auto}
@@ -179,22 +227,19 @@
   .card.no .nmb b{color:#cfd4e0}
 
   .fav{
-    position:absolute;left:6px;bottom:52px;z-index:3;font-size:17px;line-height:1;cursor:pointer;
+    position:absolute;left:8px;bottom:52px;z-index:3;font-size:17px;line-height:1;cursor:pointer;
     color:#ffffff3d;text-shadow:0 1px 4px #000;transition:.12s;
   }
   .fav:hover{color:#ffd54a99;transform:scale(1.15)}
   .fav.on{color:var(--gold);text-shadow:0 0 8px #ffd54a80,0 1px 3px #000}
-  .rk{
-    position:absolute;top:0;left:0;font-size:10.5px;font-weight:800;padding:3px 9px 4px;
-    clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);
-  }
-  .rk.S{background:linear-gradient(135deg,#ffca28,#c9971a);color:#2a1e00}
-  .rk.A{background:linear-gradient(135deg,#c07af0,#7a3fb0);color:#fff}
+  .rk{position:absolute;top:7px;left:7px;z-index:3}
+
   /* стихия, специальность, готовность и модификатор — одной колонкой справа */
   /* ранг из тир-листа — слева сверху, под значком редкости */
-  .tierb{position:absolute;left:6px;top:30px;z-index:3;min-width:22px;height:18px;padding:0 5px;
-    border-radius:5px;display:grid;place-items:center;font-size:10.5px;font-weight:800;
-    background:#0b0d11e0;border:1px solid var(--line);color:var(--tx2);line-height:1}
+  .tierb{position:absolute;left:7px;top:35px;z-index:3;min-width:23px;height:19px;padding:0 6px;
+    border-radius:20px;display:grid;place-items:center;font-size:10.5px;font-weight:800;
+    background:#0b0d11e6;border:1px solid var(--line);color:var(--tx2);line-height:1;
+    box-shadow:0 1px 0 #ffffff17 inset}
   .tierb.tSp{border-color:#ff5c8a;color:#ff9ab6}
   .tierb.tS{border-color:#ffb020;color:#ffcc66}
   .tierb.tA{border-color:#a06bff;color:#c9a7ff}
@@ -393,19 +438,9 @@
   .dcard .edit{position:absolute;top:3px;right:4px;font-size:10px;color:var(--tx3);
     opacity:0;transition:.12s;cursor:pointer}
   .dcard:hover .edit{opacity:1}
-  /* оценка диска — уступает место карандашу при наведении */
-  .dcard .dq{position:absolute;top:3px;right:5px;font-size:11px;line-height:1;transition:.12s}
+  /* оценка диска — значок в углу, уступает место карандашу при наведении */
+  .dcard .dq{position:absolute;top:5px;right:5px;transition:.12s;z-index:2}
   .dcard:hover .dq{opacity:0}
-  /* буквы залиты градиентом по самим глифам: S+ горячий оранжевый, дальше на спад */
-  .dq{font-weight:800;font-family:var(--mono);letter-spacing:-.02em;
-    -webkit-background-clip:text;background-clip:text;
-    -webkit-text-fill-color:transparent;color:transparent}
-  .dq.qSp{background-image:linear-gradient(135deg,#fd8e12,#f95a14)}
-  .dq.qS {background-image:linear-gradient(135deg,#ffd54a,#e0a020)}
-  .dq.qA {background-image:linear-gradient(135deg,#0bd1d1,#0a8f9e)}
-  .dq.qB {background-image:linear-gradient(135deg,#c2c2c2,#747474)}
-  .dq.qC {background-image:linear-gradient(135deg,#8b92a3,#5a6070)}
-  .dq.qD {background-image:linear-gradient(135deg,#5a6070,#3a3f4a)}
   .dqbar{height:2px;border-radius:2px;background:#ffffff14;margin-top:4px;overflow:hidden}
   .dqbar i{display:block;height:100%;border-radius:2px}
   .dcard .edit:hover{color:var(--gold)}
@@ -760,7 +795,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v61';
+const APP_VER = 'v62';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1554,7 +1589,17 @@ function render() {
     return (x.ru || '').localeCompare(y.ru || '', 'ru');
   });
 
-  $('grid').innerHTML = list.map(cardHTML).join('');
+  // Избранные показываем отдельной полосой сверху, чтобы не искать их в общем
+  // списке. Заголовок появляется только когда избранные вообще есть.
+  const fav = list.filter(a => prog[a.id] && prog[a.id].fav);
+  const rest = list.filter(a => !(prog[a.id] && prog[a.id].fav));
+  $('grid').innerHTML = fav.length
+    ? '<div class="gsec"><h4><span class="gstar">★</span>Избранные<i>' + fav.length + '</i></h4>' +
+      '<div class="grid">' + fav.map(cardHTML).join('') + '</div></div>' +
+      (rest.length ? '<div class="gsec"><h4>Остальные<i>' + rest.length + '</i></h4>' +
+        '<div class="grid">' + rest.map(cardHTML).join('') + '</div></div>' : '')
+    : list.map(cardHTML).join('');
+  $('grid').classList.toggle('split', !!fav.length);
   $('emptyMsg').style.display = list.length ? 'none' : 'block';
   document.querySelectorAll('.card').forEach(c => {
     c.onclick = e => {
@@ -1595,6 +1640,14 @@ function img(src, cls, alt) {
   return '<img class="' + cls + '" src="' + esc(src) + '" alt="' + esc(alt || '') + '" loading="lazy" onerror="this.style.display=\'none\'">';
 }
 
+// Значок ранга: буква на объёмной плашке. Используется и для редкости агента,
+// и для оценки диска — вид один, меняется только размер.
+function rankBadge(letter, size, title) {
+  const cls = { 'S+': 'rSp', 'S': 'rS', 'S-': 'rSm', 'A': 'rA', 'B': 'rB', 'C': 'rC', 'D': 'rD' };
+  return '<span class="rankb ' + (size || 'sm') + ' ' + (cls[letter] || 'rC') + '"' +
+         (title ? ' title="' + esc(title) + '"' : '') + '>' + esc(letter) + '</span>';
+}
+
 function cardHTML(a) {
   const p = prog[a.id], have = !!(p && p.have), pc = pctOf(a.id);
   const mods = have ? modifiersOf(a.id, p).sum : 0;
@@ -1624,7 +1677,7 @@ function cardHTML(a) {
       (pic ? '<img src="' + esc(pic) + '" alt="" width="480" height="480" loading="lazy" decoding="async" ' +
         'data-alt="' + esc(picAlt) + '" onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
         '{this.src=this.dataset.alt}else{this.style.display=\'none\'}">' : '') +
-      '<span class="rk ' + esc(a.rarity) + '">' + esc(a.rarity) + '</span>' +
+      '<span class="rk">' + rankBadge(a.rarity, 'sm', 'Редкость ' + a.rarity) + '</span>' +
       (tierOf(a.id) ? '<span class="tierb t' + esc(tierOf(a.id).tier.replace('+', 'p')) +
         '" title="' + esc((TIER && TIER.sourceName) || 'тир-лист') + ': ' + esc(tierOf(a.id).tier) +
         ' · ' + esc(((TIER && TIER.roles) || {})[tierOf(a.id).role] || '') + '">' +
@@ -1948,7 +2001,7 @@ function renderSheet() {
         '<div><div class="wn">' + esc(w ? (w.ru || w.en) : 'не выбран') + '</div>' +
         '<div class="wd">' + (w ? esc(w.rarity) + '-ранг · ' + esc(PROF[w.prof] || w.prof)
                                 : 'нажми, чтобы указать') + '</div></div>' +
-        (w ? '<div class="wr"><b>' + Math.round(wb.atk) + '</b>' +
+        (w ? '<div class="wr"><b>АТК ' + Math.round(wb.atk) + '</b>' +
              (wb.sec ? esc(shortName(wb.sec.p)) + ' ' + esc(secText(wb.sec)) + ' · ' : '') +
              'Ур.' + (wSrc.w.lvl || 0) + ' · P' + (wSrc.w.phase || 1) + '</div>' : '') +
         '<span class="edit" id="wEditBtn" title="изменить">✎</span>' +
@@ -1965,8 +2018,8 @@ function renderSheet() {
         'Средняя оценка шести слотов под этого агента. Считается по доп. характеристикам:\n' +
         'у диска максимум ' + DISC_MAX_ROLLS + ' прокруток, в зачёт идут только нужные агенту.\n' +
         'Пустой слот считается нулём. Список нужных характеристик правится кнопкой ' +
-        '«модификаторы» в блоке характеристик.') + '">сборка <b class="dq q' + bg.c + '">' +
-        bg.g + '</b> · ' + bs.pct + '%</span>' : '') +
+        '«модификаторы» в блоке характеристик.') + '">сборка ' +
+        rankBadge(bg.g, 'sm') + ' <b>' + bs.pct + '%</b></span>' : '') +
       '</h4><div class="drow">';
     for (let sl = 1; sl <= 6; sl++) {
       const d = list.find(x => x.slot === sl);
@@ -1985,7 +2038,7 @@ function renderSheet() {
            esc((d && suit ? (suit.ru || suit.en) : 'слот ' + sl) +
                (sc ? '\n\n' + discHint(sc, d) : '')) + '">' +
         '<span class="sn">' + sl + '</span><span class="edit" data-edit="' + sl + '">✎</span>' +
-        (sc ? '<span class="dq q' + sc.cls + '">' + sc.grade + '</span>' : '') +
+        (sc ? '<span class="dq">' + rankBadge(sc.grade, 'big') + '</span>' : '') +
         (suit && suit.icon ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">'
                            : '<img alt="">') +
         '<div class="mn">' + esc(d ? mainText(d.mainP, d.mainV, d.lvl) : '—') + '</div>' +
