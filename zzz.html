@@ -164,6 +164,15 @@
     display:inline-flex;align-items:center;gap:5px;
   }
   .chip.f-el,.chip.f-pr{padding:5px 8px}
+  /* внешняя ссылка в строке фильтров — прижата к правому краю */
+  .chip.link{margin-left:auto;text-decoration:none;color:var(--tx3);
+    background:linear-gradient(180deg,#ffffff0d,#ffffff03);
+    box-shadow:0 1px 0 #ffffff0f inset}
+  .chip.link:hover{color:var(--gold);border-color:var(--gold);
+    box-shadow:0 1px 0 #ffffff17 inset,0 0 14px #ffd54a2e}
+  .chip.link svg{opacity:.8}
+  .chip.link:hover svg{opacity:1}
+  @media(max-width:720px){ .chip.link{margin-left:0} }
   .chip:hover{border-color:var(--acc);color:var(--tx)}
   .chip.on{border-color:var(--c,var(--acc));background:color-mix(in srgb,var(--c,var(--acc)) 14%,transparent);color:var(--c,#ffb3b3)}
   .chip svg{display:block;flex:none}
@@ -859,7 +868,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v68';
+const APP_VER = 'v69';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1593,6 +1602,14 @@ function renderFilters() {
     h += '<span class="chip f-sort' + (ui.sort === 'tier' ? ' on' : '') +
          '" data-v="tier">по тир-листу</span>';
   }
+  // Официальный конструктор сборок HoYoLab. Агент внутри выбирается на самой
+  // странице и в адрес не попадает, поэтому ссылка общая, а не по агенту.
+  h += '<a class="chip link" href="https://act.hoyolab.com/zzz/gt/character-builder-h/index.html' +
+       '?utm_id=8&lang=ru-ru&utm_source=hoyolab&utm_medium=tools#/" target="_blank" rel="noopener" ' +
+       'title="Официальное руководство по развитию агентов на HoYoLab">' +
+       '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">' +
+       '<path d="M12 2 3 6.5v5c0 5 3.8 9.7 9 10.5 5.2-.8 9-5.5 9-10.5v-5L12 2zm0 4.2 2 4 4.4.5-3.3 3 .9 4.3L12 15.8 8 18l.9-4.3-3.3-3 4.4-.5 2-4z"/>' +
+       '</svg>Руководство</a>';
   $('filters').innerHTML = h;
 
   const tog = (arr, v) => { const i = arr.indexOf(v); if (i === -1) arr.push(v); else arr.splice(i, 1); };
