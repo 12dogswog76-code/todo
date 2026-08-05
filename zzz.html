@@ -616,7 +616,9 @@
             навыки, оружие и диски. Витрину в игре трогать не нужно.</li>
       </ol>
       <p>Дальше можно ничего не делать: поменял диск в игре — нажми кнопку ещё раз,
-         данные обновятся. Регистрироваться нигде не надо.</p>
+         данные обновятся. Регистрироваться нигде не надо.<br>
+         Характеристики дисков полностью видны у тех, кто стоит в <b>витрине</b> профиля в игре —
+         поставь туда тех, кто важен.</p>
     </div>
 
     <div class="prow" style="margin-top:12px">
@@ -628,12 +630,12 @@
     </div>
 
     <details class="more" id="ownBox">
-      <summary>Свой доступ HoYoLab — чтобы приехали все агенты и статы дисков</summary>
+      <summary>Свой доступ HoYoLab — если хочешь статы всех дисков, а не только витрины</summary>
       <div class="hint" style="margin-top:8px">
-        Без этого HoYoLab отдаёт чужой аккаунт урезанным: <b>девять агентов</b> и диски
-        без характеристик. Так устроен их API, обойти нельзя. Со своим доступом приедет
-        всё: полный список, характеристики дисков и итоговые статы.<br>
-        Хозяину сайта вставлять ничего не нужно — у него доступ уже прописан.
+        Обычно это не нужно. Чужой аккаунт HoYoLab отдаёт урезанным — девять агентов и диски
+        без характеристик, — но характеристики витринных агентов трекер сам добирает с Enka,
+        так что кнопка работает и без всякой возни.<br>
+        Свой доступ нужен, только если хочешь <b>статы всех дисков</b>, а не шести витринных.
       </div>
       <ol class="hint" style="margin:8px 0 0 18px">
         <li>Открой <a href="https://www.hoyolab.com/" target="_blank" rel="noopener" style="color:var(--gold)">hoyolab.com</a> и войди в аккаунт</li>
@@ -752,7 +754,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v58';
+const APP_VER = 'v59';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3154,19 +3156,49 @@ $('hoyoGo').onclick = async () => {
                     'в панели «↕ Импорт / экспорт».';
     return;
   }
+  // Если хроника отдала чужой аккаунт урезанным, характеристики дисков добираем
+  // с Enka: она по тому же UID отдаёт витрину целиком и без всяких доступов.
+  // Пользователь при этом ничего лишнего не делает — всё в одно нажатие.
+  let fromEnka = 0;
+  if (thin) {
+    msg.textContent = 'Догружаю характеристики дисков…';
+    const api = enkaApiUrl(uid);
+    const tries = myApiUrls('/uid/' + uid).concat([
+      api,
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(api),
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(api)
+    ]);
+    for (const u of tries) {
+      try {
+        const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+        const j = JSON.parse(await r.text());
+        if (j && j.error) continue;
+        const list = (((j || {}).PlayerInfo || {}).ShowcaseDetail || {}).AvatarList || [];
+        if (!list.length) continue;
+        list.forEach(av => { if (DB.byId[av.Id] && applyEnka(av)) fromEnka++; });
+        break;
+      } catch (e) {}
+    }
+  }
+
   save();
   localStorage.setItem(LS, JSON.stringify(prog));
   scheduleSync();
   render();
   refreshEnkaLinks();
-  msg.innerHTML = '<b>Готово.</b> Загружено агентов: <b>' + done.length + '</b> ' +
-    '<span style="color:var(--ok)">· хроника HoYoLab</span>' +
-    (thin ? '<br><b style="color:var(--warn)">Данные урезаны.</b> HoYoLab отдал чужой аккаунт ' +
-      'без характеристик дисков и только девять агентов. Чтобы приехало всё, задай свой доступ — ' +
-      'блок «Свой доступ HoYoLab» ниже.' : '') +
+
+  const still = thin && !fromEnka;
+  msg.innerHTML = '<b>Готово.</b> Загружено агентов: <b>' + done.length + '</b>' +
+    (fromEnka ? ', из них с характеристиками дисков: <b>' + fromEnka + '</b>' : '') +
+    ' <span style="color:var(--ok)">· хроника HoYoLab' + (fromEnka ? ' + витрина Enka' : '') + '</span>' +
+    (thin && fromEnka ? '<br><span style="color:var(--tx3)">У остальных видны уровень, ядро, навыки, ' +
+      'оружие и комплекты дисков, но не характеристики: чужой аккаунт HoYoLab отдаёт без них. ' +
+      'Хочешь больше — поставь нужных агентов в витрину в игре, витрина приходит полностью.</span>' : '') +
+    (still ? '<br><b style="color:var(--warn)">Характеристики дисков не пришли.</b> ' +
+      'Поставь агентов в витрину профиля в игре и нажми кнопку ещё раз — или задай свой доступ ' +
+      'в блоке ниже.' : '') +
     (skip.length ? '<br>Не нашлись в базе (id ' + esc(skip.join(', ')) +
-      ') — нажми «⟳ Обновить список агентов» в панели «↕ Импорт / экспорт».' : '') +
-    '<br><span style="color:var(--tx3)">Характеристики взяты из игры как есть, без пересчёта.</span>';
+      ') — нажми «⟳ Обновить список агентов» в панели «↕ Импорт / экспорт».' : '');
 };
 
 $('enkaGo').onclick = async () => {
