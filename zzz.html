@@ -681,7 +681,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v51';
+const APP_VER = 'v53';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2704,7 +2704,15 @@ function refreshEnkaLinks() {
     : 'https://enka.network/';
 }
 
-function useEnkaData(data) {
+// Свой прокси к Enka. Живёт в том же Cloudflare Worker, что и push-уведомления
+// (см. cloudflare/alextask-worker.js). Сначала пробуем свой домен — там нет ни
+// CORS, ни блокировок; если маршрут не привязан, идём напрямую на workers.dev.
+// Пока воркер не обновлён, оба адреса просто не отвечают, и трекер уходит
+// на прежние запасные зеркала.
+const MYAPI = ['/api/zzz', 'https://alextask-push.12dogswog76.workers.dev/api/zzz'];
+const myApiUrls = tail => MYAPI.map(b => b + tail);
+
+function useEnkaData(data, viaProxy) {
   const show = (data && data.PlayerInfo && data.PlayerInfo.ShowcaseDetail) || null;
   const list = (show && show.AvatarList) || [];
   if (!list.length) {
@@ -2724,6 +2732,7 @@ function useEnkaData(data) {
   refreshEnkaLinks();
   $('enkaMsg').innerHTML = '<b>Готово' + (nick ? ', ' + esc(nick) : '') + '.</b> Загружено: ' +
     esc(done.join(', ')) +
+    (viaProxy ? ' <span style="color:var(--ok)">· через свой прокси</span>' : '') +
     (skip.length ? '<br>Не нашлись в базе (id ' + esc(skip.join(', ')) +
       ') — нажми «⟳ Обновить список агентов» в панели «↕ Импорт / экспорт».' : '');
   return true;
@@ -2803,16 +2812,18 @@ $('enkaBuilds').onclick = async () => {
   let user = m ? m[1] : raw.replace(/^@/, ''), hash = m ? m[2] : '';
   $('enkaMsg').textContent = 'Ищу сохранённые сборки…';
 
-  const get = async (u) => {
-    const tries = [u,
+  // mine — тот же запрос на своём прокси (свой домен, затем workers.dev)
+  const get = async (u, mine) => {
+    const tries = (mine || []).concat([u,
       'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
       'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
-      'https://corsproxy.io/?' + encodeURIComponent(u)];
+      'https://corsproxy.io/?' + encodeURIComponent(u)]);
     for (const t of tries) {
       try {
         const r = await fetch(t, { headers: { 'Accept': 'application/json' } });
-        if (!r.ok) continue;
-        return JSON.parse(await r.text());
+        const j = JSON.parse(await r.text());
+        if (!r.ok || (j && j.error)) continue;
+        return j;
       } catch (e) {}
     }
     return null;
@@ -2820,7 +2831,8 @@ $('enkaBuilds').onclick = async () => {
 
   try {
     if (!hash) {
-      const hoyos = await get('https://enka.network/api/profile/' + encodeURIComponent(user) + '/hoyos/');
+      const hoyos = await get('https://enka.network/api/profile/' + encodeURIComponent(user) + '/hoyos/',
+                              myApiUrls('/hoyos/' + encodeURIComponent(user)));
       const keys = hoyos ? Object.keys(hoyos) : [];
       // берём привязку к ZZZ, если их несколько
       hash = keys.filter(k => {
@@ -2830,7 +2842,8 @@ $('enkaBuilds').onclick = async () => {
       if (!hash) throw new Error('нет подтверждённых аккаунтов');
     }
     const builds = await get('https://enka.network/api/profile/' + encodeURIComponent(user) +
-                             '/hoyos/' + encodeURIComponent(hash) + '/builds/');
+                             '/hoyos/' + encodeURIComponent(hash) + '/builds/',
+                             myApiUrls('/builds/' + encodeURIComponent(user) + '/' + encodeURIComponent(hash)));
     if (!builds || typeof builds !== 'object') throw new Error('сборки не пришли');
 
     let ok = 0, skip = 0;
@@ -2863,26 +2876,32 @@ $('enkaGo').onclick = async () => {
   $('enkaMsg').textContent = 'Гружу профиль…';
   const api = enkaApiUrl(uid);
 
-  // Enka режет запросы с чужих доменов, поэтому пробуем несколько зеркал-посредников
-  const tries = [
+  // Свой прокси идёт первым: он на этом же домене, поэтому не упирается ни в CORS,
+  // ни в блокировки сети. Остальное — запасные варианты на случай, если воркер
+  // ещё не настроен (см. cloudflare/НАСТРОЙКА.md).
+  const mine = myApiUrls('/uid/' + uid);
+  const tries = mine.concat([
     api,
     'https://api.allorigins.win/raw?url=' + encodeURIComponent(api),
     'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(api),
     'https://corsproxy.io/?' + encodeURIComponent(api)
-  ];
-  let data = null, lastErr = '';
-  for (const u of tries) {
+  ]);
+  let data = null, lastErr = '', viaProxy = false;
+  for (let i = 0; i < tries.length; i++) {
     try {
-      const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
-      if (!r.ok) { lastErr = 'HTTP ' + r.status; continue; }
+      const r = await fetch(tries[i], { headers: { 'Accept': 'application/json' } });
       const t = await r.text();
-      const j = JSON.parse(t);
-      if (j && j.PlayerInfo) { data = j; break; }
+      let j = null;
+      try { j = JSON.parse(t); } catch (e) { lastErr = 'HTTP ' + r.status; continue; }
+      // свой прокси на понятные беды отвечает текстом, а не кодом
+      if (j && j.error) { lastErr = j.error; continue; }
+      if (!r.ok) { lastErr = 'HTTP ' + r.status; continue; }
+      if (j && j.PlayerInfo) { data = j; viaProxy = (i < mine.length); break; }
       lastErr = 'ответ без данных профиля';
     } catch (e) { lastErr = e.message || String(e); }
   }
 
-  if (data) { useEnkaData(data); return; }
+  if (data) { useEnkaData(data, viaProxy); return; }
 
   // автоматика не прошла — ручной путь и так на виду, просто подсказываем
   refreshEnkaLinks();

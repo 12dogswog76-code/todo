@@ -4,7 +4,7 @@
 // v8: карточки агентов переведены на card_*.webp / hero_*.webp вместо полноразмерных
 // art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
 // работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
-const CACHE = 'moi-dela-v9';
+const CACHE = 'moi-dela-v10';
 const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json', './zzz-extra.json', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
@@ -26,6 +26,11 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // облако и прочие чужие домены не трогаем
   if (url.origin !== location.origin || e.request.method !== 'GET') return;
+
+  // Прокси к Enka (Cloudflare Worker на /api/zzz/*) обходим стороной: это живые
+  // данные, кешировать их здесь нельзя — иначе после прокачки трекер будет
+  // показывать вчерашнюю витрину. Свой кеш у воркера уже есть.
+  if (url.pathname.indexOf('/api/') === 0) return;
 
   if (e.request.mode === 'navigate') {
     // страница: сеть в приоритете, офлайн — из кэша
