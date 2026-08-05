@@ -627,6 +627,34 @@
       Заберутся все агенты аккаунта, а характеристики — прямо из игры, без пересчёта.
     </div>
 
+    <details class="more" id="ownBox">
+      <summary>Свой доступ HoYoLab — чтобы приехали все агенты и статы дисков</summary>
+      <div class="hint" style="margin-top:8px">
+        Без этого HoYoLab отдаёт чужой аккаунт урезанным: <b>девять агентов</b> и диски
+        без характеристик. Так устроен их API, обойти нельзя. Со своим доступом приедет
+        всё: полный список, характеристики дисков и итоговые статы.<br>
+        Хозяину сайта вставлять ничего не нужно — у него доступ уже прописан.
+      </div>
+      <ol class="hint" style="margin:8px 0 0 18px">
+        <li>Открой <a href="https://www.hoyolab.com/" target="_blank" rel="noopener" style="color:var(--gold)">hoyolab.com</a> и войди в аккаунт</li>
+        <li>Нажми <b>F12</b> → вкладка <b>Application</b> (в русском Chrome «Приложение»)</li>
+        <li>Слева <b>Storage → Cookies</b> → выбери строку <b>https://www.hoyolab.com</b></li>
+        <li>В поле фильтра набери <b>lt</b> — останутся нужные строки</li>
+        <li>Скопируй значения <b>ltuid_v2</b> и <b>ltoken_v2</b> и вставь ниже</li>
+      </ol>
+      <div class="prow" style="margin-top:8px">
+        <input type="password" id="hoyoCk" placeholder="ltuid_v2=…; ltoken_v2=…" style="flex:1;min-width:220px;margin-bottom:0">
+        <button id="hoyoCkSave" class="pri">Сохранить</button>
+        <button id="hoyoCkClear" class="ghost2">Забыть</button>
+      </div>
+      <div class="hint" id="hoyoCkMsg" style="margin-top:6px"></div>
+      <div class="hint" style="margin-top:6px;color:var(--tx3)">
+        Доступ хранится только в этом браузере и уходит на сервер лишь на время запроса —
+        нигде не сохраняется. Он даёт чтение профиля HoYoLab, но не доступ к игре и не к
+        покупкам. Если сомневаешься — не вставляй, урезанный режим тоже работает.
+      </div>
+    </details>
+
     <details class="more">
       <summary>Другие способы — если хроника закрыта</summary>
       <div class="hint" style="margin-top:0">
@@ -724,7 +752,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v57';
+const APP_VER = 'v58';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2004,8 +2032,9 @@ function renderSheet() {
 
     const oldDiscs = (p.discs || []).length && !(p.discs || []).some(x => x && x.mainP);
     if (oldDiscs) h += '<div class="warn" style="margin:10px 0;padding:10px;font-size:12px">' +
-      '<b>Диски записаны в старом виде</b> — их характеристики не учитываются. ' +
-      'Нажми «⟳ Импорт из игры» ещё раз.</div>';
+      '<b>У дисков нет характеристик.</b> Так бывает, когда HoYoLab отдаёт чужой аккаунт: ' +
+      'комплекты и уровни видны, а статы скрыты. Открой «⟳ Импорт из игры» → ' +
+      '«Свой доступ HoYoLab» и задай свой — приедет всё.</div>';
     h += '<div class="hint">Считается из уровня, прорыва, оружия и дисков. Прибавки от ядра ' +
          'у каждого агента свои — задай их кнопкой «прибавки ядра» рядом с кружками A–F, ' +
          'и расчёт сойдётся с игрой. Любое число можно и просто переписать руками.</div>';
@@ -3046,6 +3075,47 @@ $('enkaBuilds').onclick = async () => {
   }
 };
 
+// Свой доступ к HoYoLab. Хранится только здесь, в браузере: на сервере не оседает,
+// в адресе запроса не передаётся — уходит отдельным заголовком.
+const LS_CK = LS + '_hoyock';
+function hoyoCk() { return localStorage.getItem(LS_CK) || ''; }
+function hoyoCkHead() {
+  const c = hoyoCk();
+  return c ? { 'X-Hoyo-Cookie': c } : {};
+}
+function hoyoCkShow() {
+  const c = hoyoCk(), el = $('hoyoCkMsg');
+  if (!el) return;
+  if (c) {
+    const uid = (c.match(/ltuid_v2=(\d+)/) || [])[1] || '';
+    el.innerHTML = '<span style="color:var(--ok)">Доступ сохранён' +
+      (uid ? ', аккаунт ' + esc(uid) : '') + '.</span> Теперь жми «Загрузить весь аккаунт».';
+  } else {
+    el.innerHTML = 'Пока не задан — приедет урезанный набор.';
+  }
+  if ($('hoyoCk')) $('hoyoCk').value = '';
+}
+if ($('hoyoCkSave')) {
+  $('hoyoCkSave').onclick = () => {
+    const raw = $('hoyoCk').value.trim();
+    if (!raw) { $('hoyoCkMsg').innerHTML = '<b>Поле пустое.</b>'; return; }
+    // принимаем что угодно: пару строк, целую строку Cookie, с пробелами и без
+    const uid = (raw.match(/ltuid_v2\s*=\s*([^;\s]+)/) || [])[1];
+    const tok = (raw.match(/ltoken_v2\s*=\s*([^;\s]+)/) || [])[1];
+    if (!uid || !tok) {
+      $('hoyoCkMsg').innerHTML = '<b>Не нашёл ltuid_v2 и ltoken_v2.</b> Вставь обе строки — ' +
+        'можно прямо в виде <code>ltuid_v2=123; ltoken_v2=v2_ABC…</code>';
+      return;
+    }
+    localStorage.setItem(LS_CK, 'ltuid_v2=' + uid + '; ltoken_v2=' + tok);
+    hoyoCkShow();
+  };
+}
+if ($('hoyoCkClear')) {
+  $('hoyoCkClear').onclick = () => { localStorage.removeItem(LS_CK); hoyoCkShow(); };
+}
+hoyoCkShow();
+
 $('hoyoGo').onclick = async () => {
   const uid = $('uidInput').value.trim().replace(/\D/g, '');
   const msg = $('enkaMsg');
@@ -3056,7 +3126,8 @@ $('hoyoGo').onclick = async () => {
   let data = null, lastErr = '';
   for (const base of MYAPI) {
     try {
-      const r = await fetch(base + '/hoyo/' + uid + '/full', { headers: { 'Accept': 'application/json' } });
+      const r = await fetch(base + '/hoyo/' + uid + '/full',
+        { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) });
       const j = JSON.parse(await r.text());
       if (j && j.error) { lastErr = j.error; continue; }
       if (j && j.avatars && j.avatars.length) { data = j; break; }
@@ -3075,6 +3146,9 @@ $('hoyoGo').onclick = async () => {
     const a = applyHoyo(av);
     if (a) done.push(a.ru); else skip.push(av.id);
   });
+  // чужой аккаунт HoYoLab отдаёт без характеристик дисков — предупреждаем честно
+  const thin = data.avatars.length && !data.avatars.some(av =>
+    (av.discs || []).some(d => d && d.main));
   if (!done.length) {
     msg.innerHTML = '<b>Ни один агент не совпал с базой.</b> Нажми «⟳ Обновить список агентов» ' +
                     'в панели «↕ Импорт / экспорт».';
@@ -3086,7 +3160,10 @@ $('hoyoGo').onclick = async () => {
   render();
   refreshEnkaLinks();
   msg.innerHTML = '<b>Готово.</b> Загружено агентов: <b>' + done.length + '</b> ' +
-    '<span style="color:var(--ok)">· весь аккаунт, хроника HoYoLab</span>' +
+    '<span style="color:var(--ok)">· хроника HoYoLab</span>' +
+    (thin ? '<br><b style="color:var(--warn)">Данные урезаны.</b> HoYoLab отдал чужой аккаунт ' +
+      'без характеристик дисков и только девять агентов. Чтобы приехало всё, задай свой доступ — ' +
+      'блок «Свой доступ HoYoLab» ниже.' : '') +
     (skip.length ? '<br>Не нашлись в базе (id ' + esc(skip.join(', ')) +
       ') — нажми «⟳ Обновить список агентов» в панели «↕ Импорт / экспорт».' : '') +
     '<br><span style="color:var(--tx3)">Характеристики взяты из игры как есть, без пересчёта.</span>';
