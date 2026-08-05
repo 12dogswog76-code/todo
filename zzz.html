@@ -723,7 +723,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v55';
+const APP_VER = 'v56';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2740,9 +2740,23 @@ function hoyoSubVal(pid, l, shown) {
   const b = subBase(pid);
   if (b) return b;
   // характеристики нет в таблице — вытащим из показанного текста
-  const n = parseFloat(String(shown || '').replace(',', '.')) || 0;
-  const pct = String(shown || '').indexOf('%') >= 0;
-  return Math.round((pct ? n * 100 : n) / Math.max(1, l));
+  return Math.round(hoyoRaw(shown) / Math.max(1, l));
+}
+// «14.4%» -> 1440, «224» -> 224. Внутри трекера проценты хранятся умноженными на сто
+function hoyoRaw(shown) {
+  const t = String(shown == null ? '' : shown);
+  const n = parseFloat(t.replace(',', '.')) || 0;
+  return t.indexOf('%') >= 0 ? Math.round(n * 100) : n;
+}
+// Сколько раз характеристика выпадала. Хроника отдаёт это числом в поле level,
+// но не у всех агентов: у части там ноль при ненулевом значении. Тогда считаем
+// сами — делим показанное значение на прибавку за одну прокрутку.
+function hoyoRolls(pid, l, shown) {
+  if (+l > 0) return +l;
+  const b = subBase(pid);
+  const raw = hoyoRaw(shown);
+  if (!b || !raw) return 1;
+  return Math.max(1, Math.min(6, Math.round(raw / b)));
 }
 function hoyoMainVal(slot, pid, lvl, shown) {
   const opt = (MAIN_OPTS[slot] || []).filter(o => o[0] === String(pid))[0];
@@ -2813,8 +2827,10 @@ function applyHoyo(raw) {
     lvl: d.lvl || 0,
     mainP: d.main ? String(d.main) : '',
     mainV: hoyoMainVal(d.slot, d.main, d.lvl, d.mainv),
-    subs: (d.subs || []).map(x =>
-      ({ p: String(x.p), v: hoyoSubVal(x.p, x.l || 1, x.v), l: x.l || 1 }))
+    subs: (d.subs || []).map(x => {
+      const l = hoyoRolls(x.p, x.l, x.v);
+      return { p: String(x.p), v: hoyoSubVal(x.p, l, x.v), l: l };
+    })
   }));
 
   p.disc = discSum(p.discs);
