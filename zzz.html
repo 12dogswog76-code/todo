@@ -509,7 +509,28 @@
     font-size:12.5px;padding:8px 15px;border-radius:8px;font-family:inherit;transition:.12s}
   .panel button:hover{border-color:var(--acc);color:var(--tx)}
   .panel button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+  /* второстепенная кнопка: тот же размер, но не тянет на себя внимание */
+  .panel button.ghost2{background:transparent;border-color:var(--line);color:var(--tx3);font-size:12px}
+  .panel button.ghost2:hover{border-color:var(--tx3);color:var(--tx2)}
   .hint{color:var(--tx3);font-size:11.5px;line-height:1.55;margin-top:8px}
+  /* короткая инструкция для тех, кто на сайте впервые */
+  .howto{background:linear-gradient(160deg,#4ade801a,#4ade8008);border:1px solid #4ade8033;
+    border-radius:12px;padding:13px 16px;box-shadow:var(--glass)}
+  .howto h5{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--acc);
+    margin-bottom:9px;font-weight:700}
+  .howto ol{margin:0 0 0 17px;padding:0;font-size:12.5px;line-height:1.65;color:var(--tx2)}
+  .howto li{margin-bottom:6px}
+  .howto li b{color:var(--tx)}
+  .howto a{color:var(--acc)}
+  .howto p{margin-top:9px;font-size:11.5px;color:var(--tx3);line-height:1.55}
+  /* спойлер с запасными способами — чтобы не мешал новичку */
+  .more{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  .more>summary{cursor:pointer;font-size:12px;color:var(--tx3);list-style:none;
+    display:flex;align-items:center;gap:6px;user-select:none}
+  .more>summary::-webkit-details-marker{display:none}
+  .more>summary::before{content:'▸';color:var(--tx3);transition:.15s}
+  .more[open]>summary::before{transform:rotate(90deg)}
+  .more>summary:hover{color:var(--tx2)}
   .hint b{color:var(--tx2)}
   .hint ol{margin:6px 0 0 18px}.hint li{margin-bottom:4px}
   .warn{background:#e53e3e14;border:1px solid #e53e3e44;border-radius:10px;padding:12px;
@@ -583,43 +604,64 @@
   </div>
 
   <div class="panel" id="enkaPanel">
-    <div class="prow" style="margin-top:0">
+    <div class="howto">
+      <h5>Как перенести своих агентов — три шага</h5>
+      <ol>
+        <li><b>Открой хронику.</b> Зайди на <a href="https://www.hoyolab.com/" target="_blank" rel="noopener">hoyolab.com</a>
+            под своим аккаунтом, открой профиль → <b>Настройки</b> → включи
+            <b>публичный доступ к боевой хронике</b> для Zenless Zone Zero.</li>
+        <li><b>Возьми UID.</b> В игре он написан внизу экрана профиля, девять цифр.</li>
+        <li><b>Вставь сюда и нажми кнопку.</b> Загрузятся все твои агенты — уровни, ядра,
+            навыки, оружие и диски. Витрину в игре трогать не нужно.</li>
+      </ol>
+      <p>Дальше можно ничего не делать: поменял диск в игре — нажми кнопку ещё раз,
+         данные обновятся. Регистрироваться нигде не надо.</p>
+    </div>
+
+    <div class="prow" style="margin-top:12px">
       <input type="text" id="uidInput" placeholder="UID аккаунта, например 1502024259" style="flex:1;min-width:200px;margin-bottom:0">
-      <button id="enkaGo" class="pri">Загрузить витрину</button>
-    </div>
-    <div class="prow" style="margin-top:6px">
-      <input type="text" id="enkaUser" placeholder="ник на enka.network или ссылка на профиль" style="flex:1;min-width:200px;margin-bottom:0">
-      <button id="enkaBuilds" class="pri">Загрузить все сборки</button>
-    </div>
-    <div class="prow" style="margin-top:6px">
-      <button id="enkaLocal" class="pri">⤓ Загрузить с нашего сайта</button>
-      <span class="hint" id="enkaLocalMsg" style="margin:0;align-self:center"></span>
+      <button id="hoyoGo" class="pri" style="font-weight:700;box-shadow:0 4px 16px #4ade8038" title="Весь аккаунт из боевой хроники HoYoLab: все агенты, а не только витрина">⚡ Загрузить весь аккаунт</button>
     </div>
     <div class="hint" id="enkaMsg">
-      Данные берутся с <b>enka.network</b> — из витрины профиля. Подтянутся уровень, ядро,
-      навыки, М.Картины, W-Engine и все 6 дисков со статами.<br>
-      <b>Витрина</b> отдаёт только тех, кто стоит в профиле в игре — обычно до шести.<br>
-      <b>Все сборки</b> берут сохранённые сборки из твоего аккаунта на enka.network: там их
-      сколько угодно, витрину менять не нужно. Аккаунт должен быть подтверждён, а сборки — сохранены.
+      Заберутся все агенты аккаунта, а характеристики — прямо из игры, без пересчёта.
     </div>
-    <div id="manualBox" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+
+    <details class="more">
+      <summary>Другие способы — если хроника закрыта</summary>
       <div class="hint" style="margin-top:0">
-        <b>Если кнопки выше упёрлись в отказ</b> — Enka не всегда отвечает на запросы
-        с чужого сайта. Тогда забрать данные можно вручную, это быстро:
-        <ol>
-          <li><a id="enkaLink" href="#" target="_blank" rel="noopener" style="color:var(--gold)">открыть витрину по UID</a>
-              &nbsp;·&nbsp;
-              <a id="enkaLinkB" href="#" target="_blank" rel="noopener" style="color:var(--gold)">открыть все сборки</a></li>
-          <li>выдели всё и скопируй: <b>Ctrl+A</b>, затем <b>Ctrl+C</b></li>
-          <li>вставь сюда и нажми «Применить»</li>
-        </ol>
+        Всё ниже работает через <b>enka.network</b>. Нужно, только если публичный доступ
+        к хронике включить не получается: тогда данные берутся из витрины профиля в игре.
       </div>
-      <textarea id="manualJson" placeholder='Сюда вставить скопированный текст — и витрина, и сборки подойдут'
-        style="width:100%;height:88px;background:var(--pan2);border:1px solid var(--line);border-radius:9px;
-               color:var(--tx);padding:9px 12px;font-size:11.5px;font-family:Consolas,monospace;outline:none"></textarea>
-      <div class="prow"><button id="manualGo" class="pri">Применить</button>
-        <button id="manualPaste">Вставить из буфера</button></div>
-    </div>
+      <div class="prow" style="margin-top:8px">
+        <button id="enkaGo" class="ghost2">Витрина по UID</button>
+        <span class="hint" style="margin:0;align-self:center">до шести агентов — те, что стоят в профиле в игре</span>
+      </div>
+      <div class="prow" style="margin-top:6px">
+        <input type="text" id="enkaUser" placeholder="ник на enka.network или ссылка на профиль" style="flex:1;min-width:200px;margin-bottom:0">
+        <button id="enkaBuilds" class="ghost2">Сохранённые сборки</button>
+      </div>
+      <div class="prow" style="margin-top:6px">
+        <button id="enkaLocal" class="ghost2">⤓ Загрузить с нашего сайта</button>
+        <span class="hint" id="enkaLocalMsg" style="margin:0;align-self:center"></span>
+      </div>
+      <div id="manualBox" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <div class="hint" style="margin-top:0">
+          <b>Совсем ручной путь</b>, если и кнопки выше отказали:
+          <ol>
+            <li><a id="enkaLink" href="#" target="_blank" rel="noopener" style="color:var(--gold)">открыть витрину по UID</a>
+                &nbsp;·&nbsp;
+                <a id="enkaLinkB" href="#" target="_blank" rel="noopener" style="color:var(--gold)">открыть все сборки</a></li>
+            <li>выдели всё и скопируй: <b>Ctrl+A</b>, затем <b>Ctrl+C</b></li>
+            <li>вставь сюда и нажми «Применить»</li>
+          </ol>
+        </div>
+        <textarea id="manualJson" placeholder='Сюда вставить скопированный текст — и витрина, и сборки подойдут'
+          style="width:100%;height:88px;background:var(--pan2);border:1px solid var(--line);border-radius:9px;
+                 color:var(--tx);padding:9px 12px;font-size:11.5px;font-family:var(--mono);outline:none"></textarea>
+        <div class="prow"><button id="manualGo" class="ghost2">Применить</button>
+          <button id="manualPaste" class="ghost2">Вставить из буфера</button></div>
+      </div>
+    </details>
   </div>
 
   <div class="panel" id="cloudPanel">
@@ -681,7 +723,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v53';
+const APP_VER = 'v55';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2684,6 +2726,124 @@ function applyEnka(av) {
   return a;
 }
 
+// ── импорт всего аккаунта из боевой хроники HoYoLab ──────────────────────────
+// В отличие от Enka хроника отдаёт весь ростер, а не витрину из шести слотов,
+// и данные в ней свежие: поменял диск в игре — через пару минут видно здесь.
+// Запрос идёт через свой воркер (см. cloudflare/alextask-worker.js), cookie
+// лежат у него в секрете и до браузера не доходят.
+
+// Хроника отдаёт значения уже с учётом уровня диска: у главной характеристики
+// это итог после +15, у дополнительной — сумма всех прокруток. Наш формат
+// хранит значение за одну прокрутку, поэтому берём его из своих таблиц,
+// а из хроники — только сколько раз характеристика выпадала.
+function hoyoSubVal(pid, l, shown) {
+  const b = subBase(pid);
+  if (b) return b;
+  // характеристики нет в таблице — вытащим из показанного текста
+  const n = parseFloat(String(shown || '').replace(',', '.')) || 0;
+  const pct = String(shown || '').indexOf('%') >= 0;
+  return Math.round((pct ? n * 100 : n) / Math.max(1, l));
+}
+function hoyoMainVal(slot, pid, lvl, shown) {
+  const opt = (MAIN_OPTS[slot] || []).filter(o => o[0] === String(pid))[0];
+  if (opt) return opt[2];
+  const n = parseFloat(String(shown || '').replace(',', '.')) || 0;
+  const pct = String(shown || '').indexOf('%') >= 0;
+  return Math.round((pct ? n * 100 : n) / (1 + 0.2 * (lvl || 0)));
+}
+
+// Хроника не отдаёт уровень прорыва — считаем по уровню агента.
+// Сверено с Enka: уровень 60 соответствует шестому прорыву.
+function hoyoPromo(lvl) {
+  return lvl < 10 ? 0 : Math.min(6, Math.ceil(lvl / 10));
+}
+
+// В блоке итоговых характеристик у хроники своя нумерация, короткая
+const HOYO_STAT = { 1:'hp', 2:'atk', 3:'def', 4:'im', 5:'cr', 6:'cd',
+                    7:'am', 8:'ap', 9:'penp', 11:'er', 232:'pen' };
+function hoyoNum(v) {
+  const n = parseFloat(String(v == null ? '' : v).replace('%', '').replace(',', '.'));
+  return isFinite(n) ? n : 0;
+}
+
+// Воркер умеет отдавать и полный ответ хроники, и укороченный. Приводим к одному виду.
+function hoyoNorm(a) {
+  if (a.skills && !Array.isArray(a.skills)) return a;      // уже укороченный
+  const sk = {};
+  (a.skills || []).forEach(x => { sk[x.skill_type] = x.level; });
+  return {
+    id: a.id, lvl: a.level, mind: a.rank || 0,
+    core: Math.max(0, (sk[5] || 1) - 1),
+    skills: { 0: sk[0] || 1, 1: sk[1] || 1, 2: sk[2] || 1, 3: sk[3] || 1, 6: sk[6] || 1 },
+    weapon: a.weapon ? { id: a.weapon.id, lvl: a.weapon.level, star: a.weapon.star } : null,
+    discs: (a.equip || []).map(e => ({
+      slot: e.equipment_type, lvl: e.level,
+      suit: (e.equip_suit && e.equip_suit.suit_id) || Math.floor((e.id || 0) / 100) * 100,
+      main: ((e.main_properties || [])[0] || {}).property_id || 0,
+      mainv: ((e.main_properties || [])[0] || {}).base || '',
+      subs: (e.properties || []).map(x => ({ p: x.property_id, l: x.level, v: x.base }))
+    })),
+    stats: (a.properties || []).reduce((o, x) => { o[x.property_id] = x.final; return o; }, {})
+  };
+}
+
+function applyHoyo(raw) {
+  const av = hoyoNorm(raw);
+  const a = DB.byId[av.id];
+  if (!a) return null;
+  const p = P(av.id);
+  p.have = true;
+  p.lvl  = av.lvl || 0;
+  p.core = av.core || 0;
+  p.mind = av.mind || 0;
+  p.promo = hoyoPromo(p.lvl);
+
+  SKILL_IDX.forEach(o => { if (av.skills[o.i]) p.sk[o.i] = av.skills[o.i]; });
+
+  if (av.weapon && av.weapon.id) {
+    p.w.id    = av.weapon.id;
+    p.w.lvl   = av.weapon.lvl || 0;
+    p.w.phase = av.weapon.star || 1;
+    p.w.br    = hoyoPromo(p.w.lvl) - 1 > 0 ? Math.min(5, hoyoPromo(p.w.lvl) - 1) : 0;
+  }
+
+  p.discs = (av.discs || []).filter(d => d && d.slot).map(d => ({
+    slot: d.slot,
+    suit: d.suit || 0,
+    lvl: d.lvl || 0,
+    mainP: d.main ? String(d.main) : '',
+    mainV: hoyoMainVal(d.slot, d.main, d.lvl, d.mainv),
+    subs: (d.subs || []).map(x =>
+      ({ p: String(x.p), v: hoyoSubVal(x.p, x.l || 1, x.v), l: x.l || 1 }))
+  }));
+
+  p.disc = discSum(p.discs);
+
+  // Итоговые характеристики берём прямо из игры — это точнее любого расчёта.
+  // Если хроника их не прислала, считаем сами, как при импорте с Enka.
+  const st = av.stats || {};
+  if (Object.keys(st).length) {
+    const cur = {};
+    Object.keys(HOYO_STAT).forEach(k => {
+      if (st[k] != null && st[k] !== '') cur[HOYO_STAT[k]] = hoyoNum(st[k]);
+    });
+    // бонус стихии лежит под разными номерами — берём первый непустой
+    Object.keys(st).forEach(k => {
+      if (+k >= 315 && +k <= 323 && hoyoNum(st[k])) cur.dmg = hoyoNum(st[k]);
+    });
+    if (cur.dmg == null) cur.dmg = 0;
+    p.cur = cur;
+  } else {
+    const t = calcTotals(a, p, p.discs);
+    p.cur = { hp: t.hp, atk: t.atk, def: t.def,
+              cr: Math.round(t.cr * 10) / 10, cd: Math.round(t.cd * 10) / 10,
+              ap: t.ap, am: t.am, im: t.im, pen: t.pen,
+              er: t.er, dmg: Math.round(t.dmg * 10) / 10 };
+  }
+  p.mod = Date.now();
+  return a;
+}
+
 function enkaApiUrl(uid) { return 'https://enka.network/api/zzz/uid/' + uid + '/'; }
 
 // раскладываем полученный ответ по агентам
@@ -2867,6 +3027,52 @@ $('enkaBuilds').onclick = async () => {
     $('enkaMsg').innerHTML = 'Не вышло: ' + esc(e.message || String(e)) +
       '.<br>Проверь ник и что профиль на enka.network подтверждён.';
   }
+};
+
+$('hoyoGo').onclick = async () => {
+  const uid = $('uidInput').value.trim().replace(/\D/g, '');
+  const msg = $('enkaMsg');
+  if (!uid) { msg.innerHTML = '<b>Впиши UID.</b> Он виден в игре внизу экрана профиля.'; return; }
+  localStorage.setItem(LS + '_uid', uid);
+  msg.textContent = 'Гружу весь аккаунт из хроники…';
+
+  let data = null, lastErr = '';
+  for (const base of MYAPI) {
+    try {
+      const r = await fetch(base + '/hoyo/' + uid + '/full', { headers: { 'Accept': 'application/json' } });
+      const j = JSON.parse(await r.text());
+      if (j && j.error) { lastErr = j.error; continue; }
+      if (j && j.avatars && j.avatars.length) { data = j; break; }
+      lastErr = 'ответ без агентов';
+    } catch (e) { lastErr = e.message || String(e); }
+  }
+
+  if (!data) {
+    msg.innerHTML = '<b>Не вышло:</b> ' + esc(lastErr) +
+      '<br>Попробуй кнопку «Только витрина» — она работает без хроники.';
+    return;
+  }
+
+  const done = [], skip = [];
+  data.avatars.forEach(av => {
+    const a = applyHoyo(av);
+    if (a) done.push(a.ru); else skip.push(av.id);
+  });
+  if (!done.length) {
+    msg.innerHTML = '<b>Ни один агент не совпал с базой.</b> Нажми «⟳ Обновить список агентов» ' +
+                    'в панели «↕ Импорт / экспорт».';
+    return;
+  }
+  save();
+  localStorage.setItem(LS, JSON.stringify(prog));
+  scheduleSync();
+  render();
+  refreshEnkaLinks();
+  msg.innerHTML = '<b>Готово.</b> Загружено агентов: <b>' + done.length + '</b> ' +
+    '<span style="color:var(--ok)">· весь аккаунт, хроника HoYoLab</span>' +
+    (skip.length ? '<br>Не нашлись в базе (id ' + esc(skip.join(', ')) +
+      ') — нажми «⟳ Обновить список агентов» в панели «↕ Импорт / экспорт».' : '') +
+    '<br><span style="color:var(--tx3)">Характеристики взяты из игры как есть, без пересчёта.</span>';
 };
 
 $('enkaGo').onclick = async () => {
