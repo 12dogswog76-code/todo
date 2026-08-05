@@ -85,6 +85,10 @@
   .logo .who::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--ok);
     box-shadow:0 0 7px var(--ok)}
   .logo .who b{font-weight:700;color:var(--tx)}
+  .logo .who{cursor:pointer;transition:.15s}
+  .logo .who:hover{border-color:var(--ok);color:var(--tx);background:#4ade801a;
+    box-shadow:0 0 14px #4ade8033}
+  .logo .who.busy{opacity:.55;pointer-events:none}
   .top .sp{flex:1}
   .top a.back{color:var(--tx2);text-decoration:none;font-size:12.5px}
   .top a.back:hover{color:var(--acc)}
@@ -98,7 +102,7 @@
   .modbadge{float:right;font-size:10.5px;font-weight:600;color:var(--tx3);letter-spacing:0;
     text-transform:none;background:#ffffff10;border:1px solid var(--line);padding:2px 9px;border-radius:20px}
   .modbadge b{color:var(--gold);font-size:12px;margin-left:3px}
-  .ver{font-size:10px;font-weight:700;color:var(--tx3);background:#ffffff10;border:1px solid var(--line);font-family:var(--mono);
+  .ver{font-size:10px;font-weight:700;color:var(--tx3);background:#ffffff10;border:1px solid var(--line);
        padding:2px 7px;border-radius:20px;letter-spacing:.4px;white-space:nowrap}
   #cloudDot{width:8px;height:8px;border-radius:50%;background:#3a3f4a;display:inline-block;margin-left:2px}
   #cloudDot.cloud-ok{background:var(--ok)} #cloudDot.cloud-err{background:var(--acc)}
@@ -252,8 +256,8 @@
   /* низ фотографии гасим не в чёрный, а в цвет самой карточки — стыка не видно */
   .card .ph::after{
     content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,transparent 22%,#08090cb3 46%,#0a0c10f0 74%,var(--cmid) 100%);
-    bottom:-1px;
+    background:linear-gradient(180deg,transparent 22%,#08090cb3 46%,#0a0c10f0 70%,var(--cmid) 92%,var(--cmid) 100%);
+    inset:0 0 -3px 0;
   }
   .card.no .ph img{opacity:.4}
   .card.no:hover .ph img{opacity:.75}
@@ -301,7 +305,7 @@
   /* число модификаторов под кольцом готовности */
   .modc{
     width:26px;height:26px;border-radius:50%;background:#0b0d11e6;
-    border:1px solid var(--gold);color:var(--gold);font-family:var(--mono);
+    border:1px solid var(--gold);color:var(--gold);
     font-size:11px;font-weight:800;display:grid;place-items:center;line-height:1;
     box-shadow:0 2px 8px #000a,0 0 10px #ffd54a26;
   }
@@ -309,7 +313,7 @@
   /* кольцо тоньше, чтобы число влезало в тот же размер, что и значки */
   .pcirc i{
     position:absolute;inset:2px;border-radius:50%;background:#0b0d11;display:grid;place-items:center;
-    font-style:normal;font-size:9.5px;color:#e6e9f2;text-shadow:0 1px 3px #000;font-family:var(--mono);
+    font-style:normal;font-size:9.5px;color:#e6e9f2;text-shadow:0 1px 3px #000;
   }
   .cbars{padding:8px 9px 9px;display:flex;flex-direction:column;gap:4px}
   .cb{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--tx3)}
@@ -317,7 +321,7 @@
   .cb .t{flex:1;height:3px;background:#ffffff12;border-radius:2px;overflow:hidden}
   .cb .t i{display:block;height:100%;background:var(--warn);border-radius:2px}
   .cb .t i.full{background:var(--ok)}
-  .cb span{width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+  .cb span{width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
 
   /* ── модалка ── */
   .modal{display:none;position:fixed;inset:0;background:#000000cc;z-index:100;
@@ -355,13 +359,28 @@
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
-  .hart .tg{font-size:10.5px;line-height:26px;height:26px;padding:0 10px;border-radius:8px;
-    background:linear-gradient(180deg,#ffffff26,#ffffff0f);box-shadow:0 1px 0 #ffffff1a inset;
-    color:var(--tx);display:inline-flex;align-items:center;justify-content:center;gap:5px}
-  .hart .tg svg{display:block}
+  /* Плашки под именем: стекло сохранили, но добавили затемнение под ним —
+     иначе на светлом арте белый текст пропадал. */
+  .hart .tg{font-size:11px;font-weight:600;line-height:28px;height:28px;padding:0 11px;border-radius:14px;
+    background:linear-gradient(180deg,#ffffff2e,#ffffff0d),rgba(8,9,12,.55);
+    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+    box-shadow:0 1px 0 #ffffff2b inset,0 -1px 0 #0000004d inset,0 2px 8px #0006;
+    border:1px solid #ffffff1f;
+    color:var(--tx);text-shadow:0 1px 2px #000c;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .hart .tg svg{display:block;filter:drop-shadow(0 1px 1px #000a)}
   .hart .tg .ic{display:inline-flex;align-items:center;justify-content:center}
   .hart .tg .ic img{display:block}
-  .hart .tg.el{background:color-mix(in srgb,var(--el) 26%,transparent);color:var(--el)}
+  .hart .tg.el{background:linear-gradient(180deg,color-mix(in srgb,var(--el) 38%,transparent),
+    color-mix(in srgb,var(--el) 14%,transparent)),rgba(8,9,12,.5);
+    border-color:color-mix(in srgb,var(--el) 55%,transparent);
+    color:#fff;box-shadow:0 1px 0 #ffffff33 inset,0 2px 12px color-mix(in srgb,var(--el) 35%,transparent)}
+  /* ранг и тир — буквой, как на карточках */
+  .hart .tg.rk2{padding:0 10px;gap:5px}
+  .hart .tg.tier2{border-color:#ffffff2e}
+  .hart .tg.pct{color:var(--ok);border-color:#4ade8047;
+    background:linear-gradient(180deg,#4ade8033,#4ade800f),rgba(8,9,12,.5)}
+  .hart .tg b{font-weight:800}
 
   .hbody{padding:14px 16px 16px;min-width:0}
   .hhead{display:flex;align-items:center;gap:7px;margin-bottom:12px}
@@ -388,7 +407,7 @@
     padding:4px 0;border-bottom:1px solid #ffffff08;font-size:12px}
   .st .lab{color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     display:flex;align-items:center;gap:6px}
-  .st .val{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+  .st .val{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
   .st .curin{
     width:66px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--tx);
     padding:2px 5px;font-size:12px;text-align:right;outline:none;font-weight:700;
@@ -458,7 +477,7 @@
   .dcard .sn{position:absolute;top:4px;left:6px;font-size:9px;color:var(--tx3);font-weight:700}
   .dcard img{width:34px;height:34px;object-fit:contain;margin:6px auto 3px;display:block}
   .dcard .mn{font-size:12.5px;font-weight:800;color:var(--warn);line-height:1.15;
-    font-variant-numeric:tabular-nums;font-family:var(--mono)}
+    font-variant-numeric:tabular-nums}
   .dcard .mnl{font-size:8.5px;color:var(--tx3);line-height:1.2;margin-bottom:4px}
   /* доп. характеристики, которые идут в зачёт модификаторов */
   .dcard .st2 span.good,.stlist div.good{color:var(--gold)}
@@ -467,7 +486,7 @@
   .dcard .st2{font-size:9px;color:var(--tx2);line-height:1.5;text-align:left;
     border-top:1px solid #ffffff0f;padding-top:4px;display:flex;flex-direction:column;gap:1px}
   .dcard .st2 span{display:flex;align-items:center;gap:3px}
-  .dcard .st2 em{margin-left:auto;font-style:normal;color:var(--tx);font-family:var(--mono)}
+  .dcard .st2 em{margin-left:auto;font-style:normal;color:var(--tx);font-variant-numeric:tabular-nums}
   .dcard .st2 .rl{color:var(--gold);font-weight:700;font-size:8px}
   .dcard .edit{position:absolute;bottom:3px;right:5px;font-size:10px;color:var(--tx3);
     opacity:0;transition:.12s;cursor:pointer}
@@ -524,6 +543,17 @@
     font-size:12.5px;padding:8px 18px;border-radius:8px;font-family:inherit;transition:.12s}
   .foot2 button:hover{border-color:var(--acc);color:var(--tx)}
   .foot2 button.ghost{background:transparent;border-color:transparent;color:var(--tx3);opacity:.55;font-size:11.5px}
+  /* ссылка на внешний гайд — слева в подвале карточки */
+  .foot2 .pryd{
+    display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+    font-size:12px;font-weight:600;color:var(--tx2);
+    background:linear-gradient(180deg,#ffffff14,#ffffff05);
+    border:1px solid var(--line);border-radius:9px;padding:7px 13px;transition:.15s;
+    box-shadow:0 1px 0 #ffffff12 inset}
+  .foot2 .pryd::before{content:'';width:6px;height:6px;border-radius:50%;
+    background:var(--info);box-shadow:0 0 8px var(--info)}
+  .foot2 .pryd:hover{color:var(--tx);border-color:var(--info);
+    box-shadow:0 1px 0 #ffffff1f inset,0 0 16px #60a5fa3d}
   .foot2 button.ghost:hover{opacity:1;border-color:var(--line);color:var(--tx2)}
   .htab.favon{border-color:var(--gold);color:var(--gold);background:#ffd54a1a}
   .foot2 button.pri{background:linear-gradient(180deg,#63e694,var(--acc));border-color:var(--acc);
@@ -829,7 +859,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v66';
+const APP_VER = 'v68';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1685,6 +1715,29 @@ function setNick(nick, uid) {
   if (!n && !u) { el.hidden = true; return; }
   el.hidden = false;
   el.innerHTML = n ? '<b>' + esc(n) + '</b>' + (u ? ' · ' + esc(u) : '') : esc(u);
+  el.title = 'Обновить данные из игры — то же, что «Загрузить весь аккаунт»';
+  el.onclick = () => {
+    if (!$('hoyoGo')) return;
+    el.classList.add('busy');
+    if ($('uidInput') && u) $('uidInput').value = u;
+    $('hoyoGo').click();
+    setTimeout(() => el.classList.remove('busy'), 12000);
+  };
+}
+
+// Гайды на prydwen.gg. Адрес почти всегда собирается из английского имени,
+// но у девяти агентов он там записан иначе — их держим списком. Все 58 ссылок
+// сверены со списком агентов на самом сайте.
+const PRYD_FIX = {
+  1011: 'anby-demara', 1031: 'nicole-demara', 1081: 'billy-kid', 1181: 'grace-howard',
+  1261: 'jane-doe', 1301: 'orphie-and-magus', 1381: 'anby-demara-soldier-0',
+  1411: 'ukinami-yuzuha', 1531: 'billy-starlight'
+};
+function prydUrl(a) {
+  if (!a) return '';
+  const slug = PRYD_FIX[a.id] ||
+    String(a.en || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return slug ? 'https://www.prydwen.gg/zenless/characters/' + slug : '';
 }
 
 function rankBadge(letter, size, title) {
@@ -1927,18 +1980,22 @@ function renderSheet() {
       'onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
       '{this.src=this.dataset.alt}else{this.style.display=\'none\'}"></div>' : '') +
     '<div class="who"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span>' +
-      '<div class="tags"><span class="tg el">' + elIcon(el, 16) + '</span>' +
-      '<span class="tg">' + profIcon(a.prof, 16, '#e9ecf3') + '</span>' +
-      '<span class="tg">' + esc(a.rarity) + '-ранг</span>' +
+      '<div class="tags"><span class="tg el" title="' + esc((ELEM[el] && ELEM[el].ru) || '') + '">' +
+        elIcon(el, 16) + '</span>' +
+      '<span class="tg" title="' + esc(PROF[a.prof] || a.prof || '') + '">' +
+        profIcon(a.prof, 16, '#e9ecf3') + '</span>' +
+      '<span class="tg rk2" title="Редкость ' + esc(a.rarity) + '">' +
+        rankBadge(a.rarity, 'sm') + '</span>' +
       (function () {
         const t = tierOf(curId);
         if (!t) return '';
         const role = ((TIER && TIER.roles) || {})[t.role] || '';
-        return '<span class="tg" title="Тир-лист «Оборона Шиюй», источник: ' +
-          esc((TIER && TIER.sourceName) || '') + '">' + esc(t.tier) +
-          (role ? ' · ' + esc(role) : '') + '</span>';
+        return '<span class="tg tier2" title="Тир-лист «Оборона Шиюй», источник: ' +
+          esc((TIER && TIER.sourceName) || '') + '">' + rankBadge(t.tier, 'sm') +
+          (role ? '<span style="color:var(--tx2);font-size:10px">' + esc(role) + '</span>' : '') +
+          '</span>';
       })() +
-      (p.have ? '<span class="tg">готово ' + pctOf(curId) + '%</span>' : '') +
+      (p.have ? '<span class="tg pct">готово <b>' + pctOf(curId) + '%</b></span>' : '') +
     '</div></div></div><div class="hbody">';
 
   if (!p.have) {
@@ -2149,6 +2206,8 @@ function renderSheet() {
 
   h += '</div></div>';
   h += '<div class="foot2">' +
+       (prydUrl(a) ? '<a class="pryd" href="' + esc(prydUrl(a)) + '" target="_blank" rel="noopener" ' +
+         'title="Гайд по агенту на prydwen.gg — сборки, команды, приоритеты">Prydwen</a>' : '') +
        (p.have ? '<button id="haveTog" class="ghost">убрать из трекера</button>' : '') +
        '<span style="flex:1"></span>' +
        '<button onclick="closeModal()">Закрыть</button>' +
