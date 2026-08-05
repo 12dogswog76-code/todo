@@ -642,10 +642,16 @@
         <li>Нажми <b>F12</b> → вкладка <b>Application</b> (в русском Chrome «Приложение»)</li>
         <li>Слева <b>Storage → Cookies</b> → выбери строку <b>https://www.hoyolab.com</b></li>
         <li>В поле фильтра набери <b>lt</b> — останутся нужные строки</li>
-        <li>Скопируй значения <b>ltuid_v2</b> и <b>ltoken_v2</b> и вставь ниже</li>
+        <li>Скопируй <b>значения</b> из колонки Value (двойной клик по ячейке → Ctrl+C)
+            и вставь каждое в своё поле ниже</li>
       </ol>
       <div class="prow" style="margin-top:8px">
-        <input type="password" id="hoyoCk" placeholder="ltuid_v2=…; ltoken_v2=…" style="flex:1;min-width:220px;margin-bottom:0">
+        <input type="text" id="hoyoCkUid" placeholder="ltuid_v2 — только цифры, например 102348243"
+               style="flex:1;min-width:200px;margin-bottom:0" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="prow" style="margin-top:6px">
+        <input type="text" id="hoyoCkTok" placeholder="ltoken_v2 — длинная строка, обычно начинается с v2_"
+               style="flex:1;min-width:200px;margin-bottom:0" autocomplete="off" spellcheck="false">
         <button id="hoyoCkSave" class="pri">Сохранить</button>
         <button id="hoyoCkClear" class="ghost2">Забыть</button>
       </div>
@@ -754,7 +760,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v59';
+const APP_VER = 'v61';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3095,21 +3101,47 @@ function hoyoCkShow() {
   } else {
     el.innerHTML = 'Пока не задан — приедет урезанный набор.';
   }
-  if ($('hoyoCk')) $('hoyoCk').value = '';
+  if ($('hoyoCkUid')) $('hoyoCkUid').value = '';
+  if ($('hoyoCkTok')) $('hoyoCkTok').value = '';
+}
+// Разбираем то, что вставил человек. Полей два, но полагаться на то, что он не
+// перепутает их местами и не вставит всё в одно, нельзя. Поэтому смотрим не на
+// поле, а на сам вид значения: ltuid_v2 всегда цифры, ltoken_v2 всегда длинная
+// строка. Плюс понимаем запись «имя=значение» и целую строку Cookie.
+function hoyoParse(a, b) {
+  const text = (a || '') + ' ; ' + (b || '');
+  const named = (name) => {
+    const m = text.match(new RegExp(name + '\\s*[=:]\\s*([^;\\s,]+)'));
+    return m ? m[1] : '';
+  };
+  let uid = named('ltuid_v2'), tok = named('ltoken_v2');
+  if (uid && tok) return { uid: uid, tok: tok };
+
+  // имён нет — разбираем по виду
+  const parts = text.split(/[;\s,]+/).filter(Boolean)
+                    .map(x => x.replace(/^[a-z_]+\s*[=:]\s*/i, ''));
+  if (!uid) uid = parts.filter(x => /^\d{5,}$/.test(x))[0] || '';
+  if (!tok) tok = parts.filter(x => x.length >= 20 && !/^\d+$/.test(x))
+                       .sort((x, y) => y.length - x.length)[0] || '';
+  return { uid: uid, tok: tok };
 }
 if ($('hoyoCkSave')) {
   $('hoyoCkSave').onclick = () => {
-    const raw = $('hoyoCk').value.trim();
-    if (!raw) { $('hoyoCkMsg').innerHTML = '<b>Поле пустое.</b>'; return; }
-    // принимаем что угодно: пару строк, целую строку Cookie, с пробелами и без
-    const uid = (raw.match(/ltuid_v2\s*=\s*([^;\s]+)/) || [])[1];
-    const tok = (raw.match(/ltoken_v2\s*=\s*([^;\s]+)/) || [])[1];
-    if (!uid || !tok) {
-      $('hoyoCkMsg').innerHTML = '<b>Не нашёл ltuid_v2 и ltoken_v2.</b> Вставь обе строки — ' +
-        'можно прямо в виде <code>ltuid_v2=123; ltoken_v2=v2_ABC…</code>';
+    const r = hoyoParse($('hoyoCkUid').value, $('hoyoCkTok').value);
+    if (!r.uid) {
+      $('hoyoCkMsg').innerHTML = '<b style="color:var(--warn)">Не вижу ltuid_v2.</b> ' +
+        'Это число из колонки Value, обычно девять цифр. Вставь его в первое поле — ' +
+        'можно прямо с именем, я разберу.';
       return;
     }
-    localStorage.setItem(LS_CK, 'ltuid_v2=' + uid + '; ltoken_v2=' + tok);
+    if (!r.tok) {
+      $('hoyoCkMsg').innerHTML = '<b style="color:var(--warn)">Не вижу ltoken_v2.</b> ' +
+        'Это длинная строка, обычно начинается с <code>v2_</code>. В таблице она видна не ' +
+        'целиком: кликни по ячейке Value дважды, нажми <b>Ctrl+A</b>, потом <b>Ctrl+C</b> — ' +
+        'скопируется всё.';
+      return;
+    }
+    localStorage.setItem(LS_CK, 'ltuid_v2=' + r.uid + '; ltoken_v2=' + r.tok);
     hoyoCkShow();
   };
 }
