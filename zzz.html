@@ -53,8 +53,10 @@
   }
   @keyframes bgdrift{to{background-position:240px 0,-240px 0,0 0}}
   .wrap{max-width:1160px;margin:0 auto}
-  @media(min-width:1400px){.wrap{max-width:1320px}}
-  @media(min-width:1800px){.wrap{max-width:1520px}}
+  /* На большом экране всё было мелким и приходилось выкручивать зум браузера
+     до 150%. Делаем это сами — но только на десктопе, телефон и так в порядке. */
+  @media(min-width:1250px){ body{zoom:1.5} }
+  @media(min-width:2200px){ .wrap{max-width:1320px} }
 
   /* ── шапка ── */
   .top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
@@ -76,6 +78,13 @@
   }
   .logo small{display:block;font-size:10px;font-weight:500;color:var(--tx3);letter-spacing:.3px;
     -webkit-text-fill-color:var(--tx3)}
+  /* ник владельца профиля, который загружали последним */
+  .logo .who{font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:0;
+    background:#ffffff0d;border:1px solid var(--line);border-radius:20px;padding:3px 11px;
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .logo .who::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--ok);
+    box-shadow:0 0 7px var(--ok)}
+  .logo .who b{font-weight:700;color:var(--tx)}
   .top .sp{flex:1}
   .top a.back{color:var(--tx2);text-decoration:none;font-size:12.5px}
   .top a.back:hover{color:var(--acc)}
@@ -126,8 +135,8 @@
   .sc:hover::before{opacity:0}
   .sc:hover{border-color:transparent;
     box-shadow:var(--glass),0 0 22px color-mix(in srgb,var(--sc-c) 32%,transparent)}
-  .sc b{display:block;font-size:21px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums;
-    font-family:var(--mono);letter-spacing:-.02em}
+  .sc b{display:block;font-size:21px;font-weight:800;line-height:1.05;
+    font-variant-numeric:tabular-nums;letter-spacing:-.3px}
   .sc span{display:block;font-size:9.5px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.4px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sc.a b{color:var(--gold)} .sc.g b{color:var(--ok)}
@@ -181,13 +190,15 @@
      не тень, а drop-shadow в тот же цвет: он повторяет контур буквы, а не
      рисует прямоугольник. */
   .rankb{
-    display:inline-block;font-family:var(--mono);font-weight:800;line-height:1;
-    letter-spacing:-.04em;
+    display:inline-block;font-family:var(--mono);font-weight:800;
+    /* запас по краям: у наклонных букв A, B, D глиф выходит за строчную коробку
+       и обрезался при заливке градиентом */
+    line-height:1.25;padding:0 .12em;margin:0 -.12em;
     -webkit-background-clip:text;background-clip:text;
     -webkit-text-fill-color:transparent;color:transparent;
   }
-  .rankb.big{font-size:19px}
-  .rankb.sm{font-size:15px}
+  .rankb.big{font-size:20px}
+  .rankb.sm{font-size:19px}
   .rankb.rSp{background-image:linear-gradient(165deg,#d8f4ff 8%,#5fc8ff 42%,#0f86d8 100%);
              filter:drop-shadow(0 0 5px #37b6ff9e) drop-shadow(0 1px 1px #0009)}
   .rankb.rS {background-image:linear-gradient(165deg,#fff0b8 8%,#ffc039 42%,#f0620c 100%);
@@ -225,7 +236,7 @@
      наружу плюс подсвеченная грань внутри дают тот самый «пузырёк». */
   .card:hover{
     border-color:color-mix(in srgb,var(--el) 70%,#fff);
-    transform:translateY(-4px) scale(1.015);
+    transform:translateY(-4px);
     box-shadow:
       1px 1px 0 #ffffff26 inset,
       -2px -3px 16px #00000073 inset,
@@ -242,6 +253,7 @@
   .card .ph::after{
     content:'';position:absolute;inset:0;
     background:linear-gradient(180deg,transparent 22%,#08090cb3 46%,#0a0c10f0 74%,var(--cmid) 100%);
+    bottom:-1px;
   }
   .card.no .ph img{opacity:.4}
   .card.no:hover .ph img{opacity:.75}
@@ -253,19 +265,20 @@
   }
   .fav:hover{color:#ffd54a99;transform:scale(1.15)}
   .fav.on{color:var(--gold);text-shadow:0 0 8px #ffd54a80,0 1px 3px #000}
-  .rk{position:absolute;top:7px;left:7px;z-index:3}
+  .rk{position:absolute;top:6px;left:9px;z-index:3;line-height:1}
 
   /* стихия, специальность, готовность и модификатор — одной колонкой справа */
   /* ранг из тир-листа — слева сверху, под значком редкости */
-  .tierb{position:absolute;left:7px;top:35px;z-index:3;min-width:23px;height:19px;padding:0 6px;
-    border-radius:20px;display:grid;place-items:center;font-size:10.5px;font-weight:800;
-    background:#0b0d11e6;border:1px solid var(--line);color:var(--tx2);line-height:1;
-    box-shadow:0 1px 0 #ffffff17 inset}
-  .tierb.tSp{border-color:#ff5c8a;color:#ff9ab6}
-  .tierb.tS{border-color:#ffb020;color:#ffcc66}
-  .tierb.tA{border-color:#a06bff;color:#c9a7ff}
-  .tierb.tB{border-color:#4a9fff;color:#8fc4ff}
-  .tierb.tC{border-color:#6b7280;color:#9aa0ae}
+  /* ранг из тир-листа — под буквой редкости, по той же оси */
+  .tierb{position:absolute;left:5px;top:36px;z-index:3;min-width:26px;height:17px;padding:0 5px;
+    border-radius:9px;display:grid;place-items:center;font-size:9.5px;font-weight:800;
+    letter-spacing:.2px;line-height:1;background:#0b0d11d9;backdrop-filter:blur(3px);
+    border:1px solid;box-shadow:0 1px 0 #ffffff14 inset,0 2px 6px #0009}
+  .tierb.tSp{border-color:#5fc8ff99;color:#9de0ff;box-shadow:0 0 10px #37b6ff3d,0 1px 0 #ffffff14 inset}
+  .tierb.tS {border-color:#ffb43d99;color:#ffd08a;box-shadow:0 0 10px #ffa0263d,0 1px 0 #ffffff14 inset}
+  .tierb.tA {border-color:#b58cff99;color:#d3bcff;box-shadow:0 0 10px #a56bff3d,0 1px 0 #ffffff14 inset}
+  .tierb.tB {border-color:#87beff99;color:#b7d8ff;box-shadow:0 0 10px #63a6ff33,0 1px 0 #ffffff14 inset}
+  .tierb.tC {border-color:#8a90a0a6;color:#b6bcc9;box-shadow:0 1px 0 #ffffff10 inset}
   .card.no .tierb{opacity:.45}
   .badges{position:absolute;right:6px;top:6px;z-index:3;display:flex;flex-direction:column;gap:5px}
   .elb,.prb{
@@ -445,7 +458,7 @@
   .dcard .sn{position:absolute;top:4px;left:6px;font-size:9px;color:var(--tx3);font-weight:700}
   .dcard img{width:34px;height:34px;object-fit:contain;margin:6px auto 3px;display:block}
   .dcard .mn{font-size:12.5px;font-weight:800;color:var(--warn);line-height:1.15;
-    font-variant-numeric:tabular-nums;font-family:var(--mono);letter-spacing:-.02em}
+    font-variant-numeric:tabular-nums;font-family:var(--mono)}
   .dcard .mnl{font-size:8.5px;color:var(--tx3);line-height:1.2;margin-bottom:4px}
   /* доп. характеристики, которые идут в зачёт модификаторов */
   .dcard .st2 span.good,.stlist div.good{color:var(--gold)}
@@ -627,6 +640,7 @@
     <div class="logo">
       <span class="mark">⚔</span>
       <span>ZZZ Трекер<small id="stats">загрузка…</small></span>
+      <span class="who" id="whoAmI" hidden></span>
       <span class="ver" id="appVer" title="версия трекера"></span>
       <span id="cloudDot" title="облако не подключено"></span>
     </div>
@@ -693,7 +707,7 @@
         Свой доступ нужен, только если хочешь <b>статы всех дисков</b>, а не шести витринных.
       </div>
       <ol class="hint" style="margin:8px 0 0 18px">
-        <li>Открой <a href="https://www.hoyolab.com/" target="_blank" rel="noopener" style="color:var(--gold)">hoyolab.com</a> и войди в аккаунт</li>
+        <li>Открой <a href="https://act.hoyolab.com/app/zzz-game-record/index.html?bbs_auth_required=true&amp;game_id=8&amp;lang=ru-ru&amp;bbs_theme=dark#/zzz" target="_blank" rel="noopener" style="color:var(--gold)">боевые заслуги ZZZ</a> и войди в аккаунт HoYoLab</li>
         <li>Нажми <b>F12</b> → вкладка <b>Application</b> (в русском Chrome «Приложение»)</li>
         <li>Слева <b>Storage → Cookies</b> → выбери строку <b>https://www.hoyolab.com</b></li>
         <li>В поле фильтра набери <b>lt</b> — останутся нужные строки</li>
@@ -718,7 +732,7 @@
       </div>
     </details>
 
-    <details class="more">
+    <details class="more" id="enkaWays" hidden>
       <summary>Другие способы — если хроника закрыта</summary>
       <div class="hint" style="margin-top:0">
         Всё ниже работает через <b>enka.network</b>. Нужно, только если публичный доступ
@@ -815,7 +829,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v63';
+const APP_VER = 'v66';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1442,6 +1456,7 @@ function boot() {
 
   $('main').style.display = 'block';
   if ($('appVer')) $('appVer').textContent = APP_VER;
+  setNick();
   renderFilters();
   render();
   if (sync) setTimeout(() => cloudSync(true), 250);
@@ -1542,23 +1557,21 @@ function renderFilters() {
   });
   h += '<span class="fsep"></span>';
   h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">есть у меня</span>';
-  h += '<span class="chip f-todo' + (ui.todo ? ' on' : '') + '">недокачанные</span>';
-  h += '<span class="fsep"></span><span style="font-size:10px;color:var(--tx3);letter-spacing:.5px">СОРТИРОВКА</span>';
-  [['ready', 'по готовности'], ['new', 'сначала новые'], ['mods', 'по модификаторам']]
-    .concat(TIER ? [['tier', 'по тир-листу']] : [])
-    .forEach(o => {
-      h += '<span class="chip f-sort' + ((ui.sort || 'ready') === o[0] ? ' on' : '') +
-           '" data-v="' + o[0] + '">' + o[1] + '</span>';
-    });
+  // Сортировка одна и переключается как флажок: нажал — по тир-листу,
+  // нажал ещё раз — обычный порядок по именам.
+  if (TIER) {
+    h += '<span class="chip f-sort' + (ui.sort === 'tier' ? ' on' : '') +
+         '" data-v="tier">по тир-листу</span>';
+  }
   $('filters').innerHTML = h;
 
   const tog = (arr, v) => { const i = arr.indexOf(v); if (i === -1) arr.push(v); else arr.splice(i, 1); };
   document.querySelectorAll('.f-el').forEach(c => c.onclick = () => { tog(ui.el, c.dataset.v); save(); renderFilters(); render(); });
   document.querySelectorAll('.f-pr').forEach(c => c.onclick = () => { tog(ui.pr, c.dataset.v); save(); renderFilters(); render(); });
   document.querySelector('.f-have').onclick = () => { ui.have = !ui.have; save(); renderFilters(); render(); };
-  document.querySelector('.f-todo').onclick = () => { ui.todo = !ui.todo; save(); renderFilters(); render(); };
   document.querySelectorAll('.f-sort').forEach(c => c.onclick = () => {
-    ui.sort = c.dataset.v; save(); renderFilters(); render();
+    ui.sort = (ui.sort === c.dataset.v) ? '' : c.dataset.v;   // повторное нажатие снимает
+    save(); renderFilters(); render();
   });
 }
 
@@ -1571,13 +1584,12 @@ function visible() {
     if (ui.pr.length && ui.pr.indexOf(a.prof) === -1) return false;
     const p = prog[a.id];
     if (ui.have && !(p && p.have)) return false;
-    if (ui.todo && (!p || !p.have || isDone(a.id))) return false;
     return true;
   });
 }
 
 function render() {
-  const mode = ui.sort || 'ready';
+  const mode = ui.sort || '';
   const list = visible().slice().sort((x, y) => {
     const fx = prog[x.id] && prog[x.id].fav ? 1 : 0;
     const fy = prog[y.id] && prog[y.id].fav ? 1 : 0;
@@ -1662,6 +1674,19 @@ function img(src, cls, alt) {
 
 // Значок ранга: буква на объёмной плашке. Используется и для редкости агента,
 // и для оценки диска — вид один, меняется только размер.
+// Ник игрока показываем в шапке — просто чтобы было видно, чей профиль открыт.
+const LS_NICK = LS + '_nick';
+function setNick(nick, uid) {
+  if (nick) localStorage.setItem(LS_NICK, nick);
+  const el = $('whoAmI');
+  if (!el) return;
+  const n = nick || localStorage.getItem(LS_NICK) || '';
+  const u = uid || localStorage.getItem(LS + '_uid') || '';
+  if (!n && !u) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = n ? '<b>' + esc(n) + '</b>' + (u ? ' · ' + esc(u) : '') : esc(u);
+}
+
 function rankBadge(letter, size, title) {
   const cls = { 'S+': 'rSp', 'S': 'rS', 'S-': 'rSm', 'A': 'rA', 'B': 'rB', 'C': 'rC', 'D': 'rD' };
   return '<span class="rankb ' + (size || 'sm') + ' ' + (cls[letter] || 'rC') + '"' +
@@ -3016,6 +3041,7 @@ function useEnkaData(data, viaProxy) {
   render();
   const nick = (show.SocialDetail && show.SocialDetail.ProfileDetail &&
                 show.SocialDetail.ProfileDetail.Nickname) || '';
+  setNick(nick, data.uid || '');
   refreshEnkaLinks();
   $('enkaMsg').innerHTML = '<b>Готово' + (nick ? ', ' + esc(nick) : '') + '.</b> Загружено: ' +
     esc(done.join(', ')) +
@@ -3291,6 +3317,7 @@ $('hoyoGo').onclick = async () => {
   scheduleSync();
   render();
   refreshEnkaLinks();
+  setNick(data.nick || '', uid);
 
   const still = thin && !fromEnka;
   msg.innerHTML = '<b>Готово.</b> Загружено агентов: <b>' + done.length + '</b>' +
