@@ -103,23 +103,35 @@
   .tbtn.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0}
 
   /* ── сводка ── */
-  .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:10px;margin-bottom:16px}
-  .sc.lead{display:flex;align-items:center;gap:11px}
-  .sc.lead img{width:46px;height:46px;border-radius:50%;object-fit:cover;flex:none;
+  .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:9px;margin-bottom:14px}
+  .sc.lead{display:flex;align-items:center;gap:9px}
+  .sc.lead img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;
     border:2px solid var(--ok);background:#0b0d11}
   .sc.lead > div{min-width:0}
   .sc{
+    --sc-c:var(--gold);
     background:linear-gradient(160deg,var(--pan2),var(--pan));
-    border:1px solid var(--line);padding:13px 16px;position:relative;overflow:hidden;
-    border-radius:16px;box-shadow:var(--glass);transition:.18s;
+    border:1px solid var(--line);padding:9px 12px;position:relative;overflow:hidden;
+    border-radius:14px;box-shadow:var(--glass);transition:box-shadow .2s,border-color .2s;
   }
-  .sc:hover{border-color:#ffffff24;box-shadow:var(--glass),0 6px 22px #0009}
-  .sc::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:3px;
-    border-radius:0 3px 3px 0;background:var(--gold);opacity:.85;
-    box-shadow:0 0 10px color-mix(in srgb,var(--gold) 60%,transparent)}
-  .sc b{display:block;font-size:23px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
-  .sc span{display:block;font-size:10.5px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
+  /* Полоска слева при наведении разворачивается в рамку по всему контуру и
+     подсвечивает блок своим же цветом — не серой тенью, а рассеянным светом. */
+  .sc::before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:3px;
+    border-radius:0 3px 3px 0;background:var(--sc-c);opacity:.85;transition:opacity .2s;
+    box-shadow:0 0 9px color-mix(in srgb,var(--sc-c) 60%,transparent)}
+  .sc::after{content:'';position:absolute;inset:0;border-radius:14px;pointer-events:none;
+    border:1px solid var(--sc-c);opacity:0;transition:opacity .22s;
+    box-shadow:0 0 16px color-mix(in srgb,var(--sc-c) 30%,transparent) inset}
+  .sc:hover::after{opacity:.9}
+  .sc:hover::before{opacity:0}
+  .sc:hover{border-color:transparent;
+    box-shadow:var(--glass),0 0 22px color-mix(in srgb,var(--sc-c) 32%,transparent)}
+  .sc b{display:block;font-size:21px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums;
+    font-family:var(--mono);letter-spacing:-.02em}
+  .sc span{display:block;font-size:9.5px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sc.a b{color:var(--gold)} .sc.g b{color:var(--ok)}
+  .sc.g{--sc-c:var(--ok)}
 
   /* ── поиск и фильтры ── */
   .search{position:relative;margin-bottom:11px}
@@ -163,25 +175,34 @@
   .gsec:first-child>h4{color:var(--gold)}
   .gsec:first-child>h4::after{background:linear-gradient(90deg,#ffd54a3d,transparent)}
 
-  /* ── значки ранга: буква на объёмной плашке, а не просто цветной текст ── */
+  /* ── буквы ранга: только глиф, без подложки ──
+     Заливка идёт градиентом по самим буквам — от светлого блика сверху к
+     насыщенному низу, отсюда ощущение отлитого металла. Свечение вокруг делает
+     не тень, а drop-shadow в тот же цвет: он повторяет контур буквы, а не
+     рисует прямоугольник. */
   .rankb{
-    display:inline-grid;place-items:center;font-family:var(--mono);font-weight:800;
-    line-height:1;color:#fff;border-radius:9px;position:relative;
-    text-shadow:0 1px 2px #0009;
-    box-shadow:0 1px 0 #ffffff5c inset, 0 -2px 6px #0006 inset, 0 2px 7px #0009;
+    display:inline-block;font-family:var(--mono);font-weight:800;line-height:1;
+    letter-spacing:-.04em;
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
   }
-  .rankb::after{content:'';position:absolute;left:2px;right:2px;top:2px;height:38%;
-    border-radius:7px 7px 60% 60%/7px 7px 100% 100%;
-    background:linear-gradient(180deg,#ffffff4d,#ffffff00);pointer-events:none}
-  .rankb.big{width:30px;height:30px;font-size:14px;letter-spacing:-.5px;border-radius:10px}
-  .rankb.sm{width:23px;height:23px;font-size:11px;letter-spacing:-.4px}
-  .rankb.rSp{background:linear-gradient(160deg,#7fd7ff,#1a8fd6);box-shadow:0 1px 0 #ffffff70 inset,0 -2px 6px #00000059 inset,0 2px 10px #1a8fd66b}
-  .rankb.rS {background:linear-gradient(160deg,#ffb43d,#f2620f);box-shadow:0 1px 0 #ffffff70 inset,0 -2px 6px #00000059 inset,0 2px 10px #f2620f6b}
-  .rankb.rSm{background:linear-gradient(160deg,#ffd76b,#e0951a)}
-  .rankb.rA {background:linear-gradient(160deg,#c6a2ff,#7a3fd0);box-shadow:0 1px 0 #ffffff70 inset,0 -2px 6px #00000059 inset,0 2px 10px #7a3fd06b}
-  .rankb.rB {background:linear-gradient(160deg,#8fc4ff,#2f6fc4)}
-  .rankb.rC {background:linear-gradient(160deg,#c8ccd6,#6d7381)}
-  .rankb.rD {background:linear-gradient(160deg,#8d93a1,#474c58)}
+  .rankb.big{font-size:19px}
+  .rankb.sm{font-size:15px}
+  .rankb.rSp{background-image:linear-gradient(165deg,#d8f4ff 8%,#5fc8ff 42%,#0f86d8 100%);
+             filter:drop-shadow(0 0 5px #37b6ff9e) drop-shadow(0 1px 1px #0009)}
+  .rankb.rS {background-image:linear-gradient(165deg,#fff0b8 8%,#ffc039 42%,#f0620c 100%);
+             filter:drop-shadow(0 0 5px #ffa02694) drop-shadow(0 1px 1px #0009)}
+  .rankb.rSm{background-image:linear-gradient(165deg,#fff3c9 8%,#ffd257 45%,#d98d10 100%);
+             filter:drop-shadow(0 0 5px #ffc23d8a) drop-shadow(0 1px 1px #0009)}
+  .rankb.rA {background-image:linear-gradient(165deg,#efe2ff 8%,#b58cff 42%,#6d2fc9 100%);
+             filter:drop-shadow(0 0 5px #a56bff94) drop-shadow(0 1px 1px #0009)}
+  .rankb.rB {background-image:linear-gradient(165deg,#dcecff 8%,#87beff 42%,#2a67bd 100%);
+             filter:drop-shadow(0 0 5px #63a6ff85) drop-shadow(0 1px 1px #0009)}
+  /* серые ранги тоже должны читаться: у C светлее верх, у D добавлен контур */
+  .rankb.rC {background-image:linear-gradient(165deg,#eef0f5 8%,#aeb4c2 45%,#5f6572 100%);
+             filter:drop-shadow(0 0 4px #aab0bd5c) drop-shadow(0 1px 1px #000c)}
+  .rankb.rD {background-image:linear-gradient(165deg,#b9bfcc 8%,#6f7583 45%,#2f3542 100%);
+             filter:drop-shadow(0 0 4px #7d8494a6) drop-shadow(0 1px 2px #000)}
 
   /* ── сетка агентов ── */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px}
@@ -435,12 +456,11 @@
   .dcard .st2 span{display:flex;align-items:center;gap:3px}
   .dcard .st2 em{margin-left:auto;font-style:normal;color:var(--tx);font-family:var(--mono)}
   .dcard .st2 .rl{color:var(--gold);font-weight:700;font-size:8px}
-  .dcard .edit{position:absolute;top:3px;right:4px;font-size:10px;color:var(--tx3);
+  .dcard .edit{position:absolute;bottom:3px;right:5px;font-size:10px;color:var(--tx3);
     opacity:0;transition:.12s;cursor:pointer}
   .dcard:hover .edit{opacity:1}
   /* оценка диска — значок в углу, уступает место карандашу при наведении */
-  .dcard .dq{position:absolute;top:5px;right:5px;transition:.12s;z-index:2}
-  .dcard:hover .dq{opacity:0}
+  .dcard .dq{position:absolute;top:4px;right:6px;z-index:2;pointer-events:none}
   .dqbar{height:2px;border-radius:2px;background:#ffffff14;margin-top:4px;overflow:hidden}
   .dqbar i{display:block;height:100%;border-radius:2px}
   .dcard .edit:hover{color:var(--gold)}
@@ -795,7 +815,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v62';
+const APP_VER = 'v63';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
