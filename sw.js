@@ -4,7 +4,7 @@
 // v8: карточки агентов переведены на card_*.webp / hero_*.webp вместо полноразмерных
 // art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
 // работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
-const CACHE = 'moi-dela-v10';
+const CACHE = 'moi-dela-v11';
 const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json', './zzz-extra.json', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
@@ -37,8 +37,10 @@ self.addEventListener('fetch', e => {
     e.respondWith(
       fetch(e.request)
         .then(r => {
-          const copy = r.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
+          if (r && r.ok) {
+            const copy = r.clone();
+            caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+          }
           return r;
         })
         .catch(() => caches.match(e.request).then(m => m || caches.match('./index.html')))
@@ -69,11 +71,17 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // остальное (иконка, манифест): кэш в приоритете, фоном обновляем
+  // остальное (иконка, манифест): кэш в приоритете, фоном обновляем.
+  // Копию ответа снимаем сразу: тело читается ровно один раз, и если звать
+  // clone() уже после того, как ответ ушёл странице, он падает с ошибкой —
+  // а вместе с ним падал и весь обработчик, подсовывая старый файл из кэша.
   e.respondWith(
     caches.match(e.request).then(cached => {
       const net = fetch(e.request).then(r => {
-        caches.open(CACHE).then(c => c.put(e.request, r.clone()));
+        if (r && r.ok) {
+          const copy = r.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        }
         return r;
       }).catch(() => cached);
       return cached || net;
