@@ -259,14 +259,17 @@
   }
   .card:hover .ph img{transform:scale(1.04)}
   .card .ph img{transition:transform .35s ease}
+  .card .nmb,.card .badges,.card .fav,.card .rk,.card .tierb{z-index:3}
   .card.no{--cmid:color-mix(in srgb,var(--cw),#000 88%);--cdark:#0a0c10}
-  .card .ph{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0b0d11}
-  .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;image-rendering:auto}
+  .card .ph{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0b0d11;
+    isolation:isolate;contain:paint}
+  .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;
+    image-rendering:auto;position:relative;z-index:0;will-change:transform;backface-visibility:hidden}
   /* низ фотографии гасим не в чёрный, а в цвет самой карточки — стыка не видно */
   .card .ph::after{
-    content:'';position:absolute;inset:0;
+    content:'';position:absolute;inset:0 0 -3px 0;z-index:1;
     background:linear-gradient(180deg,transparent 22%,#08090cb3 46%,#0a0c10f0 70%,var(--cmid) 92%,var(--cmid) 100%);
-    inset:0 0 -3px 0;
+    transform:translateZ(0);
   }
   .card.no .ph img{opacity:.4}
   .card.no:hover .ph img{opacity:.75}
@@ -370,7 +373,8 @@
   .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
   /* Плашки под именем: стекло сохранили, но добавили затемнение под ним —
      иначе на светлом арте белый текст пропадал. */
-  .hart .tg{font-size:11px;font-weight:600;line-height:28px;height:28px;padding:0 11px;border-radius:14px;
+  .hart .tg{font-size:11px;font-weight:600;line-height:30px;height:30px;padding:0 12px;border-radius:15px;
+    white-space:nowrap;
     background:linear-gradient(180deg,#ffffff2e,#ffffff0d),rgba(8,9,12,.55);
     backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
     box-shadow:0 1px 0 #ffffff2b inset,0 -1px 0 #0000004d inset,0 2px 8px #0006;
@@ -384,11 +388,15 @@
     color-mix(in srgb,var(--el) 14%,transparent)),rgba(8,9,12,.5);
     border-color:color-mix(in srgb,var(--el) 55%,transparent);
     color:#fff;box-shadow:0 1px 0 #ffffff33 inset,0 2px 12px color-mix(in srgb,var(--el) 35%,transparent)}
-  /* ранг и тир — буквой, как на карточках */
-  .hart .tg.rk2{padding:0 10px;gap:5px}
-  .hart .tg.tier2{border-color:#ffffff2e}
-  .hart .tg.pct{color:var(--ok);border-color:#4ade8047;
-    background:linear-gradient(180deg,#4ade8033,#4ade800f),rgba(8,9,12,.5)}
+  /* ранг и тир — буквой, как на карточках, но крупнее: на стекле мелкая
+     буква терялась */
+  .hart .tg .rankb{font-size:22px;line-height:1}
+  .hart .tg.rk2{padding:0 13px}
+  .hart .tg.tier2{border-color:#ffffff33;gap:8px}
+  .hart .tg.tier2 .rl{color:var(--tx2);font-size:10.5px;font-weight:600;letter-spacing:.2px}
+  .hart .tg.pct{color:var(--ok);border-color:#4ade8052;font-size:14px;font-weight:800;
+    background:linear-gradient(180deg,#4ade8033,#4ade800f),rgba(8,9,12,.5);
+    box-shadow:0 1px 0 #ffffff2b inset,0 2px 12px #4ade8033}
   .hart .tg b{font-weight:800}
 
   .hbody{padding:14px 16px 16px;min-width:0}
@@ -868,7 +876,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v69';
+const APP_VER = 'v70';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2009,10 +2017,10 @@ function renderSheet() {
         const role = ((TIER && TIER.roles) || {})[t.role] || '';
         return '<span class="tg tier2" title="Тир-лист «Оборона Шиюй», источник: ' +
           esc((TIER && TIER.sourceName) || '') + '">' + rankBadge(t.tier, 'sm') +
-          (role ? '<span style="color:var(--tx2);font-size:10px">' + esc(role) + '</span>' : '') +
+          (role ? '<span class="rl">' + esc(role) + '</span>' : '') +
           '</span>';
       })() +
-      (p.have ? '<span class="tg pct">готово <b>' + pctOf(curId) + '%</b></span>' : '') +
+      (p.have ? '<span class="tg pct" title="Готовность агента">' + pctOf(curId) + '%</span>' : '') +
     '</div></div></div><div class="hbody">';
 
   if (!p.have) {
