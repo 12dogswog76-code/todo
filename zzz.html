@@ -567,6 +567,15 @@
   .d5row.win .d5bar i{background:linear-gradient(90deg,#4ade80,#22c55e);
     box-shadow:0 0 8px #4ade8066}
   .d5row.win b{color:var(--ok);font-weight:800}
+  .d5fight{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;
+    padding-top:8px;border-top:1px solid #ffffff0f}
+  .d5cap{font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px}
+  .d5f{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--tx3)}
+  .d5f input{width:52px;background:#0b0d11;border:1px solid var(--line);border-radius:7px;
+    color:var(--tx);padding:3px 7px;font-size:11px;text-align:right;outline:none;
+    font-family:inherit;font-variant-numeric:tabular-nums}
+  .d5f input:focus{border-color:var(--gold)}
+  .d5note{font-size:10px;color:var(--tx3);opacity:.75;flex:1;min-width:140px}
   .d5foot{margin-top:8px;padding-top:7px;border-top:1px solid #ffffff0f;
     font-size:10.5px;color:var(--tx3);line-height:1.5}
   @media(max-width:640px){ .d5row .d5n{width:104px;font-size:11px} .d5sel{margin-left:0} }
@@ -943,7 +952,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v79';
+const APP_VER = 'v81';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2143,22 +2152,51 @@ function fifthDisc(a, p, team, boss) {
   const bd = (BOSS_DEF[boss] || BOSS_DEF[1]).v;
 
   const without = (p.discs || []).filter(d => d && d.slot !== 5);
-  const T = calcTotals(a, p, without);
+  const T  = calcTotals(a, p, without);         // расчёт без пятого диска
+  const TW = calcTotals(a, p, p.discs || []);   // расчёт со всеми дисками
   const pt = T._parts.atk;
 
+  // Итоговые характеристики из игры (p.cur) включают всё, чего наш расчёт не
+  // знает: пассивки ядра, дополнительные способности, эффекты оружия и бонусы
+  // комплектов. Поэтому берём за основу их, а вклад пятого диска снимаем как
+  // разницу между расчётом со всеми дисками и без него.
+  const cur = p.cur || {};
+  const real = (k, calcNo, calcAll) => {
+    const v = cur[k];
+    if (v == null || !isFinite(v)) return calcNo;      // импорта не было — считаем сами
+    return v - (calcAll - calcNo);                     // из игрового итога вычли пятый диск
+  };
+  // Пассивки оружия и ядра, которые работают только в бою, игра в профиле не
+  // показывает — ни хроника, ни Enka их не отдают. Поэтому их вписывают руками
+  // один раз на агента: «Струны ночи» дают крит. урон, чей-то движок — атаку,
+  // чьё-то ядро — бонус стихии.
+  const fight = (p.d5 && typeof p.d5 === 'object') ? p.d5 : {};
+  const fAtkp = (+fight.atkp || 0) / 100;
+  const fDmg  = (+fight.dmg  || 0) / 100;
+  const fPen  = (+fight.penp || 0) / 100;
+
+  const atkOwn = real('atk', T.atk, TW.atk);
+  let affix    = real('dmg', T.dmg * 100, TW.dmg * 100) / 100;
+  let penOwn   = real('penp', T.penp * 100, TW.penp * 100) / 100;
+  const flatPen = real('pen', T.pen, TW.pen);
+  if (!(affix >= 0)) affix = Math.max(0, T.dmg || 0);
+  if (!(penOwn >= 0)) penOwn = Math.max(0, T.penp || 0);
+
   const baseAtk = pt.base || 1;
-  // атака в бою: своё, потом множитель команды, потом её плоские прибавки
-  const atkNow = (baseAtk * (1 + pt.pct) + pt.flat) * (1 + tb.atkp) + tb.flat;
-  const affix  = T.dmg || 0;
-  const dm     = defMult(bd, tb.shred, T.penp || 0, T.pen || 0);
+  affix  += fDmg;
+  penOwn += fPen;
+  // атака в бою: своё и боевые пассивки, потом множитель команды и её плоские прибавки
+  const atkOwnF = atkOwn + baseAtk * fAtkp;
+  const atkNow  = atkOwnF * (1 + tb.atkp) + tb.flat;
+  const dm      = defMult(bd, tb.shred, penOwn, flatPen);
 
-  const dps = (atk, aff, pen) => atk * (1 + aff) * defMult(bd, tb.shred, pen, T.pen || 0);
-  const now = dps(atkNow, affix, T.penp || 0);
+  const dps = (atk, aff, pen) => atk * (1 + aff) * defMult(bd, tb.shred, pen, flatPen);
+  const now = dps(atkNow, affix, penOwn);
 
-  const vAtk = dps((baseAtk * (1 + pt.pct + D5.atkp) + pt.flat) * (1 + tb.atkp) + tb.flat,
-                   affix, T.penp || 0);
-  const vDmg = dps(atkNow, affix + D5.dmg, T.penp || 0);
-  const vPen = dps(atkNow, affix, (T.penp || 0) + D5.penp);
+  // прибавка к атаке от диска считается от базы агента с оружием и ядром
+  const vAtk = dps((atkOwnF + baseAtk * D5.atkp) * (1 + tb.atkp) + tb.flat, affix, penOwn);
+  const vDmg = dps(atkNow, affix + D5.dmg, penOwn);
+  const vPen = dps(atkNow, affix, penOwn + D5.penp);
 
   const list = [
     { k: 'dmg',  n: 'Бонус стихии 30%', v: vDmg },
@@ -2172,6 +2210,7 @@ function fifthDisc(a, p, team, boss) {
 
   return { list: list, best: best, lead: lead, atk: Math.round(atkNow),
            affix: Math.round(affix * 1000) / 10, dm: Math.round(dm * 1000) / 10,
+           fromGame: cur.atk != null, fight: fight,
            team: tb, boss: (BOSS_DEF[boss] || BOSS_DEF[1]).n };
 }
 
@@ -2186,6 +2225,11 @@ function fifthHTML(a, p) {
       '<div class="d5bar"><i style="width:' + Math.max(3, Math.round(o.v / r.list[0].v * 100)) + '%"></i></div>' +
       '<b>+' + o.gain.toFixed(1) + '%</b></div>').join('');
   const near = r.lead < 3;
+  const f = r.fight || {};
+  const fld = (k, lab, ph) =>
+    '<label class="d5f"><span>' + lab + '</span>' +
+    '<input type="number" class="d5in" data-f="' + k + '" step="1" min="0" max="300" ' +
+    'placeholder="' + ph + '" value="' + (f[k] != null && f[k] !== '' ? esc(String(f[k])) : '') + '"></label>';
   return '<div class="d5">' +
     '<div class="d5head">' +
       '<span>Пятый диск: <b>' + esc(r.best.n) + '</b></span>' +
@@ -2198,12 +2242,20 @@ function fifthHTML(a, p) {
           esc(b.n) + '</i>').join('') +
       '</span>' +
     '</div>' + rows +
+    '<div class="d5fight">' +
+      '<span class="d5cap">в бою добавляется</span>' +
+      fld('atkp', 'атака %', '0') + fld('dmg', 'стихия %', '0') + fld('penp', 'пробой %', '0') +
+      '<span class="d5note">пассивки оружия и ядра — игра их в профиле не показывает</span>' +
+    '</div>' +
     '<div class="d5foot">' +
       (near ? 'Разница с ближайшим вариантом всего ' + r.lead.toFixed(1) +
               '% — бери тот, где лучше доп. характеристики. '
             : 'Отрыв от второго варианта: ' + r.lead.toFixed(1) + '%. ') +
       'Считано от твоих статов без пятого диска: атака ' + r.atk +
-      ', бонус стихии ' + r.affix + '%, до цели доходит ' + r.dm + '% урона.' +
+      ', бонус стихии ' + r.affix + '%, до цели доходит ' + r.dm + '% урона. ' +
+      (r.fromGame ? 'Характеристики взяты из игры, то есть с пассивками ядра, оружия и комплектов.'
+                  : 'Импорта не было — считано по справочнику, без пассивок.') +
+      ' Крит в сравнение не входит: он множит все три варианта одинаково.' +
     '</div></div>';
 }
 
@@ -2563,6 +2615,17 @@ function bindSheet() {
     editing = null;
     renderSheet();
   };
+  document.querySelectorAll('.d5in').forEach(el => {
+    el.onclick = e => e.stopPropagation();
+    el.onchange = () => {
+      const pp = P(curId);
+      if (!pp.d5 || typeof pp.d5 !== 'object') pp.d5 = {};
+      const v = el.value.trim();
+      if (v === '' || !isFinite(+v)) delete pp.d5[el.dataset.f];
+      else pp.d5[el.dataset.f] = Math.max(0, Math.min(300, +v));
+      save(curId); renderSheet();
+    };
+  });
   document.querySelectorAll('.d5t').forEach(el => el.onclick = e => {
     e.stopPropagation();
     if (el.dataset.team != null) ui.d5team = +el.dataset.team;
