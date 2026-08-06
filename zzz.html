@@ -567,9 +567,15 @@
   .d5row.win .d5bar i{background:linear-gradient(90deg,#4ade80,#22c55e);
     box-shadow:0 0 8px #4ade8066}
   .d5row.win b{color:var(--ok);font-weight:800}
-  .d5fight{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;
-    padding-top:8px;border-top:1px solid #ffffff0f}
-  .d5cap{font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px}
+  .d5fight{margin-top:9px;padding-top:8px;border-top:1px solid #ffffff0f}
+  .d5fight>summary{cursor:pointer;font-size:10.5px;color:var(--tx3);list-style:none;
+    display:inline-flex;align-items:center;gap:5px;user-select:none;
+    text-transform:uppercase;letter-spacing:.4px}
+  .d5fight>summary::-webkit-details-marker{display:none}
+  .d5fight>summary::before{content:'+';font-size:12px;line-height:1}
+  .d5fight[open]>summary::before{content:'−'}
+  .d5fight>summary:hover{color:var(--tx2)}
+  .d5frow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
   .d5f{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--tx3)}
   .d5f input{width:52px;background:#0b0d11;border:1px solid var(--line);border-radius:7px;
     color:var(--tx);padding:3px 7px;font-size:11px;text-align:right;outline:none;
@@ -952,7 +958,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v83';
+const APP_VER = 'v84';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2273,6 +2279,7 @@ function fifthHTML(a, p) {
       '<b>+' + o.gain.toFixed(1) + '%</b></div>').join('');
   const near = r.lead < 3;
   const f = r.fight || {};
+  const hasFight = ['atkp','dmg','penp'].some(k => +f[k]);
   const fld = (k, lab, ph) =>
     '<label class="d5f"><span>' + lab + '</span>' +
     '<input type="number" class="d5in" data-f="' + k + '" step="1" min="0" max="300" ' +
@@ -2289,18 +2296,20 @@ function fifthHTML(a, p) {
           esc(b.n) + '</i>').join('') +
       '</span>' +
     '</div>' + rows +
-    '<div class="d5fight">' +
-      '<span class="d5cap">в бою добавляется</span>' +
+    '<details class="d5fight"' + (hasFight ? ' open' : '') + '>' +
+      '<summary>' + (hasFight ? 'вписано вручную' : 'уточнить вручную') + '</summary>' +
+      '<div class="d5frow">' +
       fld('atkp', 'атака %', '0') + fld('dmg', 'стихия %', '0') + fld('penp', 'пробой %', '0') +
       '<span class="d5note">' + (function () {
         const src = [];
         if (r.wf && r.wf.atkp) src.push('оружие: атака +' + r.wf.atkp + '% (фаза ' + r.wf.ph + ')');
         if (r.sf && r.sf.dmg)  src.push(esc(r.sf.from.join(', ')) + ': стихия +' + r.sf.dmg + '%');
         if (r.sf && r.sf.atkp) src.push(esc(r.sf.from.join(', ')) + ': атака +' + r.sf.atkp + '%');
-        return src.length ? 'уже учтено — ' + src.join(', ')
-                          : 'пассивки оружия и ядра — игра их в профиле не показывает';
+        return src.length ? 'уже учтено само — ' + src.join(', ')
+                          : 'сюда только то, что висит весь бой и не попало в расчёт: ' +
+                            'доп. способность агента, баф поддержки, новое оружие без описания';
       })() + '</span>' +
-    '</div>' +
+      '</div></details>' +
     '<div class="d5foot">' +
       (near ? 'Разница с ближайшим вариантом всего ' + r.lead.toFixed(1) +
               '% — бери тот, где лучше доп. характеристики. '
