@@ -332,12 +332,13 @@
      страницы и от подъёма карточки прячутся под этим непрозрачным слоем. */
   .cbars{padding:9px 9px 9px;display:flex;flex-direction:column;gap:4px;
     position:relative;z-index:2;background:var(--cmid);margin-top:0}
-  .cb{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--tx3)}
-  .cb b{width:46px;flex:none;font-weight:500}
+  .cb{display:flex;align-items:center;gap:6px;font-size:10px;color:#fff}
+  .cb b{width:48px;flex:none;font-weight:600;color:#fff}
   .cb .t{flex:1;height:3px;background:#ffffff12;border-radius:2px;overflow:hidden}
   .cb .t i{display:block;height:100%;background:var(--warn);border-radius:2px}
   .cb .t i.full{background:var(--ok)}
-  .cb span{width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+  .cb span{width:40px;text-align:right;flex:none;font-variant-numeric:tabular-nums;
+    font-weight:600;color:#fff}
 
   /* ── модалка ── */
   .modal{display:none;position:fixed;inset:0;background:#000000cc;z-index:100;
@@ -384,7 +385,8 @@
     box-shadow:0 1px 0 #ffffff2b inset,0 -1px 0 #0000004d inset,0 2px 8px #0006;
     border:1px solid #ffffff1f;
     color:var(--tx);text-shadow:0 1px 2px #000c;
-    display:inline-flex;align-items:center;justify-content:center;gap:6px}
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    box-sizing:border-box}
   .hart .tg svg{display:block;filter:drop-shadow(0 1px 1px #000a)}
   .hart .tg .ic{display:inline-flex;align-items:center;justify-content:center}
   .hart .tg .ic img{display:block}
@@ -395,12 +397,17 @@
   /* Буква ранга — ровно та же, что на дисках. Тень текста от плашки обязательно
      гасим: буква залита градиентом по прозрачному глифу, и чужая тень
      проступала сквозь неё грязным пятном. */
-  .hart .tg .rankb{font-size:22px;line-height:1;text-shadow:none}
-  .hart .tg.rk2{padding:0 14px}
-  .hart .tg.tier2{border-color:#ffffff33;gap:7px}
-  .hart .tg .cap2{font-size:10px;font-weight:600;color:var(--tx3);letter-spacing:.3px;
-    text-transform:uppercase}
-  .hart .tg.pct{color:var(--ok);border-color:#4ade8052;font-size:14px;font-weight:800;
+  /* Буква — отдельная флекс-ячейка во всю высоту плашки, иначе её собственные
+     отступы и высота строки выталкивали глиф вниз. */
+  .hart .tg .rankb{display:inline-flex;align-items:center;justify-content:center;
+    height:100%;font-size:19px;line-height:1;text-shadow:none;margin:0;padding:0 2px}
+  .hart .tg.rk2{padding:0 13px}
+  .hart .tg.tier2{border-color:#ffffff33;gap:7px;padding:0 13px}
+  .hart .tg .cap2{display:inline-flex;align-items:center;height:100%;
+    font-size:9.5px;font-weight:600;color:var(--tx3);letter-spacing:.4px;
+    text-transform:uppercase;line-height:1}
+  .hart .tg.pct{color:var(--ok);border-color:#4ade8052;font-size:13.5px;font-weight:800;
+    line-height:1;letter-spacing:.2px;
     background:linear-gradient(180deg,#4ade8033,#4ade800f),rgba(8,9,12,.5);
     box-shadow:0 1px 0 #ffffff2b inset,0 2px 12px #4ade8033}
   .hart .tg b{font-weight:800}
@@ -882,7 +889,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v71';
+const APP_VER = 'v72';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
