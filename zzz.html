@@ -952,7 +952,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v82';
+const APP_VER = 'v83';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2132,6 +2132,31 @@ function weapFight(p) {
   return v ? { atkp: +v.atkp || 0, dmg: +v.dmg || 0, penp: +v.penp || 0, ph: ph } : null;
 }
 
+// Бонусы комплектов из четырёх предметов. Разобраны описания всех тридцати:
+// безусловный бонус, влияющий на выбор пятого диска, нашёлся ровно один.
+// Остальные либо условные («когда попадает», «при использовании»), либо
+// действуют на отдельный тип атаки, а не на весь урон.
+// Бонусы двух предметов сюда не нужны: они статичны, показываются в игре и
+// уже приходят в характеристиках при импорте.
+const SUIT_FIGHT = {
+  31800: { dmg: 15, el: ['fire', 'electric', 'firefrost'] }   // Хаос-джаз: огонь и электро
+};
+function suitFight(a, p) {
+  const cnt = {};
+  (p.discs || []).forEach(d => { if (d && d.suit) cnt[d.suit] = (cnt[d.suit] || 0) + 1; });
+  const out = { atkp: 0, dmg: 0, penp: 0, from: [] };
+  Object.keys(cnt).forEach(sid => {
+    if (cnt[sid] < 4) return;
+    const r = SUIT_FIGHT[sid];
+    if (!r) return;
+    if (r.el && (a.element || []).every(e => r.el.indexOf(e) < 0)) return;   // не та стихия
+    out.atkp += +r.atkp || 0; out.dmg += +r.dmg || 0; out.penp += +r.penp || 0;
+    const su = DB.suitById[sid];
+    out.from.push((su && (su.ru || su.en)) || ('#' + sid));
+  });
+  return out.from.length ? out : null;
+}
+
 // ── какой главный стат ставить на пятый диск ────────────────────────────────
 // Считаем по логике таблицы «Как выбрать 5-й диск»: урон пропорционален
 // произведению трёх множителей, и каждый из них имеет убывающую отдачу.
@@ -2192,9 +2217,10 @@ function fifthDisc(a, p, team, boss) {
   // чьё-то ядро — бонус стихии.
   const fight = (p.d5 && typeof p.d5 === 'object') ? p.d5 : {};
   const wf = weapFight(p);            // безусловная прибавка от пассивки оружия
-  const fAtkp = ((+fight.atkp || 0) + (wf ? wf.atkp : 0)) / 100;
-  const fDmg  = ((+fight.dmg  || 0) + (wf ? wf.dmg  : 0)) / 100;
-  const fPen  = ((+fight.penp || 0) + (wf ? wf.penp : 0)) / 100;
+  const sf = suitFight(a, p);         // и от комплекта из четырёх предметов
+  const fAtkp = ((+fight.atkp || 0) + (wf ? wf.atkp : 0) + (sf ? sf.atkp : 0)) / 100;
+  const fDmg  = ((+fight.dmg  || 0) + (wf ? wf.dmg  : 0) + (sf ? sf.dmg  : 0)) / 100;
+  const fPen  = ((+fight.penp || 0) + (wf ? wf.penp : 0) + (sf ? sf.penp : 0)) / 100;
 
   const atkOwn = real('atk', T.atk, TW.atk);
   let affix    = real('dmg', T.dmg * 100, TW.dmg * 100) / 100;
@@ -2231,7 +2257,7 @@ function fifthDisc(a, p, team, boss) {
 
   return { list: list, best: best, lead: lead, atk: Math.round(atkNow),
            affix: Math.round(affix * 1000) / 10, dm: Math.round(dm * 1000) / 10,
-           fromGame: cur.atk != null, fight: fight, wf: wf,
+           fromGame: cur.atk != null, fight: fight, wf: wf, sf: sf,
            team: tb, boss: (BOSS_DEF[boss] || BOSS_DEF[1]).n };
 }
 
@@ -2266,10 +2292,14 @@ function fifthHTML(a, p) {
     '<div class="d5fight">' +
       '<span class="d5cap">в бою добавляется</span>' +
       fld('atkp', 'атака %', '0') + fld('dmg', 'стихия %', '0') + fld('penp', 'пробой %', '0') +
-      '<span class="d5note">' +
-        (r.wf ? 'от пассивки оружия уже учтено: сила атаки +' + r.wf.atkp + '% (фаза ' + r.wf.ph + ')'
-              : 'пассивки оружия и ядра — игра их в профиле не показывает') +
-      '</span>' +
+      '<span class="d5note">' + (function () {
+        const src = [];
+        if (r.wf && r.wf.atkp) src.push('оружие: атака +' + r.wf.atkp + '% (фаза ' + r.wf.ph + ')');
+        if (r.sf && r.sf.dmg)  src.push(esc(r.sf.from.join(', ')) + ': стихия +' + r.sf.dmg + '%');
+        if (r.sf && r.sf.atkp) src.push(esc(r.sf.from.join(', ')) + ': атака +' + r.sf.atkp + '%');
+        return src.length ? 'уже учтено — ' + src.join(', ')
+                          : 'пассивки оружия и ядра — игра их в профиле не показывает';
+      })() + '</span>' +
     '</div>' +
     '<div class="d5foot">' +
       (near ? 'Разница с ближайшим вариантом всего ' + r.lead.toFixed(1) +
