@@ -210,18 +210,22 @@
     -webkit-background-clip:text;background-clip:text;
     -webkit-text-fill-color:transparent;color:transparent;
   }
+  .rankb i,.rankb u{font-style:normal;text-decoration:none;
+    -webkit-text-fill-color:transparent;color:transparent}
+  .rankb u{font-size:.6em;vertical-align:.22em;margin-left:.01em;letter-spacing:0}
   .rankb.big{font-size:20px}
   .rankb.sm{font-size:19px}
-  .rankb.rSp{background-image:linear-gradient(165deg,#d8f4ff 8%,#5fc8ff 42%,#0f86d8 100%);
-             filter:drop-shadow(0 0 5px #37b6ff9e) drop-shadow(0 1px 1px #0009)}
+  .rankb.rSp{background-image:linear-gradient(165deg,#ffffff 4%,#a8ecff 28%,#3fd0ff 58%,#0aa2f0 100%);
+             filter:drop-shadow(0 0 8px #48d3ffcc) drop-shadow(0 0 16px #2ab0ff6b)
+                    drop-shadow(0 1px 1px #0009)}
   .rankb.rS {background-image:linear-gradient(165deg,#fff0b8 8%,#ffc039 42%,#f0620c 100%);
              filter:drop-shadow(0 0 5px #ffa02694) drop-shadow(0 1px 1px #0009)}
   .rankb.rSm{background-image:linear-gradient(165deg,#fff3c9 8%,#ffd257 45%,#d98d10 100%);
              filter:drop-shadow(0 0 5px #ffc23d8a) drop-shadow(0 1px 1px #0009)}
   .rankb.rA {background-image:linear-gradient(165deg,#efe2ff 8%,#b58cff 42%,#6d2fc9 100%);
              filter:drop-shadow(0 0 5px #a56bff94) drop-shadow(0 1px 1px #0009)}
-  .rankb.rB {background-image:linear-gradient(165deg,#dcecff 8%,#87beff 42%,#2a67bd 100%);
-             filter:drop-shadow(0 0 5px #63a6ff85) drop-shadow(0 1px 1px #0009)}
+  .rankb.rB {background-image:linear-gradient(165deg,#a9c8ee 8%,#5c8ec9 45%,#1c4176 100%);
+             filter:drop-shadow(0 0 4px #4a7cb85c) drop-shadow(0 1px 2px #000b)}
   /* серые ранги тоже должны читаться: у C светлее верх, у D добавлен контур */
   .rankb.rC {background-image:linear-gradient(165deg,#eef0f5 8%,#aeb4c2 45%,#5f6572 100%);
              filter:drop-shadow(0 0 4px #aab0bd5c) drop-shadow(0 1px 1px #000c)}
@@ -912,7 +916,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v77';
+const APP_VER = 'v78';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1867,8 +1871,13 @@ function prydUrl(a) {
 
 function rankBadge(letter, size, title) {
   const cls = { 'S+': 'rSp', 'S': 'rS', 'S-': 'rSm', 'A': 'rA', 'B': 'rB', 'C': 'rC', 'D': 'rD' };
+  // Знак разносим в отдельный элемент: так его можно уменьшить, не трогая
+  // размер самой буквы. Заливка градиентом остаётся на общем контейнере.
+  const m = String(letter).match(/^([A-Za-z])([+\-−]?)$/);
+  const base = m ? m[1] : letter, sign = m ? m[2] : '';
   return '<span class="rankb ' + (size || 'sm') + ' ' + (cls[letter] || 'rC') + '"' +
-         (title ? ' title="' + esc(title) + '"' : '') + '>' + esc(letter) + '</span>';
+         (title ? ' title="' + esc(title) + '"' : '') + '>' +
+         '<i>' + esc(base) + '</i>' + (sign ? '<u>' + esc(sign) + '</u>' : '') + '</span>';
 }
 
 function cardHTML(a) {
