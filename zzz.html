@@ -385,8 +385,8 @@
     box-shadow:0 1px 0 #ffffff2b inset,0 -1px 0 #0000004d inset,0 2px 8px #0006;
     border:1px solid #ffffff1f;
     color:var(--tx);text-shadow:0 1px 2px #000c;
-    display:inline-flex;align-items:center;justify-content:center;gap:6px;
-    box-sizing:border-box}
+    display:inline-flex;flex-direction:row;flex-wrap:nowrap;flex-shrink:0;
+    align-items:center;justify-content:center;gap:6px;box-sizing:border-box}
   .hart .tg svg{display:block;filter:drop-shadow(0 1px 1px #000a)}
   .hart .tg .ic,.hart .tg .ic img{display:block;line-height:0}
   .hart .tg .ic{display:inline-flex;align-items:center;justify-content:center}
@@ -400,12 +400,12 @@
      проступала сквозь неё грязным пятном. */
   /* Буква — отдельная флекс-ячейка во всю высоту плашки, иначе её собственные
      отступы и высота строки выталкивали глиф вниз. */
-  .hart .tg .rankb{display:block;font-size:18px;line-height:1;text-shadow:none;
-    margin:-3px 0;padding:3px 2px}
+  .hart .tg .rankb{display:inline-block;vertical-align:middle;font-size:18px;line-height:1;
+    text-shadow:none;margin:-3px 0;padding:3px 2px;flex:none}
   .hart .tg.rk2{padding:9px 15px}
   .hart .tg.tier2{border-color:#ffffff33;gap:8px}
-  .hart .tg .cap2{display:block;font-size:9.5px;font-weight:600;color:var(--tx3);
-    letter-spacing:.4px;text-transform:uppercase;line-height:1}
+  .hart .tg .cap2{display:inline;font-size:9.5px;font-weight:600;color:var(--tx3);
+    letter-spacing:.4px;text-transform:uppercase;line-height:1;white-space:nowrap}
   .hart .tg.pct{color:var(--ok);border-color:#4ade8052;font-size:13.5px;font-weight:800;
     line-height:1;letter-spacing:.2px;padding:10px 15px;
     background:linear-gradient(180deg,#4ade8033,#4ade800f),rgba(8,9,12,.5);
@@ -460,14 +460,19 @@
   /* оружие */
   .weng{
     display:flex;align-items:center;gap:11px;background:linear-gradient(120deg,var(--pan2),var(--pan));
-    border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;transition:.12s;
+    border:1px solid var(--line);border-radius:12px;padding:9px 11px;cursor:pointer;transition:.12s;
+    flex-wrap:wrap;
   }
+  .weng>div{min-width:0;flex:1 1 120px}
   .weng:hover{border-color:var(--acc)}
   .weng.plan{border-style:dashed}
   .weng img{width:46px;height:46px;object-fit:contain;flex:none;border-radius:8px;background:#0b0d11}
-  .weng .wn{font-size:13px;font-weight:700;line-height:1.2}
+  .weng .wn{font-size:13px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
   .weng .wd{font-size:10.5px;color:var(--tx3);margin-top:2px}
-  .weng .wr{margin-left:auto;text-align:right;flex:none;font-size:10.5px;color:var(--tx2)}
+  /* Правая колонка не должна выдавливать себя за край: на узком экране она
+     просто уезжает на свою строку, а длинная приписка переносится по словам. */
+  .weng .wr{margin-left:auto;text-align:right;font-size:10.5px;color:var(--tx2);
+    flex:0 1 auto;min-width:0;overflow-wrap:anywhere;line-height:1.35}
   .weng .wr b{display:block;font-size:13px;color:var(--gold);font-variant-numeric:tabular-nums}
   .weng .edit{flex:none;color:var(--tx3);font-size:13px;cursor:pointer;padding:2px 4px}
   .weng .edit:hover{color:var(--gold)}
@@ -889,7 +894,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v73';
+const APP_VER = 'v74';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2182,7 +2187,7 @@ function renderSheet() {
         (w ? '<div class="wr"><b>АТК ' + Math.round(wb.atk) + '</b>' +
              (wb.sec ? esc(shortName(wb.sec.p)) + ' ' + esc(secText(wb.sec)) + ' · ' : '') +
              'Ур.' + (wSrc.w.lvl || 0) + ' · P' + (wSrc.w.phase || 1) + '</div>' : '') +
-        '<span class="edit" id="wEditBtn" title="изменить">✎</span>' +
+  
       '</div><div class="drop" id="infoW"></div></div>';
 
     // ── диски ──
@@ -2215,7 +2220,7 @@ function renderSheet() {
            (isPlan ? ' set' : '') + '" data-slot="' + sl + '" title="' +
            esc((d && suit ? (suit.ru || suit.en) : 'слот ' + sl) +
                (sc ? '\n\n' + discHint(sc, d) : '')) + '">' +
-        '<span class="sn">' + sl + '</span><span class="edit" data-edit="' + sl + '">✎</span>' +
+        '<span class="sn">' + sl + '</span>' +
         (sc ? '<span class="dq">' + rankBadge(sc.grade, 'big') + '</span>' : '') +
         (suit && suit.icon ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">'
                            : '<img alt="">') +
@@ -2356,22 +2361,22 @@ function bindSheet() {
   document.querySelectorAll('.htab[data-tab]').forEach(b => b.onclick = () => {
     applySheet(); curTab = b.dataset.tab; editing = null; renderSheet();
   });
+  // Карандаш убрали: клик по диску раскрывает подробности, а править
+  // предлагается кнопкой «изменить» внутри них.
   document.querySelectorAll('.dcard').forEach(c => {
-    c.onclick = e => {
+    c.onclick = () => {
       applySheet();
-      const isEdit = e.target && e.target.classList && e.target.classList.contains('edit');
       const sl = +c.dataset.slot;
-      if (isEdit) { editing = { kind: 'disc', slot: sl }; info = null; }
-      else { info = (info && info.kind === 'disc' && info.slot === sl) ? null : { kind: 'disc', slot: sl }; editing = null; }
+      info = (info && info.kind === 'disc' && info.slot === sl) ? null : { kind: 'disc', slot: sl };
+      editing = null;
       renderSheet();
     };
   });
   const we = $('wEdit');
-  if (we) we.onclick = e => {
+  if (we) we.onclick = () => {
     applySheet();
-    const isEdit = e.target && e.target.classList && e.target.classList.contains('edit');
-    if (isEdit) { editing = { kind: 'weapon' }; info = null; }
-    else { info = (info && info.kind === 'weapon') ? null : { kind: 'weapon' }; editing = null; }
+    info = (info && info.kind === 'weapon') ? null : { kind: 'weapon' };
+    editing = null;
     renderSheet();
   };
   document.querySelectorAll('.goalin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
