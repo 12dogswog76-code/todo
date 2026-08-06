@@ -656,6 +656,9 @@
   .howto li b{color:var(--tx)}
   .howto a{color:var(--acc)}
   .howto p{margin-top:9px;font-size:11.5px;color:var(--tx3);line-height:1.55}
+  .howto code.np{display:block;margin:6px 0 2px;padding:8px 11px;border-radius:8px;
+    background:#0b0d11;border:1px solid var(--line);color:var(--gold);
+    font-family:var(--mono);font-size:11.5px;user-select:all;overflow-wrap:anywhere}
   /* спойлер с запасными способами — чтобы не мешал новичку */
   .more{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
   .more>summary{cursor:pointer;font-size:12px;color:var(--tx3);list-style:none;
@@ -837,17 +840,32 @@
 
   <div class="panel" id="cloudPanel">
     <div class="hint" id="cloudInfo" style="margin-top:0"></div>
-    <input type="text" id="cloudKey" placeholder="Master Key (первое устройство) или код подключения (остальные)">
+
+    <div class="howto" id="npHow">
+      <h5>Общее хранилище — один раз на первом устройстве</h5>
+      <ol>
+        <li>Открой <a href="https://www.npoint.io/" target="_blank" rel="noopener">npoint.io</a>
+            и нажми <b>Create JSON</b>. Регистрация не нужна.</li>
+        <li>В окне редактора сотри всё и вставь ровно это, затем <b>Save</b>:
+            <code class="np">{"v":1,"prog":{},"uid":"","t":0}</code></li>
+        <li>Сверху появится ссылка вида <b>api.npoint.io/xxxxxxxxxxxx</b> — скопируй её.</li>
+        <li>Вставь ссылку в поле ниже и нажми <b>Подключить</b>, затем <b>Синхронизировать сейчас</b>.</li>
+      </ol>
+      <p>На втором устройстве ничего создавать не надо: нажми здесь
+         <b>Скопировать код подключения</b> и вставь код там в это же поле.</p>
+    </div>
+
+    <input type="text" id="cloudKey" style="margin-top:12px"
+           placeholder="ссылка api.npoint.io/… или код подключения с другого устройства">
     <div class="prow" style="margin-top:0">
       <button id="cloudConnect" class="pri">Подключить</button>
       <button id="cloudCopy" style="display:none">Скопировать код подключения</button>
       <button id="cloudNow" style="display:none">Синхронизировать сейчас</button>
       <button id="cloudOff" style="display:none">Отключить</button>
-      <button id="cloudTest">Проверить связь</button>
-      <button id="cloudNp">Хранилище npoint</button>
+      <button id="cloudTest" class="ghost2">Проверить связь</button>
     </div>
     <div class="hint" id="cloudMsg"></div>
-    <div class="hint" id="cloudDiag" style="color:var(--tx3);font-family:Consolas,monospace;font-size:11px;white-space:pre-wrap"></div>
+    <div class="hint" id="cloudDiag" style="color:var(--tx3);font-family:var(--mono);font-size:11px;white-space:pre-wrap"></div>
   </div>
 
   <div class="panel" id="modPanel">
@@ -894,7 +912,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v74';
+const APP_VER = 'v75';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3631,6 +3649,7 @@ function cloudUI() {
   $('cloudOff').style.display  = on ? '' : 'none';
   $('cloudKey').style.display     = on ? 'none' : '';
   $('cloudConnect').style.display = on ? 'none' : '';
+  if ($('npHow')) $('npHow').style.display = on ? 'none' : '';
   $('cloudInfo').innerHTML = on
     ? 'Облако подключено ✓ ' + (sync.np ? 'Хранилище: npoint. ' : 'Хранилище: jsonbin. ') +
       'Скопируй код подключения и вставь его на других устройствах.'
@@ -3794,20 +3813,7 @@ $('cloudCopy').onclick = () => {
 // Нужен там, где jsonbin закрыт сетью: у корпоративного интернета и части операторов.
 // Создать бин запросом npoint не даёт (отвечает 500) — только через свой сайт.
 // Поэтому показываем порядок действий, а ссылку принимаем в общее поле подключения.
-$('cloudNp').onclick = () => {
-  const msg = $('cloudMsg'), box = $('cloudDiag');
-  if (sync && sync.np) { msg.textContent = 'Уже на npoint: ' + sync.np; return; }
-  $('cloudKey').style.display = '';
-  $('cloudKey').placeholder = 'ссылка вида https://api.npoint.io/xxxxxxxx или сам код';
-  msg.textContent = 'Как перейти на npoint:';
-  box.textContent =
-    '1. Открой npoint.io и нажми Create JSON (вход не нужен).\n' +
-    '2. В окне редактора вставь: {"v":1,"prog":{},"uid":"","t":0} и сохрани.\n' +
-    '3. Скопируй ссылку вида https://api.npoint.io/xxxxxxxxxxxx\n' +
-    '4. Вставь её в поле выше и нажми «Подключить».\n' +
-    '5. Нажми «Синхронизировать сейчас» — твой прогресс уедет туда.\n' +
-    '6. На других устройствах: Отключить, потом «Скопировать код подключения» отсюда и вставить там.';
-};
+
 
 $('cloudTest').onclick = async () => {
   const box = $('cloudDiag');
