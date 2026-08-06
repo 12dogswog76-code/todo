@@ -544,6 +544,33 @@
   .setpill img{width:15px;height:15px;object-fit:contain}
   .setpill.full{border-color:var(--ok);color:var(--ok);box-shadow:0 1px 0 #ffffff12 inset,0 0 12px #4ade8024}
 
+  /* ── подсказка по пятому диску ── */
+  .d5{margin-top:10px;background:linear-gradient(160deg,#ffffff0a,#ffffff03);
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--glass)}
+  .d5head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    font-size:11.5px;color:var(--tx2);margin-bottom:8px}
+  .d5head b{color:var(--gold);font-weight:800}
+  .d5sel{margin-left:auto;font-size:10.5px;color:var(--tx3);display:flex;
+    align-items:center;gap:4px;flex-wrap:wrap}
+  .d5sel .d5t{font-style:normal;cursor:pointer;padding:2px 8px;border-radius:20px;
+    border:1px solid var(--line);background:#ffffff08;transition:.12s}
+  .d5sel .d5t:hover{color:var(--tx2);border-color:var(--tx3)}
+  .d5sel .d5t.on{color:var(--gold);border-color:var(--gold);background:#ffd54a1a}
+  .d5row{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--tx2);
+    padding:3px 0}
+  .d5row .d5n{width:132px;flex:none}
+  .d5row .d5bar{flex:1;height:5px;border-radius:3px;background:#ffffff12;overflow:hidden}
+  .d5row .d5bar i{display:block;height:100%;border-radius:3px;background:var(--tx3)}
+  .d5row b{width:52px;text-align:right;flex:none;font-variant-numeric:tabular-nums;color:var(--tx2)}
+  .d5row.win{color:var(--tx)}
+  .d5row.win .d5n{font-weight:700}
+  .d5row.win .d5bar i{background:linear-gradient(90deg,#4ade80,#22c55e);
+    box-shadow:0 0 8px #4ade8066}
+  .d5row.win b{color:var(--ok);font-weight:800}
+  .d5foot{margin-top:8px;padding-top:7px;border-top:1px solid #ffffff0f;
+    font-size:10.5px;color:var(--tx3);line-height:1.5}
+  @media(max-width:640px){ .d5row .d5n{width:104px;font-size:11px} .d5sel{margin-left:0} }
+
   /* ядро и навыки */
   .core{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
   .cc{
@@ -916,7 +943,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v78';
+const APP_VER = 'v79';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2076,6 +2103,110 @@ function mainText(pid, base, lvl) {
   return pct ? (v / 100).toFixed(1) + '%' : String(Math.round(v));
 }
 
+// ── какой главный стат ставить на пятый диск ────────────────────────────────
+// Считаем по логике таблицы «Как выбрать 5-й диск»: урон пропорционален
+// произведению трёх множителей, и каждый из них имеет убывающую отдачу.
+//
+//   урон ~ атака × (1 + бонус стихии) × множитель_защиты
+//
+// Поэтому чем больше у агента уже атаки, тем ценнее бонус стихии, и наоборот.
+// Точка равновесия считается прямым сравнением: прибавляем 30% к одному
+// множителю, к другому — и смотрим, где урон вырос сильнее.
+//
+// Бафы команды берём не поимённо, а тремя наборами: состав меняется, а
+// порядок величин — нет. К тому же большая часть бафов действует на оба
+// варианта одинаково и на выбор почти не влияет.
+const TEAM_BUFFS = [
+  { id: 0, n: 'без поддержки', flat: 0,    atkp: 0,    shred: 0    },
+  { id: 1, n: 'обычная',       flat: 1000, atkp: 0.25, shred: 0.20 },
+  { id: 2, n: 'сильная',       flat: 1800, atkp: 0.45, shred: 0.40 }
+];
+const BOSS_DEF = [
+  { id: 0, n: 'мало',    v: 476  },
+  { id: 1, n: 'средне',  v: 953  },
+  { id: 2, n: 'много',   v: 1588 }
+];
+// прибавки самого пятого диска, значения из игры
+const D5 = { dmg: 0.30, atkp: 0.30, penp: 0.24 };
+
+// множитель защиты: столько от урона доходит до цели
+function defMult(bossDef, shred, penRatio, flatPen) {
+  const def = Math.max(0, bossDef * (1 - shred) * (1 - penRatio) - flatPen);
+  return 794 / (794 + def);
+}
+
+// Возвращает три варианта с относительным уроном. Расчёт идёт от статов
+// БЕЗ пятого диска, иначе его вклад посчитался бы дважды.
+function fifthDisc(a, p, team, boss) {
+  if (!a || !p || !p.have) return null;
+  const tb = TEAM_BUFFS[team] || TEAM_BUFFS[1];
+  const bd = (BOSS_DEF[boss] || BOSS_DEF[1]).v;
+
+  const without = (p.discs || []).filter(d => d && d.slot !== 5);
+  const T = calcTotals(a, p, without);
+  const pt = T._parts.atk;
+
+  const baseAtk = pt.base || 1;
+  // атака в бою: своё, потом множитель команды, потом её плоские прибавки
+  const atkNow = (baseAtk * (1 + pt.pct) + pt.flat) * (1 + tb.atkp) + tb.flat;
+  const affix  = T.dmg || 0;
+  const dm     = defMult(bd, tb.shred, T.penp || 0, T.pen || 0);
+
+  const dps = (atk, aff, pen) => atk * (1 + aff) * defMult(bd, tb.shred, pen, T.pen || 0);
+  const now = dps(atkNow, affix, T.penp || 0);
+
+  const vAtk = dps((baseAtk * (1 + pt.pct + D5.atkp) + pt.flat) * (1 + tb.atkp) + tb.flat,
+                   affix, T.penp || 0);
+  const vDmg = dps(atkNow, affix + D5.dmg, T.penp || 0);
+  const vPen = dps(atkNow, affix, (T.penp || 0) + D5.penp);
+
+  const list = [
+    { k: 'dmg',  n: 'Бонус стихии 30%', v: vDmg },
+    { k: 'atkp', n: 'Сила атаки 30%',   v: vAtk },
+    { k: 'penp', n: 'Пробивание 24%',   v: vPen }
+  ].sort((x, y) => y.v - x.v);
+
+  const best = list[0];
+  list.forEach(o => { o.gain = Math.round((o.v / now - 1) * 1000) / 10; });   // % к урону
+  const lead = Math.round((best.v / list[1].v - 1) * 1000) / 10;             // отрыв от второго
+
+  return { list: list, best: best, lead: lead, atk: Math.round(atkNow),
+           affix: Math.round(affix * 1000) / 10, dm: Math.round(dm * 1000) / 10,
+           team: tb, boss: (BOSS_DEF[boss] || BOSS_DEF[1]).n };
+}
+
+function fifthHTML(a, p) {
+  const team = (ui.d5team == null) ? 1 : ui.d5team;
+  const boss = (ui.d5boss == null) ? 1 : ui.d5boss;
+  const r = fifthDisc(a, p, team, boss);
+  if (!r) return '';
+  const rows = r.list.map((o, i) =>
+    '<div class="d5row' + (i === 0 ? ' win' : '') + '">' +
+      '<span class="d5n">' + esc(o.n) + '</span>' +
+      '<div class="d5bar"><i style="width:' + Math.max(3, Math.round(o.v / r.list[0].v * 100)) + '%"></i></div>' +
+      '<b>+' + o.gain.toFixed(1) + '%</b></div>').join('');
+  const near = r.lead < 3;
+  return '<div class="d5">' +
+    '<div class="d5head">' +
+      '<span>Пятый диск: <b>' + esc(r.best.n) + '</b></span>' +
+      '<span class="d5sel">' +
+        'команда ' + TEAM_BUFFS.map(t =>
+          '<i class="d5t' + (t.id === team ? ' on' : '') + '" data-team="' + t.id + '">' +
+          esc(t.n) + '</i>').join('') +
+        ' · защита ' + BOSS_DEF.map(b =>
+          '<i class="d5t' + (b.id === boss ? ' on' : '') + '" data-boss="' + b.id + '">' +
+          esc(b.n) + '</i>').join('') +
+      '</span>' +
+    '</div>' + rows +
+    '<div class="d5foot">' +
+      (near ? 'Разница с ближайшим вариантом всего ' + r.lead.toFixed(1) +
+              '% — бери тот, где лучше доп. характеристики. '
+            : 'Отрыв от второго варианта: ' + r.lead.toFixed(1) + '%. ') +
+      'Считано от твоих статов без пятого диска: атака ' + r.atk +
+      ', бонус стихии ' + r.affix + '%, до цели доходит ' + r.dm + '% урона.' +
+    '</div></div>';
+}
+
 function planDiscs(p) {
   // плановая сборка: берём текущие диски и заменяем те, что задал пользователь
   const cur = p.discs || [], pl = (p.plan && p.plan.discs) || [];
@@ -2293,6 +2424,7 @@ function renderSheet() {
         esc(su ? (su.ru || su.en) : '#' + sid) + ' ' + n + '/4</span>';
     }).join('');
     if (pills) h += '<div class="setline">' + pills + '</div>';
+    h += fifthHTML(a, p);
     h += '<div class="drop" id="infoD"></div></div>';
 
     // ── ядро и навыки ──
@@ -2431,6 +2563,12 @@ function bindSheet() {
     editing = null;
     renderSheet();
   };
+  document.querySelectorAll('.d5t').forEach(el => el.onclick = e => {
+    e.stopPropagation();
+    if (el.dataset.team != null) ui.d5team = +el.dataset.team;
+    if (el.dataset.boss != null) ui.d5boss = +el.dataset.boss;
+    save(); renderSheet();
+  });
   document.querySelectorAll('.goalin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
   document.querySelectorAll('.curin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
   const cbb = $('coreBonusBtn');
