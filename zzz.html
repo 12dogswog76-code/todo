@@ -378,7 +378,7 @@
   .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
   /* Плашки под именем: стекло сохранили, но добавили затемнение под ним —
      иначе на светлом арте белый текст пропадал. */
-  .hart .tg{font-size:11px;font-weight:600;line-height:1;height:30px;padding:0 12px;border-radius:15px;
+  .hart .tg{font-size:11px;font-weight:600;line-height:1;padding:9px 13px;border-radius:16px;
     white-space:nowrap;
     background:linear-gradient(180deg,#ffffff2e,#ffffff0d),rgba(8,9,12,.55);
     backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
@@ -388,6 +388,7 @@
     display:inline-flex;align-items:center;justify-content:center;gap:6px;
     box-sizing:border-box}
   .hart .tg svg{display:block;filter:drop-shadow(0 1px 1px #000a)}
+  .hart .tg .ic,.hart .tg .ic img{display:block;line-height:0}
   .hart .tg .ic{display:inline-flex;align-items:center;justify-content:center}
   .hart .tg .ic img{display:block}
   .hart .tg.el{background:linear-gradient(180deg,color-mix(in srgb,var(--el) 38%,transparent),
@@ -399,15 +400,14 @@
      проступала сквозь неё грязным пятном. */
   /* Буква — отдельная флекс-ячейка во всю высоту плашки, иначе её собственные
      отступы и высота строки выталкивали глиф вниз. */
-  .hart .tg .rankb{display:inline-flex;align-items:center;justify-content:center;
-    height:100%;font-size:19px;line-height:1;text-shadow:none;margin:0;padding:0 2px}
-  .hart .tg.rk2{padding:0 13px}
-  .hart .tg.tier2{border-color:#ffffff33;gap:7px;padding:0 13px}
-  .hart .tg .cap2{display:inline-flex;align-items:center;height:100%;
-    font-size:9.5px;font-weight:600;color:var(--tx3);letter-spacing:.4px;
-    text-transform:uppercase;line-height:1}
+  .hart .tg .rankb{display:block;font-size:18px;line-height:1;text-shadow:none;
+    margin:-3px 0;padding:3px 2px}
+  .hart .tg.rk2{padding:9px 15px}
+  .hart .tg.tier2{border-color:#ffffff33;gap:8px}
+  .hart .tg .cap2{display:block;font-size:9.5px;font-weight:600;color:var(--tx3);
+    letter-spacing:.4px;text-transform:uppercase;line-height:1}
   .hart .tg.pct{color:var(--ok);border-color:#4ade8052;font-size:13.5px;font-weight:800;
-    line-height:1;letter-spacing:.2px;
+    line-height:1;letter-spacing:.2px;padding:10px 15px;
     background:linear-gradient(180deg,#4ade8033,#4ade800f),rgba(8,9,12,.5);
     box-shadow:0 1px 0 #ffffff2b inset,0 2px 12px #4ade8033}
   .hart .tg b{font-weight:800}
@@ -889,7 +889,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v72';
+const APP_VER = 'v73';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1272,6 +1272,13 @@ let sync = null, pushTimer = null;
 let theme = localStorage.getItem(LS + '_theme') || 'dark';
 
 try { prog = JSON.parse(localStorage.getItem(LS)) || {}; } catch (e) { prog = {}; }
+// основной ключ пуст, а копия жива — значит запись когда-то не прошла, восстанавливаем
+if (!Object.keys(prog).length) {
+  try {
+    const bak = JSON.parse(localStorage.getItem(LS + '_bak')) || {};
+    if (Object.keys(bak).length) { prog = bak; }
+  } catch (e) {}
+}
 try { Object.assign(ui, JSON.parse(localStorage.getItem(LS + '_ui')) || {}); } catch (e) {}
 try { sync = JSON.parse(localStorage.getItem(LS + '_sync')); } catch (e) {}
 
@@ -1306,10 +1313,42 @@ function P(id) {
   return p;
 }
 
+// Прогресс — единственное, что нельзя терять. Раньше запись шла напрямую, и если
+// хранилище браузера переполнялось (там же лежит кеш справочника агентов), запись
+// молча падала: в памяти данные были, а после перезагрузки страницы исчезали.
+// Теперь пишем через обёртку: держим вторую копию, а при переполнении сбрасываем
+// кеш справочника — он восстановится из zzz-db.json на сайте.
+const LS_BAK = LS + '_bak';
+let saveWarned = false;
+
+function writeProg() {
+  const json = JSON.stringify(prog);
+  try {
+    localStorage.setItem(LS, json);
+    localStorage.setItem(LS_BAK, json);
+    return true;
+  } catch (e) {
+    try {
+      localStorage.removeItem(DB_KEY);      // самый крупный и легко восстановимый кусок
+      localStorage.setItem(LS, json);
+      localStorage.setItem(LS_BAK, json);
+      return true;
+    } catch (e2) {
+      if (!saveWarned) {
+        saveWarned = true;
+        alert('Не удалось сохранить данные: в браузере закончилось место для этого сайта.\n\n' +
+              'Скорее всего дело в режиме инкогнито или в настройках очистки данных. ' +
+              'Сделай экспорт в панели «Данные», чтобы не потерять прогресс.');
+      }
+      return false;
+    }
+  }
+}
+
 function save(touch) {
   if (touch) P(touch).mod = Date.now();
-  localStorage.setItem(LS, JSON.stringify(prog));
-  localStorage.setItem(LS + '_ui', JSON.stringify(ui));
+  writeProg();
+  try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
   scheduleSync();
 }
 
@@ -3199,7 +3238,7 @@ $('enkaLocal').onclick = async () => {
     if (!ok) throw new Error('в профиле нет знакомых агентов');
     if (prof.uid) { localStorage.setItem(LS + '_uid', prof.uid); if ($('uidInput')) $('uidInput').value = prof.uid; }
 
-    localStorage.setItem(LS, JSON.stringify(prog));
+    writeProg();
     scheduleSync();
     render();
     msg.innerHTML = 'Загружено агентов: <b>' + ok + '</b> · профиль ' +
@@ -3265,7 +3304,7 @@ $('enkaBuilds').onclick = async () => {
       if (!av || !DB.byId[av.Id]) { skip++; return; }
       if (applyEnka(av)) ok++;
     });
-    localStorage.setItem(LS, JSON.stringify(prog));
+    writeProg();
     scheduleSync();
     render();
     $('enkaMsg').innerHTML = ok
@@ -3409,7 +3448,7 @@ $('hoyoGo').onclick = async () => {
   }
 
   save();
-  localStorage.setItem(LS, JSON.stringify(prog));
+  writeProg();
   scheduleSync();
   render();
   refreshEnkaLinks();
@@ -3670,7 +3709,7 @@ async function cloudSync(quiet) {
 
   const changed = mergeProg(rec);
   if (changed) {
-    localStorage.setItem(LS, JSON.stringify(prog));
+    writeProg();
     if (!$('modal').classList.contains('open')) render();
   }
   // локальное свежее — вернём в облако, иначе второе устройство своё потеряет
