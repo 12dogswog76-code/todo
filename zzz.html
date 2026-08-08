@@ -42,16 +42,17 @@
   body::after{
     content:'';position:fixed;inset:-60px;z-index:-1;pointer-events:none;
     background:
+      radial-gradient(#ffffff0a 1px,transparent 1.2px),
       repeating-linear-gradient(115deg,#ffffff07 0 1px,transparent 1px 9px),
       repeating-linear-gradient(65deg,#ffffff05 0 1px,transparent 1px 23px),
       repeating-linear-gradient(0deg,#ffffff03 0 1px,transparent 1px 72px);
-    background-size:240px 240px,240px 240px,100% 72px;
+    background-size:4px 4px,240px 240px,240px 240px,100% 72px;
   }
   /* движение только на большом экране и только если человек не просил его отключить */
   @media(min-width:900px) and (prefers-reduced-motion:no-preference){
     body::after{animation:bgdrift 90s linear infinite}
   }
-  @keyframes bgdrift{to{background-position:240px 0,-240px 0,0 0}}
+  @keyframes bgdrift{to{background-position:0 0,240px 0,-240px 0,0 0}}
   .wrap{max-width:1160px;margin:0 auto}
   /* На большом экране всё было мелким и приходилось выкручивать зум браузера
      до 150%. Делаем это сами — но только на десктопе, телефон и так в порядке. */
@@ -376,6 +377,21 @@
   .hart::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 40%,#0b0d11d9 62%,#0b0d11 78%),
                radial-gradient(60% 40% at 50% 0%,color-mix(in srgb,var(--el) 22%,transparent),transparent 70%)}
+  /* бегущая строка с именем агента */
+  .hart .hroll{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+    opacity:.13;mix-blend-mode:screen}
+  .hart .hroll-in{position:absolute;top:50%;left:50%;width:280%;
+    transform:translate(-50%,-50%) rotate(-32deg);display:flex;flex-direction:column;gap:6px}
+  .hart .hroll-in span{display:block;white-space:nowrap;font-size:54px;font-weight:900;
+    letter-spacing:2px;line-height:1;color:var(--el);text-transform:uppercase;
+    font-family:Impact,"Arial Black",var(--mono)}
+  @media(prefers-reduced-motion:no-preference){
+    .hart .hroll-in span:nth-child(1){animation:hrollA 42s linear infinite}
+    .hart .hroll-in span:nth-child(2){animation:hrollB 42s linear infinite}
+  }
+  @keyframes hrollA{to{transform:translateX(-25%)}}
+  @keyframes hrollB{from{transform:translateX(-25%)}to{transform:translateX(0)}}
+
   .hart .lv{
     position:absolute;top:10px;left:10px;background:#0b0d11d9;border:1px solid var(--el);
     color:var(--el);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;z-index:2;
@@ -431,6 +447,12 @@
   .htab:hover{border-color:var(--acc);color:var(--tx)}
   .htab.on{background:linear-gradient(180deg,#4ade8029,#4ade8014);border-color:var(--acc);
     color:#a7f3c0;font-weight:600;box-shadow:0 1px 0 #ffffff14 inset,0 0 14px #4ade8024}
+
+  /* Техно-подпись под заголовком секции — узнаваемая деталь стиля игры:
+     крошечная латиница вторым ярусом, почти незаметная. */
+  .sect>h4 .tt{display:inline-flex;flex-direction:column;gap:1px;line-height:1}
+  .sect>h4 .tt i{font-style:normal;font-size:6.5px;letter-spacing:1.6px;
+    color:var(--tx3);opacity:.6;font-weight:600;text-transform:uppercase}
 
   .sect{margin-bottom:14px}
   .sect>h4{
@@ -623,6 +645,16 @@
   }
   .frow select:focus,.frow input:focus{border-color:var(--acc)}
   .frow input[type=text]{flex:1;min-width:160px}
+
+  /* Двойная обводка: внутреннее кольцо с отступом даёт кнопке объём,
+     как в интерфейсе игры. */
+  .htab,.foot2 button,.panel button,.prow button{position:relative}
+  .htab::after,.foot2 button::after,.panel button::after,.prow button::after{
+    content:'';position:absolute;inset:2px;border-radius:inherit;pointer-events:none;
+    border:1px solid #ffffff14;box-shadow:inset 0 1px 1px #ffffff12;
+  }
+  .foot2 button.pri::after,.panel button.pri::after,.prow button.pri::after{
+    border-color:#00000026;box-shadow:inset 0 1px 1px #ffffff40}
 
   .foot2{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);
     background:var(--pan2)}
@@ -965,7 +997,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v85';
+const APP_VER = 'v86';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2362,6 +2394,12 @@ function renderSheet() {
     // низ колонки заполняем размытым тем же артом, чтобы не оставалось пустоты,
     // когда правая колонка длиннее картинки
     (art ? '<div class="hbg" style="background-image:url(' + esc(art) + ')"></div>' : '') +
+    // Имя агента огромными буквами по диагонали, очень медленно ползёт —
+    // фон карточки перестаёт быть просто размытым артом.
+    '<div class="hroll" aria-hidden="true"><div class="hroll-in">' +
+      '<span>' + esc(((a.en || a.ru) + ' ').repeat(6)) + '</span>' +
+      '<span>' + esc(((a.en || a.ru) + ' ').repeat(6)) + '</span>' +
+    '</div></div>' +
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
     (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async" data-alt="' + esc(artAlt) + '" ' +
       'onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
@@ -2412,7 +2450,7 @@ function renderSheet() {
     const mods = modifiersOf(curId, curTab === 'plan' ? planProg(p) : p);
     const modHint = Object.keys(mods.by).map(k => statName(k) + ': ' + mods.by[k]).join(', ');
     const manCount = Object.keys(p.manual || {}).filter(k => p.manual[k] != null).length;
-    h += '<div class="sect"><h4>Характеристики' +
+    h += '<div class="sect"><h4><span class="tt">Характеристики<i>AGENT STATS</i></span>' +
       (manCount && curTab === 'now'
         ? '<button id="manReset" class="modbadge" style="cursor:pointer;border-color:var(--warn);' +
           'color:var(--warn)" title="Сейчас ' + manCount + ' значений вписаны руками и перекрывают ' +
@@ -2482,7 +2520,7 @@ function renderSheet() {
     const wSrc = curTab === 'plan' ? planProg(p) : p;
     const w = DB.engById[wSrc.w.id];
     const wb = weaponBonus(wSrc);
-    h += '<div class="sect"><h4>W-Engine</h4>' +
+    h += '<div class="sect"><h4><span class="tt">W-Engine<i>SIGNAL ENGINE</i></span></h4>' +
       '<div class="weng' + (curTab === 'plan' ? ' plan' : '') + '" id="wEdit">' +
         (w && w.icon ? '<img src="' + esc(imgUrl('engines', w.icon)) + '" alt="" onerror="this.style.visibility=\'hidden\'">'
                      : '<img alt="">') +
@@ -2501,7 +2539,8 @@ function renderSheet() {
     const mk = modKeys(curId, p);   // нужные агенту доп. характеристики
     const bs = buildScore(list, mk, pri);
     const bg = discGrade(bs.pct);
-    h += '<div class="sect"><h4>Диски' + (curTab === 'plan' ? ' — задай желаемый' : '') +
+    h += '<div class="sect"><h4><span class="tt">Диски' + (curTab === 'plan' ? ' — задай желаемый' : '') +
+      '<i>DRIVE DISCS</i></span>' +
       (bs.filled ? '<span class="modbadge" title="' + esc(
         'Средняя оценка шести слотов под этого агента. Считается по доп. характеристикам:\n' +
         'у диска максимум ' + DISC_MAX_ROLLS + ' прокруток, в зачёт идут только нужные агенту.\n' +
@@ -2550,7 +2589,7 @@ function renderSheet() {
     h += '<div class="drop" id="infoD"></div></div>';
 
     // ── ядро и навыки ──
-    h += '<div class="sect"><h4>Ядро и навыки' +
+    h += '<div class="sect"><h4><span class="tt">Ядро и навыки<i>CORE SKILLS</i></span>' +
       '<button id="tgtBtn" class="modbadge" style="cursor:pointer" title="Свои цели прокачки. ' +
       'Готовность считается относительно них: если уклонение агенту не нужно, ставишь ему 1 — ' +
       'и трекер перестаёт считать это недоработкой.">🎯 цели: ' + tgtLabel(p) + '</button>' +
