@@ -64,12 +64,18 @@
     display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;letter-spacing:.5px;
     flex-wrap:wrap;min-width:0;
   }
+  /* Логотип: если рядом лежит img/zzz/ui/logo.png — показываем его,
+     иначе остаётся прежний значок. Файл не обязателен. */
   .logo .mark{
-    width:30px;height:30px;flex:none;display:grid;place-items:center;font-size:15px;
-    background:linear-gradient(135deg,#4ade80,#166534);
-    border-radius:9px;
-    box-shadow:0 0 14px #4ade8040;
+    height:34px;flex:none;display:grid;place-items:center;font-size:15px;
+    border-radius:9px;padding:0;
   }
+  .logo .mark img{height:34px;width:auto;max-width:150px;object-fit:contain;display:block;
+    filter:drop-shadow(0 2px 6px #000a)}
+  .logo .mark b{display:none}
+  .logo .mark.noimg{width:30px;height:30px;
+    background:linear-gradient(135deg,#4ade80,#166534);box-shadow:0 0 14px #4ade8040}
+  .logo .mark.noimg b{display:block;font-weight:400}
   /* название залито градиентом по самим буквам */
   .logo>span:nth-of-type(2){
     background:linear-gradient(135deg,#ffffff,#a8b4cc 55%,#6b7488);
@@ -752,7 +758,8 @@
 
   <div class="top">
     <div class="logo">
-      <span class="mark">⚔</span>
+      <span class="mark"><img src="img/zzz/ui/logo.png" alt=""
+        onerror="this.parentNode.classList.add('noimg');this.remove()"><b>⚔</b></span>
       <span>ZZZ Трекер<small id="stats">загрузка…</small></span>
       <span class="who" id="whoAmI" hidden></span>
       <span class="ver" id="appVer" title="версия трекера"></span>
@@ -958,7 +965,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v84';
+const APP_VER = 'v85';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
