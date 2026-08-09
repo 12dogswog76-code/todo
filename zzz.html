@@ -1142,7 +1142,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v108';
+const APP_VER = 'v109';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1455,6 +1455,7 @@ function statWeights(a, p) {
     const mx = Math.max(...Object.keys(ROLL).map(k => out[k])) || 1;
     Object.keys(ROLL).forEach(k => { out[k] = out[k] / mx; });
     out._role = 'rec';
+    out._id = a.id;
     return out;
   }
   const cur = (p && p.cur) || {};
@@ -1481,6 +1482,7 @@ function statWeights(a, p) {
   const max = Math.max(...Object.values(out)) || 1;
   Object.keys(out).forEach(k => { out[k] = out[k] / max; });
   out._role = role;
+  out._id = a.id;
   return out;
 }
 
@@ -1494,11 +1496,38 @@ function discGrade(pct) {
   }
   return { g: 'D', c: 'D' };
 }
-function discMainOk(d, keys, pri) {
+// Что гайд советует ставить главной характеристикой в слот 4, 5 или 6.
+// Строка вида «Ether DMG% > HP%» или «CRIT DMG% = CRIT Rate%» — все названия
+// оттуда переводим в наши ключи, порядок внутри слота не важен.
+function guideMain(id, slot) {
+  const g = guideOf(id);
+  const s = g && g['disk' + slot];
+  if (!s) return null;
+  const out = [];
+  String(s).split(/\s*(?:>=|>|=)\s*/).forEach(part => {
+    part.split('/').forEach(piece => {
+      const k = prydStat(piece);
+      if (k && out.indexOf(k) < 0) out.push(k);
+    });
+  });
+  return out.length ? out : null;
+}
+// Подходит ли главная характеристика диска. Слоты 1–3 не выбираются, там
+// всегда одно и то же. Для 4–6 сверяем с гайдом: он расписан по слотам
+// поимённо, и это точнее общего списка нужных агенту характеристик.
+function discMainOk(d, keys, pri, w) {
   if (!d || !d.mainP) return false;
-  if ((d.slot || 0) <= 3) return true;
+  const slot = d.slot || 0;
+  if (slot <= 3) return true;
   const k = PROP2STAT[String(d.mainP)] || '';
   if (!k) return false;
+  const gm = (w && w._id) ? guideMain(w._id, slot) : null;
+  if (gm) {
+    // проценты и плоский вариант в главной характеристике не различаются
+    const wide = { hp: 'hpp', atk: 'atkp', def: 'defp' };
+    const kk = wide[k] || k;
+    return gm.some(x => (wide[x] || x) === kk);
+  }
   if (k === 'dmg' || k === 'penp') return true;
   return keys.indexOf(k) >= 0 || pri.indexOf(k) >= 0;
 }
@@ -1517,8 +1546,20 @@ function discScore(d, keys, pri, w) {
   if (!tot) return null;
   const pct = Math.round(val / tot * 100);
   const gr = discGrade(pct);
+  const gm = (w && w._id && (d.slot || 0) > 3) ? guideMain(w._id, d.slot) : null;
   return { pct: pct, grade: gr.g, cls: gr.c, good: Math.round(val * 10) / 10, tot: tot,
-           mainOk: discMainOk(d, keys, pri), by: by, role: (w && w._role) || 'crit' };
+           mainOk: discMainOk(d, keys, pri, w), by: by, role: (w && w._role) || 'crit',
+           want: gm, suitOk: suitRecommended(w && w._id, d.suit) };
+}
+// Входит ли комплект диска в рекомендованные гайдом. null — гайда нет.
+function suitRecommended(id, suitId) {
+  const g = guideOf(id);
+  if (!g || !suitId) return null;
+  const names = (g.set4 || []).concat((g.set2 || []).map(x => (x && x.n) || x));
+  if (!names.length) return null;
+  const s = DB.suitById && DB.suitById[suitId];
+  if (!s) return null;
+  return names.some(n => nameKey(n) === nameKey(s.en));
 }
 const ROLE_RU = { crit: 'урон с критами', anomaly: 'урон от аномалии',
                   rupture: 'сквозной урон от здоровья', rec: 'по рекомендациям к сборке' };
@@ -1529,7 +1570,10 @@ function discHint(sc, d) {
     'Полезных прокруток: ' + sc.good + ' из ' + sc.tot +
     (sc.tot < DISC_MAX_ROLLS ? ' (диск не докачан, потолок ' + DISC_MAX_ROLLS + ')' : '') + '\n' +
     (sc.by.length ? 'Что и сколько даёт: ' + sc.by.join(', ') + '\n' : 'Ни одна доп. характеристика урона не добавляет\n') +
-    'Главная характеристика: ' + (sc.mainOk ? 'подходит' : 'агенту не нужна — на оценку не влияет, но диск слабее');
+    'Главная характеристика: ' + (sc.mainOk ? 'подходит' : 'агенту не нужна — на оценку не влияет, но диск слабее') +
+    (sc.want ? '\nГайд советует в этот слот: ' +
+      sc.want.map(k => GUIDE_STAT_RU[k] || statName(k)).join(' или ') : '') +
+    (sc.suitOk === false ? '\nКомплект не из рекомендованных для этого агента' : '');
 }
 function buildScore(list, keys, pri, w) {
   let sum = 0, n = 0;
@@ -1949,12 +1993,26 @@ function loadTier() {
     .then(x => { if (x) TIER = x; })
     .catch(() => {});
 }
+// Откуда брать тир-лист. Приоритет у prydwen: он собирается вместе со сборками
+// и обновляется чаще. Если его нет — прежний файл с gamemeta.
+function tierSrc() {
+  if (GUIDE && GUIDE.tiers && Object.keys(GUIDE.tiers).length) {
+    return { tiers: GUIDE.tiers, roles: (GUIDE && GUIDE.roles) || null,
+             sourceName: 'prydwen.gg', url: GUIDE.tierSource || '', date: GUIDE.tierDate || '' };
+  }
+  if (TIER && TIER.tiers) {
+    return { tiers: TIER.tiers, roles: TIER.roles || null,
+             sourceName: TIER.sourceName || '', url: TIER.source || '', date: '' };
+  }
+  return null;
+}
 // ранг агента: возвращает { tier, role } или null
 function tierOf(id) {
-  if (!TIER || !TIER.tiers) return null;
+  const src = tierSrc();
+  if (!src) return null;
   const order = ['S+', 'S', 'A', 'B', 'C', 'D'];
   for (const t of order) {
-    const row = TIER.tiers[t];
+    const row = src.tiers[t];
     if (!row) continue;
     for (const rl of Object.keys(row)) {
       if ((row[rl] || []).indexOf(id) >= 0) return { tier: t, role: rl };
@@ -2190,7 +2248,7 @@ function renderFilters() {
   h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">есть у меня</span>';
   // Сортировка одна и переключается как флажок: нажал — по тир-листу,
   // нажал ещё раз — обычный порядок по именам.
-  if (TIER) {
+  if (tierSrc()) {
     h += '<span class="chip f-sort' + (ui.sort === 'tier' ? ' on' : '') +
          '" data-v="tier">по тир-листу</span>';
   }
@@ -2408,10 +2466,14 @@ function cardHTML(a) {
         'data-alt="' + esc(picAlt) + '" onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
         '{this.src=this.dataset.alt}else{this.style.display=\'none\'}">' : '') +
       '<span class="rk">' + rankBadge(a.rarity, 'sm', 'Редкость ' + a.rarity) + '</span>' +
-      (tierOf(a.id) ? '<span class="tierb t' + esc(tierOf(a.id).tier.replace('+', 'p')) +
-        '" title="' + esc((TIER && TIER.sourceName) || 'тир-лист') + ': ' + esc(tierOf(a.id).tier) +
-        ' · ' + esc(((TIER && TIER.roles) || {})[tierOf(a.id).role] || '') + '">' +
-        esc(tierOf(a.id).tier) + '</span>' : '') +
+      (tierOf(a.id) ? (function () {
+        const t = tierOf(a.id), src = tierSrc() || {};
+        return '<span class="tierb t' + esc(t.tier.replace('+', 'p')) +
+          '" title="' + esc(src.sourceName || 'тир-лист') + ': ' + esc(t.tier) +
+          ' · ' + esc((src.roles || {})[t.role] || '') +
+          (src.date ? ', обновлён ' + esc(src.date) : '') + '">' +
+          esc(t.tier) + '</span>';
+      })() : '') +
       '<div class="badges">' +
         '<span class="elb">' + elIcon(el, 14) + '</span>' +
         '<span class="prb" title="' + esc(PROF[a.prof] || a.prof) + '">' + profIcon(a.prof, 14, '#e9ecf3') + '</span>' +
@@ -2999,10 +3061,11 @@ function renderSheet() {
       (function () {
         const t = tierOf(curId);
         if (!t) return '';
-        const role = ((TIER && TIER.roles) || {})[t.role] || '';
+        const src = tierSrc() || {};
+        const role = (src.roles || {})[t.role] || '';
         return '<span class="tg tier2" title="Тир-лист «Оборона Шиюй»' +
           (role ? ', роль: ' + esc(role) : '') + '. Источник: ' +
-          esc((TIER && TIER.sourceName) || '') + '">' +
+          esc(src.sourceName || '') + (src.date ? ', обновлён ' + esc(src.date) : '') + '">' +
           '<span class="cap2">тир-ранг</span>' + rankBadge(t.tier, 'sm') + '</span>';
       })() +
 
