@@ -631,6 +631,8 @@
   .gs-ic{width:30px;height:30px;object-fit:contain;flex:none}
   .gset b{font-size:12.5px}
   .gs-en{font-style:normal;font-size:10px;color:var(--tx3);font-family:var(--mono)}
+  .gs-rec{font-size:9.5px;color:var(--acc);border:1px solid #4ade8044;border-radius:6px;
+    padding:1px 6px;flex:none}
   .gs-more{margin-left:auto;font-size:10px;color:var(--tx3);flex:none}
   .gset[open] .gs-more{color:var(--acc)}
   .gs-row{display:flex;gap:8px;font-size:11.5px;line-height:1.55;color:var(--tx2);
@@ -1140,7 +1142,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v106';
+const APP_VER = 'v107';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2827,13 +2829,18 @@ function nfmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,
 
 // Комплект: иконка, русское название, бонусы от двух и четырёх предметов.
 // Имя приходит с prydwen на английском, поэтому ищем по «скелету» имени.
-function guideSuit(name, pc, open) {
+// Комплекты на два предмета приезжают объектом с пометкой «рекомендовано» —
+// на сайте она стоит не у всех и означает выбор по умолчанию.
+function guideSuit(item, pc, open) {
+  const name = (item && typeof item === 'object') ? item.n : item;
+  const rec = !!(item && typeof item === 'object' && item.rec);
   const s = suitByName(name);
   const ex = (s && EXTRA && EXTRA.suits && EXTRA.suits[String(s.id)]) || null;
   const ru = s ? s.ru : name;
   const head = '<span class="gs-pc">' + pc + 'P</span>' +
     (s ? img(imgUrl('discs', s.icon), 'gs-ic', ru) : '') +
     '<b>' + esc(ru) + '</b>' +
+    (rec ? '<span class="gs-rec">рекомендовано</span>' : '') +
     (s ? '<i class="gs-en">' + esc(s.en) + '</i>' : '');
   if (!ex || (!ex.s2 && !ex.s4)) return '<div class="gset">' + head + '</div>';
   return '<details class="gset"' + (open ? ' open' : '') + '><summary>' + head +
