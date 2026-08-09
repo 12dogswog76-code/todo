@@ -472,6 +472,8 @@
   .hstat{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:9px;
     background:#ffffff0a;border:1px solid var(--line);box-shadow:var(--glass);line-height:1}
   .hstat b{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:var(--tx)}
+  .hstat.ok{border-color:#4ade8047;background:#4ade801a;box-shadow:var(--glass),0 0 14px #4ade8024}
+  .hstat.ok b{color:var(--ok)}
   .hstat i{font-style:normal;font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px}
   @media(max-width:640px){ .hstat i{display:none} }
 
@@ -1065,7 +1067,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v97';
+const APP_VER = 'v98';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1271,16 +1273,22 @@ const ROLL = { hp:112, hpp:300, atk:19, atkp:300, def:15, defp:480,
 // Роль определяем не по специальности, а по рекомендуемым характеристикам.
 // Причина: Мияби формально аномальщик, но её аномалия критует, и собирают её
 // в крит — по специальности этого не угадать, а в рекомендациях это видно.
+// Роль решает, по какой формуле считать вклад характеристики в урон.
+//   разрушение   урон идёт от здоровья, сила атаки не работает вообще
+//   поддержка и оглушение   урон вторичен, считать его бессмысленно —
+//                           берём рекомендуемые характеристики как есть
+//   аномалия и крит-урон    разбираем по рекомендациям: Мияби формально
+//                           аномальщик, но её собирают в крит
 function agentRole(a, p) {
+  const pr = (a && a.prof) || '';
+  if (pr === 'rupture') return 'rupture';
+  if (pr === 'support' || pr === 'stun' || pr === 'defense') return 'rec';
   const rec = (a && p) ? subsOf(a.id, p) : [];
   const has = k => rec.indexOf(k) >= 0;
   if (has('cr') || has('cd')) return 'crit';
   if (has('hp') || has('hpp')) return 'rupture';
   if (has('ap') || has('am')) return 'anomaly';
-  const pr = (a && a.prof) || '';
   if (pr === 'anomaly') return 'anomaly';
-  if (pr === 'rupture') return 'rupture';
-  if (pr === 'stun') return 'stun';
   return 'crit';
 }
 
@@ -1293,8 +1301,9 @@ function agentRole(a, p) {
 const ROLE_MIX = {
   crit:    { crit: 1.00, anom: 0,    hp: 0    },
   anomaly: { crit: 0.35, anom: 0.65, hp: 0    },
-  rupture: { crit: 0.35, anom: 0,    hp: 0.65 },
-  stun:    { crit: 0.70, anom: 0,    hp: 0    }
+  // сквозной урон считается от здоровья и критует, а сила атаки на него
+  // не влияет совсем — поэтому доля крит-урона здесь ноль
+  rupture: { crit: 0,    anom: 0,    hp: 1.00 }
 };
 function dmgModel(role, t) {
   const dm = defMult(953, 0.2, t.penp || 0, t.pen || 0);   // средняя цель
@@ -1312,6 +1321,16 @@ function dmgModel(role, t) {
 // если добавить одну прокрутку. Нормируем к лучшей — она получает единицу.
 function statWeights(a, p) {
   const role = agentRole(a, p);
+  if (role === 'rec') {
+    // Урон у этих агентов не главное, считать его нечестно. Берём то, что
+    // рекомендуют для сборки: свои характеристики — единица, крит — половина.
+    const rec = subsOf(a.id, p), out = {};
+    Object.keys(ROLL).forEach(k => { out[k] = 0; });
+    rec.forEach(k => (MOD_WIDE[k] || [k]).forEach(x => { if (out[x] != null) out[x] = 1; }));
+    ['cr', 'cd'].forEach(k => { if (!out[k]) out[k] = 0.5; });
+    out._role = 'rec';
+    return out;
+  }
   const cur = (p && p.cur) || {};
   const t = {
     atk: +cur.atk || 1000, hp: +cur.hp || 8000, def: +cur.def || 600,
@@ -1375,7 +1394,8 @@ function discScore(d, keys, pri, w) {
   return { pct: pct, grade: gr.g, cls: gr.c, good: Math.round(val * 10) / 10, tot: tot,
            mainOk: discMainOk(d, keys, pri), by: by, role: (w && w._role) || 'crit' };
 }
-const ROLE_RU = { crit: 'урон с критами', anomaly: 'урон от аномалии', stun: 'оглушение' };
+const ROLE_RU = { crit: 'урон с критами', anomaly: 'урон от аномалии',
+                  rupture: 'сквозной урон от здоровья', rec: 'по рекомендациям к сборке' };
 function discHint(sc, d) {
   if (!sc) return '';
   return 'Оценка диска для этого агента: ' + sc.grade + ' (' + sc.pct + '%)\n' +
@@ -2583,7 +2603,7 @@ function renderSheet() {
           esc((TIER && TIER.sourceName) || '') + '">' +
           '<span class="cap2">тир-ранг</span>' + rankBadge(t.tier, 'sm') + '</span>';
       })() +
-      (p.have ? '<span class="tg pct" title="Готовность агента">' + pctOf(curId) + '%</span>' : '') +
+
     '</div></div></div><div class="hbody">';
 
   if (!p.have) {
@@ -2603,10 +2623,8 @@ function renderSheet() {
       '<span style="flex:1"></span>' +
       (function () {
         const bsc = buildScore(p.discs || [], modKeys(curId, p), priOf(curId, p), statWeights(a, p));
-        return '<span class="hstat" title="Готовность: уровень, ядро, навыки и оружие">' +
-                 '<b>' + pctOf(curId) + '%</b><i>готовность</i></span>' +
-               (bsc.filled ? '<span class="hstat" title="Средняя оценка шести дисков под этого агента">' +
-                 '<b>' + rankBadge(discGrade(bsc.pct).g, 'sm') + ' ' + bsc.pct + '%</b><i>сборка</i></span>' : '');
+        return '<span class="hstat ok" title="Готовность: уровень, ядро, навыки и оружие">' +
+                 '<b>' + pctOf(curId) + '%</b><i>готовность</i></span>';
       })() +
       '<button class="htab' + (p.fav ? ' favon' : '') + '" id="favTog" title="в избранное">' +
         (p.fav ? '★ в избранном' : '☆ в избранное') + '</button></div>';
