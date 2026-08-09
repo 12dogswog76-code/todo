@@ -392,16 +392,22 @@
      подобраны с оглядкой на zoom:1.5 ниже: 440px превращаются в 660 на экране,
      а высота арта — в 1070, и он целиком помещается на 2K-мониторе.
      Единицы vh здесь использовать нельзя: zoom их не пересчитывает. */
-  /* Порог 2000, а не 1920: на Full HD всё и так стоит ровно, трогать его незачем. */
+  /* Порог 2000, а не 1920: на Full HD всё и так стоит ровно, трогать его незачем.
+     Ширина колонки ограничена ещё и по высоте окна. Высота арта считается от
+     ширины (29/47), поэтому широкая колонка на невысоком мониторе выгоняла имя
+     агента за нижний край. Обрезать сам арт нельзя — снизу остаётся пустота,
+     поэтому ужимаем колонку целиком, и картинка просто становится меньше.
+     34vh = 56% высоты окна в пересчёте на арт: внутри zoom:1.5 всё окно это
+     66.67vh, так что арт займёт около 85% экрана, остаток под имя. */
   @media(min-width:2000px){
     .wrap{max-width:1400px}
     .sheet{max-width:1400px}
-    .hero{grid-template-columns:440px 1fr}
+    .hero{grid-template-columns:min(440px,34vh) 1fr}
   }
   @media(min-width:2400px){
     .wrap{max-width:1560px}
     .sheet{max-width:1560px}
-    .hero{grid-template-columns:480px 1fr}
+    .hero{grid-template-columns:min(480px,34vh) 1fr}
   }
   .hart{
     position:sticky;top:0;align-self:start;
@@ -414,17 +420,6 @@
      считать высоту от пропорций картинки — у каждого агента выходит свой размер. */
   .hart .hfig{position:relative;aspect-ratio:29/47;height:auto;overflow:hidden;z-index:1}
   .hart .hfig img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
-  /* Высота арта считается от ширины колонки, поэтому на широком экране он
-     перерастал окно и имя агента с плашками уезжало за нижний край.
-     Подрезаем по высоте окна: картинка внутри с object-fit:cover просто
-     обрежется снизу, пропорции не поедут.
-     Считаем с оглядкой на zoom:1.5 — внутри него всё окно это 66.67vh,
-     так что 56vh примерно 85% высоты, остаток как раз под имя.
-     Правило стоит после .hart, иначе его перекроет max-height:100vh оттуда. */
-  @media(min-width:1250px){
-    .hart{max-height:66vh}
-    .hart .hfig{max-height:56vh}
-  }
   .hart .hfig::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 70%,#0b0d1166 88%,#0b0d11b3 100%)}
   /* остаток колонки закрываем размытым тем же артом, чтобы не было пустоты */
@@ -1230,7 +1225,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v113';
+const APP_VER = 'v114';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
