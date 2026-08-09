@@ -33,14 +33,14 @@
      background-attachment:fixed намеренно не используем: именно он на телефонах
      заставляет браузер перерисовывать фон на каждом кадре скролла. */
   body::before{
-    content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
+    content:'';position:fixed;inset:0;z-index:-3;pointer-events:none;
     background:
       radial-gradient(1200px 600px at 15% -10%,#1b1f2a 0%,transparent 60%),
       radial-gradient(900px 500px at 90% 0%,#1a1520 0%,transparent 55%),
       linear-gradient(180deg,#08090c 0%,#0d0f14 60%,#12141a 100%);
   }
   body::after{
-    content:'';position:fixed;inset:-60px;z-index:-1;pointer-events:none;
+    content:'';position:fixed;inset:-60px;z-index:-2;pointer-events:none;
     background:
       radial-gradient(#ffffff0a 1px,transparent 1.2px),
       repeating-linear-gradient(115deg,#ffffff07 0 1px,transparent 1px 9px),
@@ -48,6 +48,25 @@
       repeating-linear-gradient(0deg,#ffffff03 0 1px,transparent 1px 72px);
     background-size:4px 4px,240px 240px,240px 240px,100% 72px;
   }
+  /* Название игры огромными буквами по диагонали — занимает примерно половину
+     экрана и очень медленно ползёт. Ряды идут в разные стороны, цикл пять минут,
+     поэтому «перемотки» на глаз не видно. */
+  .bgroll{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
+    opacity:.05;contain:strict}
+  .bgroll-in{position:absolute;top:50%;left:50%;width:260vw;
+    transform:translate(-50%,-50%) rotate(-32deg);
+    display:flex;flex-direction:column;gap:.1em}
+  .bgroll-in span{display:block;white-space:nowrap;font-size:clamp(46px,7.5vw,150px);
+    font-weight:900;line-height:1;letter-spacing:.02em;color:#fff;
+    font-family:Impact,"Arial Black",sans-serif;will-change:transform}
+  @media(prefers-reduced-motion:no-preference){
+    .bgroll-in span:nth-child(odd){animation:bgrollA 300s linear infinite}
+    .bgroll-in span:nth-child(even){animation:bgrollB 300s linear infinite}
+  }
+  @keyframes bgrollA{to{transform:translateX(-16.666%)}}
+  @keyframes bgrollB{from{transform:translateX(-16.666%)}to{transform:translateX(0)}}
+  @media(max-width:700px){ .bgroll{opacity:.04} }
+
   /* движение только на большом экране и только если человек не просил его отключить */
   @media(min-width:900px) and (prefers-reduced-motion:no-preference){
     body::after{animation:bgdrift 90s linear infinite}
@@ -381,8 +400,10 @@
   /* Имя агента по диагонали. Лежит НАД размытым фоном, но ПОД самим артом —
      иначе перекрывало персонажа. Размер задан от ширины колонки, поэтому не
      разъезжается при зуме и на другой ширине экрана. */
-  .hart .hroll{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
-    opacity:.3;mix-blend-mode:screen;contain:paint}
+  .hart .hroll{position:absolute;inset:0;z-index:3;overflow:hidden;pointer-events:none;
+    opacity:.34;mix-blend-mode:screen;contain:paint;
+    -webkit-mask-image:linear-gradient(180deg,transparent 38%,#000 62%,#000 100%);
+    mask-image:linear-gradient(180deg,transparent 38%,#000 62%,#000 100%)}
   .hart .hroll-in{position:absolute;top:50%;left:50%;width:300%;
     transform:translate(-50%,-50%) rotate(-32deg);display:flex;flex-direction:column;gap:.14em}
   .hart .hroll-in span{display:block;white-space:nowrap;font-size:clamp(30px,20cqw,90px);
@@ -440,6 +461,19 @@
     background:linear-gradient(180deg,#4ade8033,#4ade800f),rgba(8,9,12,.5);
     box-shadow:0 1px 0 #ffffff2b inset,0 2px 12px #4ade8033}
   .hart .tg b{font-weight:800}
+
+  /* полоски прокачки в нижней части колонки с артом */
+  .hbars{position:absolute;left:14px;right:14px;bottom:14px;z-index:4;
+    display:flex;flex-direction:column;gap:7px;
+    background:linear-gradient(180deg,#0b0d1100,#0b0d11cc 30%);padding-top:14px}
+  .hbars .hb{display:flex;align-items:center;gap:9px;font-size:11px;color:#fff}
+  .hbars .hb b{width:58px;flex:none;font-weight:600}
+  .hbars .hb .t{flex:1;height:4px;border-radius:3px;background:#ffffff1f;overflow:hidden}
+  .hbars .hb .t i{display:block;height:100%;border-radius:3px;background:var(--warn);
+    box-shadow:0 0 6px #fbbf2440}
+  .hbars .hb .t i.full{background:var(--ok);box-shadow:0 0 6px #4ade8059}
+  .hbars .hb span{width:52px;text-align:right;flex:none;font-variant-numeric:tabular-nums;font-weight:600}
+  @media(max-width:900px){ .hbars{position:static;padding:12px 0 0;margin:0 14px 14px} }
 
   .hbody{padding:14px 16px 16px;min-width:0;position:relative;
     background-image:radial-gradient(#ffffff0a 1px,transparent 1.2px);
@@ -592,12 +626,14 @@
   /* ── подсказка по пятому диску ── */
   .d5{margin-top:10px;background:linear-gradient(160deg,#ffffff0a,#ffffff03);
     border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--glass)}
-  .d5head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    font-size:11.5px;color:var(--tx2);margin-bottom:8px}
+  .d5head{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;
+    font-size:11.5px;color:var(--tx2);margin-bottom:8px;overflow:hidden}
+  .d5head>span:first-of-type{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .d5head b{color:var(--gold);font-weight:800}
-  .d5sel{margin-left:auto;font-size:10.5px;color:var(--tx3);display:flex;
-    align-items:center;gap:4px;flex-wrap:wrap}
-  .d5sel .d5t{font-style:normal;cursor:pointer;padding:2px 8px;border-radius:20px;
+  .d5sel{margin-left:auto;font-size:10px;color:var(--tx3);display:flex;
+    align-items:center;gap:3px;flex-wrap:nowrap;flex:none}
+  .d5sel em{font-style:normal;opacity:.5;margin:0 2px}
+  .d5sel .d5t{font-style:normal;cursor:pointer;padding:2px 7px;border-radius:20px;white-space:nowrap;
     border:1px solid var(--line);background:#ffffff08;transition:.12s}
   .d5sel .d5t:hover{color:var(--tx2);border-color:var(--tx3)}
   .d5sel .d5t.on{color:var(--gold);border-color:var(--gold);background:#ffd54a1a}
@@ -797,6 +833,13 @@
 </style>
 </head>
 <body>
+<div class="bgroll" aria-hidden="true"><div class="bgroll-in">
+  <span>ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · </span>
+  <span>ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · </span>
+  <span>ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · </span>
+  <span>ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · ZENLESS ZONE ZERO · </span>
+</div></div>
+
 <div class="wrap">
 
   <div class="top">
@@ -1003,7 +1046,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v91';
+const APP_VER = 'v93';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2346,11 +2389,11 @@ function fifthHTML(a, p) {
   return '<details class="d5">' +
     '<summary class="d5head">' +
       '<span>Пятый диск: <b>' + esc(r.best.n) + '</b></span>' +
-      '<span class="d5sel">' +
-        'команда ' + TEAM_BUFFS.map(t =>
+      '<span class="d5sel" title="Слева — поддержка команды, справа — защита цели">' +
+        TEAM_BUFFS.map(t =>
           '<i class="d5t' + (t.id === team ? ' on' : '') + '" data-team="' + t.id + '">' +
           esc(t.n) + '</i>').join('') +
-        ' · защита ' + BOSS_DEF.map(b =>
+        '<em>·</em>' + BOSS_DEF.map(b =>
           '<i class="d5t' + (b.id === boss ? ' on' : '') + '" data-boss="' + b.id + '">' +
           esc(b.n) + '</i>').join('') +
       '</span>' +
@@ -2440,7 +2483,24 @@ function renderSheet() {
           '<span class="cap2">тир-ранг</span>' + rankBadge(t.tier, 'sm') + '</span>';
       })() +
       (p.have ? '<span class="tg pct" title="Готовность агента">' + pctOf(curId) + '%</span>' : '') +
-    '</div></div></div><div class="hbody">';
+    '</div></div>' +
+    // Под артом оставалась пустая полоса — кладём туда те же полоски прокачки,
+    // что и на карточках в сетке.
+    (p.have ? (function () {
+      const bar = (lab, val, max) => {
+        const w = Math.min(100, Math.round(val / max * 100));
+        return '<div class="hb"><b>' + lab + '</b><div class="t"><i class="' +
+          (w >= 100 ? 'full' : '') + '" style="width:' + w + '%"></i></div>' +
+          '<span>' + val + '/' + max + '</span></div>';
+      };
+      let sk = 0; SKILL_IDX.forEach(o => sk += Math.min(SKILL_MAX, (p.sk && p.sk[o.i]) || 1));
+      return '<div class="hbars">' +
+        bar('Уровень', p.lvl || 0, LVL_MAX) +
+        bar('Ядро', p.core || 0, CORE_MAX) +
+        bar('Навыки', sk, SKILL_MAX * SKILL_IDX.length) +
+        bar('Оружие', (p.w && p.w.lvl) || 0, WENG_MAX) + '</div>';
+    })() : '') +
+    '</div><div class="hbody">';
 
   if (!p.have) {
     h += '<div style="padding:26px 4px;color:var(--tx2);font-size:13px;line-height:1.6">' +
