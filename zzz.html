@@ -362,7 +362,7 @@
   .hero{display:grid;grid-template-columns:290px 1fr}
   .hart{
     position:relative;background:linear-gradient(180deg,#151820,#0b0d11);
-    overflow:hidden;min-height:420px;
+    overflow:hidden;min-height:420px;container-type:inline-size;
   }
   /* Персонаж — в блоке постоянной высоты: если растягивать его на всю колонку,
      арт скачком увеличивается при раскрытии описания диска или оружия, а если
@@ -378,19 +378,22 @@
     background:linear-gradient(180deg,transparent 40%,#0b0d11d9 62%,#0b0d11 78%),
                radial-gradient(60% 40% at 50% 0%,color-mix(in srgb,var(--el) 22%,transparent),transparent 70%)}
   /* бегущая строка с именем агента */
-  .hart .hroll{position:absolute;inset:0;z-index:3;overflow:hidden;pointer-events:none;
-    opacity:.22;mix-blend-mode:screen}
-  .hart .hroll-in{position:absolute;top:50%;left:50%;width:280%;
-    transform:translate(-50%,-50%) rotate(-32deg);display:flex;flex-direction:column;gap:6px}
-  .hart .hroll-in span{display:block;white-space:nowrap;font-size:62px;font-weight:900;
-    letter-spacing:2px;line-height:1;color:var(--el);text-transform:uppercase;
-    font-family:Impact,"Arial Black",var(--mono)}
+  /* Имя агента по диагонали. Лежит НАД размытым фоном, но ПОД самим артом —
+     иначе перекрывало персонажа. Размер задан от ширины колонки, поэтому не
+     разъезжается при зуме и на другой ширине экрана. */
+  .hart .hroll{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+    opacity:.3;mix-blend-mode:screen;contain:paint}
+  .hart .hroll-in{position:absolute;top:50%;left:50%;width:300%;
+    transform:translate(-50%,-50%) rotate(-32deg);display:flex;flex-direction:column;gap:.14em}
+  .hart .hroll-in span{display:block;white-space:nowrap;font-size:clamp(30px,20cqw,90px);
+    font-weight:900;letter-spacing:.04em;line-height:1;color:var(--el);text-transform:uppercase;
+    font-family:Impact,"Arial Black",var(--mono);will-change:transform}
   @media(prefers-reduced-motion:no-preference){
-    .hart .hroll-in span:nth-child(1){animation:hrollA 42s linear infinite}
-    .hart .hroll-in span:nth-child(2){animation:hrollB 42s linear infinite}
+    .hart .hroll-in span:nth-child(1){animation:hrollA 90s linear infinite}
+    .hart .hroll-in span:nth-child(2){animation:hrollB 90s linear infinite}
   }
-  @keyframes hrollA{to{transform:translateX(-25%)}}
-  @keyframes hrollB{from{transform:translateX(-25%)}to{transform:translateX(0)}}
+  @keyframes hrollA{to{transform:translateX(-16.666%)}}
+  @keyframes hrollB{from{transform:translateX(-16.666%)}to{transform:translateX(0)}}
 
   .hart .lv{
     position:absolute;top:10px;left:10px;background:#0b0d11d9;border:1px solid var(--el);
@@ -480,8 +483,8 @@
   .st .curin:hover{border-color:var(--line)}
   .st .curin:focus{border-color:var(--acc);background:#0b0d11}
   .st .goalin{
-    width:54px;background:#0b0d11;border:1px solid var(--line);border-radius:6px;color:var(--tx3);
-    padding:2px 5px;font-size:11px;text-align:right;outline:none;font-family:inherit;
+    width:58px;background:#0b0d11;border:1px solid var(--line);border-radius:6px;color:var(--tx3);
+    padding:3px 7px;font-size:11px;text-align:center;outline:none;font-family:inherit;
   }
   .st .goalin:focus{border-color:var(--acc);color:var(--tx)}
   .st.hit .curin,.st.hit .val{color:var(--ok)}
@@ -574,6 +577,18 @@
   .setpill img{width:15px;height:15px;object-fit:contain}
   .setpill.full{border-color:var(--ok);color:var(--ok);box-shadow:0 1px 0 #ffffff12 inset,0 0 12px #4ade8024}
 
+  /* свёрнутые блоки в карточке агента */
+  .sect>.edt>summary,.d5>summary{cursor:pointer;list-style:none;user-select:none}
+  .sect>.edt>summary::-webkit-details-marker,.d5>summary::-webkit-details-marker{display:none}
+  .sect>.edt>summary{font-size:11px;color:var(--tx3);display:inline-flex;align-items:center;gap:6px}
+  .sect>.edt>summary::before{content:'+';font-size:13px;line-height:1}
+  .sect>.edt[open]>summary::before{content:'−'}
+  .sect>.edt>summary:hover{color:var(--tx2)}
+  .d5>summary::before{content:'+';font-size:13px;line-height:1;color:var(--tx3);margin-right:2px}
+  .d5[open]>summary::before{content:'−'}
+  .d5>summary{margin-bottom:0}
+  .d5[open]>summary{margin-bottom:8px}
+
   /* ── подсказка по пятому диску ── */
   .d5{margin-top:10px;background:linear-gradient(160deg,#ffffff0a,#ffffff03);
     border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--glass)}
@@ -648,16 +663,6 @@
   .frow select:focus,.frow input:focus{border-color:var(--acc)}
   .frow input[type=text]{flex:1;min-width:160px}
 
-  /* Двойная обводка: внутреннее кольцо с отступом даёт кнопке объём,
-     как в интерфейсе игры. */
-  .htab,.foot2 button,.panel button,.prow button{position:relative}
-  .htab::after,.foot2 button::after,.panel button::after,.prow button::after{
-    content:'';position:absolute;inset:2px;border-radius:inherit;pointer-events:none;
-    border:1px solid #ffffff0d;box-shadow:inset 0 1px 1px #ffffff0d;
-  }
-  .foot2 button.pri::after,.panel button.pri::after,.prow button.pri::after{
-    border-color:#00000026;box-shadow:inset 0 1px 1px #ffffff40}
-
   .foot2{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);
     background:var(--pan2)}
   .foot2 button{background:var(--pan);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
@@ -718,6 +723,10 @@
   .prow button.pri{background:var(--acc);border-color:var(--acc);color:#06240f;font-weight:700}
 
   /* панели */
+  /* вторая половина панели «Облако и данные» — отделена линией */
+  .panel-part{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .panel-part::before{content:'Данные';display:block;font-size:10px;letter-spacing:.8px;
+    text-transform:uppercase;color:var(--tx3);margin-bottom:9px}
   .panel{background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:14px;
     margin-top:11px;display:none}
   .panel.open{display:block}
@@ -800,11 +809,9 @@
       <span id="cloudDot" title="облако не подключено"></span>
     </div>
     <span class="sp"></span>
-    <a class="back" href="./">← к задачам</a>
     <button class="tbtn" id="enkaBtn">⟳ Импорт из игры</button>
-    <button class="tbtn" id="cloudBtn">☁ Облако</button>
+    <button class="tbtn" id="cloudBtn">☁ Облако и данные</button>
     <button class="tbtn" id="modBtn">📊 Модификаторы</button>
-    <button class="tbtn" id="ioBtn">↕ Данные</button>
     <button class="tbtn" id="helpBtn">?</button>
   </div>
 
@@ -821,7 +828,6 @@
 
   <div id="main" style="display:none">
     <div class="sum" id="summary"></div>
-    <div class="search"><input id="searchInput" type="text" placeholder="Поиск по имени — по-русски или по-английски"></div>
     <div class="fil" id="filters"></div>
     <div class="grid" id="grid"></div>
     <div class="empty" id="emptyMsg" style="display:none">Под эти фильтры никто не подходит</div>
@@ -953,13 +959,7 @@
     </div>
     <div class="hint" id="cloudMsg"></div>
     <div class="hint" id="cloudDiag" style="color:var(--tx3);font-family:var(--mono);font-size:11px;white-space:pre-wrap"></div>
-  </div>
-
-  <div class="panel" id="modPanel">
-    <div id="modBox"></div>
-  </div>
-
-  <div class="panel" id="ioPanel">
+    <div class="panel-part">
     <div class="prow" style="margin-top:0">
       <button id="expFile">⇪ Скачать данные</button>
       <button id="impFile">⇩ Загрузить из файла</button>
@@ -969,6 +969,11 @@
     <div class="hint">В файл попадает только твой прогресс — база агентов и картинки в него не входят.<br>
       «Обновить список агентов» — когда вышел новый патч и появились новые персонажи
       (сам список обновляется раз в неделю).</div>
+  </div>
+  </div>
+
+  <div class="panel" id="modPanel">
+    <div id="modBox"></div>
   </div>
 
   <div class="panel" id="helpPanel">
@@ -988,8 +993,7 @@
   </div>
 
   <div class="foot">
-    <a href="./">задачи</a> · <a href="money.html">деньги</a> ·
-    <a href="https://enka.network/zzz/" target="_blank" rel="noopener">enka.network</a>
+    <a href="./">задачи</a> · <a href="money.html">деньги</a>
   </div>
 </div>
 
@@ -999,7 +1003,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v87';
+const APP_VER = 'v91';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1690,6 +1694,7 @@ function boot() {
 
   $('main').style.display = 'block';
   if ($('appVer')) $('appVer').textContent = APP_VER;
+  showWorkerVer();
   setNick();
   renderFilters();
   render();
@@ -1918,6 +1923,19 @@ function img(src, cls, alt) {
 // и для оценки диска — вид один, меняется только размер.
 // Ник игрока показываем в шапке — просто чтобы было видно, чей профиль открыт.
 const LS_NICK = LS + '_nick';
+// Во второй части версии — номер воркера на Cloudflare, чтобы сразу видеть,
+// обновлён он или нет: v87.6 это сайт v87 и воркер v6.
+function showWorkerVer() {
+  const el = $('appVer');
+  if (!el) return;
+  for (const base of MYAPI) {
+    fetch(base + '/ping', { headers: { 'Accept': 'application/json' } })
+      .then(r => r.json())
+      .then(j => { if (j && j.v) el.textContent = APP_VER + '.' + j.v; })
+      .catch(() => {});
+  }
+}
+
 function setNick(nick, uid) {
   if (nick) localStorage.setItem(LS_NICK, nick);
   const el = $('whoAmI');
@@ -2325,8 +2343,8 @@ function fifthHTML(a, p) {
     '<label class="d5f"><span>' + lab + '</span>' +
     '<input type="number" class="d5in" data-f="' + k + '" step="1" min="0" max="300" ' +
     'placeholder="' + ph + '" value="' + (f[k] != null && f[k] !== '' ? esc(String(f[k])) : '') + '"></label>';
-  return '<div class="d5">' +
-    '<div class="d5head">' +
+  return '<details class="d5">' +
+    '<summary class="d5head">' +
       '<span>Пятый диск: <b>' + esc(r.best.n) + '</b></span>' +
       '<span class="d5sel">' +
         'команда ' + TEAM_BUFFS.map(t =>
@@ -2336,7 +2354,7 @@ function fifthHTML(a, p) {
           '<i class="d5t' + (b.id === boss ? ' on' : '') + '" data-boss="' + b.id + '">' +
           esc(b.n) + '</i>').join('') +
       '</span>' +
-    '</div>' + rows +
+    '</summary>' + rows +
     '<details class="d5fight"' + (hasFight ? ' open' : '') + '>' +
       '<summary>' + (hasFight ? 'вписано вручную' : 'уточнить вручную') + '</summary>' +
       '<div class="d5frow">' +
@@ -2360,7 +2378,7 @@ function fifthHTML(a, p) {
       (r.fromGame ? 'Характеристики взяты из игры, то есть с пассивками ядра, оружия и комплектов.'
                   : 'Импорта не было — считано по справочнику, без пассивок.') +
       ' Крит в сравнение не входит: он множит все три варианта одинаково.' +
-    '</div></div>';
+    '</div></details>';
 }
 
 function planDiscs(p) {
@@ -2399,8 +2417,8 @@ function renderSheet() {
     // Имя агента огромными буквами по диагонали, очень медленно ползёт —
     // фон карточки перестаёт быть просто размытым артом.
     '<div class="hroll" aria-hidden="true"><div class="hroll-in">' +
-      '<span>' + esc(((a.en || a.ru) + ' ').repeat(6)) + '</span>' +
-      '<span>' + esc(((a.en || a.ru) + ' ').repeat(6)) + '</span>' +
+      '<span>' + esc(((a.en || a.ru) + ' · ').repeat(12)) + '</span>' +
+      '<span>' + esc(((a.en || a.ru) + ' · ').repeat(12)) + '</span>' +
     '</div></div>' +
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
     (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async" data-alt="' + esc(artAlt) + '" ' +
@@ -2514,7 +2532,7 @@ function renderSheet() {
             '" title="' + esc(statHint(k, T, calcDisp, man)) + '">'
           : '<span class="val">' + esc(disp) + extra + '</span>') +
         '<input class="goalin" data-k="' + k + '" value="' +
-          (goal == null ? '' : esc(goal)) + '" placeholder="цель">' + bar + '</div>';
+          (goal == null ? '' : esc(goal)) + '" placeholder="Цель">' + bar + '</div>';
     });
     h += '</div></div>';
 
@@ -2597,10 +2615,7 @@ function renderSheet() {
       'и трекер перестаёт считать это недоработкой.">🎯 цели: ' + tgtLabel(p) + '</button>' +
       '</h4>' + (tgtOpen ? tgtHTML(p) : '') +
       '<div class="core" style="margin-bottom:8px">' +
-      ['A','B','C','D','E','F'].map((t, idx) =>
-        '<span class="cc' + ((p.core || 0) > idx ? ' on' : '') + '">' + t + '</span>').join('') +
-      '<span style="font-size:11px;color:var(--tx3);margin-left:6px">ядро ' + (p.core || 0) + '/6</span>' +
-      '<button class="htab" id="coreBonusBtn" style="margin-left:auto;padding:4px 10px;font-size:11px">' +
+      '<button class="htab" id="coreBonusBtn" style="padding:4px 10px;font-size:11px">' +
         (cbSum(p) ? '⚙ ядро даёт: ' + cbSum(p) : '⚙ задать прибавки ядра') + '</button>' +
       '</div>' + (showCB ? coreBonusHTML(p) : '') + '<div class="skl">';
     SKILL_IDX.forEach(o => {
@@ -2611,15 +2626,18 @@ function renderSheet() {
     });
     h += '<div class="mind"><b>M' + (p.mind || 0) + '</b><span>М.Картина</span></div></div></div>';
 
-    // ── правки ──
-    h += '<div class="sect"><div class="frow">' +
+    // ── правки: уровень, ядро и М.Картина нужны редко, прячем под раскрытие ──
+    h += '<div class="sect"><details class="edt"><summary>уровень, ядро, М.Картина</summary>' +
+      '<div class="frow" style="margin-top:9px">' +
       'Уровень <select id="fLvl">' + [0,10,20,30,40,50,60].map(v =>
         '<option value="' + v + '"' + (p.lvl === v ? ' selected' : '') + '>' + (v || '—') + '</option>').join('') + '</select>' +
       'Ядро <select id="fCore">' + [0,1,2,3,4,5,6].map(v =>
         '<option value="' + v + '"' + (p.core === v ? ' selected' : '') + '>' + ['—','A','B','C','D','E','F'][v] + '</option>').join('') + '</select>' +
       'М.Картина <select id="fMind">' + [0,1,2,3,4,5,6].map(v =>
         '<option value="' + v + '"' + (p.mind === v ? ' selected' : '') + '>M' + v + '</option>').join('') + '</select>' +
-      '<input type="text" id="fNote" value="' + esc(p.note || '') + '" placeholder="заметка"></div></div>';
+      '</div></details>' +
+      '<div class="frow" style="margin-top:8px">' +
+      '<input type="text" id="fNote" value="' + esc(p.note || '') + '" placeholder="заметка" style="flex:1"></div></div>';
 
     const oldDiscs = (p.discs || []).length && !(p.discs || []).some(x => x && x.mainP);
     if (oldDiscs) h += '<div class="warn" style="margin:10px 0;padding:10px;font-size:12px">' +
@@ -4285,26 +4303,23 @@ $('rebuildDb').onclick = async () => {
 function togglePanel(id) {
   const zone = $('panelZone');
   if (zone && $(id) && $(id).parentNode !== zone) zone.appendChild($(id));
-  ['enkaPanel', 'cloudPanel', 'modPanel', 'ioPanel', 'helpPanel'].forEach(p => {
+  ['enkaPanel', 'cloudPanel', 'modPanel', 'helpPanel'].forEach(p => {
     if (p !== id) $(p).classList.remove('open');
   });
-  ['enkaBtn', 'cloudBtn', 'modBtn', 'ioBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
+  ['enkaBtn', 'cloudBtn', 'modBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
   const wasOpen = $(id).classList.contains('open');
   $(id).classList.toggle('open', !wasOpen);
   const map = { enkaPanel: 'enkaBtn', cloudPanel: 'cloudBtn', modPanel: 'modBtn',
-                ioPanel: 'ioBtn', helpPanel: 'helpBtn' };
+                helpPanel: 'helpBtn' };
   if (!wasOpen) $(map[id]).classList.add('on');
 }
 $('enkaBtn').onclick  = () => { togglePanel('enkaPanel'); refreshEnkaLinks(); };
 $('cloudBtn').onclick = () => { togglePanel('cloudPanel'); cloudUI(); };
 $('modBtn').onclick   = () => { togglePanel('modPanel'); drawModTable(); };
-$('ioBtn').onclick    = () => togglePanel('ioPanel');
 $('helpBtn').onclick  = () => togglePanel('helpPanel');
 
 
 
-$('searchInput').value = ui.q || '';
-$('searchInput').oninput = e => { ui.q = e.target.value; save(); render(); };
 
 // периодическая подтяжка облака
 document.addEventListener('visibilitychange', () => { if (!document.hidden && sync) cloudSync(); });
