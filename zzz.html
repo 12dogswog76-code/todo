@@ -1142,7 +1142,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v107';
+const APP_VER = 'v108';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2023,10 +2023,12 @@ function engByName(n) {
 
 // Название характеристики с prydwen -> наш ключ. Процент решает всё:
 // «HP%» это hpp, а «Flat HP» и просто «HP» — плоская hp.
+// «anomalyprofiency» — опечатка на самом сайте, у Пульхры. Держим оба варианта.
 const PRYD_STAT = {
   critrate: 'cr', crit: 'cr', critdmg: 'cd', critdamage: 'cd',
   hp: 'hp', atk: 'atk', def: 'def',
-  anomalyproficiency: 'ap', ap: 'ap', anomalymastery: 'am', am: 'am',
+  anomalyproficiency: 'ap', anomalyprofiency: 'ap', ap: 'ap',
+  anomalymastery: 'am', am: 'am',
   pen: 'pen', penratio: 'penp', energyregen: 'er', er: 'er',
   impact: 'im', sheerforce: 'sheer'
 };
@@ -2055,8 +2057,11 @@ function prydSubs(id) {
   const out = [];
   let rank = 0;
   for (let i = 0; i < parts.length; i += 2) {
-    const k = prydStat(parts[i]);
-    if (k && !out.some(x => x.k === k)) out.push({ k: k, rank: rank });
+    // «ATK%/Flat ATK» — гайд считает оба варианта равнозначными, берём оба
+    parts[i].split('/').forEach(piece => {
+      const k = prydStat(piece);
+      if (k && !out.some(x => x.k === k)) out.push({ k: k, rank: rank });
+    });
     const sep = parts[i + 1];
     if (sep === '>' || sep === '>=') rank++;
   }
