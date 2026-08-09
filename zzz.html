@@ -191,7 +191,9 @@
   }
   .chip.f-el,.chip.f-pr{padding:5px 8px}
   /* внешняя ссылка в строке фильтров — прижата к правому краю */
-  .chip.link{margin-left:auto;text-decoration:none;color:var(--tx3);
+  .chip.link{text-decoration:none;color:var(--tx3);}
+  .chip.link:first-of-type{margin-left:auto}
+  .chip.link{
     background:linear-gradient(180deg,#ffffff0d,#ffffff03);
     box-shadow:0 1px 0 #ffffff0f inset}
   .chip.link:hover{color:var(--gold);border-color:var(--gold);
@@ -372,7 +374,8 @@
 
   /* ── модалка ── */
   .modal{display:none;position:fixed;inset:0;background:#000000cc;z-index:100;
-    align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto}
+    align-items:flex-start;justify-content:center;padding:0 12px 20px;overflow-y:auto}
+  .sheet{margin-top:0}
   .modal.open{display:flex}
   .sheet{width:100%;max-width:1000px;background:var(--pan);border:1px solid var(--line);
     border-radius:16px;
@@ -382,15 +385,15 @@
 
   .hero{display:grid;grid-template-columns:290px 1fr}
   .hart{
-    position:sticky;top:20px;align-self:start;
+    position:sticky;top:0;align-self:start;
     background:linear-gradient(180deg,#151820,#0b0d11);
     overflow:hidden;container-type:inline-size;border-radius:16px 0 0 16px;
   }
   /* Персонаж — в блоке постоянной высоты: если растягивать его на всю колонку,
      арт скачком увеличивается при раскрытии описания диска или оружия, а если
      считать высоту от пропорций картинки — у каждого агента выходит свой размер. */
-  .hart .hfig{position:relative;height:min(560px,calc(100vh - 250px));min-height:300px;
-    overflow:hidden;z-index:1}
+  .hart .hfig{position:relative;height:min(520px,calc(100vh - 300px));min-height:280px;
+    overflow:hidden;z-index:1;margin-top:0}
   .hart .hfig img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .hart .hfig::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 70%,#0b0d1166 88%,#0b0d11b3 100%)}
@@ -426,7 +429,7 @@
   }
   /* низ блока с фигурой, а не низ колонки: иначе подпись уезжает под размытый фон */
   /* имя и плашки идут под артом, слегка наезжая на него */
-  .hart .who{position:relative;z-index:4;padding:0 14px 16px;margin-top:-72px}
+  .hart .who{position:relative;z-index:4;padding:0 14px 14px;margin-top:-96px}
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
@@ -1071,7 +1074,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v100';
+const APP_VER = 'v101';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1973,6 +1976,11 @@ function renderFilters() {
   }
   // Официальный конструктор сборок HoYoLab. Агент внутри выбирается на самой
   // странице и в адрес не попадает, поэтому ссылка общая, а не по агенту.
+  h += '<a class="chip link" href="https://www.prydwen.gg/zenless/tier-list" target="_blank" rel="noopener" ' +
+       'title="Тир-лист агентов на prydwen.gg">' +
+       '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">' +
+       '<path d="M4 5h16v2H4V5zm0 6h11v2H4v-2zm0 6h7v2H4v-2zm13.5-4.5 4.5 4.5-4.5 4.5v-3H14v-3h3.5v-3z"/>' +
+       '</svg>Тир-лист</a>';
   h += '<a class="chip link" href="https://act.hoyolab.com/zzz/gt/character-builder-h/index.html' +
        '?utm_id=8&lang=ru-ru&utm_source=hoyolab&utm_medium=tools#/" target="_blank" rel="noopener" ' +
        'title="Официальное руководство по развитию агентов на HoYoLab">' +
