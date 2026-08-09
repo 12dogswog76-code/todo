@@ -610,15 +610,22 @@
   .gengs{display:flex;flex-direction:column;gap:5px}
   .gen{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:11px;
     background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  /* тот же ряд, но раскрывающийся: сам блок обычный, а flex уходит в summary */
+  details.gen{display:block;padding:0}
+  details.gen>summary{display:flex;align-items:center;gap:9px;padding:6px 10px;
+    list-style:none;cursor:pointer}
+  details.gen>summary::-webkit-details-marker{display:none}
+  .gen-desc{font-size:11.5px;line-height:1.55;color:var(--tx2);padding:0 11px 9px 11px}
+  .gen-desc b{color:var(--gold)}
   .gen.top{border-color:#ffd54a44;background:linear-gradient(120deg,#ffd54a10,var(--pan))}
   .gen.own{box-shadow:0 0 0 1px #4ade8055 inset}
-  .gen-n{flex:none;min-width:56px;font-family:var(--mono);font-weight:800;font-size:12.5px;
+  .gen-n{flex:none;min-width:56px;font-weight:800;font-size:12.5px;
     color:var(--gold);font-variant-numeric:tabular-nums}
   .gen.top .gen-n{color:var(--warn)}
   .gen-ic{width:32px;height:32px;object-fit:contain;flex:none;border-radius:7px;background:#0b0d11}
   .gen-t{min-width:0;display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
   .gen-t b{font-size:12.5px;font-weight:700;overflow-wrap:anywhere}
-  .gen-t i{font-style:normal;font-size:10px;color:var(--tx3);font-family:var(--mono)}
+  .gen-t i{font-style:normal;font-size:10px;color:var(--tx3);font-weight:700}
 
   .gset{border:1px solid var(--line);border-radius:11px;margin-bottom:5px;
     background:linear-gradient(120deg,var(--pan2),var(--pan))}
@@ -626,26 +633,25 @@
   .gset summary::-webkit-details-marker{display:none}
   .gset summary,.gset:not([open])>*:first-child,.gset>div:first-child{
     display:flex;align-items:center;gap:9px;padding:7px 10px}
-  .gs-pc{flex:none;font-family:var(--mono);font-size:10px;font-weight:800;color:var(--tx3);
+  .gs-pc{flex:none;font-size:10px;font-weight:800;color:var(--tx3);
     border:1px solid var(--line);border-radius:6px;padding:1px 5px}
   .gs-ic{width:30px;height:30px;object-fit:contain;flex:none}
   .gset b{font-size:12.5px}
-  .gs-en{font-style:normal;font-size:10px;color:var(--tx3);font-family:var(--mono)}
+  .gs-en{font-style:normal;font-size:10px;color:var(--tx3)}
   .gs-rec{font-size:9.5px;color:var(--acc);border:1px solid #4ade8044;border-radius:6px;
     padding:1px 6px;flex:none}
   .gs-more{margin-left:auto;font-size:10px;color:var(--tx3);flex:none}
   .gset[open] .gs-more{color:var(--acc)}
   .gs-row{display:flex;gap:8px;font-size:11.5px;line-height:1.55;color:var(--tx2);
     padding:0 11px 8px 11px}
-  .gs-row u{flex:none;text-decoration:none;font-family:var(--mono);font-weight:800;
-    color:var(--gold);font-size:10.5px;padding-top:1px}
+  .gs-row u{flex:none;text-decoration:none;font-weight:800;
+    color:var(--gold);font-size:11px;padding-top:1px;min-width:12px}
 
   .gdisks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
   .gd{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:11px;
     background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
   .gd-n{flex:none;width:22px;height:22px;border-radius:7px;background:#0b0d11;
-    display:grid;place-items:center;font-family:var(--mono);font-weight:800;font-size:11px;
-    color:var(--tx3)}
+    display:grid;place-items:center;font-weight:800;font-size:11px;color:var(--tx3)}
   .gd b{font-size:12px;color:var(--warn);line-height:1.3;overflow-wrap:anywhere}
 
   .gsubs{display:flex;flex-wrap:wrap;gap:5px}
@@ -658,7 +664,7 @@
   .gsk{display:flex;flex-wrap:wrap;gap:5px}
   .gsk1{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:4px 10px;
     border-radius:999px;border:1px solid var(--line);background:var(--pan2);color:var(--tx2)}
-  .gsk1 u{text-decoration:none;font-family:var(--mono);font-weight:800;color:var(--acc);font-size:10px}
+  .gsk1 u{text-decoration:none;font-weight:800;color:var(--acc);font-size:10px}
 
   /* диски */
   .drow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
@@ -1142,7 +1148,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v109';
+const APP_VER = 'v110';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2894,6 +2900,52 @@ const GUIDE_SKILL_RU = {
 const GOAL_PCT = { cr: 1, cd: 1, penp: 1, er: 1, dmg: 1 };
 function nfmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 
+// Короткие подписи для строк с дисками: там их по три-четыре в ряд,
+// и полные названия не помещаются.
+const GUIDE_STAT_SHORT = {
+  atk: 'Атака', atkp: 'Атака %', hp: 'HP', hpp: 'HP %', def: 'Защита', defp: 'Защита %',
+  cr: 'Шанс крита', cd: 'Крит. урон', ap: 'Знание аном.', am: 'Контроль аном.',
+  im: 'Импульс', pen: 'Пробивание', penp: 'Пробивание %', er: 'Восст. энергии',
+  dmg: 'Бонус стихии', sheer: 'Сквозная сила'
+};
+// Приписки в скобках у prydwen короткие и однотипные — переводим по кускам,
+// от длинных к коротким, чтобы «top priority until ability cap» не распалось.
+const GUIDE_NOTE_RU = [
+  [/top priorit(?:y|ies) until ability cap/ig, 'в первую очередь, пока не упрётся в предел способности'],
+  [/until max\.?\s*/ig, 'до '], [/until\s*/ig, 'до '],
+  [/aim for\s*/ig, 'цель '],
+  [/in combat/ig, 'в бою'],
+  [/in stat ?screen/ig, 'в профиле'],
+  [/initial hp/ig, 'начального HP'],
+  [/if using/ig, 'если стоит'],
+  [/4P King(?: of the Summit)?/ig, 'комплект «Владыка горы»'],
+  [/\bATK\b/g, 'силы атаки'], [/\bDEF\b/g, 'защиты']
+];
+function guideNote(s) {
+  let t = ' ' + String(s || '') + ' ';
+  GUIDE_NOTE_RU.forEach(r => { t = t.replace(r[0], r[1]); });
+  return t.replace(/\s+/g, ' ').trim();
+}
+// Строку главных характеристик диска с prydwen («Ether DMG% > HP%») переводим
+// целиком, сохраняя знаки сравнения: они показывают, что важнее.
+function guideStatLine(s, short) {
+  const dict = short ? GUIDE_STAT_SHORT : GUIDE_STAT_RU;
+  return String(s || '').split(/(\s*(?:>=|>|=)\s*)/).map(part => {
+    if (/^\s*(?:>=|>|=)\s*$/.test(part)) return ' ' + part.trim() + ' ';
+    // приписки в скобках оставляем как есть, они поясняют условие
+    const note = /\(([^)]*)\)/.exec(part);
+    // «ATK/Flat ATK» после перевода даёт два одинаковых названия — схлопываем
+    const seen = [];
+    part.replace(/\([^)]*\)/g, '').split('/').forEach(x => {
+      const k = prydStat(x);
+      const nm = k ? (dict[k] || k) : x.trim();
+      if (nm && seen.indexOf(nm) < 0) seen.push(nm);
+    });
+    const names = seen.join(' / ');
+    return names + (note ? ' (' + guideNote(note[1]) + ')' : '');
+  }).join('').replace(/\s+/g, ' ').trim();
+}
+
 // Комплект: иконка, русское название, бонусы от двух и четырёх предметов.
 // Имя приходит с prydwen на английском, поэтому ищем по «скелету» имени.
 // Комплекты на два предмета приезжают объектом с пометкой «рекомендовано» —
@@ -2970,22 +3022,35 @@ function guideHtml(a, p, T) {
     eng.forEach((e, i) => {
       const w = engByName(e.n);
       const own = w && p && p.w && +p.w.id === +w.id;
-      h += '<div class="gen' + (i === 0 ? ' top' : '') + (own ? ' own' : '') + '"' +
-        (own ? ' title="Этот движок сейчас стоит на агенте"' : '') + '>' +
-        '<span class="gen-n">' + (e.pct != null ? e.pct.toFixed(2).replace(/\.?0+$/, '') + '%' : (i + 1)) + '</span>' +
+      const head = '<span class="gen-n">' +
+        (e.pct != null ? e.pct.toFixed(2).replace(/\.?0+$/, '') + '%' : (i + 1)) + '</span>' +
         (w ? img(imgUrl('engines', w.icon), 'gen-ic', e.n) : '') +
         '<span class="gen-t"><b>' + esc(w ? w.ru : e.n) + '</b>' +
-        '<i>' + esc(e.r || '') + '</i></span></div>';
+        '<i>' + esc(e.r || '') + '</i>' +
+        (own ? '<span class="gs-rec">стоит сейчас</span>' : '') + '</span>';
+      // фаза берётся из копии, которую называет гайд: S5 — это пятая фаза
+      const ph = /S(\d)/.exec(e.r || '');
+      const ex = (w && EXTRA && EXTRA.engines && EXTRA.engines[w.id]) || null;
+      const txt = ex ? ((ex.p && ex.p[ph ? ph[1] : '1']) || ex.desc || '') : '';
+      const cls = 'gen' + (i === 0 ? ' top' : '') + (own ? ' own' : '');
+      if (!txt) { h += '<div class="' + cls + '">' + head + '</div>'; return; }
+      h += '<details class="' + cls + ' gset"><summary>' + head +
+        '<span class="gs-more">что даёт</span></summary>' +
+        '<div class="gen-desc">' +
+        (ex.name ? '<b>' + esc(ex.name) + '.</b> ' : '') + esc(txt) + '</div></details>';
     });
     h += '</div></div>';
   }
 
   // ── комплекты ──
   if ((g.set4 || []).length || (g.set2 || []).length) {
-    h += '<div class="sect"><h4><span class="tt">Комплекты дисков<i>DISK SETS</i></span></h4>';
+    const many = (g.set4 || []).length > 1;
+    h += '<div class="sect"><h4><span class="tt">Комплекты дисков<i>DISK SETS</i></span></h4>' +
+      '<div class="cap2" style="margin:0 0 6px">ЧЕТЫРЕ СЛОТА' +
+      (many ? ' — ЛЮБОЙ ИЗ ЭТИХ' : '') + '</div>';
     (g.set4 || []).forEach((n, i) => { h += guideSuit(n, 4, i === 0); });
     if ((g.set2 || []).length) {
-      h += '<div class="cap2" style="margin:10px 0 6px">ЕСЛИ НЕТ ПОЛНОГО КОМПЛЕКТА — ДВА ПРЕДМЕТА</div>';
+      h += '<div class="cap2" style="margin:10px 0 6px">ОСТАВШИЕСЯ ДВА СЛОТА — ОДИН ИЗ ЭТИХ</div>';
       (g.set2 || []).forEach(n => { h += guideSuit(n, 2, false); });
     }
     h += '</div>';
@@ -2998,8 +3063,8 @@ function guideHtml(a, p, T) {
     if (dk.length) {
       h += '<div class="gdisks">';
       dk.forEach(n => {
-        h += '<div class="gd"><span class="gd-n">' + n + '</span>' +
-          '<b>' + esc(g['disk' + n]) + '</b></div>';
+        h += '<div class="gd" title="' + esc(g['disk' + n]) + '"><span class="gd-n">' + n + '</span>' +
+          '<b>' + esc(guideStatLine(g['disk' + n], true)) + '</b></div>';
       });
       h += '</div>';
     }
@@ -3010,7 +3075,8 @@ function guideHtml(a, p, T) {
         subs.map(s => '<span class="gsub r' + Math.min(s.rank, 3) + '">' +
           statIcon(s.k === 'hpp' ? 'hp' : (s.k === 'atkp' ? 'atk' : (s.k === 'defp' ? 'def' : s.k)), 12) +
           esc(GUIDE_STAT_RU[s.k] || s.k) + '</span>').join('') +
-        '</div><div class="hint" style="margin-top:6px">' + esc(g.substats) + '</div>';
+        '</div><div class="hint" style="margin-top:6px" title="' + esc(g.substats) + '">' +
+        esc(guideStatLine(g.substats, false)) + '</div>';
     }
     h += '</div>';
   }
