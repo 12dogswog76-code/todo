@@ -384,7 +384,12 @@
   .sheet>.hero{border-radius:16px 16px 0 0;overflow:clip}
   .sheet>.foot2{border-radius:0 0 16px 16px}
 
-  .hero{display:grid;grid-template-columns:360px 1fr}
+  /* Колонка с артом заканчивается там, где кончается имя агента, а правая
+     тянется дальше — под левой оставалась подложка карточки, заметная как
+     пустой прямоугольник. Продолжаем цвет колонки до низа фоном самой сетки:
+     внизу арта градиент как раз приходит к #0b0d11, стык не виден. */
+  .hero{display:grid;--artw:360px;grid-template-columns:var(--artw) 1fr;
+    background:linear-gradient(90deg,#0b0d11 0 var(--artw),transparent var(--artw))}
   /* Широкий монитор. Карточка была жёстко зажата в 1120px, и на 2K арт занимал
      вдвое меньшую долю экрана, чем на Full HD, — казался мелким. Расширяем и
      саму карточку, и колонку с артом, чтобы доля осталась прежней.
@@ -402,12 +407,12 @@
   @media(min-width:2000px){
     .wrap{max-width:1400px}
     .sheet{max-width:1400px}
-    .hero{grid-template-columns:min(440px,34vh) 1fr}
+    .hero{--artw:min(440px,34vh)}
   }
   @media(min-width:2400px){
     .wrap{max-width:1560px}
     .sheet{max-width:1560px}
-    .hero{grid-template-columns:min(480px,34vh) 1fr}
+    .hero{--artw:min(480px,34vh)}
   }
   .hart{
     position:sticky;top:0;align-self:start;
@@ -946,7 +951,8 @@
   .foot a{color:var(--tx2);text-decoration:none}.foot a:hover{color:var(--acc)}
 
   @media(max-width:860px){
-    .hero{grid-template-columns:1fr}
+    /* одна колонка: подложку под арт рисовать не нужно */
+    .hero{grid-template-columns:1fr;background:none}
     .hart{position:static;max-height:none;border-radius:16px 16px 0 0}
     .hart .hfig{aspect-ratio:auto;height:340px}
     /* на телефоне колонка во всю ширину: показываем только верх арта, иначе он
@@ -1225,7 +1231,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v114';
+const APP_VER = 'v115';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
