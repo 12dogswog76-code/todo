@@ -4,8 +4,9 @@
 // v8: карточки агентов переведены на card_*.webp / hero_*.webp вместо полноразмерных
 // art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
 // работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
-const CACHE = 'moi-dela-v11';
-const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json', './zzz-extra.json', './manifest.json', './icon.svg'];
+const CACHE = 'moi-dela-v12';
+const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json',
+                './zzz-extra.json', './zzz-guide.json', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -61,7 +62,7 @@ self.addEventListener('fetch', e => {
 
   // данные трекера: сеть в приоритете. Раньше они отдавались из кэша, и после
   // пересборки zzz-extra.json на сайте ещё сутки могли жить старые прибавки ядра
-  if (/zzz-(db|extra)\.json$/.test(url.pathname)) {
+  if (/zzz-(db|extra|guide|tier)\.json$/.test(url.pathname)) {
     e.respondWith(
       fetch(e.request).then(r => {
         if (r.ok) { const c2 = r.clone(); caches.open(CACHE).then(c => c.put(e.request, c2)); }

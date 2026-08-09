@@ -592,6 +592,72 @@
     padding:6px 9px;margin-top:8px;font-size:12px;display:flex;align-items:center;gap:8px}
   .infobox .mainst em{margin-left:auto;font-style:normal;color:var(--gold);font-weight:800}
 
+  /* ── вкладка «Гайд»: сборка с prydwen ── */
+  .ggoals{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:6px}
+  .gg{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:11px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line);
+    font-size:12px;box-shadow:var(--glass)}
+  .gg.hit{border-color:#4ade8055;background:linear-gradient(120deg,#4ade800f,var(--pan))}
+  .gg.miss{border-color:#ffd54a33}
+  .gg-lab{display:flex;align-items:center;gap:6px;color:var(--tx2);flex:1;min-width:0}
+  .gg-tgt{color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .gg-now{font-size:10.5px;color:var(--tx3);text-align:right;flex:none;min-width:64px;
+    font-variant-numeric:tabular-nums}
+  .gg.hit .gg-now{color:var(--acc)}
+  .gg-now em{display:block;font-style:normal;color:var(--warn);font-size:9.5px}
+  .gg-now.none{color:var(--tx3);opacity:.6}
+
+  .gengs{display:flex;flex-direction:column;gap:5px}
+  .gen{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:11px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  .gen.top{border-color:#ffd54a44;background:linear-gradient(120deg,#ffd54a10,var(--pan))}
+  .gen.own{box-shadow:0 0 0 1px #4ade8055 inset}
+  .gen-n{flex:none;min-width:56px;font-family:var(--mono);font-weight:800;font-size:12.5px;
+    color:var(--gold);font-variant-numeric:tabular-nums}
+  .gen.top .gen-n{color:var(--warn)}
+  .gen-ic{width:32px;height:32px;object-fit:contain;flex:none;border-radius:7px;background:#0b0d11}
+  .gen-t{min-width:0;display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+  .gen-t b{font-size:12.5px;font-weight:700;overflow-wrap:anywhere}
+  .gen-t i{font-style:normal;font-size:10px;color:var(--tx3);font-family:var(--mono)}
+
+  .gset{border:1px solid var(--line);border-radius:11px;margin-bottom:5px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan))}
+  .gset summary{list-style:none;cursor:pointer}
+  .gset summary::-webkit-details-marker{display:none}
+  .gset summary,.gset:not([open])>*:first-child,.gset>div:first-child{
+    display:flex;align-items:center;gap:9px;padding:7px 10px}
+  .gs-pc{flex:none;font-family:var(--mono);font-size:10px;font-weight:800;color:var(--tx3);
+    border:1px solid var(--line);border-radius:6px;padding:1px 5px}
+  .gs-ic{width:30px;height:30px;object-fit:contain;flex:none}
+  .gset b{font-size:12.5px}
+  .gs-en{font-style:normal;font-size:10px;color:var(--tx3);font-family:var(--mono)}
+  .gs-more{margin-left:auto;font-size:10px;color:var(--tx3);flex:none}
+  .gset[open] .gs-more{color:var(--acc)}
+  .gs-row{display:flex;gap:8px;font-size:11.5px;line-height:1.55;color:var(--tx2);
+    padding:0 11px 8px 11px}
+  .gs-row u{flex:none;text-decoration:none;font-family:var(--mono);font-weight:800;
+    color:var(--gold);font-size:10.5px;padding-top:1px}
+
+  .gdisks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+  .gd{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:11px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  .gd-n{flex:none;width:22px;height:22px;border-radius:7px;background:#0b0d11;
+    display:grid;place-items:center;font-family:var(--mono);font-weight:800;font-size:11px;
+    color:var(--tx3)}
+  .gd b{font-size:12px;color:var(--warn);line-height:1.3;overflow-wrap:anywhere}
+
+  .gsubs{display:flex;flex-wrap:wrap;gap:5px}
+  .gsub{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;
+    border-radius:999px;border:1px solid var(--line);color:var(--tx2);background:var(--pan2)}
+  .gsub.r0{border-color:#ffd54a55;color:var(--gold)}
+  .gsub.r1{border-color:#ffd54a2e}
+  .gsub.r3{opacity:.72}
+
+  .gsk{display:flex;flex-wrap:wrap;gap:5px}
+  .gsk1{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:4px 10px;
+    border-radius:999px;border:1px solid var(--line);background:var(--pan2);color:var(--tx2)}
+  .gsk1 u{text-decoration:none;font-family:var(--mono);font-weight:800;color:var(--acc);font-size:10px}
+
   /* диски */
   .drow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
   .dcard{
@@ -1074,7 +1140,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v105';
+const APP_VER = 'v106';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1286,8 +1352,42 @@ const ROLL = { hp:112, hpp:300, atk:19, atkp:300, def:15, defp:480,
 //                           берём рекомендуемые характеристики как есть
 //   аномалия и крит-урон    разбираем по рекомендациям: Мияби формально
 //                           аномальщик, но её собирают в крит
+// Роль по гайду с prydwen — это точнее любой эвристики, потому что там роль
+// видна прямо в данных:
+//   • движки без процентов силы  — урон агенту не считают вовсе, это поддержка;
+//   • есть цель по сквозной силе или главный стат HP% на диске — бьёт от здоровья;
+//   • знание аномалии стоит в приоритете выше критов — аномальщик;
+//   • криты в приоритете — обычный крит-урон.
+// Крит здесь не отдельная роль, а часть формулы: сквозной урон тоже критует,
+// и у разрывника криты учитываются внутри своей ветки.
+function guideRole(id, prof) {
+  const g = guideOf(id);
+  if (!g) return null;
+  const eng = g.engines || [];
+  // Движки без процентов — верный признак поддержки. Если движков в файле нет
+  // вовсе (собран не до конца), опираемся на специальность.
+  if (eng.length ? eng.every(e => e.pct == null)
+                 : (prof === 'support' || prof === 'stun' || prof === 'defense')) return 'rec';
+  const goals = g.goals || {};
+  if (goals.sheer != null) return 'rupture';
+  if (/hp\s*%/i.test((g.disk6 || '') + ' ' + (g.disk5 || ''))) return 'rupture';
+  const subs = prydSubs(id) || [];
+  const rankOf = k => { const x = subs.filter(s => s.k === k)[0]; return x ? x.rank : 99; };
+  const critR = Math.min(rankOf('cr'), rankOf('cd'));
+  const anomR = rankOf('ap');
+  // Аномальщик — только когда знание аномалии стоит не ниже силы атаки. Иначе
+  // это обычный агент, которому знание аномалии просто не мешает: у Санны и
+  // Ремиэллы гайд ставит первой силу атаки, и переворачивать это нельзя.
+  if (anomR < critR && anomR <= rankOf('atkp')) return 'anomaly';
+  if (critR < 99) return 'crit';
+  // Критов в приоритете нет — считать урон нечем, берём порядок из гайда
+  return subs.length ? 'rec' : null;
+}
 function agentRole(a, p) {
   const pr = (a && a.prof) || '';
+  const byGuide = a ? guideRole(a.id, pr) : null;
+  if (byGuide) return byGuide;
+  // запасной путь: гайда на агента нет (новый персонаж, файл не собран)
   if (pr === 'rupture') return 'rupture';
   if (pr === 'support' || pr === 'stun' || pr === 'defense') return 'rec';
   const rec = (a && p) ? subsOf(a.id, p) : [];
@@ -1331,12 +1431,27 @@ function dmgModel(role, t) {
 function statWeights(a, p) {
   const role = agentRole(a, p);
   if (role === 'rec') {
-    // Урон у этих агентов не главное, считать его нечестно. Берём то, что
-    // рекомендуют для сборки: свои характеристики — единица, крит — половина.
-    const rec = subsOf(a.id, p), out = {};
+    // Урон у этих агентов не главное, считать его нечестно — берём приоритет
+    // из гайда как есть. Криты сюда больше не подмешиваются: у Санны, например,
+    // они не дают ничего, вся сборка идёт в силу атаки.
+    const out = {};
     Object.keys(ROLL).forEach(k => { out[k] = 0; });
-    rec.forEach(k => (MOD_WIDE[k] || [k]).forEach(x => { if (out[x] != null) out[x] = 1; }));
-    ['cr', 'cd'].forEach(k => { if (!out[k]) out[k] = 0.5; });
+    const subs = prydSubs(a.id);
+    if (subs) {
+      subs.forEach(s => { if (out[s.k] != null) out[s.k] = Math.max(out[s.k], rankW(s.rank)); });
+      // Если гайд назвал только процентный вариант, плоский тоже чего-то стоит:
+      // на дисках он выпадает отдельной строкой и в игре засчитывается.
+      [['atk','atkp'], ['hp','hpp'], ['def','defp']].forEach(pr => {
+        if (!out[pr[0]] && out[pr[1]]) out[pr[0]] = out[pr[1]] * 0.35;
+        if (!out[pr[1]] && out[pr[0]]) out[pr[1]] = out[pr[0]] * 0.9;
+      });
+    } else {
+      const rec = subsOf(a.id, p);
+      rec.forEach(k => (MOD_WIDE[k] || [k]).forEach(x => { if (out[x] != null) out[x] = 1; }));
+      ['cr', 'cd'].forEach(k => { if (!out[k]) out[k] = 0.5; });
+    }
+    const mx = Math.max(...Object.keys(ROLL).map(k => out[k])) || 1;
+    Object.keys(ROLL).forEach(k => { out[k] = out[k] / mx; });
     out._role = 'rec';
     return out;
   }
@@ -1854,9 +1969,107 @@ function loadExtra() {
     .catch(() => {});
 }
 
+// ─────────────── сборки с prydwen.gg ───────────────
+// Файл собирается скриптом pryd.js прямо в браузере (сайт закрыт проверкой
+// Cloudflare, снаружи не читается). По каждому агенту: главные характеристики
+// дисков 4/5/6, приоритет доп. характеристик, целевые значения, комплекты,
+// движки и порядок прокачки навыков.
+// Здесь этот файл — источник правды для двух вещей: вкладки «Гайд» и весов
+// характеристик в оценке дисков. Список рекомендаций из игры (EXTRA.subs)
+// остаётся отдельно: по нему считаются модификаторы, и он сверен с игрой.
+let GUIDE = null;
+
+function loadGuide() {
+  return fetch('zzz-guide.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(x => { if (x && x.agents) GUIDE = x; })
+    .catch(() => {});
+}
+// Первая версия pryd.js складывала сюда сырые куски текста: engines и sets были
+// строками, целей не было вовсе. Такой файл ещё может лежать на диске, поэтому
+// проверяем форму данных и отдаём агента только если он разобран как надо.
+function guideOf(id) {
+  const g = (GUIDE && GUIDE.agents && GUIDE.agents[id]) || null;
+  if (!g) return null;
+  if (!Array.isArray(g.engines) || !Array.isArray(g.set4) ||
+      !g.goals || typeof g.goals !== 'object') return null;
+  return g;
+}
+
+// Имена на prydwen пишутся по-своему: где-то теряется диакритика (Joyau Dore
+// вместо Joyau Doré), где-то нет квадратных скобок ([Lunar] Pleniluna).
+// Поэтому сравниваем по «скелету» — только латиница и цифры в нижнем регистре.
+function nameKey(s) {
+  return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+let SUIT_BY_NAME = null, ENG_BY_NAME = null;
+function suitByName(n) {
+  if (!SUIT_BY_NAME) {
+    SUIT_BY_NAME = {};
+    (DB.suits || []).forEach(s => { SUIT_BY_NAME[nameKey(s.en)] = s; });
+  }
+  return SUIT_BY_NAME[nameKey(n)] || null;
+}
+function engByName(n) {
+  if (!ENG_BY_NAME) {
+    ENG_BY_NAME = {};
+    (DB.engines || []).forEach(w => { ENG_BY_NAME[nameKey(w.en)] = w; });
+  }
+  return ENG_BY_NAME[nameKey(n)] || null;
+}
+
+// Название характеристики с prydwen -> наш ключ. Процент решает всё:
+// «HP%» это hpp, а «Flat HP» и просто «HP» — плоская hp.
+const PRYD_STAT = {
+  critrate: 'cr', crit: 'cr', critdmg: 'cd', critdamage: 'cd',
+  hp: 'hp', atk: 'atk', def: 'def',
+  anomalyproficiency: 'ap', ap: 'ap', anomalymastery: 'am', am: 'am',
+  pen: 'pen', penratio: 'penp', energyregen: 'er', er: 'er',
+  impact: 'im', sheerforce: 'sheer'
+};
+function prydStat(txt) {
+  let s = (txt || '').replace(/\([^)]*\)/g, ' ').trim();
+  const pct = s.indexOf('%') >= 0;
+  let k = nameKey(s.replace(/%/g, ''));
+  if (k.indexOf('flat') === 0) k = k.slice(4);
+  if (k === 'critdmg' || k === 'critdamage') return 'cd';
+  // «Ice DMG%», «Ether DMG%» и прочие бонусы стихии сводим к одному ключу
+  if (/dmg$/.test(k)) return 'dmg';
+  const base = PRYD_STAT[k] || '';
+  if (!base) return '';
+  if (pct && base === 'hp') return 'hpp';
+  if (pct && base === 'atk') return 'atkp';
+  if (pct && base === 'def') return 'defp';
+  return base;
+}
+
+// Строку приоритета вида «CRIT Rate = CRIT DMG > HP% > ATK% > Flat HP»
+// разбираем в список с рангами: знак «>» опускает на ступень ниже, «=» — нет.
+function prydSubs(id) {
+  const g = guideOf(id);
+  if (!g || !g.substats) return null;
+  const parts = String(g.substats).split(/\s*(>=|>|=)\s*/);
+  const out = [];
+  let rank = 0;
+  for (let i = 0; i < parts.length; i += 2) {
+    const k = prydStat(parts[i]);
+    if (k && !out.some(x => x.k === k)) out.push({ k: k, rank: rank });
+    const sep = parts[i + 1];
+    if (sep === '>' || sep === '>=') rank++;
+  }
+  return out.length ? out : null;
+}
+// Во сколько ценится характеристика в зависимости от места в приоритете.
+const RANK_W = [1, 0.6, 0.35, 0.2, 0.12, 0.08];
+function rankW(r) { return RANK_W[Math.min(r, RANK_W.length - 1)]; }
+
 function boot() {
   if (!EXTRA) { loadExtra().then(() => { if (EXTRA) render(); }); }
   if (!TIER) { loadTier().then(() => { if (TIER) { renderFilters(); render(); } }); }
+  // сборки с prydwen: от них зависят и вкладка «Гайд», и веса в оценке дисков,
+  // поэтому после загрузки перерисовываем и сетку, и открытую карточку
+  if (!GUIDE) { loadGuide().then(() => { if (GUIDE) { render(); if (curId) renderSheet(); } }); }
   DB.byId = {};
   DB.agents.forEach(a => { DB.byId[a.id] = a; });
   DB.suitById = {};
@@ -2422,8 +2635,8 @@ const BOSS_DEF = [
   { id: 1, n: 'средне',  v: 953  },
   { id: 2, n: 'много',   v: 1588 }
 ];
-// прибавки самого пятого диска, значения из игры
-const D5 = { dmg: 0.30, atkp: 0.30, penp: 0.24 };
+// прибавки самого пятого диска на +15, значения из игры
+const D5 = { dmg: 0.30, atkp: 0.30, hpp: 0.30, penp: 0.24 };
 
 // множитель защиты: столько от урона доходит до цели
 function defMult(bossDef, shred, penRatio, flatPen) {
@@ -2435,13 +2648,21 @@ function defMult(bossDef, shred, penRatio, flatPen) {
 // БЕЗ пятого диска, иначе его вклад посчитался бы дважды.
 function fifthDisc(a, p, team, boss) {
   if (!a || !p || !p.have) return null;
-  const tb = TEAM_BUFFS[team] || TEAM_BUFFS[1];
+  const tb0 = TEAM_BUFFS[team] || TEAM_BUFFS[1];
   const bd = (BOSS_DEF[boss] || BOSS_DEF[1]).v;
+
+  // Носитель урона: у разрывников он не атака, а здоровье. Сила атаки им не
+  // даёт ничего, поэтому и сравнивать надо «HP 30%» против бонуса стихии.
+  // Роль берётся из гайда с prydwen — там она видна по целям сборки.
+  const byHp = agentRole(a, p) === 'rupture';
+  // Бафы команды на атаку разрывнику бесполезны: его урон считается от HP.
+  // Пробивание защиты от поддержки работает в обоих случаях.
+  const tb = byHp ? { flat: 0, atkp: 0, shred: tb0.shred, n: tb0.n } : tb0;
 
   const without = (p.discs || []).filter(d => d && d.slot !== 5);
   const T  = calcTotals(a, p, without);         // расчёт без пятого диска
   const TW = calcTotals(a, p, p.discs || []);   // расчёт со всеми дисками
-  const pt = T._parts.atk;
+  const pt = byHp ? T._parts.hp : T._parts.atk;
 
   // Итоговые характеристики из игры (p.cur) включают всё, чего наш расчёт не
   // знает: пассивки ядра, дополнительные способности, эффекты оружия и бонусы
@@ -2464,7 +2685,7 @@ function fifthDisc(a, p, team, boss) {
   const fDmg  = ((+fight.dmg  || 0) + (wf ? wf.dmg  : 0) + (sf ? sf.dmg  : 0)) / 100;
   const fPen  = ((+fight.penp || 0) + (wf ? wf.penp : 0) + (sf ? sf.penp : 0)) / 100;
 
-  const atkOwn = real('atk', T.atk, TW.atk);
+  const atkOwn = byHp ? real('hp', T.hp, TW.hp) : real('atk', T.atk, TW.atk);
   let affix    = real('dmg', T.dmg * 100, TW.dmg * 100) / 100;
   let penOwn   = real('penp', T.penp * 100, TW.penp * 100) / 100;
   const flatPen = real('pen', T.pen, TW.pen);
@@ -2482,14 +2703,15 @@ function fifthDisc(a, p, team, boss) {
   const dps = (atk, aff, pen) => atk * (1 + aff) * defMult(bd, tb.shred, pen, flatPen);
   const now = dps(atkNow, affix, penOwn);
 
-  // прибавка к атаке от диска считается от базы агента с оружием и ядром
-  const vAtk = dps((atkOwnF + baseAtk * D5.atkp) * (1 + tb.atkp) + tb.flat, affix, penOwn);
+  // прибавка от диска считается от базы агента с оружием и ядром
+  const vAtk = dps((atkOwnF + baseAtk * (byHp ? D5.hpp : D5.atkp)) * (1 + tb.atkp) + tb.flat,
+                   affix, penOwn);
   const vDmg = dps(atkNow, affix + D5.dmg, penOwn);
   const vPen = dps(atkNow, affix, penOwn + D5.penp);
 
   const list = [
     { k: 'dmg',  n: 'Бонус стихии 30%', v: vDmg },
-    { k: 'atkp', n: 'Сила атаки 30%',   v: vAtk },
+    { k: byHp ? 'hpp' : 'atkp', n: byHp ? 'HP 30%' : 'Сила атаки 30%', v: vAtk },
     { k: 'penp', n: 'Пробивание 24%',   v: vPen }
   ].sort((x, y) => y.v - x.v);
 
@@ -2497,7 +2719,7 @@ function fifthDisc(a, p, team, boss) {
   list.forEach(o => { o.gain = Math.round((o.v / now - 1) * 1000) / 10; });   // % к урону
   const lead = Math.round((best.v / list[1].v - 1) * 1000) / 10;             // отрыв от второго
 
-  return { list: list, best: best, lead: lead, atk: Math.round(atkNow),
+  return { list: list, best: best, lead: lead, atk: Math.round(atkNow), byHp: byHp,
            affix: Math.round(affix * 1000) / 10, dm: Math.round(dm * 1000) / 10,
            fromGame: cur.atk != null, fight: fight, wf: wf, sf: sf,
            team: tb, boss: (BOSS_DEF[boss] || BOSS_DEF[1]).n };
@@ -2535,7 +2757,8 @@ function fifthHTML(a, p) {
     '<details class="d5fight"' + (hasFight ? ' open' : '') + '>' +
       '<summary>' + (hasFight ? 'вписано вручную' : 'уточнить вручную') + '</summary>' +
       '<div class="d5frow">' +
-      fld('atkp', 'атака %', '0') + fld('dmg', 'стихия %', '0') + fld('penp', 'пробой %', '0') +
+      fld('atkp', r.byHp ? 'HP %' : 'атака %', '0') + fld('dmg', 'стихия %', '0') +
+      fld('penp', 'пробой %', '0') +
       '<span class="d5note">' + (function () {
         const src = [];
         if (r.wf && r.wf.atkp) src.push('оружие: атака +' + r.wf.atkp + '% (фаза ' + r.wf.ph + ')');
@@ -2550,8 +2773,10 @@ function fifthHTML(a, p) {
       (near ? 'Разница с ближайшим вариантом всего ' + r.lead.toFixed(1) +
               '% — бери тот, где лучше доп. характеристики. '
             : 'Отрыв от второго варианта: ' + r.lead.toFixed(1) + '%. ') +
-      'Считано от твоих статов без пятого диска: атака ' + r.atk +
+      'Считано от твоих статов без пятого диска: ' + (r.byHp ? 'HP ' : 'атака ') + r.atk +
       ', бонус стихии ' + r.affix + '%, до цели доходит ' + r.dm + '% урона. ' +
+      (r.byHp ? 'Этот агент бьёт от здоровья, поэтому сила атаки и бафы команды на атаку ' +
+                'в сравнение не входят. ' : '') +
       (r.fromGame ? 'Характеристики взяты из игры, то есть с пассивками ядра, оружия и комплектов.'
                   : 'Импорта не было — считано по справочнику, без пассивок.') +
       ' Крит в сравнение не входит: он множит все три варианта одинаково.' +
@@ -2580,6 +2805,157 @@ function planProg(p) {
 }
 
 function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; cbOpen = false; modOpen = false; tgtOpen = false; renderSheet(); }
+
+// ─────────────── вкладка «Гайд» ───────────────
+// Показываем сборку так, как её даёт prydwen: диапазоны характеристик остаются
+// диапазонами. Точного числа тут и не может быть — итог зависит от пятого диска,
+// движка и того, чего не хватает в остальной сборке.
+const GUIDE_STAT_RU = {
+  sheer: 'Сквозная сила', atk: 'Сила атаки', hp: 'HP', def: 'Защита',
+  cr: 'Шанс крита', cd: 'Крит. урон', ap: 'Знание аномалии',
+  am: 'Контроль аномалии', im: 'Импульс', pen: 'Пробивание',
+  penp: 'Процент пробивания', er: 'Восст. энергии', dmg: 'Бонус стихии',
+  hpp: 'HP %', atkp: 'Сила атаки %', defp: 'Защита %'
+};
+const GUIDE_SKILL_RU = {
+  'basic attack': 'Обычная атака', 'chain attack': 'Цепь атак',
+  'special attack': 'Особая атака', 'assist': 'Помощь', 'dodge': 'Уклонение',
+  'core skill': 'Ядро', 'core passive': 'Ядро'
+};
+const GOAL_PCT = { cr: 1, cd: 1, penp: 1, er: 1, dmg: 1 };
+function nfmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+// Комплект: иконка, русское название, бонусы от двух и четырёх предметов.
+// Имя приходит с prydwen на английском, поэтому ищем по «скелету» имени.
+function guideSuit(name, pc, open) {
+  const s = suitByName(name);
+  const ex = (s && EXTRA && EXTRA.suits && EXTRA.suits[String(s.id)]) || null;
+  const ru = s ? s.ru : name;
+  const head = '<span class="gs-pc">' + pc + 'P</span>' +
+    (s ? img(imgUrl('discs', s.icon), 'gs-ic', ru) : '') +
+    '<b>' + esc(ru) + '</b>' +
+    (s ? '<i class="gs-en">' + esc(s.en) + '</i>' : '');
+  if (!ex || (!ex.s2 && !ex.s4)) return '<div class="gset">' + head + '</div>';
+  return '<details class="gset"' + (open ? ' open' : '') + '><summary>' + head +
+    '<span class="gs-more">что даёт</span></summary>' +
+    (ex.s2 ? '<div class="gs-row"><u>2</u>' + esc(ex.s2) + '</div>' : '') +
+    (ex.s4 ? '<div class="gs-row"><u>4</u>' + esc(ex.s4) + '</div>' : '') +
+    '</details>';
+}
+
+function guideHtml(a, p, T) {
+  const g = guideOf(a.id);
+  const src = (GUIDE && GUIDE.sourceName) || 'prydwen.gg';
+  if (!g) {
+    return '<div class="sect"><div class="hint">По этому агенту сборки пока нет. ' +
+      'Файл zzz-guide.json собирается скриптом pryd.js — видимо, страница ' +
+      'агента ещё не разобрана.</div></div>';
+  }
+  let h = '';
+
+  // ── целевые характеристики ──
+  const goals = g.goals || {};
+  const gk = Object.keys(goals);
+  if (gk.length) {
+    h += '<div class="sect"><h4><span class="tt">Куда стремиться<i>TARGET STATS</i></span>' +
+      '<span class="modbadge" title="Диапазон, а не точное число: итог зависит от ' +
+      'пятого диска, движка и того, чего не хватает в остальной сборке. ' +
+      'Источник: ' + esc(src) + '">' + esc(src) + '</span></h4><div class="ggoals">';
+    gk.forEach(k => {
+      const lo = goals[k][0], hi = goals[k][1], isPct = !!GOAL_PCT[k];
+      const range = (lo === hi ? nfmt(lo) : nfmt(lo) + ' – ' + nfmt(hi)) + (isPct ? '%' : '');
+      // сквозную силу трекер не считает: она выводится из HP и своя у каждого агента
+      const cur = (k === 'sheer' || !T || T[k] == null) ? null : +T[k];
+      let cls = '', now = '<span class="gg-now none">нет расчёта</span>';
+      if (cur != null) {
+        const hit = cur >= lo;
+        cls = hit ? ' hit' : ' miss';
+        const disp = isPct ? cur.toFixed(1) + '%' : nfmt(cur);
+        now = '<span class="gg-now">' + esc(disp) +
+          (hit ? '' : '<em>ещё ' + esc(isPct ? (lo - cur).toFixed(1) + '%' : nfmt(lo - cur)) + '</em>') +
+          '</span>';
+      }
+      h += '<div class="gg' + cls + '"><span class="gg-lab">' +
+        statIcon(k === 'sheer' ? 'atk' : k, 13) + esc(GUIDE_STAT_RU[k] || k) + '</span>' +
+        '<b class="gg-tgt">' + esc(range) + '</b>' + now + '</div>';
+    });
+    h += '</div></div>';
+  }
+
+  // ── движки ──
+  // У боевых агентов prydwen считает силу движка в процентах от лучшего,
+  // у поддержки расчёта урона нет — там просто порядок.
+  const eng = g.engines || [];
+  if (eng.length) {
+    const rated = eng.some(e => e.pct != null);
+    h += '<div class="sect"><h4><span class="tt">W-Engine<i>SIGNAL ENGINE</i></span>' +
+      '<span class="modbadge" title="' + (rated
+        ? 'Процент — сила движка относительно лучшего для этого агента при указанной копии'
+        : 'Урон поддержке не считается, поэтому движки идут просто по порядку') + '">' +
+      (rated ? 'сила от лучшего' : 'по порядку') + '</span></h4><div class="gengs">';
+    eng.forEach((e, i) => {
+      const w = engByName(e.n);
+      const own = w && p && p.w && +p.w.id === +w.id;
+      h += '<div class="gen' + (i === 0 ? ' top' : '') + (own ? ' own' : '') + '"' +
+        (own ? ' title="Этот движок сейчас стоит на агенте"' : '') + '>' +
+        '<span class="gen-n">' + (e.pct != null ? e.pct.toFixed(2).replace(/\.?0+$/, '') + '%' : (i + 1)) + '</span>' +
+        (w ? img(imgUrl('engines', w.icon), 'gen-ic', e.n) : '') +
+        '<span class="gen-t"><b>' + esc(w ? w.ru : e.n) + '</b>' +
+        '<i>' + esc(e.r || '') + '</i></span></div>';
+    });
+    h += '</div></div>';
+  }
+
+  // ── комплекты ──
+  if ((g.set4 || []).length || (g.set2 || []).length) {
+    h += '<div class="sect"><h4><span class="tt">Комплекты дисков<i>DISK SETS</i></span></h4>';
+    (g.set4 || []).forEach((n, i) => { h += guideSuit(n, 4, i === 0); });
+    if ((g.set2 || []).length) {
+      h += '<div class="cap2" style="margin:10px 0 6px">ЕСЛИ НЕТ ПОЛНОГО КОМПЛЕКТА — ДВА ПРЕДМЕТА</div>';
+      (g.set2 || []).forEach(n => { h += guideSuit(n, 2, false); });
+    }
+    h += '</div>';
+  }
+
+  // ── главные характеристики дисков и приоритет доп. ──
+  const dk = [4, 5, 6].filter(n => g['disk' + n]);
+  if (dk.length || g.substats) {
+    h += '<div class="sect"><h4><span class="tt">Характеристики дисков<i>DISK STATS</i></span></h4>';
+    if (dk.length) {
+      h += '<div class="gdisks">';
+      dk.forEach(n => {
+        h += '<div class="gd"><span class="gd-n">' + n + '</span>' +
+          '<b>' + esc(g['disk' + n]) + '</b></div>';
+      });
+      h += '</div>';
+    }
+    if (g.substats) {
+      const subs = prydSubs(a.id) || [];
+      h += '<div class="cap2" style="margin:10px 0 6px">ДОП. ХАРАКТЕРИСТИКИ, ПО УБЫВАНИЮ</div>' +
+        '<div class="gsubs">' +
+        subs.map(s => '<span class="gsub r' + Math.min(s.rank, 3) + '">' +
+          statIcon(s.k === 'hpp' ? 'hp' : (s.k === 'atkp' ? 'atk' : (s.k === 'defp' ? 'def' : s.k)), 12) +
+          esc(GUIDE_STAT_RU[s.k] || s.k) + '</span>').join('') +
+        '</div><div class="hint" style="margin-top:6px">' + esc(g.substats) + '</div>';
+    }
+    h += '</div>';
+  }
+
+  // ── навыки ──
+  if ((g.skills || []).length) {
+    h += '<div class="sect"><h4><span class="tt">Порядок прокачки<i>SKILL PRIORITY</i></span></h4>' +
+      '<div class="gsk">' +
+      g.skills.map((s, i) => '<span class="gsk1"><u>' + (i + 1) + '</u>' +
+        esc(GUIDE_SKILL_RU[String(s).toLowerCase()] || s) + '</span>').join('') +
+      '</div></div>';
+  }
+
+  h += '<div class="hint">Данные с <a href="' + esc(prydUrl(a) || 'https://www.prydwen.gg/zenless/') +
+    '" target="_blank" rel="noopener">prydwen.gg</a>' +
+    (GUIDE && GUIDE.built ? ', собраны ' + esc(GUIDE.built) : '') +
+    '. По ним же считаются веса характеристик в оценке дисков.</div>';
+  return h;
+}
 
 function renderSheet() {
   const a = DB.byId[curId], p = P(curId);
@@ -2634,6 +3010,10 @@ function renderSheet() {
     h += '<div class="hhead">' +
       '<button class="htab' + (curTab === 'now' ? ' on' : '') + '" data-tab="now">Сейчас</button>' +
       '<button class="htab' + (curTab === 'plan' ? ' on' : '') + '" data-tab="plan">План</button>' +
+      (guideOf(curId)
+        ? '<button class="htab' + (curTab === 'guide' ? ' on' : '') + '" data-tab="guide" ' +
+          'title="Рекомендуемая сборка с prydwen.gg">Гайд</button>'
+        : '') +
       '<span style="flex:1"></span>' +
       (function () {
         const bsc = buildScore(p.discs || [], modKeys(curId, p), priOf(curId, p), statWeights(a, p));
@@ -2642,6 +3022,8 @@ function renderSheet() {
       })() +
       '<button class="htab' + (p.fav ? ' favon' : '') + '" id="favTog" title="в избранное">' +
         (p.fav ? '★ в избранном' : '☆ в избранное') + '</button></div>';
+
+    if (curTab === 'guide') { h += guideHtml(a, p, nowT); } else {
 
     // ── характеристики ──
     const rows = [
@@ -2832,6 +3214,7 @@ function renderSheet() {
          'у каждого агента свои — задай их кнопкой «прибавки ядра» рядом с кружками A–F, ' +
          'и расчёт сойдётся с игрой. Любое число можно и просто переписать руками.</div>';
     h += '<div id="editZone"></div>';
+    }
   }
 
   h += '</div></div>';
