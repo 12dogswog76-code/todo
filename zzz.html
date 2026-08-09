@@ -383,14 +383,14 @@
   .hero{display:grid;grid-template-columns:290px 1fr}
   .hart{
     position:sticky;top:20px;align-self:start;
-    height:min(760px,calc(100vh - 40px));min-height:380px;
     background:linear-gradient(180deg,#151820,#0b0d11);
     overflow:hidden;container-type:inline-size;border-radius:16px 0 0 16px;
   }
   /* Персонаж — в блоке постоянной высоты: если растягивать его на всю колонку,
      арт скачком увеличивается при раскрытии описания диска или оружия, а если
      считать высоту от пропорций картинки — у каждого агента выходит свой размер. */
-  .hart .hfig{position:absolute;top:0;left:0;right:0;height:78%;overflow:hidden;z-index:1}
+  .hart .hfig{position:relative;height:min(560px,calc(100vh - 250px));min-height:300px;
+    overflow:hidden;z-index:1}
   .hart .hfig img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .hart .hfig::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 70%,#0b0d1166 88%,#0b0d11b3 100%)}
@@ -425,7 +425,8 @@
     color:var(--el);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;z-index:4;
   }
   /* низ блока с фигурой, а не низ колонки: иначе подпись уезжает под размытый фон */
-  .hart .who{position:absolute;left:14px;right:14px;bottom:14px;z-index:4}
+  /* имя и плашки идут под артом, слегка наезжая на него */
+  .hart .who{position:relative;z-index:4;padding:0 14px 16px;margin-top:-72px}
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
@@ -832,9 +833,8 @@
 
   @media(max-width:860px){
     .hero{grid-template-columns:1fr}
-    .hart{position:static;height:auto;min-height:340px;border-radius:16px 16px 0 0}
-    .hart .hfig{position:relative;height:340px}
-    .hart .who{position:static;padding:0 0 4px;margin-top:-70px}
+    .hart{position:static;border-radius:16px 16px 0 0}
+    .hart .hfig{height:340px;min-height:0}
     /* на телефоне колонка во всю ширину: показываем только верх арта, иначе он
        занимает пол-экрана */
     /* position обязателен: фигура внутри позиционируется абсолютно,
@@ -1071,7 +1071,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v99';
+const APP_VER = 'v100';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1304,7 +1304,8 @@ function agentRole(a, p) {
 // крит у Мияби весил бы ноль, что неправда.
 const ROLE_MIX = {
   crit:    { crit: 1.00, anom: 0,    hp: 0    },
-  anomaly: { crit: 0.35, anom: 0.65, hp: 0    },
+  // аномалия критом не усиливается, поэтому доля обычного урона мала
+  anomaly: { crit: 0.15, anom: 0.85, hp: 0    },
   // сквозной урон считается от здоровья и критует, а сила атаки на него
   // не влияет совсем — поэтому доля крит-урона здесь ноль
   rupture: { crit: 0,    anom: 0,    hp: 1.00 }
@@ -1316,7 +1317,8 @@ function dmgModel(role, t) {
   const crit = 1 + Math.min(1, (t.cr || 0) / 100) * ((t.cd || 0) / 100);
   // все три слагаемых приводим к сопоставимому масштабу, отношения не меняются
   const dCrit = (t.atk || 1) * crit * el * dm;
-  const dAnom = (t.ap || 1) * 24 * (1 + (t.am || 0) / 600) * el * dm;
+  // урон аномалии растёт и от силы атаки, и от знания аномалии, но не критует
+  const dAnom = (t.atk || 1) * ((t.ap || 1) / 100) * (1 + (t.am || 0) / 600) * el * dm;
   const dHp   = (t.hp || 1) * 0.32 * crit * el * dm;
   return mix.crit * dCrit + mix.anom * dAnom + mix.hp * dHp;
 }
@@ -2933,7 +2935,8 @@ function bindSheet() {
     };
   });
   document.querySelectorAll('.d5t').forEach(el => el.onclick = e => {
-    e.stopPropagation();
+    // клик внутри summary по умолчанию закрывает блок — отменяем
+    e.preventDefault(); e.stopPropagation();
     if (el.dataset.team != null) ui.d5team = +el.dataset.team;
     if (el.dataset.boss != null) ui.d5boss = +el.dataset.boss;
     save(); renderSheet();
