@@ -380,13 +380,15 @@
 
   .hero{display:grid;grid-template-columns:290px 1fr}
   .hart{
-    position:relative;background:linear-gradient(180deg,#151820,#0b0d11);
-    overflow:hidden;min-height:420px;container-type:inline-size;
+    position:sticky;top:0;align-self:start;
+    height:min(780px,86vh);min-height:420px;
+    background:linear-gradient(180deg,#151820,#0b0d11);
+    overflow:hidden;container-type:inline-size;
   }
   /* Персонаж — в блоке постоянной высоты: если растягивать его на всю колонку,
      арт скачком увеличивается при раскрытии описания диска или оружия, а если
      считать высоту от пропорций картинки — у каждого агента выходит свой размер. */
-  .hart .hfig{position:absolute;top:0;left:0;right:0;height:min(780px,80vh);overflow:hidden;z-index:1}
+  .hart .hfig{position:absolute;top:0;left:0;right:0;height:min(620px,64vh);overflow:hidden;z-index:1}
   .hart .hfig img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .hart .hfig::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 70%,#0b0d1166 88%,#0b0d11b3 100%)}
@@ -421,7 +423,7 @@
     color:var(--el);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;z-index:4;
   }
   /* низ блока с фигурой, а не низ колонки: иначе подпись уезжает под размытый фон */
-  .hart .who{position:absolute;left:14px;right:14px;top:min(780px,80vh);
+  .hart .who{position:absolute;left:14px;right:14px;top:min(620px,64vh);
     transform:translateY(-100%);padding-bottom:14px;z-index:4}
   .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
@@ -466,6 +468,13 @@
   .hbars{position:absolute;left:14px;right:14px;bottom:14px;z-index:4;
     display:flex;flex-direction:column;gap:7px;
     background:linear-gradient(180deg,#0b0d1100,#0b0d11cc 30%);padding-top:14px}
+  .hsum{display:flex;gap:10px;margin-bottom:4px}
+  .hsum>div{flex:1;background:#ffffff0f;border:1px solid #ffffff1a;border-radius:11px;
+    padding:7px 11px;box-shadow:var(--glass)}
+  .hsum b{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:800;
+    line-height:1.1;color:#fff}
+  .hsum span{display:block;font-size:9px;color:var(--tx3);text-transform:uppercase;
+    letter-spacing:.5px;margin-top:2px}
   .hbars .hb{display:flex;align-items:center;gap:9px;font-size:11px;color:#fff}
   .hbars .hb b{width:58px;flex:none;font-weight:600}
   .hbars .hb .t{flex:1;height:4px;border-radius:3px;background:#ffffff1f;overflow:hidden}
@@ -714,6 +723,9 @@
     box-shadow:0 1px 0 #ffffff12 inset}
   .foot2 .pryd::before{content:'';width:6px;height:6px;border-radius:50%;
     background:var(--info);box-shadow:0 0 8px var(--info)}
+  .foot2 .pryd.hoyo::before{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+  .foot2 .pryd.hoyo:hover{border-color:var(--gold);
+    box-shadow:0 1px 0 #ffffff1f inset,0 0 16px #ffd54a3d}
   .foot2 .pryd:hover{color:var(--tx);border-color:var(--info);
     box-shadow:0 1px 0 #ffffff1f inset,0 0 16px #60a5fa3d}
   .foot2 button.ghost:hover{opacity:1;border-color:var(--line);color:var(--tx2)}
@@ -1046,7 +1058,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v93';
+const APP_VER = 'v94';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2462,6 +2474,7 @@ function renderSheet() {
     '<div class="hroll" aria-hidden="true"><div class="hroll-in">' +
       '<span>' + esc(((a.en || a.ru) + ' · ').repeat(12)) + '</span>' +
       '<span>' + esc(((a.en || a.ru) + ' · ').repeat(12)) + '</span>' +
+      '<span>' + esc(((a.en || a.ru) + ' · ').repeat(12)) + '</span>' +
     '</div></div>' +
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
     (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async" data-alt="' + esc(artAlt) + '" ' +
@@ -2494,7 +2507,13 @@ function renderSheet() {
           '<span>' + val + '/' + max + '</span></div>';
       };
       let sk = 0; SKILL_IDX.forEach(o => sk += Math.min(SKILL_MAX, (p.sk && p.sk[o.i]) || 1));
+      const bsc = buildScore(p.discs || [], modKeys(curId, p), priOf(curId, p));
+      const bgr = discGrade(bsc.pct);
       return '<div class="hbars">' +
+        '<div class="hsum">' +
+          '<div><b>' + pctOf(curId) + '%</b><span>готовность</span></div>' +
+          '<div><b>' + rankBadge(bgr.g, 'sm') + ' ' + bsc.pct + '%</b><span>сборка</span></div>' +
+        '</div>' +
         bar('Уровень', p.lvl || 0, LVL_MAX) +
         bar('Ядро', p.core || 0, CORE_MAX) +
         bar('Навыки', sk, SKILL_MAX * SKILL_IDX.length) +
@@ -2714,6 +2733,9 @@ function renderSheet() {
   h += '<div class="foot2">' +
        (prydUrl(a) ? '<a class="pryd" href="' + esc(prydUrl(a)) + '" target="_blank" rel="noopener" ' +
          'title="Гайд по агенту на prydwen.gg — сборки, команды, приоритеты">Prydwen</a>' : '') +
+       '<a class="pryd hoyo" href="https://act.hoyolab.com/zzz/gt/character-builder-h/index.html' +
+         '?lang=ru-ru&avatar_id=' + a.id + '#/" target="_blank" rel="noopener" ' +
+         'title="Официальное руководство HoYoLab — сразу на этом агенте">Руководство</a>' +
        (p.have ? '<button id="haveTog" class="ghost">убрать из трекера</button>' : '') +
        '<span style="flex:1"></span>' +
        '<button onclick="closeModal()">Закрыть</button>' +
