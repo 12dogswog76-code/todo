@@ -615,6 +615,10 @@
   details.gen>summary{display:flex;align-items:center;gap:9px;padding:6px 10px;
     list-style:none;cursor:pointer}
   details.gen>summary::-webkit-details-marker{display:none}
+  .gen-st{font-size:11.5px;color:var(--tx2);padding:0 11px 6px 11px;
+    display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .gen-st b{color:var(--warn);font-weight:800;font-variant-numeric:tabular-nums}
+  .gen-st i{font-style:normal;font-size:10px;color:var(--tx3);margin-left:auto}
   .gen-desc{font-size:11.5px;line-height:1.55;color:var(--tx2);padding:0 11px 9px 11px}
   .gen-desc b{color:var(--gold)}
   .gen.top{border-color:#ffd54a44;background:linear-gradient(120deg,#ffd54a10,var(--pan))}
@@ -1148,7 +1152,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v110';
+const APP_VER = 'v111';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2969,6 +2973,23 @@ function guideSuit(item, pc, open) {
     '</details>';
 }
 
+// Что даёт движок на 60 уровне с полным прорывом — то есть в готовом виде.
+// Формулы те же, что и в weaponBonus: атака растёт от уровня и прорыва,
+// вторая характеристика — только от прорыва.
+function guideEngStats(w) {
+  if (!w) return '';
+  const out = [];
+  if (w.main) {
+    const atk = (+w.main.v || 0) * (1 + 0.1558 * 60 + 0.9 * 5);
+    out.push('Сила атаки <b>' + Math.round(atk) + '</b>');
+  }
+  if (w.sec) {
+    const sec = { p: String(w.sec.p), v: (+w.sec.v || 0) * (1 + 0.3 * 5) };
+    out.push(shortName(sec.p) + ' <b>' + secText(sec) + '</b>');
+  }
+  return out.join(' · ');
+}
+
 function guideHtml(a, p, T) {
   const g = guideOf(a.id);
   const src = (GUIDE && GUIDE.sourceName) || 'prydwen.gg';
@@ -3033,11 +3054,15 @@ function guideHtml(a, p, T) {
       const ex = (w && EXTRA && EXTRA.engines && EXTRA.engines[w.id]) || null;
       const txt = ex ? ((ex.p && ex.p[ph ? ph[1] : '1']) || ex.desc || '') : '';
       const cls = 'gen' + (i === 0 ? ' top' : '') + (own ? ' own' : '');
-      if (!txt) { h += '<div class="' + cls + '">' + head + '</div>'; return; }
+      const st = guideEngStats(w);
+      if (!txt && !st) { h += '<div class="' + cls + '">' + head + '</div>'; return; }
       h += '<details class="' + cls + ' gset"><summary>' + head +
         '<span class="gs-more">что даёт</span></summary>' +
-        '<div class="gen-desc">' +
-        (ex.name ? '<b>' + esc(ex.name) + '.</b> ' : '') + esc(txt) + '</div></details>';
+        (st ? '<div class="gen-st">' + st +
+          '<i>на 60 уровне, прорыв 5</i></div>' : '') +
+        (txt ? '<div class="gen-desc">' +
+          (ex.name ? '<b>' + esc(ex.name) + '.</b> ' : '') + esc(txt) + '</div>' : '') +
+        '</details>';
     });
     h += '</div></div>';
   }
