@@ -377,13 +377,13 @@
     align-items:flex-start;justify-content:center;padding:0 12px 20px;overflow-y:auto}
   .sheet{margin-top:0}
   .modal.open{display:flex}
-  .sheet{width:100%;max-width:1000px;background:var(--pan);border:1px solid var(--line);
+  .sheet{width:100%;max-width:1120px;background:var(--pan);border:1px solid var(--line);
     border-radius:16px;
     box-shadow:var(--glass),0 24px 70px #000c}
   .sheet>.hero{border-radius:16px 16px 0 0;overflow:clip}
   .sheet>.foot2{border-radius:0 0 16px 16px}
 
-  .hero{display:grid;grid-template-columns:290px 1fr}
+  .hero{display:grid;grid-template-columns:360px 1fr}
   .hart{
     position:sticky;top:0;align-self:start;
     max-height:100vh;
@@ -430,7 +430,7 @@
   /* низ блока с фигурой, а не низ колонки: иначе подпись уезжает под размытый фон */
   /* имя и плашки идут под артом, слегка наезжая на него */
   .hart .who{position:relative;z-index:4;padding:0 14px 14px;margin-top:-96px}
-  .hart .who b{display:block;font-size:22px;font-weight:800;line-height:1.1}
+  .hart .who b{display:block;font-size:26px;font-weight:800;line-height:1.1}
   .hart .who span{display:block;font-size:11px;color:var(--tx2);margin-top:3px}
   .hart .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
   /* Плашки под именем: стекло сохранили, но добавили затемнение под ним —
@@ -1074,7 +1074,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v104';
+const APP_VER = 'v105';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
