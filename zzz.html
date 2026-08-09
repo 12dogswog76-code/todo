@@ -1065,7 +1065,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v96';
+const APP_VER = 'v97';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2584,8 +2584,7 @@ function renderSheet() {
           '<span class="cap2">тир-ранг</span>' + rankBadge(t.tier, 'sm') + '</span>';
       })() +
       (p.have ? '<span class="tg pct" title="Готовность агента">' + pctOf(curId) + '%</span>' : '') +
-    '</div></div>' +
-    '</div></div><div class="hbody">';
+    '</div></div></div><div class="hbody">';
 
   if (!p.have) {
     h += '<div style="padding:26px 4px;color:var(--tx2);font-size:13px;line-height:1.6">' +
