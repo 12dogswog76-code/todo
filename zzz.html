@@ -468,6 +468,13 @@
   .hbars{position:absolute;left:14px;right:14px;bottom:14px;z-index:4;
     display:flex;flex-direction:column;gap:7px;
     background:linear-gradient(180deg,#0b0d1100,#0b0d11cc 30%);padding-top:14px}
+  /* готовность и оценка сборки — рядом с вкладками, а не под артом */
+  .hstat{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:9px;
+    background:#ffffff0a;border:1px solid var(--line);box-shadow:var(--glass);line-height:1}
+  .hstat b{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:var(--tx)}
+  .hstat i{font-style:normal;font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px}
+  @media(max-width:640px){ .hstat i{display:none} }
+
   .hsum{display:flex;gap:10px;margin-bottom:4px}
   .hsum>div{flex:1;background:#ffffff0f;border:1px solid #ffffff1a;border-radius:11px;
     padding:7px 11px;box-shadow:var(--glass)}
@@ -1058,7 +1065,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v94';
+const APP_VER = 'v96';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1244,27 +1251,104 @@ function modifiersOf(id, p) {
 //     в формулу не входил вовсе, убрал и я;
 //   • пороги букв были свои, теперь они привязаны к числу прокруток, как там:
 //     9 из 9 это S+, 8 — S, 7 — S-, 5–6 — A, 4 — B, 3 — C, меньше — D.
+// ── ценность характеристик и оценка дисков ──────────────────────────────────
+// Раньше веса были двоичными: стат либо в списке нужных, либо нет. Теперь вес
+// считается — на сколько процентов вырастет урон от одной прокрутки этого
+// стата. Так делает калькулятор okMuzzy, и это честнее: крит. шанс и плоская
+// атака перестают стоить одинаково.
+//
+// Урон считаем по трём разным формулам, потому что агенты бьют по-разному:
+//   крит-урон   ATK × (1 + шанс×урон крита) × (1 + бонус стихии) × защита
+//   аномалия    AP  × (1 + бонус стихии) × защита        — аномалия не критует
+//   оглушение   импульс                                  — урон вторичен
+// Роль берём из специальности агента.
 const DISC_MAX_ROLLS = 9;   // потолок для S-диска на +15: 4 стартовых + 5 усилений
 
-// Ранги как у Interknot, только под наши буквы. У них ступени были такие:
-// GOD 8–9 прокруток, ZERO 7, SSS/SS/S 5–6, A/B/C 3–4, E 0–2. Восьмёрка и
-// девятка у них — один ранг, поэтому диск, где мимо ушла всего одна прокрутка,
-// получает высшую оценку.
-//
-// Считаем не по проценту напрямую, а по приведённому числу прокруток:
-// недокачанный диск нормируется к девяти, иначе его 5 из 6 выглядели бы
-// слабее, чем 6 из 9, хотя по смыслу они лучше.
-const DISC_GRADES = [[7.5,'S+','Sp'],[6.5,'S','S'],[5.5,'S-','Sm'],
-                     [4.5,'A','A'],[3.5,'B','B'],[2.5,'C','C'],[-1,'D','D']];
+// прибавка за одну прокрутку, в тех же единицах, что и в SUB_OPTS
+const ROLL = { hp:112, hpp:300, atk:19, atkp:300, def:15, defp:480,
+               cr:240, cd:480, ap:9, am:9, pen:9 };
+
+// Роль определяем не по специальности, а по рекомендуемым характеристикам.
+// Причина: Мияби формально аномальщик, но её аномалия критует, и собирают её
+// в крит — по специальности этого не угадать, а в рекомендациях это видно.
+function agentRole(a, p) {
+  const rec = (a && p) ? subsOf(a.id, p) : [];
+  const has = k => rec.indexOf(k) >= 0;
+  if (has('cr') || has('cd')) return 'crit';
+  if (has('hp') || has('hpp')) return 'rupture';
+  if (has('ap') || has('am')) return 'anomaly';
+  const pr = (a && a.prof) || '';
+  if (pr === 'anomaly') return 'anomaly';
+  if (pr === 'rupture') return 'rupture';
+  if (pr === 'stun') return 'stun';
+  return 'crit';
+}
+
+// Условный урон при заданных характеристиках. Абсолютное значение не важно —
+// нужны только отношения, поэтому множители, одинаковые для всех вариантов,
+// можно опустить.
+// Ни один агент не наносит урон одним способом: аномальщик между аномалиями
+// бьёт обычными атаками, разрывник тоже. Поэтому модель смешанная — иначе
+// крит у Мияби весил бы ноль, что неправда.
+const ROLE_MIX = {
+  crit:    { crit: 1.00, anom: 0,    hp: 0    },
+  anomaly: { crit: 0.35, anom: 0.65, hp: 0    },
+  rupture: { crit: 0.35, anom: 0,    hp: 0.65 },
+  stun:    { crit: 0.70, anom: 0,    hp: 0    }
+};
+function dmgModel(role, t) {
+  const dm = defMult(953, 0.2, t.penp || 0, t.pen || 0);   // средняя цель
+  const el = 1 + (t.dmg || 0) / 100;
+  const mix = ROLE_MIX[role] || ROLE_MIX.crit;
+  const crit = 1 + Math.min(1, (t.cr || 0) / 100) * ((t.cd || 0) / 100);
+  // все три слагаемых приводим к сопоставимому масштабу, отношения не меняются
+  const dCrit = (t.atk || 1) * crit * el * dm;
+  const dAnom = (t.ap || 1) * 24 * (1 + (t.am || 0) / 600) * el * dm;
+  const dHp   = (t.hp || 1) * 0.32 * crit * el * dm;
+  return mix.crit * dCrit + mix.anom * dAnom + mix.hp * dHp;
+}
+
+// Веса всех характеристик для конкретного агента: насколько вырастет урон,
+// если добавить одну прокрутку. Нормируем к лучшей — она получает единицу.
+function statWeights(a, p) {
+  const role = agentRole(a, p);
+  const cur = (p && p.cur) || {};
+  const t = {
+    atk: +cur.atk || 1000, hp: +cur.hp || 8000, def: +cur.def || 600,
+    cr: +cur.cr || 5, cd: +cur.cd || 50, ap: +cur.ap || 90, am: +cur.am || 90,
+    im: +cur.im || 90, pen: +cur.pen || 0,
+    penp: (+cur.penp || 0) / 100,      // в p.cur проценты, в расчёте нужна доля
+    dmg: +cur.dmg || 0
+  };
+  const base = dmgModel(role, t);
+  const out = {};
+  Object.keys(ROLL).forEach(k => {
+    const step = { ...t };
+    const v = ROLL[k];
+    if (k === 'atkp')      step.atk = t.atk * (1 + v / 10000);
+    else if (k === 'hpp')  step.hp  = t.hp  * (1 + v / 10000);
+    else if (k === 'defp') step.def = t.def * (1 + v / 10000);
+    else if (k === 'cr')   step.cr  = t.cr + v / 100;
+    else if (k === 'cd')   step.cd  = t.cd + v / 100;
+    else if (step[k] != null) step[k] = t[k] + v;
+    out[k] = Math.max(0, dmgModel(role, step) / base - 1);
+  });
+  const max = Math.max(...Object.values(out)) || 1;
+  Object.keys(out).forEach(k => { out[k] = out[k] / max; });
+  out._role = role;
+  return out;
+}
+
+// Пороги подобраны так, чтобы распределение букв осталось прежним:
+// проверено на четырёх тысячах случайных дисков и на реальном профиле.
+const DISC_GRADES = [[63,'S+','Sp'],[53,'S','S'],[44,'S-','Sm'],
+                     [37,'A','A'],[33,'B','B'],[22,'C','C'],[0,'D','D']];
 function discGrade(pct) {
-  const eq = pct / 100 * DISC_MAX_ROLLS;      // сколько это было бы прокруток из девяти
   for (let i = 0; i < DISC_GRADES.length; i++) {
-    if (eq >= DISC_GRADES[i][0]) return { g: DISC_GRADES[i][1], c: DISC_GRADES[i][2] };
+    if (pct >= DISC_GRADES[i][0]) return { g: DISC_GRADES[i][1], c: DISC_GRADES[i][2] };
   }
   return { g: 'D', c: 'D' };
 }
-// Главный стат в оценку не входит, но подсказать про него стоит: диск с крит.
-// уроном и диск с защитой на четвёртом слоте — разные вещи.
 function discMainOk(d, keys, pri) {
   if (!d || !d.mainP) return false;
   if ((d.slot || 0) <= 3) return true;
@@ -1273,35 +1357,39 @@ function discMainOk(d, keys, pri) {
   if (k === 'dmg' || k === 'penp') return true;
   return keys.indexOf(k) >= 0 || pri.indexOf(k) >= 0;
 }
-function discScore(d, keys, pri) {
+function discScore(d, keys, pri, w) {
   if (!d || !Array.isArray(d.subs) || !d.subs.length) return null;
-  let tot = 0, good = 0;
+  let tot = 0, val = 0;
   const by = [];
   d.subs.forEach(s => {
     if (!s || !s.p) return;
     const n = Math.max(1, +s.l || 1);
-    tot += n;
-    if (isModSub(s, keys)) { good += n; by.push(shortName(s.p) + ' ×' + n); }
+    const k = PROP2STAT[String(s.p)] || '';
+    const wt = (w && w[k]) || 0;
+    tot += n; val += n * wt;
+    if (wt >= 0.25) by.push(shortName(s.p) + ' ×' + n + ' (' + Math.round(wt * 100) + '%)');
   });
   if (!tot) return null;
-  const pct = Math.round(good / tot * 100);
+  const pct = Math.round(val / tot * 100);
   const gr = discGrade(pct);
-  return { pct: pct, grade: gr.g, cls: gr.c, good: good, tot: tot,
-           mainOk: discMainOk(d, keys, pri), by: by };
+  return { pct: pct, grade: gr.g, cls: gr.c, good: Math.round(val * 10) / 10, tot: tot,
+           mainOk: discMainOk(d, keys, pri), by: by, role: (w && w._role) || 'crit' };
 }
+const ROLE_RU = { crit: 'урон с критами', anomaly: 'урон от аномалии', stun: 'оглушение' };
 function discHint(sc, d) {
   if (!sc) return '';
   return 'Оценка диска для этого агента: ' + sc.grade + ' (' + sc.pct + '%)\n' +
+    'Считается по вкладу в урон, роль агента: ' + (ROLE_RU[sc.role] || sc.role) + '\n' +
     'Полезных прокруток: ' + sc.good + ' из ' + sc.tot +
     (sc.tot < DISC_MAX_ROLLS ? ' (диск не докачан, потолок ' + DISC_MAX_ROLLS + ')' : '') + '\n' +
-    (sc.by.length ? 'В зачёт идут: ' + sc.by.join(', ') + '\n' : 'Ни одна доп. характеристика агенту не нужна\n') +
+    (sc.by.length ? 'Что и сколько даёт: ' + sc.by.join(', ') + '\n' : 'Ни одна доп. характеристика урона не добавляет\n') +
     'Главная характеристика: ' + (sc.mainOk ? 'подходит' : 'агенту не нужна — на оценку не влияет, но диск слабее');
 }
-function buildScore(list, keys, pri) {
+function buildScore(list, keys, pri, w) {
   let sum = 0, n = 0;
   for (let s = 1; s <= 6; s++) {
     const d = (list || []).filter(x => x && x.slot === s)[0];
-    const r = d ? discScore(d, keys, pri) : null;
+    const r = d ? discScore(d, keys, pri, w) : null;
     sum += r ? r.pct : 0;
     if (d) n++;
   }
@@ -2497,29 +2585,7 @@ function renderSheet() {
       })() +
       (p.have ? '<span class="tg pct" title="Готовность агента">' + pctOf(curId) + '%</span>' : '') +
     '</div></div>' +
-    // Под артом оставалась пустая полоса — кладём туда те же полоски прокачки,
-    // что и на карточках в сетке.
-    (p.have ? (function () {
-      const bar = (lab, val, max) => {
-        const w = Math.min(100, Math.round(val / max * 100));
-        return '<div class="hb"><b>' + lab + '</b><div class="t"><i class="' +
-          (w >= 100 ? 'full' : '') + '" style="width:' + w + '%"></i></div>' +
-          '<span>' + val + '/' + max + '</span></div>';
-      };
-      let sk = 0; SKILL_IDX.forEach(o => sk += Math.min(SKILL_MAX, (p.sk && p.sk[o.i]) || 1));
-      const bsc = buildScore(p.discs || [], modKeys(curId, p), priOf(curId, p));
-      const bgr = discGrade(bsc.pct);
-      return '<div class="hbars">' +
-        '<div class="hsum">' +
-          '<div><b>' + pctOf(curId) + '%</b><span>готовность</span></div>' +
-          '<div><b>' + rankBadge(bgr.g, 'sm') + ' ' + bsc.pct + '%</b><span>сборка</span></div>' +
-        '</div>' +
-        bar('Уровень', p.lvl || 0, LVL_MAX) +
-        bar('Ядро', p.core || 0, CORE_MAX) +
-        bar('Навыки', sk, SKILL_MAX * SKILL_IDX.length) +
-        bar('Оружие', (p.w && p.w.lvl) || 0, WENG_MAX) + '</div>';
-    })() : '') +
-    '</div><div class="hbody">';
+    '</div></div><div class="hbody">';
 
   if (!p.have) {
     h += '<div style="padding:26px 4px;color:var(--tx2);font-size:13px;line-height:1.6">' +
@@ -2536,6 +2602,13 @@ function renderSheet() {
       '<button class="htab' + (curTab === 'now' ? ' on' : '') + '" data-tab="now">Сейчас</button>' +
       '<button class="htab' + (curTab === 'plan' ? ' on' : '') + '" data-tab="plan">План</button>' +
       '<span style="flex:1"></span>' +
+      (function () {
+        const bsc = buildScore(p.discs || [], modKeys(curId, p), priOf(curId, p), statWeights(a, p));
+        return '<span class="hstat" title="Готовность: уровень, ядро, навыки и оружие">' +
+                 '<b>' + pctOf(curId) + '%</b><i>готовность</i></span>' +
+               (bsc.filled ? '<span class="hstat" title="Средняя оценка шести дисков под этого агента">' +
+                 '<b>' + rankBadge(discGrade(bsc.pct).g, 'sm') + ' ' + bsc.pct + '%</b><i>сборка</i></span>' : '');
+      })() +
       '<button class="htab' + (p.fav ? ' favon' : '') + '" id="favTog" title="в избранное">' +
         (p.fav ? '★ в избранном' : '☆ в избранное') + '</button></div>';
 
@@ -2636,7 +2709,8 @@ function renderSheet() {
     const list = curTab === 'plan' ? planDiscs(p) : (p.discs || []);
     const plSet = (p.plan && p.plan.discs) || [];
     const mk = modKeys(curId, p);   // нужные агенту доп. характеристики
-    const bs = buildScore(list, mk, pri);
+    const wts = statWeights(a, p);
+    const bs = buildScore(list, mk, pri, wts);
     const bg = discGrade(bs.pct);
     h += '<div class="sect"><h4><span class="tt">Диски' + (curTab === 'plan' ? ' — задай желаемый' : '') +
       '<i>DRIVE DISCS</i></span>' +
@@ -2651,7 +2725,7 @@ function renderSheet() {
       const d = list.find(x => x.slot === sl);
       const suit = d && DB.suitById[d.suit];
       const isPlan = curTab === 'plan' && plSet.some(x => x.slot === sl);
-      const sc = discScore(d, mk, pri);
+      const sc = discScore(d, mk, pri, wts);
       const subs = (d && d.subs || []).map(sp => {
         const r = subRolls(sp);
         return '<span' + (isModSub(sp, mk) ? ' class="good"' : '') + '>' + esc(shortName(sp.p)) +
