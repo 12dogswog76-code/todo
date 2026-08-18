@@ -131,6 +131,8 @@
   .modbadge b{color:var(--gold);font-size:12px;margin-left:3px}
   .ver{font-size:10px;font-weight:700;color:var(--tx3);background:#ffffff10;border:1px solid var(--line);
        padding:2px 7px;border-radius:20px;letter-spacing:.4px;white-space:nowrap}
+  /* сервер не ответил — версия воркера рядом не появится, подсвечиваем */
+  .ver.vererr{color:var(--warn);border-color:#fbbf2455;background:#fbbf241a}
   #cloudDot{width:8px;height:8px;border-radius:50%;background:#3a3f4a;display:inline-block;margin-left:2px}
   #cloudDot.cloud-ok{background:var(--ok)} #cloudDot.cloud-err{background:var(--acc)}
   #cloudDot.cloud-sync{background:var(--warn)}
@@ -1231,7 +1233,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v115';
+const APP_VER = 'v116';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1976,7 +1978,9 @@ async function loadDb(force) {
   // 1) свой собранный файл рядом со страницей
   if (!force) {
     try {
-      const r = await fetch('zzz-db.json', { cache: 'no-cache' });
+      // таймаут: без него медленная сеть держит белый экран до упора,
+      // хотя рядом лежит рабочий кэш в браузере
+      const r = await fetch('zzz-db.json', { cache: 'no-cache', signal: abortIn(12000) });
       if (r.ok) {
         const db = await r.json();
         db.local = true;
@@ -2472,12 +2476,18 @@ const LS_NICK = LS + '_nick';
 function showWorkerVer() {
   const el = $('appVer');
   if (!el) return;
-  for (const base of MYAPI) {
-    fetch(base + '/ping', { headers: { 'Accept': 'application/json' } })
-      .then(r => r.json())
-      .then(j => { if (j && j.v) el.textContent = APP_VER + '.' + j.v; })
-      .catch(() => {});
-  }
+  // Заодно это первая проверка связи: адрес, который ответил, запомнится
+  // в API_OK, и остальные запросы уже не будут стучаться в мёртвый.
+  apiFetch('/ping', { headers: { 'Accept': 'application/json' } }, 8000).then(res => {
+    if (res.ok && res.data && res.data.v) {
+      el.textContent = APP_VER + '.' + res.data.v;
+      el.title = 'Сайт ' + APP_VER + ', воркер v' + res.data.v + '\nСвязь через ' + res.base;
+    } else {
+      el.title = 'Сервер не отвечает: ' + (res.err || '') +
+                 '\nИмпорт из игры сейчас работать не будет.';
+      el.classList.add('vererr');
+    }
+  });
 }
 
 function setNick(nick, uid) {
@@ -4359,8 +4369,56 @@ function refreshEnkaLinks() {
 // CORS, ни блокировок; если маршрут не привязан, идём напрямую на workers.dev.
 // Пока воркер не обновлён, оба адреса просто не отвечают, и трекер уходит
 // на прежние запасные зеркала.
+// Два адреса своего прокси: сначала маршрут на своём домене, потом прямой адрес
+// воркера. Домен предпочтительнее — адреса вида *.workers.dev у части провайдеров
+// не открываются, и тогда запрос висит до таймаута.
 const MYAPI = ['/api/zzz', 'https://alextask-push.12dogswog76.workers.dev/api/zzz'];
 const myApiUrls = tail => MYAPI.map(b => b + tail);
+
+// Какой из адресов ответил в прошлый раз. Мёртвый адрес иначе опрашивается снова
+// и снова, и каждый запрос ждёт таймаут — со стороны это выглядит как «сайт висит».
+let API_OK = null;
+try { API_OK = sessionStorage.getItem(LS + '_api') || null; } catch (e) {}
+
+// Понятная причина вместо «Failed to fetch»: это сообщение браузер выдаёт и когда
+// сервер лежит, и когда адрес режет провайдер, — человеку оно ничего не говорит.
+function netMsg(e) {
+  const m = (e && e.message) || String(e);
+  if (e && e.name === 'AbortError') return 'сервер не ответил за отведённое время';
+  if (/Failed to fetch|NetworkError|load failed|ERR_/i.test(m))
+    return 'нет связи с сервером — он лежит либо адрес закрыт провайдером';
+  return m;
+}
+function abortIn(ms) {
+  const c = new AbortController();
+  setTimeout(() => c.abort(), ms);
+  return c.signal;
+}
+// Запрос к своему прокси: обходит адреса по очереди, начиная с рабочего,
+// с таймаутом и разбором JSON. Возвращает { ok, data, base } или { ok:false, err }.
+async function apiFetch(tail, opt, ms) {
+  const rest = MYAPI.filter(b => b !== API_OK);
+  const bases = API_OK ? [API_OK].concat(rest) : MYAPI;
+  let last = 'не удалось связаться с сервером';
+  for (const b of bases) {
+    try {
+      const r = await fetch(b + tail, Object.assign({ signal: abortIn(ms || 15000) }, opt || {}));
+      const txt = await r.text();
+      let j = null;
+      try { j = JSON.parse(txt); } catch (e2) {
+        // сюда попадаем, когда маршрут на домене не настроен и отвечает сам сайт
+        last = 'по адресу ' + b + ' отвечает не прокси';
+        continue;
+      }
+      API_OK = b;
+      try { sessionStorage.setItem(LS + '_api', b); } catch (e3) {}
+      return { ok: true, data: j, base: b, status: r.status };
+    } catch (e) {
+      last = netMsg(e);
+    }
+  }
+  return { ok: false, err: last };
+}
 
 function useEnkaData(data, viaProxy) {
   const show = (data && data.PlayerInfo && data.PlayerInfo.ShowcaseDetail) || null;
@@ -4471,7 +4529,8 @@ $('enkaBuilds').onclick = async () => {
       'https://corsproxy.io/?' + encodeURIComponent(u)]);
     for (const t of tries) {
       try {
-        const r = await fetch(t, { headers: { 'Accept': 'application/json' } });
+        const r = await fetch(t, { headers: { 'Accept': 'application/json' },
+                                   signal: abortIn(15000) });
         const j = JSON.parse(await r.text());
         if (!r.ok || (j && j.error)) continue;
         return j;
@@ -4595,19 +4654,21 @@ $('hoyoGo').onclick = async () => {
   msg.textContent = 'Гружу весь аккаунт из хроники…';
 
   let data = null, lastErr = '';
-  for (const base of MYAPI) {
-    try {
-      const r = await fetch(base + '/hoyo/' + uid + '/full',
-        { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) });
-      const j = JSON.parse(await r.text());
-      if (j && j.error) { lastErr = j.error; continue; }
-      if (j && j.avatars && j.avatars.length) { data = j; break; }
-      lastErr = 'ответ без агентов';
-    } catch (e) { lastErr = e.message || String(e); }
+  {
+    // хроника отвечает не мгновенно: агентов опрашивают пачками, даём минуту
+    const res = await apiFetch('/hoyo/' + uid + '/full',
+      { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 60000);
+    if (!res.ok) lastErr = res.err;
+    else if (res.data && res.data.error) lastErr = res.data.error;
+    else if (res.data && res.data.avatars && res.data.avatars.length) data = res.data;
+    else lastErr = 'ответ без агентов';
   }
 
   if (!data) {
+    const noNet = /нет связи|не ответил|отвечает не прокси/.test(lastErr);
     msg.innerHTML = '<b>Не вышло:</b> ' + esc(lastErr) +
+      (noNet ? '<br>Проверь связь кнопкой «Проверить связь» в панели «☁ Облако и данные» — ' +
+               'она покажет, какой адрес не отвечает.' : '') +
       '<br>Попробуй кнопку «Только витрина» — она работает без хроники.';
     return;
   }
@@ -4639,7 +4700,8 @@ $('hoyoGo').onclick = async () => {
     ]);
     for (const u of tries) {
       try {
-        const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+        const r = await fetch(u, { headers: { 'Accept': 'application/json' },
+                                   signal: abortIn(15000) });
         const j = JSON.parse(await r.text());
         if (j && j.error) continue;
         const list = (((j || {}).PlayerInfo || {}).ShowcaseDetail || {}).AvatarList || [];
@@ -4691,7 +4753,10 @@ $('enkaGo').onclick = async () => {
   let data = null, lastErr = '', viaProxy = false;
   for (let i = 0; i < tries.length; i++) {
     try {
-      const r = await fetch(tries[i], { headers: { 'Accept': 'application/json' } });
+      // без ограничения по времени один зависший адрес держит всю очередь,
+      // и со стороны это выглядит как намертво повисший сайт
+      const r = await fetch(tries[i], { headers: { 'Accept': 'application/json' },
+                                        signal: abortIn(15000) });
       const t = await r.text();
       let j = null;
       try { j = JSON.parse(t); } catch (e) { lastErr = 'HTTP ' + r.status; continue; }
@@ -4700,7 +4765,7 @@ $('enkaGo').onclick = async () => {
       if (!r.ok) { lastErr = 'HTTP ' + r.status; continue; }
       if (j && j.PlayerInfo) { data = j; viaProxy = (i < mine.length); break; }
       lastErr = 'ответ без данных профиля';
-    } catch (e) { lastErr = e.message || String(e); }
+    } catch (e) { lastErr = netMsg(e); }
   }
 
   if (data) { useEnkaData(data, viaProxy); return; }
@@ -4780,19 +4845,23 @@ const CLOUD_PROXY = [
   u => 'https://api.cors.lol/?url=' + encodeURIComponent(u)
 ];
 function isNetErr(e) {
+  if (e && e.name === 'AbortError') return true;
   return /Failed to fetch|NetworkError|Load failed|ERR_|timeout/i.test(String((e && e.message) || e));
 }
-// один запрос: сначала напрямую, при сетевой ошибке — через прокси по очереди
+// Один запрос: сначала напрямую, при сетевой ошибке — через прокси по очереди.
+// Таймаут обязателен: синхронизация запускается сама при открытии страницы, и
+// без него один зависший адрес держит загрузку — со стороны сайт просто «висит».
 async function cloudFetch(url, opt) {
+  const withTimeout = o => Object.assign({}, o || {}, { signal: abortIn(12000) });
   try {
-    const r = await fetch(url, opt);
+    const r = await fetch(url, withTimeout(opt));
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r;
   } catch (e) {
-    if (!isNetErr(e)) throw e;
+    if (!isNetErr(e) && !(e && e.name === 'AbortError')) throw e;
     for (let i = 0; i < CLOUD_PROXY.length; i++) {
       try {
-        const r = await fetch(CLOUD_PROXY[i](url), opt);
+        const r = await fetch(CLOUD_PROXY[i](url), withTimeout(opt));
         if (!r.ok) throw new Error('HTTP ' + r.status);
         cloudLog('прямой запрос не прошёл, работаю через прокси');
         return r;
@@ -5012,7 +5081,11 @@ $('cloudTest').onclick = async () => {
     ['kvdb.io',               'https://kvdb.io/ping'],
     ['enka.network',          'https://enka.network/api/zzz/uid/1502024259/']
   ];
-  const items = [['напрямую api.jsonbin.io', url]]
+  // Свой прокси проверяем первым и поимённо: именно от него зависят импорт из
+  // игры и хроника, и именно он ломается, когда провайдер режет workers.dev.
+  const items = MYAPI.map(b => ['мой сервер: ' + (b.indexOf('http') === 0 ? b.split('/')[2] : 'свой домен'),
+                                b + '/ping'])
+    .concat([['напрямую api.jsonbin.io', url]])
     .concat(CLOUD_PROXY.map((f, i) => ['прокси ' + (i + 1) + ': ' + f('x').split('/')[2], f(url)]))
     .concat(ALT.map(a => ['хранилище ' + a[0], a[1]]));
   box.textContent = 'Проверяю…';
