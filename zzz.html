@@ -1004,7 +1004,9 @@
     /* разделитель превращается в перенос строки */
     .fsep{flex-basis:100%;width:auto;height:0;background:none;margin:2px 0}
     .fil .cap{flex-basis:100%;text-align:center;margin:0 0 1px}
-    .chip.link{flex:0 1 auto}
+    /* на ПК первая ссылка прижата вправо через margin-left:auto — на телефоне
+       это растаскивало её в чужую строку */
+    .chip.link,.chip.link:first-of-type{flex:0 1 auto;margin-left:0}
 
     /* ── карточка агента ── */
     /* вкладки и «в избранное» переносятся, а не уезжают за край */
@@ -1019,7 +1021,11 @@
     /* ── прокрутка ── */
     /* карточки на телефоне ниже, чем на ПК: уточняем высоту-заглушку, чтобы
        полоса прокрутки не дёргалась при долистывании */
-    .card{contain-intrinsic-size:auto 232px}
+    .card{contain-intrinsic-size:auto 268px;contain:layout style paint}
+    /* переходы при прокрутке только мешают: наведения на телефоне всё равно нет */
+    .card,.card *{transition:none}
+    /* сетка не пересчитывает соседей, когда появляется очередная карточка */
+    .grid{contain:layout}
     /* эффекты, которые на телефоне стоят дорого, а видно их еле-еле */
     .card:hover{box-shadow:var(--glass)}
     .sc::after,.sc:hover::after{display:none}
@@ -1290,7 +1296,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v120';
+const APP_VER = 'v121';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2402,6 +2408,9 @@ function renderFilters() {
     h += '<span class="chip f-sort' + (ui.sort === 'tier' ? ' on' : '') +
          '" data-v="tier">по тир-листу</span>';
   }
+  // Внешние ссылки — своей группой. На телефоне разделитель работает как перенос
+  // строки, поэтому они не липнут к кнопкам фильтров и не лезут в чужую строку.
+  h += '<span class="fsep"></span>';
   // Официальный конструктор сборок HoYoLab. Агент внутри выбирается на самой
   // странице и в адрес не попадает, поэтому ссылка общая, а не по агенту.
   h += '<a class="chip link" href="https://www.prydwen.gg/zenless/tier-list" target="_blank" rel="noopener" ' +
@@ -2596,7 +2605,11 @@ function rankBadge(letter, size, title) {
          '<i>' + esc(base) + '</i>' + (sign ? '<u>' + esc(sign) + '</u>' : '') + '</span>';
 }
 
-function cardHTML(a) {
+// Первые карточки видны сразу, ждать ленивой загрузки им незачем: при быстрой
+// прокрутке она не поспевает, и вместо портретов какое-то время пустые плитки.
+// Порядковый номер приходит из map(), где второй аргумент — индекс.
+const EAGER_CARDS = 12;
+function cardHTML(a, idx) {
   const p = prog[a.id], have = !!(p && p.have), pc = pctOf(a.id);
   const mods = have ? modifiersOf(a.id, p).sum : 0;
   const el = (a.element || [])[0] || '';
@@ -2622,8 +2635,9 @@ function cardHTML(a) {
   return '<div class="card' + (have ? '' : ' no') + '" data-id="' + a.id +
     '" style="--el:' + col + '">' +
     '<div class="ph">' +
-      (pic ? '<img src="' + esc(pic) + '" alt="" width="480" height="480" loading="lazy" decoding="async" ' +
-        'data-alt="' + esc(picAlt) + '" onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
+      (pic ? '<img src="' + esc(pic) + '" alt="" width="480" height="480" decoding="async"' +
+        (idx != null && idx < EAGER_CARDS ? ' fetchpriority="high"' : ' loading="lazy"') +
+        ' data-alt="' + esc(picAlt) + '" onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
         '{this.src=this.dataset.alt}else{this.style.display=\'none\'}">' : '') +
       '<span class="rk">' + rankBadge(a.rarity, 'sm', 'Редкость ' + a.rarity) + '</span>' +
       (tierOf(a.id) ? (function () {
