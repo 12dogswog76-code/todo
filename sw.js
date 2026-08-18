@@ -1,10 +1,11 @@
-// ВНИМАНИЕ: это устаревшая копия. Источник правды — репозиторий 12dogswog76-code/todo. НЕ деплоить.
 // service worker «Мои дела»: уведомления + офлайн-режим (PWA)
+// Этот файл выкладывается отсюда (он в списке $files в deploy-zzz.ps1), локальная
+// копия сверена с боевой. При замене картинок обязательно поднимать CACHE.
 // v5: страницы кэшируются каждая под своим адресом (задачи / деньги / ZZZ) + картинки ZZZ
 // v8: карточки агентов переведены на card_*.webp / hero_*.webp вместо полноразмерных
 // art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
 // работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
-const CACHE = 'moi-dela-v12';
+const CACHE = 'moi-dela-v13';
 const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json',
                 './zzz-extra.json', './zzz-guide.json', './manifest.json', './icon.svg'];
 
@@ -34,18 +35,30 @@ self.addEventListener('fetch', e => {
   if (url.pathname.indexOf('/api/') === 0) return;
 
   if (e.request.mode === 'navigate') {
-    // страница: сеть в приоритете, офлайн — из кэша
-    e.respondWith(
-      fetch(e.request)
-        .then(r => {
-          if (r && r.ok) {
-            const copy = r.clone();
-            caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-          }
-          return r;
-        })
-        .catch(() => caches.match(e.request).then(m => m || caches.match('./index.html')))
-    );
+    // Страница: сеть в приоритете, офлайн — из кэша.
+    //
+    // Отдать кэш, если сеть не ответила за 6 секунд, — но не бросать при этом
+    // саму загрузку: она продолжается и кладёт свежую страницу в кэш, так что
+    // следующее открытие будет уже свежим. Без этого получался замкнутый круг:
+    // сеть тормозит -> отдаём старую страницу -> в ней старый код, который
+    // тормозит ещё сильнее, и новая версия не доезжает вообще никогда.
+    e.respondWith((async () => {
+      const net = fetch(e.request).then(r => {
+        if (r && r.ok) {
+          const copy = r.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        }
+        return r;
+      });
+      const cached = await caches.match(e.request);
+      if (!cached) {
+        // в кэше пусто — ждём сеть до конца, иначе показывать нечего
+        return net.catch(() => caches.match('./index.html'));
+      }
+      const slow = new Promise(res => setTimeout(() => res(null), 6000));
+      const first = await Promise.race([net.catch(() => null), slow]);
+      return first || cached;
+    })());
     return;
   }
 
