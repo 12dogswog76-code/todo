@@ -1296,7 +1296,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v121';
+const APP_VER = 'v122';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2882,12 +2882,22 @@ function suitFight(a, p) {
 // множителю, к другому — и смотрим, где урон вырос сильнее.
 //
 // Бафы команды берём не поимённо, а тремя наборами: состав меняется, а
-// порядок величин — нет. К тому же большая часть бафов действует на оба
-// варианта одинаково и на выбор почти не влияет.
+// порядок величин — нет.
+//
+// dmg — бонус стихии от команды, и это ключевая величина в споре «стихия против
+// пробивания». Бонусы стихии складываются в один множитель, поэтому каждый
+// следующий процент стоит тем меньше, чем больше уже набрано: при своих 10%
+// диск на +30% даёт +27% урона, а если команда добавила ещё 45%, тот же диск
+// даёт уже +19%. Пробивание от этого не зависит вовсе — оно бьёт по защите.
+// Пока поля не было, трекер сравнивал «плюс 30% к десяти» вместо «плюс 30%
+// к пятидесяти пяти» и стабильно занижал пробивание.
+//
+// pen — плоское пробивание от поддержки (Цезарь, Люси, часть движков). Считается
+// после процентного, поэтому по уже пробитой защите работает особенно заметно.
 const TEAM_BUFFS = [
-  { id: 0, n: 'без поддержки', flat: 0,    atkp: 0,    shred: 0    },
-  { id: 1, n: 'обычная',       flat: 1000, atkp: 0.25, shred: 0.20 },
-  { id: 2, n: 'сильная',       flat: 1800, atkp: 0.45, shred: 0.40 }
+  { id: 0, n: 'без поддержки', flat: 0,    atkp: 0,    shred: 0,    dmg: 0,    pen: 0   },
+  { id: 1, n: 'обычная',       flat: 1000, atkp: 0.25, shred: 0.20, dmg: 0.25, pen: 60  },
+  { id: 2, n: 'сильная',       flat: 1800, atkp: 0.45, shred: 0.40, dmg: 0.45, pen: 100 }
 ];
 const BOSS_DEF = [
   { id: 0, n: 'мало',    v: 476  },
@@ -2954,19 +2964,22 @@ function fifthDisc(a, p, team, boss) {
   const baseAtk = pt.base || 1;
   affix  += fDmg;
   penOwn += fPen;
+  // бонус стихии и плоское пробивание от команды — в общую кучу к своим
+  const affixAll = affix + (tb.dmg || 0);
+  const penFlatAll = flatPen + (tb.pen || 0);
   // атака в бою: своё и боевые пассивки, потом множитель команды и её плоские прибавки
   const atkOwnF = atkOwn + baseAtk * fAtkp;
   const atkNow  = atkOwnF * (1 + tb.atkp) + tb.flat;
-  const dm      = defMult(bd, tb.shred, penOwn, flatPen);
+  const dm      = defMult(bd, tb.shred, penOwn, penFlatAll);
 
-  const dps = (atk, aff, pen) => atk * (1 + aff) * defMult(bd, tb.shred, pen, flatPen);
-  const now = dps(atkNow, affix, penOwn);
+  const dps = (atk, aff, pen) => atk * (1 + aff) * defMult(bd, tb.shred, pen, penFlatAll);
+  const now = dps(atkNow, affixAll, penOwn);
 
   // прибавка от диска считается от базы агента с оружием и ядром
   const vAtk = dps((atkOwnF + baseAtk * (byHp ? D5.hpp : D5.atkp)) * (1 + tb.atkp) + tb.flat,
-                   affix, penOwn);
-  const vDmg = dps(atkNow, affix + D5.dmg, penOwn);
-  const vPen = dps(atkNow, affix, penOwn + D5.penp);
+                   affixAll, penOwn);
+  const vDmg = dps(atkNow, affixAll + D5.dmg, penOwn);
+  const vPen = dps(atkNow, affixAll, penOwn + D5.penp);
 
   const list = [
     { k: 'dmg',  n: 'Бонус стихии 30%', v: vDmg },
@@ -2978,8 +2991,14 @@ function fifthDisc(a, p, team, boss) {
   list.forEach(o => { o.gain = Math.round((o.v / now - 1) * 1000) / 10; });   // % к урону
   const lead = Math.round((best.v / list[1].v - 1) * 1000) / 10;             // отрыв от второго
 
+  // сколько защиты у цели осталось после всех снижений — по этому числу сразу
+  // видно, есть ли ещё куда пробивать
+  const defLeft = Math.max(0, bd * (1 - tb.shred) * (1 - penOwn) - penFlatAll);
   return { list: list, best: best, lead: lead, atk: Math.round(atkNow), byHp: byHp,
-           affix: Math.round(affix * 1000) / 10, dm: Math.round(dm * 1000) / 10,
+           affix: Math.round(affixAll * 1000) / 10, dm: Math.round(dm * 1000) / 10,
+           own: Math.round(affix * 1000) / 10, teamDmg: Math.round((tb.dmg || 0) * 100),
+           pen: Math.round(penOwn * 1000) / 10, defLeft: Math.round(defLeft),
+           bossDef: bd,
            fromGame: cur.atk != null, fight: fight, wf: wf, sf: sf,
            team: tb, boss: (BOSS_DEF[boss] || BOSS_DEF[1]).n };
 }
@@ -3001,7 +3020,10 @@ function fifthHTML(a, p) {
     '<label class="d5f"><span>' + lab + '</span>' +
     '<input type="number" class="d5in" data-f="' + k + '" step="1" min="0" max="300" ' +
     'placeholder="' + ph + '" value="' + (f[k] != null && f[k] !== '' ? esc(String(f[k])) : '') + '"></label>';
-  return '<details class="d5">' +
+  // Открыт блок или нет — помним между перерисовками. Выбор поддержки и защиты
+  // цели перестраивает всю карточку, а <details> без этого создаётся заново
+  // закрытым: нажал «сильная» — и блок схлопнулся прямо под пальцем.
+  return '<details class="d5"' + (ui.d5open ? ' open' : '') + '>' +
     '<summary class="d5head">' +
       '<span>Пятый диск: <b>' + esc(r.best.n) + '</b></span>' +
       '<span class="d5sel" title="Слева — поддержка команды, справа — защита цели">' +
@@ -3033,7 +3055,14 @@ function fifthHTML(a, p) {
               '% — бери тот, где лучше доп. характеристики. '
             : 'Отрыв от второго варианта: ' + r.lead.toFixed(1) + '%. ') +
       'Считано от твоих статов без пятого диска: ' + (r.byHp ? 'HP ' : 'атака ') + r.atk +
-      ', бонус стихии ' + r.affix + '%, до цели доходит ' + r.dm + '% урона. ' +
+      ', бонус стихии ' + r.affix + '%' +
+      (r.teamDmg ? ' (свои ' + r.own + ' + от команды ' + r.teamDmg + ')' : '') +
+      ', пробивание ' + r.pen + '%. ' +
+      'У цели остаётся защиты ' + r.defLeft + ' из ' + r.bossDef +
+      ', доходит ' + r.dm + '% урона. ' +
+      (r.defLeft <= 0
+        ? 'Защита уже пробита в ноль — пробивание больше ничего не даст. '
+        : '') +
       (r.byHp ? 'Этот агент бьёт от здоровья, поэтому сила атаки и бафы команды на атаку ' +
                 'в сравнение не входят. ' : '') +
       (r.fromGame ? 'Характеристики взяты из игры, то есть с пассивками ядра, оружия и комплектов.'
@@ -3701,7 +3730,12 @@ function bindSheet() {
     e.preventDefault(); e.stopPropagation();
     if (el.dataset.team != null) ui.d5team = +el.dataset.team;
     if (el.dataset.boss != null) ui.d5boss = +el.dataset.boss;
+    ui.d5open = true;          // выбор делают при открытом блоке — таким и оставляем
     save(); renderSheet();
+  });
+  // запоминаем, свернул человек блок или развернул
+  document.querySelectorAll('details.d5').forEach(el => el.ontoggle = () => {
+    if (ui.d5open !== el.open) { ui.d5open = el.open; save(); }
   });
   document.querySelectorAll('.goalin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
   document.querySelectorAll('.curin').forEach(i => i.onchange = () => { applySheet(); renderSheet(); });
