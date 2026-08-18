@@ -1233,7 +1233,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v118';
+const APP_VER = 'v119';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -4428,30 +4428,39 @@ function abortIn(ms) {
   setTimeout(() => c.abort(), ms);
   return c.signal;
 }
-// Запрос к своему прокси: обходит адреса по очереди, начиная с рабочего,
-// с таймаутом и разбором JSON. Возвращает { ok, data, base } или { ok:false, err }.
-async function apiFetch(tail, opt, ms) {
-  const rest = MYAPI.filter(b => b !== API_OK);
-  const bases = API_OK ? [API_OK].concat(rest) : MYAPI;
-  let last = 'не удалось связаться с сервером';
-  for (const b of bases) {
-    try {
-      const r = await fetch(b + tail, Object.assign({ signal: abortIn(ms || 15000) }, opt || {}));
-      const txt = await r.text();
-      let j = null;
-      try { j = JSON.parse(txt); } catch (e2) {
-        // сюда попадаем, когда маршрут на домене не настроен и отвечает сам сайт
-        last = 'по адресу ' + b + ' отвечает не прокси';
-        continue;
-      }
-      API_OK = b;
-      try { sessionStorage.setItem(LS + '_api', b); } catch (e3) {}
-      return { ok: true, data: j, base: b, status: r.status };
-    } catch (e) {
-      last = netMsg(e);
-    }
+// Один запрос по конкретному адресу: с таймаутом и разбором JSON.
+async function apiOne(base, tail, opt, ms) {
+  const r = await fetch(base + tail, Object.assign({ signal: abortIn(ms || 15000) }, opt || {}));
+  const txt = await r.text();
+  let j = null;
+  try { j = JSON.parse(txt); } catch (e) {
+    // сюда попадаем, когда маршрут на домене не настроен и отвечает сам сайт
+    throw new Error('по адресу ' + base + ' отвечает не прокси');
   }
-  return { ok: false, err: last };
+  return { ok: true, data: j, base: base, status: r.status };
+}
+
+// Запрос к своему прокси. Если рабочий адрес уже известен — идём сразу туда,
+// иначе спрашиваем все разом и берём того, кто ответил первым.
+//
+// Раньше адреса перебирались по очереди, и недоступный первым в списке
+// задерживал ответ на весь свой таймаут: сайт открывался, а связь с воркером
+// появлялась секунд через пятнадцать. Какой адрес живой — у каждой сети своё:
+// где-то режется свой домен, где-то workers.dev.
+async function apiFetch(tail, opt, ms) {
+  if (API_OK) {
+    try { return await apiOne(API_OK, tail, opt, ms); }
+    catch (e) { API_OK = null; try { sessionStorage.removeItem(LS + '_api'); } catch (e2) {} }
+  }
+  try {
+    const res = await Promise.any(MYAPI.map(b => apiOne(b, tail, opt, ms)));
+    API_OK = res.base;
+    try { sessionStorage.setItem(LS + '_api', res.base); } catch (e) {}
+    return res;
+  } catch (e) {
+    const list = (e && e.errors) || [];
+    return { ok: false, err: list.length ? netMsg(list[0]) : 'не удалось связаться с сервером' };
+  }
 }
 
 function useEnkaData(data, viaProxy) {
@@ -4689,6 +4698,9 @@ $('hoyoGo').onclick = async () => {
 
   let data = null, lastErr = '';
   {
+    // Сначала убеждаемся, что рабочий адрес известен. Иначе тяжёлый запрос
+    // пойдёт гонкой сразу на все адреса, и сервер трижды опросит хронику.
+    if (!API_OK) await apiFetch('/ping', { headers: { 'Accept': 'application/json' } }, 8000);
     // хроника отвечает не мгновенно: агентов опрашивают пачками, даём минуту
     const res = await apiFetch('/hoyo/' + uid + '/full',
       { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 60000);
