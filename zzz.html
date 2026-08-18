@@ -763,6 +763,8 @@
     font-size:11.5px;color:var(--tx2);margin-bottom:8px;overflow:hidden}
   .d5head>span:first-of-type{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .d5head b{color:var(--gold);font-weight:800}
+  .d5head .d5src{font-style:normal;font-size:9.5px;color:var(--tx3);margin-left:6px;
+    border:1px solid var(--line);border-radius:20px;padding:1px 6px;white-space:nowrap}
   .d5sel{margin-left:auto;font-size:10px;color:var(--tx3);display:flex;
     align-items:center;gap:3px;flex-wrap:nowrap;flex:none}
   .d5sel em{font-style:normal;opacity:.5;margin:0 2px}
@@ -1296,7 +1298,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v122';
+const APP_VER = 'v123';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2892,12 +2894,13 @@ function suitFight(a, p) {
 // Пока поля не было, трекер сравнивал «плюс 30% к десяти» вместо «плюс 30%
 // к пятидесяти пяти» и стабильно занижал пробивание.
 //
-// pen — плоское пробивание от поддержки (Цезарь, Люси, часть движков). Считается
-// после процентного, поэтому по уже пробитой защите работает особенно заметно.
+// pen — плоское пробивание от поддержки. Держим маленьким: агентов, которые его
+// дают, в командах почти не бывает, а завышенное значение съедает ценность
+// пробивания на диске.
 const TEAM_BUFFS = [
-  { id: 0, n: 'без поддержки', flat: 0,    atkp: 0,    shred: 0,    dmg: 0,    pen: 0   },
-  { id: 1, n: 'обычная',       flat: 1000, atkp: 0.25, shred: 0.20, dmg: 0.25, pen: 60  },
-  { id: 2, n: 'сильная',       flat: 1800, atkp: 0.45, shred: 0.40, dmg: 0.45, pen: 100 }
+  { id: 0, n: 'без поддержки', flat: 0,    atkp: 0,    shred: 0,    dmg: 0,    pen: 0  },
+  { id: 1, n: 'обычная',       flat: 1000, atkp: 0.25, shred: 0.20, dmg: 0.25, pen: 0  },
+  { id: 2, n: 'сильная',       flat: 1800, atkp: 0.45, shred: 0.40, dmg: 0.45, pen: 30 }
 ];
 const BOSS_DEF = [
   { id: 0, n: 'мало',    v: 476  },
@@ -3023,9 +3026,20 @@ function fifthHTML(a, p) {
   // Открыт блок или нет — помним между перерисовками. Выбор поддержки и защиты
   // цели перестраивает всю карточку, а <details> без этого создаётся заново
   // закрытым: нажал «сильная» — и блок схлопнулся прямо под пальцем.
+  // Что советует гайд в этот слот. Приоритет у него: расчёт — прикидка по
+  // характеристикам из профиля, а гайд опирается на реальные бои, где у агента
+  // висят условные бафы от комплектов и пассивок, которых в профиле не видно.
+  // Именно поэтому пробивание в гайде стоит первым у шестнадцати агентов из
+  // пятидесяти семи, а расчёт его недооценивает.
+  const gm = guideMain(curId, 5);
+  const gmRu = gm ? gm.map(k => GUIDE_STAT_SHORT[k] || k).join(' или ') : '';
+  // совпадает ли лучший по расчёту с тем, что советует гайд
+  const same = gm ? gm.indexOf(r.best.k) >= 0 : null;
+
   return '<details class="d5"' + (ui.d5open ? ' open' : '') + '>' +
     '<summary class="d5head">' +
-      '<span>Пятый диск: <b>' + esc(r.best.n) + '</b></span>' +
+      '<span>Пятый диск: <b>' + esc(gmRu || r.best.n) + '</b>' +
+        (gmRu ? '<i class="d5src">по гайду</i>' : '') + '</span>' +
       '<span class="d5sel" title="Слева — поддержка команды, справа — защита цели">' +
         TEAM_BUFFS.map(t =>
           '<i class="d5t' + (t.id === team ? ' on' : '') + '" data-team="' + t.id + '">' +
@@ -3051,6 +3065,14 @@ function fifthHTML(a, p) {
       })() + '</span>' +
       '</div></details>' +
     '<div class="d5foot">' +
+      (gmRu
+        ? (same
+            ? 'Расчёт согласен с гайдом. '
+            : '<b style="color:var(--warn)">Гайд советует ' + esc(gmRu) + '</b>, а расчёт ниже ставит ' +
+              'первым «' + esc(r.best.n) + '». Верить стоит гайду: он опирается на реальные бои, ' +
+              'где у агента висят бафы от комплектов и пассивок, которых в профиле не видно, ' +
+              'а расчёт считает по тому, что видит. ')
+        : '') +
       (near ? 'Разница с ближайшим вариантом всего ' + r.lead.toFixed(1) +
               '% — бери тот, где лучше доп. характеристики. '
             : 'Отрыв от второго варианта: ' + r.lead.toFixed(1) + '%. ') +
