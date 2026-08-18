@@ -6,6 +6,11 @@
 // art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
 // работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
 const CACHE = 'moi-dela-v13';
+// Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
+// страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
+// заново тянул около десяти мегабайт артов и значков. На хорошем канале это
+// незаметно, на плохом — минуты пустых карточек.
+const IMG_CACHE = 'moi-dela-img';
 const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json',
                 './zzz-extra.json', './zzz-guide.json', './manifest.json', './icon.svg'];
 
@@ -19,7 +24,8 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      // кэш картинок переживает смену версии, чистим только старые оболочки
+      Promise.all(keys.filter(k => k !== CACHE && k !== IMG_CACHE).map(k => caches.delete(k)))
     ).then(() => clients.claim())
   );
 });
@@ -62,13 +68,16 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // картинки ZZZ: кэш в приоритете (их много, они не меняются)
+  // Картинки ZZZ: кэш в приоритете (их много, они не меняются) и живут в своём
+  // кэше, который не сбрасывается при обновлении сайта.
   if (url.pathname.indexOf('/img/zzz/') !== -1) {
     e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(r => {
-        if (r.ok) { const c2 = r.clone(); caches.open(CACHE).then(c => c.put(e.request, c2)); }
-        return r;
-      }).catch(() => cached))
+      caches.open(IMG_CACHE).then(c => c.match(e.request).then(cached => cached ||
+        fetch(e.request).then(r => {
+          if (r.ok) { const c2 = r.clone(); c.put(e.request, c2).catch(() => {}); }
+          return r;
+        }).catch(() => cached)
+      ))
     );
     return;
   }
