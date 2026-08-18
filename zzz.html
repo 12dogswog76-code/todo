@@ -977,6 +977,63 @@
     .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px}
     .sum{grid-template-columns:repeat(2,1fr)}
   }
+
+  /* ═══ телефон ═══════════════════════════════════════════════════════════
+     Всё ниже — только для узкого экрана. На ПК ничего из этого не работает,
+     поэтому вид на большом мониторе не меняется.
+
+     Две задачи: ничего не должно уезжать за правый край, и прокрутка не
+     должна спотыкаться. Тяжёлое на телефоне — не сами карточки (у них уже
+     стоит content-visibility), а слои с размытием и смешиванием: фоновая
+     бегущая строка, диагональное имя агента, подложка под артом. */
+  @media(max-width:760px){
+    /* ── шапка и кнопки панелей ── */
+    .top{justify-content:center;gap:10px}
+    .top .sp{display:none}                 /* распорка растаскивала кнопки по краям */
+    .logo{width:100%;justify-content:center;text-align:center}
+    .tbtn{flex:1 1 auto;min-width:140px;text-align:center}
+
+    /* ── сводка: длинная подпись едет строкой, а не обрезается многоточием ── */
+    .sc span.marq{text-overflow:clip}
+    .sc span.marq>i{display:inline-block;font-style:normal;white-space:nowrap;
+      padding-right:28px;animation:scmarq 9s linear infinite}
+    .sc span.marq>i::after{content:attr(data-t);padding-left:28px}
+
+    /* ── фильтры: стихии, роли и кнопки — каждая группа своей строкой ── */
+    .fil{justify-content:center;gap:6px}
+    /* разделитель превращается в перенос строки */
+    .fsep{flex-basis:100%;width:auto;height:0;background:none;margin:2px 0}
+    .fil .cap{flex-basis:100%;text-align:center;margin:0 0 1px}
+    .chip.link{flex:0 1 auto}
+
+    /* ── карточка агента ── */
+    /* вкладки и «в избранное» переносятся, а не уезжают за край */
+    .hhead{flex-wrap:wrap;gap:6px}
+    .hhead .hstat{order:5}
+    .hhead #favTog{order:6;margin-left:auto}
+    /* пятый диск: наборы кнопок перестают тесниться в одну строку */
+    .d5head{flex-wrap:wrap}
+    .d5sel{margin-left:0;flex-basis:100%;flex-wrap:wrap;justify-content:flex-start;gap:4px}
+    .d5head>span:first-of-type{flex-basis:100%;white-space:normal}
+
+    /* ── прокрутка ── */
+    /* карточки на телефоне ниже, чем на ПК: уточняем высоту-заглушку, чтобы
+       полоса прокрутки не дёргалась при долистывании */
+    .card{contain-intrinsic-size:auto 232px}
+    /* эффекты, которые на телефоне стоят дорого, а видно их еле-еле */
+    .card:hover{box-shadow:var(--glass)}
+    .sc::after,.sc:hover::after{display:none}
+    .hart .hbg{filter:blur(18px) brightness(.38) saturate(.8)}
+    .hart .hroll{display:none}             /* имя по диагонали — лишний слой с blend */
+    .bgroll{display:none}                  /* бегущий фон страницы */
+    body::after{animation:none}
+    .hart .tg{backdrop-filter:none;-webkit-backdrop-filter:none}
+  }
+  @keyframes scmarq{
+    from{transform:translateX(0)}
+    to{transform:translateX(-50%)}
+  }
+  @media(prefers-reduced-motion:reduce){ .sc span.marq>i{animation:none} }
 </style>
 </head>
 <body>
@@ -1233,7 +1290,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v119';
+const APP_VER = 'v120';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2462,9 +2519,13 @@ function picFallback(a) {
   return (!v || /^https?:/.test(v)) ? '' : 'img/zzz/agents/' + v;
 }
 
-function img(src, cls, alt) {
+// Ленивая загрузка полезна в сетке из шестидесяти карточек, но вредна внутри
+// открытой карточки агента: там картинок полтора десятка, все нужны сразу, а с
+// lazy они догружаются уже во время прокрутки и мигают пустыми местами.
+function img(src, cls, alt, now) {
   if (!src) return '';
-  return '<img class="' + cls + '" src="' + esc(src) + '" alt="' + esc(alt || '') + '" loading="lazy" onerror="this.style.display=\'none\'">';
+  return '<img class="' + cls + '" src="' + esc(src) + '" alt="' + esc(alt || '') + '"' +
+         (now ? '' : ' loading="lazy"') + ' decoding="async" onerror="this.style.display=\'none\'">';
 }
 
 // Значок ранга: буква на объёмной плашке. Используется и для редкости агента,
@@ -2626,8 +2687,24 @@ function renderSummary() {
       '<div><b>' + bestVal + '</b><span>лидер модификации</span></div></div>';
   }
   $('summary').innerHTML = html;
+  markMarquee($('summary'));
   $('stats').textContent = 'база от ' + (DB.built || '?') + ' · ' + all + ' агентов · ' +
     (DB.suits || []).length + ' сетов · ' + (DB.engines || []).length + ' W-Engine';
+}
+
+// Подписи в сводке на телефоне не влезают и обрезаются многоточием — «лидер
+// модифи…». Те, что не поместились, пускаем бегущей строкой: текст дублируется
+// внутри, поэтому лента идёт без разрыва. Проверяем по факту, а не по длине:
+// шрифт и ширина экрана у всех разные.
+function markMarquee(box) {
+  if (!box || window.innerWidth > 760) return;
+  box.querySelectorAll('.sc span').forEach(el => {
+    if (el.classList.contains('marq')) return;
+    if (el.scrollWidth <= el.clientWidth + 1) return;
+    const t = el.textContent;
+    el.classList.add('marq');
+    el.innerHTML = '<i data-t="' + esc(t) + '">' + esc(t) + '</i>';
+  });
 }
 
 // ─────────────── карточка агента ───────────────
@@ -3057,7 +3134,7 @@ function guideSuit(item, pc, open) {
   const ex = (s && EXTRA && EXTRA.suits && EXTRA.suits[String(s.id)]) || null;
   const ru = s ? s.ru : name;
   const head = '<span class="gs-pc">' + pc + 'P</span>' +
-    (s ? img(imgUrl('discs', s.icon), 'gs-ic', ru) : '') +
+    (s ? img(imgUrl('discs', s.icon), 'gs-ic', ru, true) : '') +
     '<b>' + esc(ru) + '</b>' +
     (rec ? '<span class="gs-rec">рекомендовано</span>' : '') +
     (s ? '<i class="gs-en">' + esc(s.en) + '</i>' : '');
@@ -3141,7 +3218,7 @@ function guideHtml(a, p, T) {
       const own = w && p && p.w && +p.w.id === +w.id;
       const head = '<span class="gen-n">' +
         (e.pct != null ? e.pct.toFixed(2).replace(/\.?0+$/, '') + '%' : (i + 1)) + '</span>' +
-        (w ? img(imgUrl('engines', w.icon), 'gen-ic', e.n) : '') +
+        (w ? img(imgUrl('engines', w.icon), 'gen-ic', e.n, true) : '') +
         '<span class="gen-t"><b>' + esc(w ? w.ru : e.n) + '</b>' +
         '<i>' + esc(e.r || '') + '</i>' +
         (own ? '<span class="gs-rec">стоит сейчас</span>' : '') + '</span>';
