@@ -1233,7 +1233,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v117';
+const APP_VER = 'v118';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2965,6 +2965,13 @@ function planDiscs(p) {
   }
   return out;
 }
+// Сколько всего задумано в плане: диски плюс движок. Ноль — сбрасывать нечего.
+function planCount(p) {
+  if (!p || !p.plan) return 0;
+  const d = (p.plan.discs || []).filter(x => x && x.slot).length;
+  const w = (p.plan.w && p.plan.w.id) ? 1 : 0;
+  return d + w;
+}
 function planProg(p) {
   const q = (p.plan && p.plan.w) || null;
   if (!q || !q.id) return p;
@@ -3269,6 +3276,12 @@ function renderSheet() {
         ? '<button class="htab' + (curTab === 'guide' ? ' on' : '') + '" data-tab="guide" ' +
           'title="Рекомендуемая сборка с prydwen.gg">Гайд</button>'
         : '') +
+      // Сброс плана: убирает только задуманное, а надетое остаётся. После него
+      // вкладка «План» показывает ровно то же, что «Сейчас», — можно набирать заново.
+      (curTab === 'plan' && planCount(p)
+        ? '<button class="htab" id="planReset" title="Убрать задуманные диски и движок — ' +
+          'останется то, что стоит на агенте сейчас">↺ сбросить план</button>'
+        : '') +
       '<span style="flex:1"></span>' +
       (function () {
         const bsc = buildScore(p.discs || [], modKeys(curId, p), priOf(curId, p), statWeights(a, p));
@@ -3500,6 +3513,18 @@ function bindSheet() {
   };
   const ft = $('favTog');
   if (ft) ft.onclick = () => { p.fav = !p.fav; p.mod = Date.now(); save(curId); renderSheet(); render(); };
+  const pr = $('planReset');
+  if (pr) pr.onclick = () => {
+    const n = planCount(p);
+    if (!confirm('Убрать задуманное в плане (' + n + ')?\n\nТо, что стоит на агенте сейчас, ' +
+                 'останется — план просто станет равен текущей сборке.')) return;
+    const p2 = P(curId);
+    delete p2.plan;
+    p2.mod = Date.now();
+    save(curId);
+    editing = null; info = null;
+    renderSheet();
+  };
   const sb = $('saveBtn');
   if (sb) sb.onclick = () => { applySheet(); closeModal(); render(); };
   const tb = $('tgtBtn');
