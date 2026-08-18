@@ -625,41 +625,10 @@
   }
 
   /* --- Всплывающее окно писем (уведомления из почты) --- */
-  #mailPop {
-    position: fixed; left: 14px; top: 14px; z-index: 90;
-    width: 330px; max-width: calc(100vw - 28px); max-height: 70vh;
-    background: #15171c; border: 1px solid #33363e; border-radius: 14px;
-    box-shadow: 0 10px 40px #000c; display: none; flex-direction: column;
-    animation: slideIn .25s ease;
-  }
-  #mailPop.open { display: flex; }
-  .mailhead { display: flex; align-items: center; gap: 8px; padding: 11px 13px; border-bottom: 1px solid #2c3038; }
-  .mailhead b { font-size: 14px; }
-  .mailhead .sp { flex: 1; }
-  .mailhead button { background: none; border: none; color: #9aa0ae; cursor: pointer; font-size: 12.5px; padding: 3px 6px; border-radius: 6px; }
-  .mailhead button:hover { color: #e8eaf0; background: #2a2d35; }
-  #mailList { overflow-y: auto; padding: 6px; }
-  .mailitem { display: flex; gap: 8px; align-items: flex-start; background: #1c1e24; border: 1px solid #2c3038; border-radius: 10px; padding: 9px 10px; margin-bottom: 6px; }
-  .msrc { font-size: 10.5px; font-weight: 700; border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
-  .msrc.jira { background: #1e6fd933; color: #7fb8ff; }
-  .msrc.person { background: #4caf7d22; color: #8fd6a8; }
-  .mtext { flex: 1; min-width: 0; }
-  .msubj { font-size: 13px; color: #e8eaf0; line-height: 1.3; word-wrap: break-word; }
-  .mfrom { font-size: 11px; color: #9aa0ae; margin-top: 3px; }
-  .mprev { font-size: 12px; color: #b9bec9; margin-top: 3px; line-height: 1.3; }
   body.light .mprev { color: #5f6673; }
-  .mread { background: none; border: 1px solid #424650; border-radius: 6px; color: #9aa0ae; cursor: pointer; font-size: 12px; padding: 2px 7px; }
-  .mread:hover { color: #8fd6a8; border-color: #4caf7d; }
   .topbar button.mbell.has { border-color: #e53e3e; color: #fff; background: #e53e3e22; }
-  body.light #mailPop { background: #fff; border-color: #d4d7de; }
-  body.light .mailhead { border-color: #e4e6ea; }
-  body.light .mailitem { background: #f2f3f6; border-color: #d4d7de; }
   body.light .msubj { color: #1c1e24; }
   .topbar button.on { border-color: #e53e3e; color: #fff; background: #e53e3e22; }
-  .mailitem.read { opacity: .5; }
-  .mailempty { color: #777d8a; text-align: center; padding: 18px 0; font-size: 13px; }
-  #outlookGuide { position: fixed; inset: 0; background: #000000aa; display: none; align-items: center; justify-content: center; z-index: 55; padding: 16px; }
-  #outlookGuide.open { display: flex; }
   #ogCard { background: #fff; color: #1c1e24; border-radius: 18px; max-width: 560px; width: 100%; max-height: 86vh; overflow-y: auto; padding: 22px 24px; box-shadow: 0 10px 40px #000c; }
   #ogCard h2 { font-size: 18px; margin-bottom: 10px; color: #111; }
   #ogCard h3 { font-size: 14.5px; margin: 16px 0 6px; color: #111; }
@@ -849,7 +818,6 @@
     <button id="archiveBtn">📦 Архив</button>
     <button id="guideBtn">❔ Как пользоваться</button>
     <button id="aiBtn" class="aibtn">✨ ИИ</button>
-    <button id="mailBell" class="mbell" style="display:none" title="Письма с почты">📨 Письма</button>
   </div>
 
   <div class="addbox">
@@ -930,7 +898,19 @@
 
   <div id="syncPanel">
     <div id="syncInfo" class="hint" style="margin-top:0"></div>
-    <input id="syncKey" type="text" class="editInput" style="margin-top:8px" placeholder="Master Key (первое устройство) или код подключения (остальные)">
+    <div class="hint" id="npHowTasks">
+      <b>Общее хранилище — один раз на первом устройстве</b>
+      <ol style="margin:6px 0 0 18px">
+        <li>Открой <a href="https://www.npoint.io/" target="_blank" rel="noopener">npoint.io</a>
+            и нажми <b>Create JSON</b>. Регистрация не нужна.</li>
+        <li>Сотри всё в редакторе, вставь <code>{"v":1,"tasks":[],"t":0}</code> и нажми <b>Save</b>.</li>
+        <li>Сверху появится ссылка вида <b>api.npoint.io/xxxxxxxxxxxx</b> — скопируй её.</li>
+        <li>Вставь ссылку в поле ниже и нажми <b>Подключить</b>.</li>
+      </ol>
+      На втором устройстве ничего создавать не надо: нажми здесь «Скопировать код подключения»
+      и вставь код там в это же поле.
+    </div>
+    <input id="syncKey" type="text" class="editInput" style="margin-top:8px" placeholder="ссылка api.npoint.io/… или код подключения">
     <div class="iorow">
       <button id="syncConnect">Подключить</button>
       <button id="syncCopyCode" style="display:none">Скопировать код подключения</button>
@@ -939,12 +919,7 @@
     </div>
     <div id="syncMsg" class="hint"></div>
     <div id="syncStat" class="hint"></div>
-    <input id="mailBinInput" type="text" class="editInput" style="margin-top:12px" placeholder="Код хранилища писем (из скрипта Gmail) — для уведомлений с почты">
-    <div class="iorow">
-      <button id="mailBinSave">Подключить почту</button>
-    </div>
-    <div id="mailBinMsg" class="hint"></div>
-    <div class="hint" id="pushInfo" style="margin-top:14px; border-top:1px solid #2c3038; padding-top:12px;">🔔 Push при закрытом сайте (через Cloudflare): письма и дедлайны. Включается на каждом устройстве отдельно.</div>
+    <div class="hint" id="pushInfo" style="margin-top:14px; border-top:1px solid #2c3038; padding-top:12px;">🔔 Push при закрытом сайте (через Cloudflare): напоминания о дедлайнах. Включается на каждом устройстве отдельно.</div>
     <div class="iorow">
       <button id="pushOnBtn">Включить push на этом устройстве</button>
       <button id="pushOffBtn" class="danger" style="display:none">Выключить push</button>
@@ -1009,7 +984,6 @@
       <button class="faqlink" data-sec="sg-ai">✨ ИИ-помощник</button>
       <button class="faqlink" data-sec="sg-pwa">📱 Установить как приложение</button>
       <button class="faqlink" data-sec="sg-io">↕ Экспорт / импорт</button>
-      <button class="faqlink" data-sec="sg-outlook">📨 Уведомления из почты (Outlook)</button>
     </div>
     <button id="guideClose">Закрыть</button>
   </div>
@@ -1045,16 +1019,6 @@
       </div>
     </div>
   </div>
-</div>
-
-<div id="mailPop">
-  <div class="mailhead">
-    <b>📨 Письма (<span id="mailCount">0</span>)</b>
-    <span class="sp"></span>
-    <button id="mailAll">прочитать все</button>
-    <button id="mailHide" title="Скрыть">✕</button>
-  </div>
-  <div id="mailList"></div>
 </div>
 
 <div class="subg" id="sg-basics"><div class="subgcard">
@@ -1102,15 +1066,17 @@
 
 <div class="subg" id="sg-sync"><div class="subgcard">
   <h2>☁ Синхронизация между устройствами</h2>
-  <p>Чтобы список был одинаковым на телефоне, компе и ноуте, нужно бесплатное облако-хранилище. Мы используем <b>jsonbin.io</b>:</p>
+  <p>Чтобы список был одинаковым на телефоне, компе и ноуте, нужно бесплатное облако-хранилище. Мы используем <b>npoint.io</b> — регистрация не нужна:</p>
     <ol>
-      <li>Зарегистрируйся на <b>jsonbin.io</b> (нужна только почта, карта не нужна).</li>
-      <li>В кабинете открой <b>API Keys</b> и скопируй <b>Master Key</b>.</li>
-      <li>Здесь внизу нажми <b>«☁ облако»</b>, вставь Master Key → «Подключить». Это делается <b>один раз, только на первом устройстве</b>.</li>
+      <li>Открой <a href="https://www.npoint.io/" target="_blank" rel="noopener">npoint.io</a> и нажми <b>Create JSON</b>.</li>
+      <li>Сотри всё в редакторе, вставь <code>{"v":1,"tasks":[],"t":0}</code> и нажми <b>Save</b>.</li>
+      <li>Сверху появится ссылка вида <b>api.npoint.io/xxxxxxxxxxxx</b> — скопируй её.</li>
+      <li>Здесь внизу нажми <b>«☁ облако»</b>, вставь ссылку → «Подключить». Это делается <b>один раз, только на первом устройстве</b>.</li>
       <li>Нажми <b>«Скопировать код подключения»</b> и перешли его себе (например, в Telegram «Избранное»).</li>
       <li>На остальных устройствах: «☁ облако» → вставь этот <b>код</b> → «Подключить».</li>
     </ol>
-    <p>⚠️ Важно: Master Key вставляется только один раз на первом устройстве. На все остальные — только код подключения, иначе создастся новое пустое хранилище. Код подключения — это «ключ» от твоих задач, не делись им с чужими.</p>
+    <p>⚠️ Важно: хранилище создаётся один раз, на первом устройстве. На все остальные — только код подключения, иначе получится второе пустое хранилище. Код подключения — это «ключ» от твоих задач, не делись им с чужими: кто его знает, тот видит список.</p>
+    <p>Старые подключения через jsonbin.io продолжают работать — переключаться не обязательно. Какое хранилище используется сейчас, написано в самой панели «☁ облако».</p>
     <p>Дальше всё само: изменения улетают в облако через пару секунд, другие устройства подтягивают их при открытии и каждые 3 минуты. Точка возле заголовка: зелёная — всё ок, красная — нет связи (данные не теряются).</p>
   <button class="subgback">← Назад к разделам</button>
 </div></div>
@@ -1150,24 +1116,6 @@
   <button class="subgback">← Назад к разделам</button>
 </div></div>
 
-<div class="subg" id="sg-outlook"><div class="subgcard">
-  <h2>📨 Уведомления о письмах из Outlook</h2>
-  <p>Письма с рабочей почты (Outlook на Exchange) можно получать сюда как уведомления. Это делает небольшой макрос в Outlook — он не пересылает почту, а отправляет уведомление прямо в облако этого сайта.</p>
-    <p><b>Нужно:</b> классический Outlook (не «новый»), разрешённые макросы, бесплатный аккаунт <b>jsonbin.io</b>; компьютер с Outlook должен быть включён.</p>
-    <h3>Шаги</h3>
-    <ol>
-      <li>Внизу сайта <b>«☁ Облако»</b> — подключи облако своим Master Key с jsonbin.io (если ещё не подключал).</li>
-      <li>Скачай код макроса: <a class="bmbtn" href="https://alextask.ru/outlook-macro.txt" target="_blank" rel="noopener" style="cursor:pointer">⬇ Скачать код</a></li>
-      <li>В Outlook разреши макросы: Файл → Параметры → Центр управления безопасностью → Параметры макросов → «Уведомления для всех макросов». Перезапусти Outlook.</li>
-      <li>Нажми <b>Alt+F11</b> — откроется редактор. Сверху <b>Insert → Module</b>: слева появится «Module1», справа пустое поле. Вставь туда <b>«БЛОК 1»</b> из скачанного файла и впиши свой Master Key в самой первой строке.</li>
-      <li>Создай хранилище: кликни мышкой <b>внутри строки</b> <b>Public Sub CreateMailBin()</b> и нажми <b>F5</b> (это «запустить»; то же — зелёный треугольник ▶ сверху). Если выскочит список «Макрос» — выбери <b>CreateMailBin</b> → «Выполнить». Появится окошко с <b>КОДОМ</b> — вставь его и в строку <b>MAIL_BIN_ID</b> в коде, и сюда на сайт: «☁ Облако → Код хранилища писем».</li>
-      <li>Вставь второй блок: слева в дереве найди ветку <b>«Microsoft Outlook Objects»</b> и нажми <b>плюсик [+]</b> слева от неё, чтобы раскрыть — внутри появится <b>ThisOutlookSession</b>. Сделай по нему <b>двойной клик</b> и в открывшееся справа поле вставь <b>«БЛОК 2»</b>.</li>
-      <li>Сохрани (<b>Ctrl+S</b>), закрой и снова открой Outlook. Если при запуске спросит про макросы — нажми «Включить».</li>
-      <li><b>Проверка:</b> в редакторе (Alt+F11) открой Module1, кликни мышкой <b>внутри строки</b> <b>Public Sub TestNotify</b> и нажми <b>F5</b>. Если попросит подтвердить макрос — разреши. На сайте должно всплыть окно <b>«Письма»</b> с тестовым письмом.</li>
-    </ol>
-    <p>Дальше всё само: новое письмо в Outlook → через секунды уведомление здесь. Письма Jira помечаются тегом «Jira», остальные — «Письмо».</p>
-  <button class="subgback">← Назад к разделам</button>
-</div></div>
 
 <script>
 const LS = 'alexey_todo_v1';
@@ -2390,8 +2338,11 @@ function del_confirm_io() {
   return false;
 }
 
-/* --- Облако (jsonbin.io) --- */
+/* --- Облако (npoint.io, старые подключения через jsonbin тоже работают) --- */
 const JB = 'https://api.jsonbin.io/v3/b';
+// npoint.io — основное хранилище: ключ не нужен, и оно открывается там,
+// где jsonbin закрыт. Какое хранилище выбрано, видно по полю sync.np.
+const NP = 'https://api.npoint.io';
 const PUSH_API = 'https://alextask-push.12dogswog76.workers.dev';
 const VAPID_PUB = 'BNrmwMyHC1OFDhFuQZtwHAzbjdeqCzgs4kyy-gGRGpgHPTAMjvPRyGRyKgiryVJAykh2q10MwHMzSadX-2Rx150';
 let pushKey = localStorage.getItem(LS + '_pushKey') || '';
@@ -2405,19 +2356,34 @@ function setCloud(cls, tip) {
   const st = $('syncStat'); if (st) st.textContent = tip ? ('☁ ' + tip) : '';
 }
 function syncMsg(s) { $('syncMsg').textContent = s; }
-function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, mailBin: mailBin || '', mailSeen: mailSeen, pushKey: pushKey || '', t: Date.now() }; }
+function syncPayload() { return { v: 1, tasks, tomb: tombstones, cats: catList, catsMod: catsMod, pushKey: pushKey || '', t: Date.now() }; }
 
 function syncUI() {
-  const on = !!(sync && sync.key && sync.bin);
+  const on = !!(sync && (sync.np || (sync.key && sync.bin)));
   $('syncCopyCode').style.display = on ? '' : 'none';
   $('syncNow').style.display = on ? '' : 'none';
   $('syncOff').style.display = on ? '' : 'none';
   $('syncKey').style.display = on ? 'none' : '';
   $('syncConnect').style.display = on ? 'none' : '';
-  $('syncInfo').textContent = on
-    ? 'Облако подключено ✓ Скопируй код подключения и вставь его в этой же панели на других устройствах.'
-    : 'Через jsonbin.io: на первом устройстве вставь Master Key (jsonbin.io → API Keys), на остальных — код подключения с первого устройства.';
+  if ($('npHowTasks')) $('npHowTasks').style.display = on ? 'none' : '';
+  $('syncInfo').innerHTML = on
+    ? 'Облако подключено ✓ Хранилище: ' + (sync.np ? 'npoint' : 'jsonbin') +
+      '. Скопируй код подключения и вставь его в этой же панели на других устройствах.'
+    : 'На первом устройстве создай хранилище на npoint.io и вставь ссылку, на остальных — код подключения.';
 }
+
+// адрес, заголовки и метод — своё для каждого хранилища
+function cloudUrl(forWrite) {
+  if (sync && sync.np) return NP + '/' + sync.np;
+  return JB + '/' + sync.bin + (forWrite ? '' : '/latest');
+}
+function cloudHead() {
+  return (sync && sync.np) ? { 'Content-Type': 'application/json' }
+                           : { 'Content-Type': 'application/json', 'X-Master-Key': sync.key };
+}
+// таймаут: синхронизация идёт при открытии страницы, и зависший запрос
+// иначе держит её целиком
+function abortIn(ms) { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; }
 
 function scheduleSync() {
   if (!sync) return;
@@ -2429,15 +2395,17 @@ async function cloudPush() {
   if (!sync) return;
   setCloud('cloud-sync', 'отправка…');
   try {
-    const r = await fetch(JB + '/' + sync.bin, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.key },
-      body: JSON.stringify(syncPayload())
+    const r = await fetch(cloudUrl(true), {
+      method: sync.np ? 'POST' : 'PUT',
+      headers: cloudHead(),
+      body: JSON.stringify(syncPayload()),
+      signal: abortIn(12000)
     });
     if (!r.ok) throw new Error(r.status);
     setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0,5));
   } catch(e) {
-    setCloud('cloud-err', 'ошибка отправки (' + ((e && e.message) || 'нет сети') + ') — сохранено локально');
+    const why = (e && e.name === 'AbortError') ? 'нет ответа' : ((e && e.message) || 'нет сети');
+    setCloud('cloud-err', 'ошибка отправки (' + why + ') — сохранено локально');
   }
 }
 
@@ -2465,21 +2433,10 @@ function mergeData(remote) {
     localStorage.setItem(LS + '_catsMod', String(catsMod));
     if (typeof renderCatChips === 'function') { try { renderCatChips(); renderCatMgr(); } catch(e) {} }
   }
-  // код хранилища писем приходит из облака — подхватываем на новом устройстве (телефоне)
-  if (remote && remote.mailBin && !mailBin) {
-    mailBin = remote.mailBin;
-    localStorage.setItem(LS + '_mailbin', mailBin);
-    try { updateMailBell(); mailPull(); } catch(e) {}
-  }
   if (remote && remote.pushKey && !pushKey) {
     pushKey = remote.pushKey;
     localStorage.setItem(LS + '_pushKey', pushKey);
     try { updatePushUI(); } catch(e) {}
-  }
-  if (remote && remote.mailSeen) {
-    let mch = false;
-    Object.keys(remote.mailSeen).forEach(id => { if (!mailSeen[id]) { mailSeen[id] = remote.mailSeen[id]; mch = true; } });
-    if (mch) { saveMailSeen(); try { renderMail(); if (pipWin) pipRender(); updateMailBell(); } catch(e) {} }
   }
 }
 
@@ -2487,22 +2444,23 @@ async function cloudPull() {
   if (!sync) return;
   setCloud('cloud-sync', 'загрузка…');
   try {
-    const r = await fetch(JB + '/' + sync.bin + '/latest', {
-      headers: { 'X-Master-Key': sync.key }
-    });
+    const r = await fetch(cloudUrl(false), { headers: cloudHead(), signal: abortIn(12000) });
     if (!r.ok) throw new Error(r.status);
     const data = await r.json();
+    // jsonbin заворачивает данные в record, npoint отдаёт их как есть
+    const rec = (data && data.record) ? data.record : data;
     const before = JSON.stringify(tasks) + JSON.stringify(tombstones);
-    mergeData(data.record);
+    mergeData(rec);
     const after = JSON.stringify(tasks) + JSON.stringify(tombstones);
     localStorage.setItem(LS, JSON.stringify(tasks));
     localStorage.setItem(LS + '_tomb', JSON.stringify(tombstones));
     if (before !== after && !document.querySelector('.editInput')) render();
-    const remoteStr = JSON.stringify((data.record && data.record.tasks) || []);
+    const remoteStr = JSON.stringify((rec && rec.tasks) || []);
     if (JSON.stringify(tasks) !== remoteStr) scheduleSync();
     setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0,5));
   } catch(e) {
-    setCloud('cloud-err', 'ошибка загрузки (' + ((e && e.message) || 'нет сети') + ')');
+    const why = (e && e.name === 'AbortError') ? 'нет ответа' : ((e && e.message) || 'нет сети');
+    setCloud('cloud-err', 'ошибка загрузки (' + why + ')');
   }
 }
 
@@ -2516,11 +2474,14 @@ $('syncConnect').onclick = async () => {
   const v = $('syncKey').value.trim();
   if (!v) { syncMsg('Вставь ключ или код.'); return; }
   let conf = null;
-  if (v[0] === '{') {
-    try { const o = JSON.parse(v); if (o.k && o.b) conf = { key: o.k, bin: o.b }; } catch(e) {}
-  }
-  if (!conf && !v.startsWith('$')) {
-    try { const o = JSON.parse(atob(v)); if (o.k && o.b) conf = { key: o.k, bin: o.b }; } catch(e) {}
+  const parse = o => (o && o.n) ? { np: o.n } : ((o && o.k && o.b) ? { key: o.k, bin: o.b } : null);
+  if (v[0] === '{') { try { conf = parse(JSON.parse(v)); } catch(e) {} }
+  if (!conf && !v.startsWith('$')) { try { conf = parse(JSON.parse(atob(v))); } catch(e) {} }
+  // ссылка на npoint или просто его идентификатор
+  if (!conf) {
+    const m = v.match(/npoint\.io\/(?:docs\/)?([0-9a-zA-Z]{6,})/);
+    if (m) conf = { np: m[1] };
+    else if (/^[0-9a-f]{16,40}$/i.test(v)) conf = { np: v };
   }
   if (conf) {
     sync = conf;
@@ -2549,7 +2510,7 @@ $('syncConnect').onclick = async () => {
   }
 };
 $('syncCopyCode').onclick = async () => {
-  const code = btoa(JSON.stringify({ k: sync.key, b: sync.bin }));
+  const code = btoa(JSON.stringify(sync.np ? { n: sync.np } : { k: sync.key, b: sync.bin }));
   try { await navigator.clipboard.writeText(code); syncMsg('Код скопирован ✓ Вставь его на другом устройстве в этой же панели.'); }
   catch(e) {
     $('syncKey').style.display = '';
@@ -2572,110 +2533,7 @@ $('syncOff').onclick = () => {
   syncUI(); syncMsg('Облако отключено. Данные остались и тут, и в облаке.');
 };
 
-/* --- Уведомления о письмах из почты (отдельный mail-бин jsonbin, только чтение) --- */
-let mailBin = localStorage.getItem(LS + '_mailbin') || '';
-let mailSeen = {};
-try { mailSeen = JSON.parse(localStorage.getItem(LS + '_mailseen')) || {}; } catch(e) {}
-let mailItems = [];
-let mailOpen = false;
-let mailKnownIds = {};
-let mailFirstPull = true;
-
-function mailConfigured() { return !!(mailBin && sync && sync.key); }
-function saveMailSeen() { localStorage.setItem(LS + '_mailseen', JSON.stringify(mailSeen)); }
-function unreadMail() { return mailItems.filter(m => !mailSeen[m.id]); }
-
-async function mailPull() {
-  if (!mailConfigured()) { renderMail(); return; }
-  try {
-    const r = await fetch(JB + '/' + mailBin + '/latest', { headers: { 'X-Master-Key': sync.key } });
-    if (!r.ok) throw 0;
-    const data = await r.json();
-    mailItems = (data.record && data.record.mail) || [];
-    // авто-открытие окна — только при ПОЯВЛЕНИИ нового непрочитанного письма
-    let hasNew = false; const freshUnread = [];
-    mailItems.forEach(m => { if (!mailKnownIds[m.id]) { mailKnownIds[m.id] = 1; if (!mailSeen[m.id]) { hasNew = true; freshUnread.push(m); } } });
-    if (hasNew && !mailFirstPull) mailOpen = true;
-    if (!mailFirstPull && freshUnread.length && localStorage.getItem(LS + '_notif') === '1' && ('Notification' in window) && Notification.permission === 'granted') {
-      if (freshUnread.length <= 3) freshUnread.forEach(m => showNotif(m.source === 'jira' ? '📨 Jira' : '📨 Письмо', m.subject || ''));
-      else showNotif('📨 Новых писем: ' + freshUnread.length, freshUnread.slice(0, 3).map(m => m.subject || '').join('; '));
-    }
-    mailFirstPull = false;
-    // забываем «прочитано» для писем, которых уже нет в облаке
-    const ids = {}; mailItems.forEach(m => ids[m.id] = 1);
-    Object.keys(mailSeen).forEach(id => { if (!ids[id]) delete mailSeen[id]; });
-    saveMailSeen();
-    renderMail();
-    try { if (pipWin) pipRender(); } catch(e) {}
-  } catch(e) {}
-}
-
-function renderMail() {
-  const pop = $('mailPop');
-  if (!pop) return;
-  const items = mailItems.slice().sort((a, b) => (b.at || 0) - (a.at || 0));
-  $('mailCount').textContent = unreadMail().length;
-  if (mailOpen) pop.classList.add('open'); else pop.classList.remove('open');
-  const list = $('mailList');
-  list.innerHTML = '';
-  if (!items.length) { list.innerHTML = '<div class="mailempty">Писем пока нет</div>'; updateMailBell(); return; }
-  items.forEach(m => {
-    const isUnread = !mailSeen[m.id];
-    const row = document.createElement('div');
-    row.className = 'mailitem' + (isUnread ? '' : ' read');
-    row.innerHTML = m.source === 'jira'
-      ? '<span class="msrc jira">Jira</span>'
-      : '<span class="msrc person">Письмо</span>';
-    const txt = document.createElement('div');
-    txt.className = 'mtext';
-    txt.innerHTML = '<div class="msubj">' + esc(m.subject || '(без темы)') + '</div>' +
-      (m.prev ? '<div class="mprev">' + esc(m.prev) + '</div>' : '') +
-      '<div class="mfrom">' + esc(m.name || '') + ' · ' + fmtDT(m.at || Date.now()) + '</div>';
-    row.appendChild(txt);
-    const toTask = document.createElement('button');
-    toTask.className = 'mread'; toTask.textContent = '＋'; toTask.title = 'В задачи';
-    toTask.onclick = () => {
-      const minPos = tasks.length ? Math.min(...tasks.map(x => x.pos || 0)) : 0;
-      tasks.push({ id: Date.now(), title: 'Письмо: ' + (m.subject || '') + (m.name ? ' (от ' + m.name + ')' : ''), cat: null, done: false, created: Date.now(), updatedAt: null, mod: Date.now(), pos: minPos - 1 });
-      mailSeen[m.id] = Date.now(); saveMailSeen(); scheduleSync(); save(); render();
-    };
-    row.appendChild(toTask);
-    if (isUnread) {
-      const rd = document.createElement('button');
-      rd.className = 'mread'; rd.textContent = '✓'; rd.title = 'Прочитано';
-      rd.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); scheduleSync(); renderMail(); };
-      row.appendChild(rd);
-    }
-    list.appendChild(row);
-  });
-  updateMailBell();
-}
-
-function updateMailBell() {
-  const b = $('mailBell');
-  if (!b) return;
-  b.style.display = mailConfigured() ? '' : 'none';
-  const n = unreadMail().length;
-  b.innerHTML = '<img src="' + DEV_CDN + 'outlook.svg" alt="Письма" style="width:16px;height:16px;vertical-align:-3px">' + (n ? ' ' + n : '');
-  b.classList.toggle('has', n > 0);
-}
-
-$('mailBell').onclick = () => { mailOpen = !mailOpen; renderMail(); };
-$('mailHide').onclick = () => { mailOpen = false; renderMail(); };
-$('mailAll').onclick = () => { unreadMail().forEach(m => mailSeen[m.id] = Date.now()); saveMailSeen(); scheduleSync(); renderMail(); };
-$('mailBinInput').value = mailBin;
-$('mailBinSave').onclick = () => {
-  mailBin = $('mailBinInput').value.trim();
-  localStorage.setItem(LS + '_mailbin', mailBin);
-  scheduleSync(); // отправим код в облако, чтобы телефон подхватил его сам
-  $('mailBinMsg').textContent = mailBin ? 'Подключено. Проверяю почту…' : 'Почта отключена.';
-  updateMailBell();
-  mailPull();
-};
-updateMailBell();
-mailPull();
-setInterval(() => { if (!document.hidden) mailPull(); }, 30000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) mailPull(); });
+/* Уведомления о письмах из Outlook убраны: функция не пригодилась. */
 
 /* --- Чипы категорий в панели добавления + менеджер категорий --- */
 function renderCatChips() {
@@ -3116,7 +2974,7 @@ async function enablePush() {
     const r = await fetch(PUSH_API + '/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ subscription: sub.toJSON(), pushKey }) });
     if (!r.ok) { pushMsg('Ошибка воркера: ' + r.status + ' (проверь привязку KV = PUSH)'); return; }
     pushOn = true; localStorage.setItem(LS + '_pushOn', '1');
-    updatePushUI(); pushMsg('Push включён ✓ Письма и дедлайны будут приходить при закрытом сайте.');
+    updatePushUI(); pushMsg('Push включён ✓ Напоминания о дедлайнах будут приходить при закрытом сайте.');
     lastRem = {}; pushSyncReminders();
   } catch (e) { pushMsg('Не удалось: ' + ((e && e.message) || e)); }
 }
@@ -3232,9 +3090,6 @@ const PIP_CSS = [
   '.phbtn { background:#1c1e24; border:1px solid #2c3038; border-radius:8px; color:#aab0c0; cursor:pointer; font-size:12px; padding:5px 8px; line-height:1; }',
   '.phbtn:hover { color:#fff; border-color:#e53e3e; }',
   '.phbtn.on { color:#ff9d9d; border-color:#e53e3e; background:#e53e3e22; }',
-  '.phbtn.mail.has { color:#fff; border-color:#e53e3e; background:#e53e3e; }',
-  '#pipMail { display:none; margin-bottom:8px; max-height:40vh; overflow-y:auto; }',
-  '#pipMail.open { display:block; }',
   '.pm { display:flex; gap:7px; align-items:flex-start; background:#1c1e24; border:1px solid #2c3038; border-radius:8px; padding:7px 8px; margin-bottom:5px; }',
   '.pmsrc { font-size:9.5px; font-weight:700; border-radius:5px; padding:1px 6px; white-space:nowrap; }',
   '.pmsrc.jira { background:#1e6fd933; color:#7fb8ff; }',
@@ -3306,7 +3161,6 @@ let pipCat = localStorage.getItem(LS + '_pipCat') || 'все';
 let pipColor = localStorage.getItem(LS + '_pipColor') || '';
 let pipFiltOpen = false;
 let pipSearch = '';
-let pipMailOpen = false;
 let pipQuickDue = '';
 let pipCompact = localStorage.getItem(LS + '_pipCompact') === '1';
 
@@ -3337,9 +3191,7 @@ async function togglePip() {
   d.body.classList.toggle('compact', pipCompact);
   d.body.innerHTML =
     '<div id="pipHead"><div id="pipTitle"></div>' +
-    '<button class="phbtn mail" id="pipMailBtn" title="Письма">✉</button>' +
     '<button class="phbtn" id="pipCompactBtn" title="Компактный режим">▤</button></div>' +
-    '<div id="pipMail"></div>' +
     '<div id="pipTop"></div><div id="pipCats"></div><div id="pipColors"></div>' +
     '<div id="pipAdd"><input id="pipInput" placeholder="+ Задача (Enter)"><select id="pipDue" title="Срок"></select></div>' +
     '<input id="pipSearch" placeholder="🔍 Поиск"><div id="pipList"></div>';
@@ -3352,7 +3204,6 @@ async function togglePip() {
   const srch = d.getElementById('pipSearch');
   srch.value = pipSearch;
   srch.oninput = () => { pipSearch = srch.value; pipRenderList(); };
-  d.getElementById('pipMailBtn').onclick = () => { pipMailOpen = !pipMailOpen; pipRender(); };
   d.getElementById('pipCompactBtn').onclick = () => { pipCompact = !pipCompact; localStorage.setItem(LS + '_pipCompact', pipCompact ? '1' : ''); d.body.classList.toggle('compact', pipCompact); };
   pipWin.addEventListener('pagehide', () => { pipWin = null; updatePipBtn(); });
   pipWin.addEventListener('resize', () => { try { localStorage.setItem(LS + '_pipW', pipWin.innerWidth); localStorage.setItem(LS + '_pipH', pipWin.innerHeight); } catch(e) {} });
@@ -3368,31 +3219,6 @@ function pipRender() {
     const active = tasks.filter(t => !t.done).length;
     const od = tasks.filter(t => dueClass(t) === 'overdue').length;
     title.innerHTML = 'Мои дела<span class="sub">Активных: ' + active + (od ? ' · <span class="od">просрочено: ' + od + '</span>' : '') + '</span>';
-  }
-  const unread = (typeof unreadMail === 'function') ? unreadMail() : [];
-  const mb = d.getElementById('pipMailBtn');
-  if (mb) {
-    mb.style.display = (typeof mailConfigured === 'function' && mailConfigured()) ? '' : 'none';
-    mb.textContent = '✉' + (unread.length ? ' ' + unread.length : '');
-    mb.classList.toggle('has', unread.length > 0);
-  }
-  const pm = d.getElementById('pipMail');
-  if (pm) {
-    pm.classList.toggle('open', pipMailOpen);
-    pm.innerHTML = '';
-    if (pipMailOpen) {
-      if (!unread.length) pm.innerHTML = '<div class="pmempty">Новых писем нет</div>';
-      else unread.forEach(m => {
-        const row = d.createElement('div'); row.className = 'pm';
-        row.innerHTML = m.source === 'jira' ? '<span class="pmsrc jira">Jira</span>' : '<span class="pmsrc person">Письмо</span>';
-        const tx = d.createElement('div'); tx.className = 'pmtext';
-        tx.innerHTML = '<div class="pmsubj">' + esc(m.subject || '(без темы)') + '</div>' + (m.prev ? '<div class="pmprev">' + esc(m.prev) + '</div>' : '') + '<div class="pmfrom">' + esc(m.name || '') + '</div>';
-        row.appendChild(tx);
-        const rb = d.createElement('button'); rb.className = 'pmread'; rb.textContent = '✓'; rb.title = 'Прочитано';
-        rb.onclick = () => { mailSeen[m.id] = Date.now(); saveMailSeen(); scheduleSync(); if (typeof updateMailBell === 'function') updateMailBell(); pipRender(); };
-        row.append(rb); pm.appendChild(row);
-      });
-    }
   }
   const pt = d.getElementById('pipTop');
   if (pt) {

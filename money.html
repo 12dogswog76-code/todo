@@ -244,7 +244,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v18</span>
+    <span class="hint" style="align-self:center; margin:0">v19</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -259,8 +259,20 @@
 
   <div class="card" id="syncPanel2">
     <div class="hint" id="syncInfo" style="margin-top:0"></div>
+    <div class="hint" id="npHowMoney">
+      <b>Общее хранилище — один раз на первом устройстве</b>
+      <ol style="margin:6px 0 0 18px">
+        <li>Открой <a href="https://www.npoint.io/" target="_blank" rel="noopener">npoint.io</a>
+            и нажми <b>Create JSON</b>. Регистрация не нужна.</li>
+        <li>Сотри всё в редакторе, вставь <code>{"v":2,"periods":[],"mod":0}</code> и нажми <b>Save</b>.</li>
+        <li>Сверху появится ссылка вида <b>api.npoint.io/xxxxxxxxxxxx</b> — скопируй её.</li>
+        <li>Вставь ссылку в поле ниже и нажми <b>Подключить</b>.</li>
+      </ol>
+      На втором устройстве ничего создавать не надо: нажми здесь «Скопировать код подключения»
+      и вставь код там в это же поле.
+    </div>
     <div class="iorow">
-      <input id="syncKey" style="flex:1; min-width:200px" placeholder="Master Key (jsonbin.io) или код подключения">
+      <input id="syncKey" style="flex:1; min-width:200px" placeholder="ссылка api.npoint.io/… или код подключения">
       <button class="act" id="syncConnect">Подключить</button>
     </div>
     <div class="iorow">
@@ -285,6 +297,10 @@
 <script>
 const LSM = 'alexey_money_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
+// npoint.io — основное хранилище. В отличие от jsonbin не требует ключа и
+// открывается там, где jsonbin закрыт. Старые подключения через jsonbin
+// продолжают работать: какое хранилище выбрано, видно по полю sync.np.
+const NP = 'https://api.npoint.io';
 const PUSH_API = 'https://alextask-push.12dogswog76.workers.dev';
 const VAPID_PUB = 'BNrmwMyHC1OFDhFuQZtwHAzbjdeqCzgs4kyy-gGRGpgHPTAMjvPRyGRyKgiryVJAykh2q10MwHMzSadX-2Rx150';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -351,23 +367,38 @@ function save() {
   if (sync) { clearTimeout(pushT); pushT = setTimeout(cloudPush, 1000); }
   scheduleRem();
 }
+// адрес, заголовки и метод — своё для каждого хранилища
+function cloudUrl(forWrite) {
+  if (sync && sync.np) return NP + '/' + sync.np;
+  return JB + '/' + sync.b + (forWrite ? '' : '/latest');
+}
+function cloudHead() {
+  return (sync && sync.np) ? { 'Content-Type': 'application/json' }
+                           : { 'Content-Type': 'application/json', 'X-Master-Key': sync.k };
+}
+// таймаут: синхронизация идёт при открытии страницы, и зависший запрос
+// иначе держит её целиком
+function abortIn(ms) { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; }
+
 async function cloudPush() {
   if (!sync) return;
   setDot('syncing', 'отправка…');
   try {
-    const r = await fetch(JB + '/' + sync.b, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.k }, body: JSON.stringify(data) });
+    const r = await fetch(cloudUrl(true), { method: sync.np ? 'POST' : 'PUT',
+      headers: cloudHead(), body: JSON.stringify(data), signal: abortIn(12000) });
     if (!r.ok) throw new Error(r.status);
     setDot('ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
-  } catch (e) { setDot('err', 'ошибка отправки (' + e.message + ')'); }
+  } catch (e) { setDot('err', 'ошибка отправки (' + (e.name === 'AbortError' ? 'нет ответа' : e.message) + ')'); }
 }
 async function cloudPull(force) {
   if (!sync) return;
   setDot('syncing', 'загрузка…');
   try {
-    const r = await fetch(JB + '/' + sync.b + '/latest', { headers: { 'X-Master-Key': sync.k } });
+    const r = await fetch(cloudUrl(false), { headers: cloudHead(), signal: abortIn(12000) });
     if (!r.ok) throw new Error(r.status);
     const j = await r.json();
-    const rec = j.record;
+    // jsonbin заворачивает данные в record, npoint отдаёт их как есть
+    const rec = (j && j.record) ? j.record : j;
     const adopt = rec && rec.periods && (force ? rec.periods.length > 0 : (rec.mod || 0) > (data.mod || 0));
     if (adopt) {
       data = rec; migratePaid(data); migrateYears(data); localStorage.setItem(LSM, JSON.stringify(data)); renderAll();
@@ -996,15 +1027,18 @@ $('themeBtn').onclick = () => { theme = theme === 'light' ? 'dark' : 'light'; lo
 applyTheme();
 
 function syncUI() {
-  const on = !!(sync && sync.k && sync.b);
+  const on = !!(sync && (sync.np || (sync.k && sync.b)));
   $('syncKey').style.display = on ? 'none' : '';
   $('syncConnect').style.display = on ? 'none' : '';
   $('syncCopy').style.display = on ? '' : 'none';
   $('syncNow').style.display = on ? '' : 'none';
   $('syncOff').style.display = on ? '' : 'none';
-  $('syncInfo').textContent = on
-    ? 'Облако подключено ✓ Скопируй код подключения и вставь на другом устройстве.'
-    : 'Отдельное хранилище для денег (не пересекается с задачами). На первом устройстве вставь Master Key с jsonbin.io, на остальных — код подключения.';
+  if ($('npHowMoney')) $('npHowMoney').style.display = on ? 'none' : '';
+  $('syncInfo').innerHTML = on
+    ? 'Облако подключено ✓ Хранилище: ' + (sync.np ? 'npoint' : 'jsonbin') +
+      '. Скопируй код подключения и вставь на другом устройстве.'
+    : 'Отдельное хранилище для денег — задачи и ZZZ его не затрут.<br>' +
+      'На первом устройстве создай хранилище на npoint.io и вставь ссылку, на остальных — код подключения.';
 }
 $('syncBtn').onclick = () => { $('ioPanel2').classList.remove('open'); $('syncPanel2').classList.toggle('open'); syncUI(); };
 $('ioBtn').onclick = () => { $('syncPanel2').classList.remove('open'); $('ioPanel2').classList.toggle('open'); };
@@ -1012,12 +1046,22 @@ $('syncConnect').onclick = async () => {
   const v = $('syncKey').value.trim();
   if (!v) { $('syncMsg').textContent = 'Вставь ключ или код.'; return; }
   let conf = null;
-  try { const o = JSON.parse(atob(v)); if (o.k && o.b) conf = o; } catch (e) {}
-  if (!conf && v[0] === '{') { try { const o = JSON.parse(v); if (o.k && o.b) conf = o; } catch (e) {} }
+  const parse = o => (o && o.np) ? { np: o.np } : ((o && o.k && o.b) ? { k: o.k, b: o.b } : null);
+  try { conf = parse(JSON.parse(atob(v))); } catch (e) {}
+  if (!conf && v[0] === '{') { try { conf = parse(JSON.parse(v)); } catch (e) {} }
+  // ссылка на npoint или просто его идентификатор
+  if (!conf) {
+    const m = v.match(/npoint\.io\/(?:docs\/)?([0-9a-zA-Z]{6,})/);
+    if (m) conf = { np: m[1] };
+    else if (/^[0-9a-f]{16,40}$/i.test(v)) conf = { np: v };
+  }
   if (conf) {
     sync = conf; localStorage.setItem(LSM + '_sync', JSON.stringify(sync));
     syncUI(); $('syncMsg').textContent = 'Подключаюсь…';
-    await cloudPull(true); $('syncMsg').textContent = 'Готово ✓ Данные взяты из облака.';
+    // если в хранилище пусто, cloudPull сам отправит туда локальные данные —
+    // так первое подключение не стирает то, что уже введено
+    await cloudPull(true);
+    $('syncMsg').textContent = 'Готово ✓ Устройство подключено к облаку.';
     return;
   }
   $('syncMsg').textContent = 'Создаю хранилище…';
