@@ -1298,7 +1298,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v123';
+const APP_VER = 'v124';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5408,7 +5408,30 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && sy
 setInterval(() => { if (sync && !document.hidden && !$('modal').classList.contains('open')) cloudSync(); }, 180000);
 
 // service worker
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// ─────────────── обновление страницы ───────────────
+// Service worker отдаёт свою копию страницы, а сам обновляется, когда браузер
+// решит — иногда раз в сутки. Из-за этого на одной машине висела версия
+// недельной давности, хотя на телефоне уже была свежая.
+//
+// Поэтому: файл sw.js никогда не берём из кэша (updateViaCache), при каждой
+// загрузке и при возврате на вкладку просим проверить обновление, а когда новый
+// работник встал — перезагружаем страницу один раз.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    const check = () => { try { reg.update(); } catch (e) {} };
+    check();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+    // раз в полчаса, если вкладку держат открытой сутками
+    setInterval(check, 30 * 60 * 1000);
+  }).catch(() => {});
+
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded) return;
+    reloaded = true;
+    location.reload();
+  });
+}
 </script>
 </body>
 </html>
