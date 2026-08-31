@@ -103,8 +103,12 @@
     -webkit-background-clip:text;background-clip:text;
     -webkit-text-fill-color:transparent;color:transparent;
   }
+  /* Строка под названием. Раньше тут был состав базы, из-за него шапка занимала
+     две строки и кнопки съезжали вниз. Теперь сюда попадают только сообщения о
+     загрузке, а пустая строка места не занимает. */
   .logo small{display:block;font-size:10px;font-weight:500;color:var(--tx3);letter-spacing:.3px;
     -webkit-text-fill-color:var(--tx3)}
+  .logo small:empty{display:none}
   /* ник владельца профиля, который загружали последним */
   .logo .who{font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:0;
     background:#ffffff0d;border:1px solid var(--line);border-radius:20px;padding:3px 11px;
@@ -634,11 +638,16 @@
     object-position:top center;background:#0b0d11}
   .ban-none{display:grid;place-items:center;color:var(--tx3);font-size:20px;font-weight:800;
     border:1px dashed var(--line)}
-  .ban-t{min-width:0;flex:1;display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+  .ban-t{min-width:0;flex:1 1 190px;display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
   .ban-t b{font-size:13.5px}
   .ban-t i{font-style:normal;font-size:11px;color:var(--tx3);flex-basis:100%}
-  .ban-t u{text-decoration:none;font-size:10.5px;color:var(--tx2);flex-basis:100%;
-    overflow-wrap:anywhere}
+  /* сигнатурный движок — своим блоком, отделён чертой */
+  .ban-eng{display:flex;align-items:center;gap:8px;flex:0 1 auto;min-width:0;
+    padding-left:12px;border-left:1px solid var(--line)}
+  .ban-eic{width:30px;height:30px;flex:none;border-radius:7px;object-fit:contain;background:#0b0d11}
+  .ban-eng span{min-width:0;font-size:11.5px;color:var(--tx2);overflow-wrap:anywhere}
+  .ban-eng em{display:block;font-style:normal;font-size:9px;color:var(--tx3);
+    text-transform:uppercase;letter-spacing:.5px}
   .ban-k{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);
     border:1px solid var(--line);border-radius:20px;padding:1px 7px}
   .ban-k.new{color:var(--warn);border-color:#fbbf2455;background:#fbbf2414}
@@ -652,6 +661,9 @@
   .ban.now .ban-when i{color:var(--acc)}
   @media(max-width:760px){
     .ban{gap:9px;padding:8px 9px}
+    /* на узком экране блоки встают друг под друга, черта слева не нужна */
+    .ban-eng{flex-basis:100%;padding-left:0;border-left:none;padding-top:6px;
+      border-top:1px solid var(--line);margin-left:55px}
     .ban-when{margin-left:0;flex-basis:100%;text-align:left}
   }
 
@@ -1089,7 +1101,7 @@
     <div class="logo">
       <span class="mark"><img src="img/zzz/ui/logo.png" alt=""
         onerror="this.parentNode.classList.add('noimg');this.remove()"><b>⚔</b></span>
-      <span>ZZZ Трекер<small id="stats">загрузка…</small></span>
+      <span>ZZZ Трекер<small id="stats"></small></span>
       <span class="who" id="whoAmI" hidden></span>
       <span class="ver" id="appVer" title="версия трекера"></span>
       <span id="cloudDot" title="облако не подключено"></span>
@@ -1121,6 +1133,9 @@
   </div>
 
   <div class="panel" id="enkaPanel">
+    <!-- состав базы переехал сюда из шапки: там он занимал строку и выдавливал
+         кнопки на второй ряд, а нужен ровно при разговоре про импорт -->
+    <div class="hint" id="dbInfo" style="margin:0 0 10px"></div>
     <div class="howto">
       <h5>Как перенести своих агентов — три шага</h5>
       <ol>
@@ -1332,7 +1347,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v126';
+const APP_VER = 'v127';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2738,8 +2753,11 @@ function renderSummary() {
   }
   $('summary').innerHTML = html;
   markMarquee($('summary'));
-  $('stats').textContent = 'база от ' + (DB.built || '?') + ' · ' + all + ' агентов · ' +
-    (DB.suits || []).length + ' сетов · ' + (DB.engines || []).length + ' W-Engine';
+  const dbi = $('dbInfo');
+  if (dbi) dbi.innerHTML = 'Справочник собран <b>' + esc(DB.built || '?') + '</b>: ' +
+    all + ' агентов, ' + (DB.suits || []).length + ' комплектов, ' +
+    (DB.engines || []).length + ' W-Engine.' +
+    (GUIDE && GUIDE.built ? ' Сборки с prydwen — от <b>' + esc(GUIDE.built) + '</b>.' : '');
 }
 
 // Подписи в сводке на телефоне не влезают и обрезаются многоточием — «лидер
@@ -5475,7 +5493,11 @@ function daysLeft(s) {
 function banRow(b) {
   const a = b.id ? DB.byId[b.id] : null;
   const p = b.id ? prog[b.id] : null;
-  const pic = a ? agentPic(a, 'card') : '';
+  // мелкий значок агента, а не карточный портрет: в строке он всё равно
+  // показывается размером с ноготь, а весит вчетверо меньше
+  const pic = (a && a.icon) ? imgUrl('agents', a.icon) : '';
+  // сигнатурку ищем в базе по английскому имени — оттуда русское название и значок
+  const w = b.eng ? engByName(b.eng) : null;
   const left = b.cur ? daysLeft(b.to) : daysLeft(b.from);
   const when = banDate(b.from) + ' – ' + banDate(b.to);
   return '<div class="ban' + (b.cur ? ' now' : '') + (a ? '' : ' soon') + '">' +
@@ -5487,9 +5509,15 @@ function banRow(b) {
       (b.tier ? '<span class="ban-tier">' + esc(b.tier) + '</span>' : '') +
       (p && p.have ? '<span class="ban-have">есть</span>' : '') +
       '<i>' + esc([b.role, b.el].filter(Boolean).join(' · ')) + '</i>' +
-      (b.eng ? '<u>' + esc(b.eng) + '</u>' : '') +
       (a ? '' : '<em class="ban-wait">данные появятся, когда агент выйдет в игру</em>') +
     '</div>' +
+    (b.eng
+      ? '<div class="ban-eng" title="Сигнатурный W-Engine">' +
+          (w && w.icon ? img(imgUrl('engines', w.icon), 'ban-eic', w.ru || b.eng, true)
+                       : '<span class="ban-eic ban-none">?</span>') +
+          '<span><em>сигна</em>' + esc(w ? (w.ru || w.en) : b.eng) + '</span>' +
+        '</div>'
+      : '') +
     '<div class="ban-when"><span>' + esc(when) + '</span>' +
       (left != null && left >= 0
         ? '<i>' + (b.cur ? 'ещё ' : 'через ') + left + ' ' + plural(left, 'день', 'дня', 'дней') + '</i>'
