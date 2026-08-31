@@ -817,6 +817,41 @@
     .tm-a i{display:none}
   }
 
+  /* ── панель «История» ── */
+  .hs-now{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+  .hs-now span{flex:1 1 130px;padding:9px 12px;border-radius:11px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  .hs-now b{display:block;font-size:19px;color:var(--gold);font-variant-numeric:tabular-nums}
+  .hs-now i{font-style:normal;font-size:10.5px;color:var(--tx3);line-height:1.4}
+  /* график рисуем сами: ради одной линии тянуть библиотеку незачем */
+  .hs{width:100%;height:130px;display:block;overflow:visible}
+  .hs-grid{stroke:var(--line);stroke-width:1}
+  .hs-ax{fill:var(--tx3);font-size:9px}
+  .hs-bar{fill:#4ade8022}
+  .hs-line{fill:none;stroke:var(--gold);stroke-width:2;
+    vector-effect:non-scaling-stroke;stroke-linejoin:round}
+  .hs-dot{fill:var(--gold)}
+  .hs-log{display:flex;flex-direction:column;gap:6px}
+  .hs-day{display:flex;gap:12px;padding:8px 11px;border-radius:11px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  .hs-date{flex:none;width:52px;font-size:11px;font-weight:800;color:var(--tx3);
+    font-variant-numeric:tabular-nums;padding-top:1px}
+  .hs-evs{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .hs-ev{font-size:11.5px;color:var(--tx2);display:flex;gap:7px;align-items:baseline}
+  .hs-ev u{flex:none;width:14px;text-decoration:none;font-size:10.5px;text-align:center}
+  .hs-ev b{color:var(--tx);font-variant-numeric:tabular-nums}
+  .hs-ev i{font-style:normal;color:var(--tx3);font-size:10.5px}
+  .ev-add u{color:var(--acc)}
+  .ev-done u{color:var(--gold)}
+  .ev-up u{color:#7fb8ff}
+  .ev-del u{color:var(--tx3)}
+  @media(max-width:760px){
+    .hs-now span{flex:1 1 45%;padding:8px 10px}
+    .hs-now b{font-size:17px}
+    .hs{height:110px}
+    .hs-date{width:44px;font-size:10.5px}
+  }
+
   /* ── панель «Эндгейм» ── */
   .eg-head{font-size:12px;color:var(--tx2);margin:0 0 12px;padding-bottom:10px;
     border-bottom:1px solid var(--line)}
@@ -1283,6 +1318,7 @@
     <button class="tbtn" id="modBtn">📊 Модификаторы</button>
     <button class="tbtn" id="bannerBtn" title="Кто сейчас на баннерах и кто дальше">🎟 Баннеры</button>
     <button class="tbtn" id="endBtn" title="Текущая фаза Обороны Шиюй и Опасного штурма">⚔ Эндгейм</button>
+    <button class="tbtn" id="histBtn" title="Как рос аккаунт: график и журнал изменений">📈 История</button>
     <button class="tbtn" id="helpBtn" title="Как всё устроено">Справка</button>
   </div>
 
@@ -1457,6 +1493,7 @@
 
   <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
   <div class="panel" id="endPanel"><div id="endBox"></div></div>
+  <div class="panel" id="histPanel"><div id="histBox"></div></div>
 
   <div class="panel" id="helpPanel">
     <div class="hint hlp" style="margin-top:0">
@@ -1526,7 +1563,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v150';
+const APP_VER = 'v151';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2547,7 +2584,11 @@ function boot() {
   ownerUI();
   renderFilters();
   render();
-  if (sync) setTimeout(() => cloudSync(true), 250);
+  // Снимок для истории. С задержкой и после облака: если запустить сразу, на
+  // втором устройстве снимется состояние до синхронизации, и в журнал попадёт
+  // ложное «агент убран» — просто потому, что данные ещё не приехали.
+  if (sync) setTimeout(() => cloudSync(true).then(() => histTick()), 250);
+  else setTimeout(histTick, 400);
   cloudUI();
 }
 
@@ -5615,7 +5656,8 @@ function setCloud(cls, title) {
   d.title = title || '';
 }
 function payload() {
-  return { v: 1, prog: prog, uid: localStorage.getItem(LS + '_uid') || '', t: Date.now() };
+  return { v: 1, prog: prog, uid: localStorage.getItem(LS + '_uid') || '',
+           hist: hist, t: Date.now() };
 }
 
 // сколько агентов реально заполнено (пустые болванки не считаем)
@@ -5739,8 +5781,8 @@ function mergeProg(remote) {
     localStorage.setItem(LS + '_uid', remote.uid);
     if ($('uidInput')) $('uidInput').value = remote.uid;
   }
-  if (!remote.prog) return false;
-  let changed = false;
+  let changed = mergeHist(remote.hist);
+  if (!remote.prog) return changed;
   Object.keys(remote.prog).forEach(id => {
     const r = remote.prog[id], l = prog[id];
     if (!l || (r.mod || 0) > (l.mod || 0)) { prog[id] = r; changed = true; }
@@ -5986,14 +6028,14 @@ $('rebuildDb').onclick = async () => {
 function togglePanel(id) {
   const zone = $('panelZone');
   if (zone && $(id) && $(id).parentNode !== zone) zone.appendChild($(id));
-  ['enkaPanel', 'cloudPanel', 'modPanel', 'bannerPanel', 'endPanel', 'helpPanel'].forEach(p => {
+  ['enkaPanel', 'cloudPanel', 'modPanel', 'bannerPanel', 'endPanel', 'histPanel', 'helpPanel'].forEach(p => {
     if (p !== id) $(p).classList.remove('open');
   });
-  ['enkaBtn', 'cloudBtn', 'modBtn', 'bannerBtn', 'endBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
+  ['enkaBtn', 'cloudBtn', 'modBtn', 'bannerBtn', 'endBtn', 'histBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
   const wasOpen = $(id).classList.contains('open');
   $(id).classList.toggle('open', !wasOpen);
   const map = { enkaPanel: 'enkaBtn', cloudPanel: 'cloudBtn', modPanel: 'modBtn',
-                bannerPanel: 'bannerBtn', endPanel: 'endBtn', helpPanel: 'helpBtn' };
+                bannerPanel: 'bannerBtn', endPanel: 'endBtn', histPanel: 'histBtn', helpPanel: 'helpBtn' };
   if (!wasOpen) $(map[id]).classList.add('on');
 }
 $('enkaBtn').onclick  = () => { togglePanel('enkaPanel'); refreshEnkaLinks(); drawMaint(); };
@@ -6146,6 +6188,7 @@ function drawMaint() {
 
 $('bannerBtn').onclick = () => { togglePanel('bannerPanel'); drawBanners(); };
 $('endBtn').onclick    = () => { togglePanel('endPanel'); drawEndgame(); };
+$('histBtn').onclick   = () => { togglePanel('histPanel'); drawHist(); };
 $('helpBtn').onclick  = () => togglePanel('helpPanel');
 
 // ─────────────── баннеры ───────────────
@@ -6471,6 +6514,191 @@ function banRemText() {
   if (!plan.length) return 'Напоминать сейчас не о чем: всех с текущих баннеров уже выбил.';
   return plan.map(r => banDate(new Date(r.at).toISOString().slice(0, 10)) +
     ' → ' + r.names).join(' · ');
+}
+
+// ─────────────── история прогресса ───────────────
+// Раз в день снимаем несколько чисел: сколько агентов есть, сколько собрано
+// целиком, средняя готовность, сколько замечаний по сборкам. Плюс события —
+// что именно изменилось со вчера. Снимок ~60 байт, за год около 20 КБ, поэтому
+// живёт вместе с прогрессом в облаке и общий на всех устройствах.
+//
+// Прошлого взять неоткуда: история начинается с того дня, когда версия
+// оказалась на сайте. Первые дни график будет пустым — это нормально.
+const LS_HIST = LS + '_hist';
+const HIST_KEEP = 400;      // дней храним, дальше отрезаем самое старое
+const HIST_STEP = 5;        // на сколько должна вырасти готовность, чтобы попасть в журнал
+let hist = null;
+try { hist = JSON.parse(localStorage.getItem(LS_HIST) || 'null'); } catch (e) { hist = null; }
+if (!hist || !hist.days) hist = { v: 1, last: {}, days: [] };
+
+function histSave() {
+  try { localStorage.setItem(LS_HIST, JSON.stringify(hist)); } catch (e) {}
+}
+function today() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+         '-' + String(d.getDate()).padStart(2, '0');
+}
+// «портрет» дня: готовность каждого агента, который у тебя есть
+function histShot() {
+  const cur = {};
+  (DB.agents || []).forEach(a => {
+    const p = prog[a.id];
+    if (p && p.have) cur[a.id] = pctOf(a.id);
+  });
+  return cur;
+}
+// Снимок делаем при заходе, не чаще раза в день. Если за сегодня запись уже
+// есть — переписываем её: за день данные меняются, и хранить утренний срез,
+// когда вечером всё иначе, смысла нет.
+function histTick() {
+  if (!DB || !DB.agents || !DB.agents.length) return;
+  const cur = histShot(), ids = Object.keys(cur);
+  if (!ids.length) return;
+  const prev = (hist.last && Object.keys(hist.last).length) ? hist.last : null;
+  const ev = [];
+  if (prev) {
+    ids.forEach(id => {
+      const was = prev[id], now = cur[id];
+      if (was == null) { ev.push(['+', +id]); return; }
+      if (now >= 100 && was < 100) { ev.push(['=', +id]); return; }
+      if (now - was >= HIST_STEP) ev.push(['^', +id, was, now]);
+    });
+    Object.keys(prev).forEach(id => { if (cur[id] == null) ev.push(['-', +id]); });
+  }
+  const sum = ids.reduce((s, id) => s + cur[id], 0);
+  const rec = {
+    d: today(), t: Date.now(),
+    n: ids.length,
+    done: ids.filter(id => cur[id] >= 100).length,
+    pct: Math.round(sum / ids.length),
+    iss: (DB.agents || []).reduce((s, a) =>
+      s + ((prog[a.id] && prog[a.id].have && guideOf(a.id)) ? buildIssues(a, prog[a.id]).length : 0), 0),
+    ev: ev
+  };
+  const i = hist.days.findIndex(x => x.d === rec.d);
+  // событий за сегодня могло накопиться в несколько заходов — не теряем прежние
+  if (i >= 0) { rec.ev = (hist.days[i].ev || []).concat(ev); hist.days[i] = rec; }
+  else hist.days.push(rec);
+  hist.days.sort((a, b) => a.d < b.d ? -1 : 1);
+  if (hist.days.length > HIST_KEEP) hist.days = hist.days.slice(-HIST_KEEP);
+  hist.last = cur;
+  histSave();
+}
+// Слияние с облаком: записи уникальны по дате, при совпадении побеждает та,
+// что снята позже. Иначе телефон, открытый утром, затирал бы вечерний срез с ПК.
+function mergeHist(rh) {
+  if (!rh || !rh.days || !rh.days.length) return false;
+  let changed = false;
+  const by = {};
+  hist.days.forEach(d => { by[d.d] = d; });
+  rh.days.forEach(d => {
+    const l = by[d.d];
+    if (!l || (d.t || 0) > (l.t || 0)) { by[d.d] = d; changed = true; }
+  });
+  if (changed) {
+    hist.days = Object.keys(by).sort().map(k => by[k]);
+    if (hist.days.length > HIST_KEEP) hist.days = hist.days.slice(-HIST_KEEP);
+    // последний портрет берём у той стороны, чья запись свежее
+    const mine = hist.days[hist.days.length - 1];
+    const theirs = rh.days[rh.days.length - 1];
+    if (theirs && mine && theirs.d === mine.d && (rh.last && (theirs.t || 0) >= (mine.t || 0))) {
+      hist.last = rh.last;
+    }
+    histSave();
+  }
+  return changed;
+}
+
+// Формулировки без глаголов: агенты разного пола, и «Мияби собран» режет глаз,
+// а плодить согласование по роду ради журнала не стоит.
+const HIST_EV = {
+  '+': { i: '＋', c: 'ev-add',  t: 'в трекере' },
+  '-': { i: '−',  c: 'ev-del',  t: 'из трекера' },
+  '=': { i: '✓',  c: 'ev-done', t: 'до 100%' },
+  '^': { i: '▲',  c: 'ev-up',   t: '' }
+};
+function histEvText(e) {
+  const a = DB.byId[e[1]];
+  const nm = a ? a.ru : '#' + e[1];
+  if (e[0] === '^') return esc(nm) + ' <b>' + e[2] + '% → ' + e[3] + '%</b>';
+  return esc(nm) + ' <i>' + HIST_EV[e[0]].t + '</i>';
+}
+// График: линия средней готовности плюс столбики «сколько агентов есть».
+// Рисуем svg вручную — библиотека ради одной линии не нужна.
+function histChart(days) {
+  if (days.length < 2) return '';
+  const W = 640, H = 120, PL = 26, PR = 8, PT = 8, PB = 16;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const maxN = Math.max.apply(null, days.map(d => d.n)) || 1;
+  const x = i => PL + (days.length === 1 ? iw / 2 : iw * i / (days.length - 1));
+  const y = v => PT + ih - ih * (v / 100);
+  const bars = days.map((d, i) => {
+    const bh = Math.max(1, ih * (d.n / maxN) * 0.55);
+    const bw = Math.max(2, Math.min(14, iw / days.length * 0.55));
+    return '<rect x="' + (x(i) - bw / 2).toFixed(1) + '" y="' + (PT + ih - bh).toFixed(1) +
+      '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="2" class="hs-bar"><title>' +
+      esc(banDate(d.d)) + ': агентов ' + d.n + '</title></rect>';
+  }).join('');
+  const pts = days.map((d, i) => x(i).toFixed(1) + ',' + y(d.pct).toFixed(1)).join(' ');
+  const dots = days.map((d, i) => '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(d.pct).toFixed(1) +
+    '" r="2.5" class="hs-dot"><title>' + esc(banDate(d.d)) + ': готовность ' + d.pct +
+    '%, собрано ' + d.done + '</title></circle>').join('');
+  const grid = [0, 50, 100].map(v => '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(v) +
+    '" y2="' + y(v) + '" class="hs-grid"/><text x="2" y="' + (y(v) + 3.5) + '" class="hs-ax">' + v + '</text>').join('');
+  return '<svg class="hs" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+    grid + bars + '<polyline points="' + pts + '" class="hs-line"/>' + dots +
+    '<text x="' + PL + '" y="' + (H - 4) + '" class="hs-ax">' + esc(banDate(days[0].d)) + '</text>' +
+    '<text x="' + (W - PR) + '" y="' + (H - 4) + '" class="hs-ax" text-anchor="end">' +
+      esc(banDate(days[days.length - 1].d)) + '</text></svg>';
+}
+function drawHist() {
+  const box = $('histBox');
+  if (!box) return;
+  histTick();
+  const days = hist.days || [];
+  if (!days.length) {
+    box.innerHTML = '<div class="hint" style="margin-top:0">Истории пока нет. ' +
+      'Первый снимок появится, когда в трекере будет хоть один агент с отметкой «есть».</div>';
+    return;
+  }
+  const last = days[days.length - 1], first = days[0];
+  const dPct = last.pct - first.pct, dN = last.n - first.n;
+  const sign = v => (v > 0 ? '+' : '') + v;
+  let h = '<div class="hs-now">' +
+    '<span><b>' + last.pct + '%</b><i>средняя готовность' +
+      (days.length > 1 ? ', ' + sign(dPct) + ' за период' : '') + '</i></span>' +
+    '<span><b>' + last.n + '</b><i>' + plural(last.n, 'агент', 'агента', 'агентов') +
+      (days.length > 1 && dN ? ', ' + sign(dN) : '') + '</i></span>' +
+    '<span><b>' + last.done + '</b><i>' + plural(last.done, 'агент', 'агента', 'агентов') +
+      ' на 100%</i></span>' +
+    '<span><b>' + last.iss + '</b><i>' +
+      plural(last.iss, 'замечание', 'замечания', 'замечаний') + ' по сборкам</i></span>' +
+    '</div>';
+  if (days.length > 1) h += histChart(days.slice(-90));
+  else h += '<div class="hint">Точка всего одна — график появится со второго дня.</div>';
+
+  // журнал: свежие дни сверху, пустые дни пропускаем
+  const withEv = days.filter(d => (d.ev || []).length).slice(-60).reverse();
+  h += '<div class="cap2" style="margin:14px 0 6px">ЧТО МЕНЯЛОСЬ</div>';
+  h += withEv.length
+    ? '<div class="hs-log">' + withEv.map(d =>
+        '<div class="hs-day"><div class="hs-date">' + esc(banDate(d.d)) + '</div><div class="hs-evs">' +
+        (d.ev || []).slice(0, 12).map(e => {
+          const k = HIST_EV[e[0]] || HIST_EV['^'];
+          return '<div class="hs-ev ' + k.c + '"><u>' + k.i + '</u>' + histEvText(e) + '</div>';
+        }).join('') +
+        ((d.ev || []).length > 12 ? '<div class="hs-ev"><u></u>и ещё ' + ((d.ev || []).length - 12) + '</div>' : '') +
+        '</div></div>').join('')
+      + '</div>'
+    : '<div class="hint" style="margin-top:0">Пока ничего не менялось — записи появятся, ' +
+      'когда добавишь агента или доведёшь кого-то до цели.</div>';
+
+  h += '<div class="hint">Снимок делается раз в день при открытии трекера и едет в облако ' +
+    'вместе с прогрессом, так что история общая на телефоне и ПК. Хранится ' + HIST_KEEP +
+    ' дней. В журнал попадают появление и уход агентов, выход на 100% и рост готовности ' +
+    'от ' + HIST_STEP + '% за раз.</div>';
+  box.innerHTML = h;
 }
 
 // ─────────────── панель «Эндгейм» ───────────────
