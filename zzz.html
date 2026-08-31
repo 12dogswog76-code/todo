@@ -1456,7 +1456,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v141';
+const APP_VER = 'v142';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2485,30 +2485,66 @@ function boot() {
 // Цель прокачки для агента. По умолчанию — максимум, но её можно занизить:
 // например, уклонение геймплейно не нужно — ставишь ему 1, и трекер перестаёт
 // считать это недоработкой. Цель 0 полностью исключает часть из процента.
-function tgtOf(p) {
+//
+// Навыки — отдельная история. В игре потолок у всех пятерых 12, но качать всё
+// до потолка никто не станет: материалов не хватит, а прироста от пятого навыка
+// почти нет. Prydwen целевых уровней не даёт вовсе — только порядок важности.
+// Из этого порядка и считаем цель:
+//
+//   первые три по приоритету  → 12   (основа урона, качаются всегда)
+//   оставшиеся два            → 6    (добиваются по желанию, шкалу не держат)
+//   у станеров «Помощь»       → 12   (у них помощь — рабочий инструмент оглушения,
+//                                     даже когда prydwen ставит её четвёртой)
+//
+// Знаменатель выходит 48 у большинства и 54 у станеров, чья помощь не попала
+// в тройку. Если гайда на агента нет — оставляем прежние 12 по всем.
+const SKILL_LOW = 6;                       // потолок для второстепенных навыков
+const GUIDE_SKILL_IDX = { 'basic attack': 0, 'special attack': 1, 'dodge': 2,
+                          'chain attack': 3, 'assist': 6 };
+function skillPlan(id) {
+  const g = id ? guideOf(id) : null;
+  const order = (g && Array.isArray(g.skills)) ? g.skills : null;
+  const out = {};
+  if (!order || !order.length) {
+    SKILL_IDX.forEach(o => { out[o.i] = SKILL_MAX; });
+    return out;
+  }
+  SKILL_IDX.forEach(o => { out[o.i] = SKILL_LOW; });
+  order.slice(0, 3).forEach(n => {
+    const i = GUIDE_SKILL_IDX[String(n).toLowerCase()];
+    if (i != null) out[i] = SKILL_MAX;
+  });
+  const a = DB && DB.byId ? DB.byId[id] : null;
+  if (a && a.prof === 'stun') out[6] = SKILL_MAX;   // помощь у станера всегда в топе
+  return out;
+}
+function tgtOf(p, id) {
   const t = (p && p.tgt) || {};
+  const def = skillPlan(id);
   const sk = {};
   SKILL_IDX.forEach(o => {
-    const v = t.sk && t.sk[o.i] != null ? +t.sk[o.i] : SKILL_MAX;
+    const v = t.sk && t.sk[o.i] != null ? +t.sk[o.i] : def[o.i];
     sk[o.i] = Math.max(0, Math.min(SKILL_MAX, v));
   });
   return {
     lvl:  t.lvl  != null ? Math.max(0, Math.min(LVL_MAX,  +t.lvl))  : LVL_MAX,
     core: t.core != null ? Math.max(0, Math.min(CORE_MAX, +t.core)) : CORE_MAX,
     w:    t.w    != null ? Math.max(0, Math.min(WENG_MAX, +t.w))    : WENG_MAX,
-    sk: sk
+    sk: sk, def: def
   };
 }
-function tgtLabel(p) {
-  const t = tgtOf(p), off = [];
+function tgtLabel(p, id) {
+  const t = tgtOf(p, id), off = [];
   if (t.lvl !== LVL_MAX) off.push('ур.' + t.lvl);
   if (t.core !== CORE_MAX) off.push('ядро ' + t.core);
   if (t.w !== WENG_MAX) off.push('оруж.' + t.w);
-  SKILL_IDX.forEach(o => { if (t.sk[o.i] !== SKILL_MAX) off.push(o.n.toLowerCase() + ' ' + t.sk[o.i]); });
-  return off.length ? off.join(', ') : 'по максимуму';
+  // отклонением считаем расхождение с планом по гайду, а не с потолком:
+  // «уклонение 6» — это норма, а не настройка, которую стоит показывать
+  SKILL_IDX.forEach(o => { if (t.sk[o.i] !== t.def[o.i]) off.push(o.n.toLowerCase() + ' ' + t.sk[o.i]); });
+  return off.length ? off.join(', ') : (guideOf(id) ? 'по гайду' : 'по максимуму');
 }
-function tgtHTML(p) {
-  const t = tgtOf(p);
+function tgtHTML(p, id) {
+  const t = tgtOf(p, id);
   let rows = '<div class="frow" style="gap:6px"><span style="flex:1;font-size:11.5px">Уровень</span>' +
     '<input type="number" class="tgin" data-k="lvl" min="0" max="' + LVL_MAX + '" value="' + t.lvl +
     '" style="width:60px;text-align:right"></div>' +
@@ -2518,8 +2554,15 @@ function tgtHTML(p) {
     '<div class="frow" style="gap:6px"><span style="flex:1;font-size:11.5px">Оружие</span>' +
     '<input type="number" class="tgin" data-k="w" min="0" max="' + WENG_MAX + '" value="' + t.w +
     '" style="width:60px;text-align:right"></div>';
+  // рядом с навыком — его место в приоритете prydwen: видно, почему цель именно такая
+  const g = id ? guideOf(id) : null;
+  const ord = (g && Array.isArray(g.skills)) ? g.skills : [];
+  const place = {};
+  ord.forEach((n, k) => { const i = GUIDE_SKILL_IDX[String(n).toLowerCase()]; if (i != null) place[i] = k + 1; });
   SKILL_IDX.forEach(o => {
-    rows += '<div class="frow" style="gap:6px"><span style="flex:1;font-size:11.5px">' + esc(o.n) + '</span>' +
+    rows += '<div class="frow" style="gap:6px"><span style="flex:1;font-size:11.5px">' + esc(o.n) +
+      (place[o.i] ? '<i style="font-style:normal;color:var(--tx3);font-size:10px"> · ' +
+        place[o.i] + '-й в гайде</i>' : '') + '</span>' +
       '<input type="number" class="tgin" data-k="sk' + o.i + '" min="0" max="' + SKILL_MAX +
       '" value="' + t.sk[o.i] + '" style="width:60px;text-align:right"></div>';
   });
@@ -2529,15 +2572,20 @@ function tgtHTML(p) {
     rows + '</div>' +
     '<div class="hint">Готовность считается относительно этих значений: выставленное = 100%. ' +
     'Ноль убирает пункт из подсчёта совсем.' +
+    (g ? '<br>По умолчанию навыки берутся из гайда: первые три по приоритету — до ' + SKILL_MAX +
+         ', остальные — до ' + SKILL_LOW +
+         (DB.byId[id] && DB.byId[id].prof === 'stun'
+           ? '. Агент оглушает, поэтому помощь всё равно до ' + SKILL_MAX + '.' : '.') : '') +
     '<br><button id="tgtSave" class="pri" style="margin-top:6px;padding:5px 12px">Применить</button> ' +
     '<button id="tgtNow" style="margin-top:6px;padding:5px 12px">Принять текущее за 100%</button> ' +
-    '<button id="tgtReset" style="margin-top:6px;padding:5px 12px">Сбросить на максимум</button></div></div>';
+    '<button id="tgtReset" style="margin-top:6px;padding:5px 12px">' +
+      (g ? 'Вернуть по гайду' : 'Сбросить на максимум') + '</button></div></div>';
 }
 
 function pctOf(id) {
   const p = prog[id];
   if (!p || !p.have) return 0;
-  const t = tgtOf(p);
+  const t = tgtOf(p, id);
   const parts = [];
   if (t.lvl)  parts.push(Math.min(1, (p.lvl || 0) / t.lvl));
   if (t.core) parts.push(Math.min(1, (p.core || 0) / t.core));
@@ -2558,7 +2606,7 @@ function isDone(id) { return pctOf(id) >= 100; }
 function pctGaps(id) {
   const p = prog[id];
   if (!p || !p.have) return [];
-  const t = tgtOf(p);
+  const t = tgtOf(p, id);
   const out = [];
   if (t.lvl && (p.lvl || 0) < t.lvl)  out.push('уровень ' + (p.lvl || 0) + '/' + t.lvl);
   if (t.core && (p.core || 0) < t.core) out.push('ядро ' + (p.core || 0) + '/' + t.core);
@@ -3811,8 +3859,8 @@ function renderSheet() {
     h += '<div class="sect"><h4><span class="tt">Ядро и навыки<i>CORE SKILLS</i></span>' +
       '<button id="tgtBtn" class="modbadge" style="cursor:pointer" title="Свои цели прокачки. ' +
       'Готовность считается относительно них: если уклонение агенту не нужно, ставишь ему 1 — ' +
-      'и трекер перестаёт считать это недоработкой.">🎯 цели: ' + tgtLabel(p) + '</button>' +
-      '</h4>' + (tgtOpen ? tgtHTML(p) : '') +
+      'и трекер перестаёт считать это недоработкой.">🎯 цели: ' + tgtLabel(p, curId) + '</button>' +
+      '</h4>' + (tgtOpen ? tgtHTML(p, curId) : '') +
       '<div class="core" style="margin-bottom:8px">' +
       '<button class="htab" id="coreBonusBtn" style="padding:4px 10px;font-size:11px">' +
         (cbSum(p) ? '⚙ ядро даёт: ' + cbSum(p) : '⚙ задать прибавки ядра') + '</button>' +
