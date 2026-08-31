@@ -776,9 +776,11 @@
     background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
   /* состав, который собирается целиком, подсвечиваем: это цель, а не мечта */
   .tm-row.full{border-color:#4ade8044;background:linear-gradient(120deg,#4ade800d,var(--pan))}
-  .tm-rank{flex:none;width:34px;font-size:11px;font-weight:800;color:var(--tx3);
-    font-variant-numeric:tabular-nums}
+  .tm-rank{flex:none;width:22px;font-size:11px;font-weight:800;color:var(--tx3);
+    font-variant-numeric:tabular-nums;text-align:right}
   .tm-row.full .tm-rank{color:var(--acc)}
+  /* счётчик у заголовка: сразу видно, сколько составов реально собирается */
+  .tm-cnt{margin-left:auto;font-size:10.5px;color:var(--tx3);font-weight:400}
   .tm-ags{display:flex;align-items:center;gap:9px;flex:1 1 210px;min-width:0;flex-wrap:wrap}
   .tm-a{display:flex;align-items:center;gap:5px;min-width:0}
   .tm-a i{font-style:normal;font-size:10.5px;color:var(--tx2);white-space:nowrap}
@@ -788,9 +790,13 @@
   .tm-ic{width:26px;height:26px;flex:none;border-radius:50%;object-fit:cover}
   .tm-none{display:grid;place-items:center;background:var(--pan2);color:var(--tx3);
     font-size:12px;font-weight:800}
-  .tm-boo{flex:0 0 150px;min-width:0;font-size:10.5px;color:var(--tx2);line-height:1.35}
+  /* бангбу: значок обязателен — по имени его не опознать, а по картинке видно сразу */
+  .tm-boo{display:flex;align-items:center;gap:7px;flex:0 0 168px;min-width:0;
+    font-size:10.5px;color:var(--tx2);line-height:1.35}
+  .tm-boo span{min-width:0}
+  .tm-bic{width:28px;height:28px;flex:none;border-radius:50%;object-fit:cover}
   .tm-boo-n{display:block;font-weight:700;color:var(--gold);overflow-wrap:anywhere}
-  .tm-boo i{font-style:normal;font-size:9.5px;color:var(--tx3)}
+  .tm-boo i{display:block;font-style:normal;font-size:9.5px;color:var(--tx3)}
   .tm-num{flex:0 0 64px;text-align:right;font-size:11.5px;color:var(--tx2);
     font-variant-numeric:tabular-nums}
   .tm-num i{display:block;font-style:normal;font-size:9.5px;color:var(--tx3);margin-top:1px}
@@ -807,6 +813,7 @@
     /* бангбу уводим под состав: в три колонки на телефоне не влезает */
     .tm-boo{order:2;flex:1 1 100%;padding-top:5px;border-top:1px solid var(--line)}
     .tm-boo-n{display:inline;margin-right:6px}
+    .tm-boo i{display:inline}
     .tm-a i{display:none}
   }
 
@@ -1496,7 +1503,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v146';
+const APP_VER = 'v148';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3665,11 +3672,65 @@ function teamsOf(id) {
   if (!t) return null;
   return (t.shiyu || []).length || (t.da || []).length ? t : null;
 }
+// Русские названия фракций и бангбу. Prydwen пишет их по-английски, в игровых
+// данных Enka фракций и бангбу нет вовсе, поэтому названия взяты из TextMap
+// игры (git.mero.moe/dimbreath/ZenlessData): ключи PartnerCamp_Name_* и
+// Bangboo_Name_*. Меняются они раз в патч и только при выходе нового бангбу,
+// так что держим их прямо здесь, а не отдельным файлом.
+const RU_CAMP = {
+  'Cunning Hares': 'Хитрые зайцы',
+  'Belobog Heavy Industries': 'Белобог',
+  'Victoria Housekeeping Co.': 'Виктория',
+  'Obol Squad': 'Отряд Обол',
+  'OBOLS Squad': 'Отряд Обол',
+  'Criminal Investigation Special Response Team': 'Группа особого реагирования',
+  'N.E.P.S.': 'Группа особого реагирования',
+  'Sons of Calydon': 'Сыны Калидона',
+  'Hollow Special Operations Section 6': 'Секция 6',
+  'Section 6': 'Секция 6',
+  'Stars of Lyra': 'Созвездие Лиры',
+  'Mockingbird': 'Пересмешники',
+  'Yunkui Summit': 'Школа горы Юнькуй',
+  'Spook Shack': 'Хижина кошмаров',
+  'Krampus Compliance Authority': 'Надзорная служба «Крампус»',
+  'Angels of Delusion': 'Ангелы наваждения',
+  'Metropolitan Order Division': 'Городской департамент охраны правопорядка',
+  'External Strategy Department': 'Департамент внешней стратегии',
+  'Sixth Street': 'Шестая улица'
+};
+const RU_BOO = {
+  'Eous': 'Эос', 'Penguinboo': 'Пингвибу', 'Luckyboo': 'Счастливчик',
+  'Exploreboo': 'Искатель', 'Sumoboo': 'Сумобу', 'Paperboo': 'Бумабу',
+  'Bagboo': 'Пакетник', 'Cryboo': 'Плаксабу', 'Avocaboo': 'Авокабу',
+  'Boollseye': 'Яблочкобу', 'Electroboo': 'Электробу', 'Magnetiboo': 'Магнитобу',
+  'Booressure': 'Баробу', 'Baddieboo': 'Злобнобу', 'Overtimeboo': 'Перерабу',
+  'Brawlerboo': 'Борьбу', 'Excaliboo': 'Экскалибу', 'Knightboo': 'Рыцарьбу',
+  'Bild N. Boolok': 'Деталькабу', 'Booltergeist': 'Бурабашка', 'Sharkboo': 'Акулабу',
+  'Safety': 'Прорабу', 'Devilboo': 'Вельзебу', 'Butler': 'Мажордом',
+  'Amillion': 'Амиллион', 'Rocketboo': 'Ракетабу', 'Plugboo': 'Штекербу',
+  'Resonaboo': 'Резонабу', 'Biggest Fan': 'Фанбу', 'Red Moccus': 'Красный Моккус',
+  'Officer Cui': 'Офицер Цуй', 'Bangvolver': 'Револьвербу',
+  'Agent Gulliver': 'Агент Гулливер', 'Snap': 'Щелкун', 'Robin': 'Робин',
+  'Belion': 'Львец', 'Miss Esme': 'Госпожа Эсме', 'Mercury': 'Меркурий',
+  'Birkblick': 'Биркблик', 'Sprout': 'Колосок', 'Ultra Jake': 'Супер-Джейк'
+};
 // фракция агента лежит в гайде: в игровых данных её нет
 function factionOf(id) {
   const g = (GUIDE && GUIDE.agents && GUIDE.agents[id]) || null;
   return (g && g.faction) || '';
 }
+// названия у Prydwen и в игре пишутся по-разному, поэтому сверяем по «скелету»
+function facRu(en) {
+  if (!en || en === 'Unknown') return '';
+  if (RU_CAMP[en]) return RU_CAMP[en];
+  const k = facKey(en);
+  const hit = Object.keys(RU_CAMP).filter(x => {
+    const kk = facKey(x);
+    return kk === k || kk.indexOf(k) >= 0 || k.indexOf(kk) >= 0;
+  })[0];
+  return hit ? RU_CAMP[hit] : en;
+}
+function booRu(en) { return RU_BOO[en] || en; }
 // Бангбу под состав. У каждого в пассивке условие: двое одной стихии, двое
 // одной фракции, хотя бы один нужной специализации или конкретный агент.
 // Проверяем состав по всем четырём видам и оставляем то, что реально включится.
@@ -3724,7 +3785,7 @@ function bangbooFor(ids) {
             const k = facKey(f);
             return facs[f] >= 2 && (k === key || k.indexOf(key) >= 0 || key.indexOf(k) >= 0);
           })[0];
-          if (hit) { why = 'двое из ' + hit; rank = 1; }
+          if (hit) { why = 'фракция ' + facRu(hit); rank = 1; }
         }
       }
     }
@@ -3754,8 +3815,10 @@ function profRu(en) {
   const k = Object.keys(BOO_PROF).filter(x => BOO_PROF[x] === en)[0];
   return (k && PROF[k] ? PROF[k] : en).toLowerCase();
 }
-// одна строка состава
-function teamRow(t, mine) {
+// Одна строка состава. Порядкового номера с prydwen тут нет: «#20» ничего не
+// говорит, потому что рейтинг там общий по всей игре, а не по этому агенту.
+// Вместо него слева стоит место в этом списке, а справа — доля прохождений.
+function teamRow(t, n) {
   const ics = t.ids.map(id => {
     const a = DB.byId[id];
     const have = !!(prog[id] && prog[id].have);
@@ -3768,16 +3831,20 @@ function teamRow(t, mine) {
   }).join('');
   const miss = t.ids.filter(id => !(prog[id] && prog[id].have)).length;
   const boo = bangbooFor(t.ids);
+  const b = boo.length ? boo[0] : null;
   return '<div class="tm-row' + (miss ? '' : ' full') + '">' +
-    '<div class="tm-rank" title="Место состава в общем рейтинге">#' + (t.r || '—') + '</div>' +
+    '<div class="tm-rank">' + (n || '') + '</div>' +
     '<div class="tm-ags">' + ics + '</div>' +
-    (boo.length
-      ? '<div class="tm-boo" title="Бангбу, у которого с этим составом включается пассивка">' +
-          '<span class="tm-boo-n">' + esc(boo[0].b.n) + '</span>' +
-          '<i>' + esc(boo[0].why) + '</i></div>'
+    (b
+      ? '<div class="tm-boo" title="Бангбу, у которого с этим составом срабатывает пассивка">' +
+          (b.b.icon ? img(imgUrl('bangboo', b.b.icon), 'tm-bic', booRu(b.b.n), true)
+                    : '<span class="tm-bic tm-none">?</span>') +
+          '<span><b class="tm-boo-n">' + esc(booRu(b.b.n)) + '</b>' +
+          '<i>' + esc(b.why) + '</i></span></div>'
       : '<div class="tm-boo"></div>') +
     '<div class="tm-num">' +
-      '<span>' + (t.u ? t.u.toFixed(1) + '%' : '—') + '</span>' +
+      '<span title="Доля прохождений эндгейма, где встречался этот состав">' +
+        (t.u ? t.u.toFixed(1) + '%' : '—') + '</span>' +
       '<i>' + (miss ? 'нет ' + miss : 'есть все') + '</i>' +
     '</div></div>';
 }
@@ -3789,32 +3856,39 @@ function shortRu(s) {
 function teamHtml(a) {
   const t = teamsOf(a.id);
   if (!t) return '<div class="hint" style="margin-top:0">Составов для этого агента нет.</div>';
-  const g = guideOf(a.id);
-  const sect = (title, note, rows) => !rows.length ? '' :
-    '<div class="sect"><h4><span class="tt">' + title + '<i>' + note + '</i></span></h4>' +
-    '<div class="tm-list">' + rows.map(r => teamRow(r)).join('') + '</div></div>';
+  // Наверх — то, что можешь собрать прямо сейчас: состав, где не хватает
+  // человека, тебе сегодня не поможет, каким бы популярным он ни был. Внутри
+  // групп порядок по частоте. Считается по твоим отметкам «есть», так что у
+  // другого игрока с тем же файлом список будет свой.
+  const missOf = r => r.ids.filter(id => !(prog[id] && prog[id].have)).length;
+  const sortT = list => list.slice().sort((x, y) => missOf(x) - missOf(y) || (y.u || 0) - (x.u || 0));
+  const sect = (title, note, list) => {
+    if (!list.length) return '';
+    const rows = sortT(list);
+    const ready = rows.filter(r => !missOf(r)).length;
+    return '<div class="sect"><h4><span class="tt">' + title + '<i>' + note + '</i></span>' +
+      '<span class="tm-cnt">' + (ready ? 'собирается ' + ready + ' из ' + rows.length
+                                       : 'ни один не собирается целиком') + '</span></h4>' +
+      '<div class="tm-list">' + rows.map((r, i) => teamRow(r, i + 1)).join('') + '</div></div>';
+  };
   let h = '';
-  const fac = factionOf(a.id);
-  if (fac && fac !== 'Unknown') {
-    const mates = DB.agents.filter(x => x.id !== a.id && factionOf(x.id) === fac);
+  const fac = facRu(factionOf(a.id));
+  if (fac) {
+    const mates = DB.agents.filter(x => x.id !== a.id && facRu(factionOf(x.id)) === fac);
     if (mates.length) h += '<div class="tm-fac">Фракция <b>' + esc(fac) + '</b>: ' +
       mates.map(x => '<span class="' + (prog[x.id] && prog[x.id].have ? 'tm-has' : 'tm-no') + '">' +
         esc(x.ru) + '</span>').join(', ') +
       '<i>двое из одной фракции включают пассивку у части бангбу</i></div>';
   }
   h += sect('Оборона Шиюй', 'SHIYU DEFENSE', t.shiyu || []);
-  h += sect('Deadly Assault', 'DEADLY ASSAULT', t.da || []);
-  // авторские варианты напарников: состав без чужого текста
-  if (g && (g.mates || []).length) {
-    h += '<div class="sect"><h4><span class="tt">Кого ставят рядом<i>SYNERGY</i></span></h4>' +
-      '<div class="tm-list">' + g.mates.map(ids => teamRow({ r: 0, ids: ids })).join('') +
-      '</div></div>';
-  }
-  h += '<div class="hint">Составы — статистика прохождений с <a href="' +
+  h += sect('Опасный штурм', 'DEADLY ASSAULT', t.da || []);
+  h += '<div class="hint">Составы — срез по реальным прохождениям эндгейма с <a href="' +
     esc(prydUrl(a) || 'https://www.prydwen.gg/zenless/') + '" target="_blank" rel="noopener">prydwen.gg</a>' +
     (GUIDE && GUIDE.built ? ', собраны ' + esc(GUIDE.built) : '') +
-    '. Процент — как часто состав встречается, «#» — место в общем рейтинге. ' +
-    'Приглушённые агенты — те, кого у тебя нет.</div>';
+    '. <b>Процент</b> — доля прохождений, где встречался этот состав: 22% значит, что ' +
+    'каждый пятый игрок с этим агентом ходил именно так. Номер слева — место в этом ' +
+    'списке, не более того. Сверху те, кого можешь собрать целиком; приглушённые и ' +
+    'зачёркнутые агенты — те, кого у тебя нет.</div>';
   return h;
 }
 
@@ -6011,6 +6085,14 @@ function drawMaint() {
     '<b>Console</b>, вставь первую строку и жми Enter. Через пять минут результат сам ' +
     'скопируется в буфер — сохрани его по пути из второй строки, заменив старый файл. '  +
     'Первой строкой скрипт пишет свою версию — сверься, что она свежая.');
+
+  if (!noBoo) {
+    h += maintCmd(++n + '. Значки бангбу', 'после сбора с prydwen',
+      'cd "' + SITE_DIR + '"; .\\fetch-bangboo.ps1',
+      'Кладёт значки в <b>img\\zzz\\bangboo</b> — без них во вкладке «Команды» ' +
+      'вместо бангбу будут пустые кружки. Уже скачанные пропускает, так что ' +
+      'запускать можно после каждого сбора.');
+  }
 
   if (missing.length) {
     h += maintCmd(++n + '. Справочник и картинки нового агента', 'нужно сейчас',
