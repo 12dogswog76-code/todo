@@ -1,5 +1,5 @@
 /**
- * pryd.js v4 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
+ * pryd.js v4.1 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
  *              за один прогон и складывает всё в один файл.
  *
  * Зачем через браузер: сайт закрыт проверкой Cloudflare, скрипту снаружи он
@@ -416,6 +416,16 @@
               Math.ceil((slugs.length + 1) * PAUSE / 60000) + ' мин',
               'color:#ffd54a;font-size:14px');
 
+  // Сразу говорим, будут бангбу или нет. Собираются они в самом конце, и без
+  // этой строки первые пять минут непонятно, ту ли страницу открыл.
+  const booPage = location.pathname.indexOf('/zenless/bangboo') >= 0;
+  console.log(booPage
+    ? '%c  бангбу: страница та, соберу их в конце (' +
+      document.querySelectorAll('.single-bangboo').length + ' карточек на странице)'
+    : '%c  бангбу: НЕ соберутся — скрипт запущен не на /zenless/bangboo. ' +
+      'Всё остальное соберётся, в файле останется прежний список бангбу.',
+    booPage ? 'color:#4ade80' : 'color:#fbbf24;font-size:13px');
+
   let tierRes = { tiers: {}, miss: [] };
   try {
     const doc = location.pathname.indexOf('tier-list') >= 0 ? document : await getDoc(TIER_URL);
@@ -510,12 +520,16 @@
       if (list.length) {
         bangboo = { updated: new Date().toISOString().slice(0, 10),
                     src: 'https://www.prydwen.gg/zenless/bangboo', list: list };
-        console.log('  бангбу: ' + list.length +
-                    ' (с условием: ' + list.filter(x => /squad/i.test(x.p)).length + ')');
+        console.log('%c  бангбу: ' + list.length +
+                    ' (с условием на состав: ' + list.filter(x => /squad/i.test(x.p)).length + ')',
+                    'color:#4ade80');
+      } else {
+        console.warn('  бангбу: карточки нашлись, а пассивки не прочитались — ' +
+                     'разметка изменилась, пришли мне эту строку');
       }
     } else {
-      console.log('%c  бангбу пропущены: чтобы собрать и их, запусти скрипт со страницы ' +
-                  'https://www.prydwen.gg/zenless/bangboo', 'color:#8ab4f8');
+      console.log('%c  бангбу пропущены: скрипт был запущен не на странице бангбу',
+                  'color:#8ab4f8');
     }
   } catch (e) {
     console.warn('  бангбу не собрались: ' + e.message);
