@@ -817,6 +817,27 @@
     .tm-a i{display:none}
   }
 
+  /* ── панель «Эндгейм» ── */
+  .eg-head{font-size:12px;color:var(--tx2);margin:0 0 12px;padding-bottom:10px;
+    border-bottom:1px solid var(--line)}
+  .eg-head b{color:var(--gold)}
+  /* плитки своих агентов: значок, имя и счёт с направлением */
+  .eg-mine{display:flex;flex-wrap:wrap;gap:6px}
+  .eg-m{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 5px;border-radius:20px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  .eg-m.up{border-color:#4ade8044}
+  .eg-m.down{border-color:#e5484d33}
+  .eg-ic{width:24px;height:24px;flex:none;border-radius:50%;object-fit:cover}
+  .eg-m b{font-size:11.5px;color:var(--tx);font-weight:700}
+  .eg-m i{font-style:normal;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums}
+  .eg-m.up i{color:var(--acc)}
+  .eg-m.down i{color:#e5484d}
+  .eg-st{font-weight:400;color:var(--tx3);letter-spacing:0;text-transform:none}
+  @media(max-width:760px){
+    .eg-m{padding:4px 8px 4px 4px;gap:5px}
+    .eg-m b{font-size:10.5px}
+  }
+
   /* ── вкладка «Гайд»: сборка с prydwen ── */
   .ggoals{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:6px}
   .gg{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:11px;
@@ -1261,6 +1282,7 @@
     <button class="tbtn" id="cloudBtn">☁ Облако и данные</button>
     <button class="tbtn" id="modBtn">📊 Модификаторы</button>
     <button class="tbtn" id="bannerBtn" title="Кто сейчас на баннерах и кто дальше">🎟 Баннеры</button>
+    <button class="tbtn" id="endBtn" title="Текущая фаза Обороны Шиюй и Опасного штурма">⚔ Эндгейм</button>
     <button class="tbtn" id="helpBtn" title="Как всё устроено">Справка</button>
   </div>
 
@@ -1434,6 +1456,7 @@
   </div>
 
   <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
+  <div class="panel" id="endPanel"><div id="endBox"></div></div>
 
   <div class="panel" id="helpPanel">
     <div class="hint hlp" style="margin-top:0">
@@ -1503,7 +1526,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v148';
+const APP_VER = 'v150';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5963,14 +5986,14 @@ $('rebuildDb').onclick = async () => {
 function togglePanel(id) {
   const zone = $('panelZone');
   if (zone && $(id) && $(id).parentNode !== zone) zone.appendChild($(id));
-  ['enkaPanel', 'cloudPanel', 'modPanel', 'bannerPanel', 'helpPanel'].forEach(p => {
+  ['enkaPanel', 'cloudPanel', 'modPanel', 'bannerPanel', 'endPanel', 'helpPanel'].forEach(p => {
     if (p !== id) $(p).classList.remove('open');
   });
-  ['enkaBtn', 'cloudBtn', 'modBtn', 'bannerBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
+  ['enkaBtn', 'cloudBtn', 'modBtn', 'bannerBtn', 'endBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
   const wasOpen = $(id).classList.contains('open');
   $(id).classList.toggle('open', !wasOpen);
   const map = { enkaPanel: 'enkaBtn', cloudPanel: 'cloudBtn', modPanel: 'modBtn',
-                bannerPanel: 'bannerBtn', helpPanel: 'helpBtn' };
+                bannerPanel: 'bannerBtn', endPanel: 'endBtn', helpPanel: 'helpBtn' };
   if (!wasOpen) $(map[id]).classList.add('on');
 }
 $('enkaBtn').onclick  = () => { togglePanel('enkaPanel'); refreshEnkaLinks(); drawMaint(); };
@@ -6043,6 +6066,7 @@ function drawMaint() {
   const gAg = (GUIDE && GUIDE.agents) || {};
   const noTeams = Object.keys(gAg).length && !Object.keys(gAg).some(k => gAg[k].teams);
   const noBoo = !(GUIDE && GUIDE.bangboo && (GUIDE.bangboo.list || []).length);
+  const noEnd = !egOf();
 
   const old = (n, lim) => n != null && n > lim;
   let h = '<div class="mt"><div class="cap2">ОБСЛУЖИВАНИЕ</div>';
@@ -6054,7 +6078,7 @@ function drawMaint() {
       (dAge == null ? 'нет данных' : dAge + ' ' + plural(dAge, 'день', 'дня', 'дней') + ' назад') + '</span>' +
     '</div>';
 
-  if (missing.length || noGuide.length || noTeams || noBoo || old(gAge, 21)) {
+  if (missing.length || noGuide.length || noTeams || noBoo || noEnd || old(gAge, 21)) {
     h += '<div class="mt-todo">' +
       (missing.length ? '<div>Вышли новые агенты, их нет в справочнике: <b>' +
         esc(missing.join(', ')) + '</b></div>' : '') +
@@ -6062,6 +6086,7 @@ function drawMaint() {
       (noTeams ? '<div>Нет составов команд — файл собран до <b>pryd.js v4</b>, ' +
         'прогони шаг 1 заново</div>' : '') +
       (noBoo ? '<div>Нет бангбу — прогони шаг 1 <b>со страницы бангбу</b></div>' : '') +
+      (noEnd ? '<div>Нет аналитики эндгейма — нужен <b>pryd.js v4.4</b> и выше</div>' : '') +
       (old(gAge, 21) && !noGuide.length ? '<div>Сборки давно не обновлялись — вышел ли патч?</div>' : '') +
       '</div>';
   } else {
@@ -6120,6 +6145,7 @@ function drawMaint() {
 }
 
 $('bannerBtn').onclick = () => { togglePanel('bannerPanel'); drawBanners(); };
+$('endBtn').onclick    = () => { togglePanel('endPanel'); drawEndgame(); };
 $('helpBtn').onclick  = () => togglePanel('helpPanel');
 
 // ─────────────── баннеры ───────────────
@@ -6445,6 +6471,114 @@ function banRemText() {
   if (!plan.length) return 'Напоминать сейчас не о чем: всех с текущих баннеров уже выбил.';
   return plan.map(r => banDate(new Date(r.at).toISOString().slice(0, 10)) +
     ' → ' + r.names).join(' · ');
+}
+
+// ─────────────── панель «Эндгейм» ───────────────
+// Во вкладке агента видны только его собственные составы. Здесь общая картина
+// текущей фазы: во что играет вся игра, что из этого собираешь ты и как твои
+// агенты выглядят на фоне остальных. Данные те же, что и в карточке, но
+// снятые со страниц аналитики целиком, а не по одному агенту.
+function egOf() {
+  const e = (GUIDE && GUIDE.endgame) || null;
+  if (!e) return null;
+  return (e.shiyu || e.da) ? e : null;
+}
+// строка состава: та же разметка, что во вкладке агента
+function egTeamRow(t, n) {
+  const ics = t.ids.map(id => {
+    const a = DB.byId[id];
+    const have = !!(prog[id] && prog[id].have);
+    if (!a) return '<span class="tm-ic tm-none" title="нет в базе">?</span>';
+    return '<span class="tm-a' + (have ? '' : ' off') + '" title="' + esc(a.ru) +
+      (have ? '' : ' — у тебя нет') + '">' +
+      (a.icon ? img(imgUrl('agents', a.icon), 'tm-ic', a.ru, true)
+              : '<span class="tm-ic tm-none">?</span>') +
+      '<i>' + esc(shortRu(a.ru)) + '</i></span>';
+  }).join('');
+  const miss = t.ids.filter(id => !(prog[id] && prog[id].have)).length;
+  const boo = bangbooFor(t.ids);
+  const b = boo.length ? boo[0] : null;
+  return '<div class="tm-row' + (miss ? '' : ' full') + '">' +
+    '<div class="tm-rank">' + (n || '') + '</div>' +
+    '<div class="tm-ags">' + ics + '</div>' +
+    (b
+      ? '<div class="tm-boo" title="Бангбу, у которого с этим составом срабатывает пассивка">' +
+          (b.b.icon ? img(imgUrl('bangboo', b.b.icon), 'tm-bic', booRu(b.b.n), true)
+                    : '<span class="tm-bic tm-none">?</span>') +
+          '<span><b class="tm-boo-n">' + esc(booRu(b.b.n)) + '</b>' +
+          '<i>' + esc(b.why) + '</i></span></div>'
+      : '<div class="tm-boo"></div>') +
+    '<div class="tm-num">' +
+      '<span title="Доля прохождений с этим составом">' +
+        (t.u ? t.u.toFixed(1) + '%' : '—') + '</span>' +
+      '<i>' + (miss ? 'нет ' + miss : 'есть все') + '</i>' +
+    '</div></div>';
+}
+// твои агенты в текущей фазе: место среди всех и изменение к прошлой
+function egMine(chars) {
+  const rows = chars.map((c, i) => ({ c: c, place: i + 1 }))
+    .filter(x => prog[x.c.id] && prog[x.c.id].have && DB.byId[x.c.id]);
+  if (!rows.length) return '<div class="hint" style="margin-top:0">' +
+    'Ни один из твоих агентов не попал в статистику этой фазы.</div>';
+  return '<div class="eg-mine">' + rows.slice(0, 12).map(x => {
+    const a = DB.byId[x.c.id];
+    const up = x.c.d > 0, down = x.c.d < 0;
+    return '<span class="eg-m' + (up ? ' up' : down ? ' down' : '') + '" title="' +
+      esc(a.ru) + ': средний счёт ' + nfmt(x.c.v) +
+      ', место ' + x.place + ' из ' + chars.length + '">' +
+      (a.icon ? img(imgUrl('agents', a.icon), 'eg-ic', a.ru, true) : '') +
+      '<b>' + esc(shortRu(a.ru)) + '</b>' +
+      '<i>' + nfmt(x.c.v) + (x.c.d ? (up ? ' ▲' : ' ▼') + nfmt(Math.abs(x.c.d)) : '') + '</i>' +
+      '</span>';
+  }).join('') + '</div>';
+}
+function egSect(title, note, e) {
+  if (!e) return '';
+  const missOf = r => r.ids.filter(id => !(prog[id] && prog[id].have)).length;
+  // Составы разбиты по этажам Шиюй и боссам Штурма: у каждого свой топ, и
+  // сваливать их вместе нельзя — ранги начнут повторяться.
+  const stages = (e.stages || []).map(g => {
+    const rows = g.teams.slice().sort((x, y) => missOf(x) - missOf(y) || (y.u || 0) - (x.u || 0));
+    return { n: g.n, rows: rows, ready: rows.filter(r => !missOf(r)).length };
+  });
+  const total = stages.reduce((s2, g) => s2 + g.rows.length, 0);
+  const ready = stages.reduce((s2, g) => s2 + g.ready, 0);
+  return '<div class="sect"><h4><span class="tt">' + title +
+      '<i>' + note + (e.phase ? ' · ФАЗА ' + esc(e.phase) : '') + '</i></span>' +
+      '<span class="tm-cnt">' + (total ? 'собираешь ' + ready + ' из ' + total : '') + '</span></h4>' +
+    (e.chars && e.chars.length
+      ? '<div class="cap2" style="margin:0 0 6px">ТВОИ АГЕНТЫ В ЭТОЙ ФАЗЕ</div>' + egMine(e.chars)
+      : '') +
+    stages.map(g =>
+      '<div class="cap2" style="margin:12px 0 6px">' + esc((g.n || 'ЧТО БЕРУТ ЧАЩЕ ВСЕГО').toUpperCase()) +
+        (g.rows.length ? ' <span class="eg-st">' + (g.ready ? 'собираешь ' + g.ready : 'ни одного') + '</span>' : '') +
+      '</div><div class="tm-list">' + g.rows.slice(0, 6).map((r, i) => egTeamRow(r, i + 1)).join('') + '</div>'
+    ).join('') +
+    '</div>';
+}
+function drawEndgame() {
+  const box = $('endBox');
+  if (!box) return;
+  const e = egOf();
+  if (!e) {
+    box.innerHTML = '<div class="hint" style="margin-top:0">Данных по эндгейму пока нет. ' +
+      'Они приезжают вместе со сборками — прогони <b>pryd.js</b> в консоли на prydwen.gg ' +
+      '(нужна версия v4.4 и выше).</div>';
+    return;
+  }
+  const any = e.shiyu || e.da;
+  box.innerHTML =
+    '<div class="eg-head">Фаза <b>' + esc(any.phase || '?') + '</b>' +
+      (any.date ? ', данные от ' + esc(banDate(any.date) + '.' + any.date.slice(0, 4)) : '') +
+      (any.users ? ' · по прохождениям ' + nfmt(any.users) + ' игроков' : '') + '</div>' +
+    egSect('Оборона Шиюй', 'SHIYU DEFENSE', e.shiyu) +
+    egSect('Опасный штурм', 'DEADLY ASSAULT', e.da) +
+    '<div class="hint">Аналитика с <a href="https://www.prydwen.gg/zenless/shiyu-defense" ' +
+      'target="_blank" rel="noopener">prydwen.gg</a>' +
+      (GUIDE && GUIDE.built ? ', собрана ' + esc(GUIDE.built) : '') +
+      '. Оборона Шиюй разбита по этажам, Опасный штурм — по боссам: у каждого свой топ. ' + 'Числа у агента — средний счёт за фазу и насколько он изменился с прошлой: ' +
+      '<b>▲</b> агент стал заходить лучше, <b>▼</b> просел. Составы отсортированы так же, ' +
+      'как в карточке: сверху те, что собираешь целиком.</div>';
 }
 
 function drawBanners() {

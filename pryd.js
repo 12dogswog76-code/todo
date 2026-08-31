@@ -1,5 +1,5 @@
 /**
- * pryd.js v4.3 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
+ * pryd.js v4.4 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
  *              за один прогон и складывает всё в один файл.
  *
  * Зачем через браузер: сайт закрыт проверкой Cloudflare, скрипту снаружи он
@@ -32,6 +32,10 @@
  *                Assault), в каждом ранг, частота и средний результат
  *   mates      — варианты напарников из авторского разбора, только состав
  *
+ * Плюс общая аналитика эндгейма (endgame): текущая фаза Обороны Шиюй и Опасного
+ * штурма, топ составов всей игры и средний результат каждого агента с
+ * изменением к прошлой фазе.
+ *
  * Плюс общий список бангбу с условием пассивки — если запуск был со страницы
  * /zenless/bangboo.
  *
@@ -50,7 +54,7 @@
   // строкой в консоли, и браузер спокойно отдаёт его из кэша — прогон на пять
   // минут уходил впустую на старом коде, а понять это было можно только по
   // готовому файлу.
-  const VER = 'v4.3';
+  const VER = 'v4.4';
   const PAUSE = 5000;          // пауза между страницами
   const TIER_URL = '/zenless/tier-list';
 
@@ -391,6 +395,91 @@
     return out;
   }
 
+  // ── эндгейм: страницы аналитики ───────────────────────────────────────────
+  // /zenless/shiyu-defense и /zenless/deadly-assault. В карточке агента лежат
+  // только его собственные составы, а тут — общая картина текущей фазы: топ
+  // составов всей игры и средний результат каждого агента с изменением к
+  // прошлой фазе. По ним видно, кто сейчас на подъёме, а кто просел.
+  //
+  // Номер фазы берём из <option> списка фаз, а не из текста страницы: в
+  // склеенном тексте год предыдущей строки прилипает к номеру («20263.1.3»),
+  // и любая регулярка вытаскивает мусор.
+  function readEndgame(doc) {
+    const out = { phase: '', date: '', users: 0, stages: [], chars: [] };
+    const re = /^(\d{1,2}\.\d{1,2}\.\d{1,2})\s*-\s*(\d{1,2})\/([A-Za-z]+)\/(\d{4})\s*\(([\d,]+) users\)$/;
+    const opt = [].slice.call(doc.querySelectorAll('option'))
+      .map(o => re.exec(clean(o.textContent))).filter(Boolean)[0];
+    if (opt) {
+      out.phase = opt[1];
+      const mm = MON[opt[3].slice(0, 3)];
+      out.date = mm ? opt[4] + '-' + String(mm).padStart(2, '0') + '-' + opt[2].padStart(2, '0') : '';
+      out.users = +opt[5].replace(/,/g, '');
+    }
+
+    // Составы разбиты по этажам («Stage 5-1») у Шиюй и по боссам («Boss 1») у
+    // Штурма — три группы по десять. Если свалить их в кучу, ранги начинают
+    // повторяться и список выглядит бессмыслицей. Группа = общий родитель строк,
+    // название ищем в тексте выше.
+    const label = el => {
+      let x = el;
+      for (let i = 0; i < 8 && x; i++) {
+        x = x.previousElementSibling || x.parentElement;
+        if (!x) break;
+        const m = clean(x.textContent || '').match(/(Stage \d+-\d+|Boss \d+)/);
+        if (m) return m[1].replace('Stage ', 'этаж ').replace('Boss ', 'босс ');
+      }
+      return '';
+    };
+    const seenBox = [];
+    doc.querySelectorAll('.team-row').forEach(row => {
+      const par = row.parentElement;
+      if (!par) return;
+      let grp = seenBox.filter(g => g.el === par)[0];
+      if (!grp) { grp = { el: par, n: label(par), teams: [] }; seenBox.push(grp); out.stages.push(grp); }
+      const info = clean((row.querySelector('.column.info') || {}).textContent || '');
+      const ids = [];
+      row.querySelectorAll('.column.characters a[href*="/characters/"]').forEach(a => {
+        const m = (a.getAttribute('href') || '').match(/\/characters\/([a-z0-9\-]+)/);
+        const id = m ? SLUGS[m[1]] : 0;
+        if (id && ids.indexOf(id) < 0) ids.push(id);
+      });
+      if (ids.length < 2) return;
+      const num = k => {
+        const m = info.match(new RegExp(k + ':\\s*([\\d,.]+)'));
+        return m ? +m[1].replace(/,/g, '') : 0;
+      };
+      grp.teams.push({ r: +((info.match(/Rank\s+(\d+)/i) || [])[1] || 0),
+                       u: num('rate'), v: num('Avg\\. Score'), ids: ids });
+    });
+    out.stages.forEach(g => { delete g.el; });
+    out.stages = out.stages.filter(g => g.teams.length);
+
+    // Агентов на странице два списка: сначала по среднему счёту, следом тот же
+    // состав по частоте использования. Берём только первый — во втором вместо
+    // счёта проценты, и вперемешку получались значения вроде «19».
+    const boxes = [].slice.call(doc.querySelectorAll('.char-box'))
+      .filter(b => b.querySelector('a[href*="/characters/"]'));
+    const firstPar = boxes.length ? boxes[0].parentElement : null;
+    boxes.filter(b => b.parentElement === firstPar).forEach(b => {
+      const a = b.querySelector('a[href*="/characters/"]');
+      const m = (a.getAttribute('href') || '').match(/\/characters\/([a-z0-9\-]+)/);
+      const id = m ? SLUGS[m[1]] : 0;
+      if (!id || out.chars.some(x => x.id === id)) return;
+      const p = b.querySelector('.column.percentage p');
+      const score = p ? +clean(p.textContent).replace(/[^\d]/g, '') : 0;
+      if (!score) return;
+      // знак изменения — цветом стрелки: в самом тексте минус стоит не всегда
+      const d = b.querySelector('.difference');
+      let diff = d ? +clean(d.textContent).replace(/[^\d-]/g, '') : 0;
+      if (d && b.querySelector('.difference .red') && diff > 0) diff = -diff;
+      // у агента, вышедшего в эту фазу, сравнивать не с чем: prydwen пишет
+      // изменение равным самому счёту — это не рост, а отсутствие прошлого
+      if (Math.abs(diff) >= score) diff = 0;
+      out.chars.push({ id: id, v: score, d: diff || 0 });
+    });
+    return (out.stages.length || out.chars.length) ? out : null;
+  }
+
   // ── бангбу ────────────────────────────────────────────────────────────────
   // Условие пассивки («когда в отряде двое из Cunning Hares») лежит не в
   // разметке, а в данных, которые страница подставляет уже в браузере: в
@@ -556,6 +645,27 @@
     console.warn('  баннеры не собрались: ' + e.message);
   }
 
+  // ── эндгейм ───────────────────────────────────────────────────────────────
+  let endgame = null;
+  for (const [key, url, name] of [['shiyu', '/zenless/shiyu-defense', 'Оборона Шиюй'],
+                                  ['da', '/zenless/deadly-assault', 'Опасный штурм']]) {
+    try {
+      await sleep(PAUSE);
+      const eg = readEndgame(await getDoc(url));
+      if (eg) {
+        endgame = endgame || {};
+        endgame[key] = eg;
+        console.log('  ' + name + ': фаза ' + (eg.phase || '?') + ' · ' +
+                    eg.stages.map(g => (g.n || '?') + ' ' + g.teams.length).join(', ') +
+                    ' · агентов ' + eg.chars.length + ' · игроков ' + eg.users);
+      } else {
+        console.warn('  ' + name + ' не разобрался — разметка изменилась');
+      }
+    } catch (e) {
+      console.warn('  ' + name + ' не собрался: ' + e.message);
+    }
+  }
+
   // ── бангбу ────────────────────────────────────────────────────────────────
   let bangboo = null;
   try {
@@ -590,6 +700,7 @@
     // если баннеры или бангбу не разобрались, поле не пишем — трекер оставит прежние
     banners: banners || undefined,
     bangboo: bangboo || undefined,
+    endgame: endgame || undefined,
     agents: agents
   });
 
