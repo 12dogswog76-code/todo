@@ -749,7 +749,13 @@
     font-variant-numeric:tabular-nums;white-space:nowrap}
   .ban-when i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:2px}
   .ban.now .ban-when i{color:var(--acc)}
+  /* строка с напоминанием: кнопка слева, что именно придёт — справа */
+  .ban-rem{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+  .ban-rem button{flex:none}
+  .ban-rem button.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0}
+  .ban-rem span{min-width:0;flex:1 1 200px;font-size:11px;color:var(--tx3);line-height:1.5}
   @media(max-width:760px){
+    .ban-rem span{flex-basis:100%}
     /* Без переноса всё сжималось в одну строку, и название движка ломалось
        по одной букве в столбик. */
     .ban{gap:9px;padding:8px 9px;flex-wrap:wrap;align-items:flex-start}
@@ -1450,7 +1456,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v140';
+const APP_VER = 'v141';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2364,6 +2370,7 @@ function loadGuide() {
   return fetch('zzz-guide.json', { cache: 'no-cache' })
     .then(r => r.ok ? r.json() : null)
     .then(x => { if (x && x.agents) GUIDE = x; })
+    .then(() => { try { banRemSync(); } catch (e) {} })
     .catch(() => {});
 }
 // Первая версия pryd.js складывала сюда сырые куски текста: engines и sets были
@@ -5952,6 +5959,142 @@ function buildClean(a, p) {
   return !!(p && p.have && guideOf(a.id) && !buildIssues(a, p).length);
 }
 
+// ─────────────── напоминание о конце баннера ───────────────
+// Push уходит через тот же воркер, что и дедлайны задач: /schedule кладёт
+// запись в KV, cron её оттуда достаёт и отправляет. Ключ подписки общий с
+// задачами — он лежит в localStorage того же домена, поэтому если push уже
+// включён в задачах, здесь разрешение повторно не спрашивается.
+//
+// Пуш один на фазу, а не на агента: баннеры закрываются пачкой с одной датой,
+// и четыре одинаковых уведомления про 08.09 — это мусор. Если всех S-ранговых
+// этой фазы уже выбил, напоминание не ставится вовсе.
+const PUSH_API   = 'https://alextask-push.12dogswog76.workers.dev';
+const VAPID_PUB  = 'BNrmwMyHC1OFDhFuQZtwHAzbjdeqCzgs4kyy-gGRGpgHPTAMjvPRyGRyKgiryVJAykh2q10MwHMzSadX-2Rx150';
+const LS_TODO    = 'alexey_todo_v1';   // префикс страницы задач: оттуда push-ключ
+const BAN_DAYS   = 3;                  // за сколько дней предупреждать
+const LS_BANREM  = LS + '_banRem';
+const LS_BANSENT = LS + '_banRemSent';
+
+let banRemOn = localStorage.getItem(LS_BANREM) === '1';
+let banSent = {};
+try { banSent = JSON.parse(localStorage.getItem(LS_BANSENT) || '{}') || {}; } catch (e) { banSent = {}; }
+function banSentSave() { try { localStorage.setItem(LS_BANSENT, JSON.stringify(banSent)); } catch (e) {} }
+
+function u8FromB64(s) {
+  const pad = '='.repeat((4 - s.length % 4) % 4);
+  const raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  const u = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) u[i] = raw.charCodeAt(i);
+  return u;
+}
+function pushKeyGet(make) {
+  let k = localStorage.getItem(LS_TODO + '_pushKey') || '';
+  if (!k && make) {
+    k = 'pk' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem(LS_TODO + '_pushKey', k);
+  }
+  return k;
+}
+function postPush(tail, body) {
+  return fetch(PUSH_API + tail, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+// что нужно напомнить: по одной записи на дату закрытия
+function banRemPlan() {
+  const list = (GUIDE && GUIDE.banners && GUIDE.banners.list) || [];
+  const by = {};
+  list.forEach(b => {
+    if (!b.cur || !b.to) return;
+    const a = b.id ? DB.byId[b.id] : null;
+    if (a && a.rarity !== 'S') return;          // A-ранги идут прицепом, они не событие
+    const p = b.id ? prog[b.id] : null;
+    (by[b.to] || (by[b.to] = [])).push({ n: a ? a.ru : b.name, have: !!(p && p.have) });
+  });
+  const out = [];
+  Object.keys(by).forEach(to => {
+    const need = by[to].filter(x => !x.have);
+    if (!need.length) return;                   // всех уже выбил
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(to);
+    if (!m) return;
+    const end = new Date(+m[1], +m[2] - 1, +m[3], 12, 0, 0).getTime();
+    const names = need.slice(0, 5).map(x => x.n).join(', ') + (need.length > 5 ? ' и др.' : '');
+    out.push({
+      id: 'zzzban:' + to, to: to, end: end,
+      at: end - BAN_DAYS * 86400000,
+      title: '🎟 Баннер закрывается ' + banDate(to),
+      body: names + ' — осталось ' + BAN_DAYS + ' ' + plural(BAN_DAYS, 'день', 'дня', 'дней'),
+      names: names
+    });
+  });
+  return out.sort((a, b) => a.end - b.end);
+}
+// ставим задания воркеру. Планируем только то, чего он ещё не знает: ключ
+// сохранённого задания — id плюс время, так что перепланируем лишь при сдвиге даты
+function banRemSync(force) {
+  if (!banRemOn) return;
+  const key = pushKeyGet(false);
+  if (!key) return;
+  const now = Date.now(), plan = banRemPlan(), live = {};
+  plan.forEach(r => {
+    if (r.end <= now) return;                              // фаза уже закрыта
+    // если три дня до конца прошли, а баннер ещё идёт — напомним один раз сейчас
+    const at = r.at > now + 60000 ? r.at : now + 120000;
+    live[r.id] = 1;
+    if (banSent[r.id] === r.at && !force) return;
+    postPush('/schedule', { pushKey: key, taskId: r.id, at: at,
+      title: r.title, body: r.body, url: 'https://alextask.ru/zzz.html' }).catch(() => {});
+    banSent[r.id] = r.at;
+  });
+  // отменяем то, что стало неактуальным: агента выбил или фаза кончилась
+  Object.keys(banSent).forEach(id => {
+    if (live[id]) return;
+    postPush('/cancel', { pushKey: key, taskId: id }).catch(() => {});
+    delete banSent[id];
+  });
+  banSentSave();
+}
+function banRemOff() {
+  const key = pushKeyGet(false);
+  Object.keys(banSent).forEach(id => {
+    if (key) postPush('/cancel', { pushKey: key, taskId: id }).catch(() => {});
+    delete banSent[id];
+  });
+  banRemOn = false;
+  localStorage.setItem(LS_BANREM, '');
+  banSentSave();
+}
+async function banRemToggle() {
+  const msg = s => { if ($('banRemMsg')) $('banRemMsg').textContent = s; };
+  if (banRemOn) { banRemOff(); drawBanners(); return; }
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      msg('Этот браузер не умеет push.'); return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { msg('Уведомления запрещены в настройках браузера.'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe(
+      { userVisibleOnly: true, applicationServerKey: u8FromB64(VAPID_PUB) });
+    const key = pushKeyGet(true);
+    const r = await postPush('/subscribe', { subscription: sub.toJSON(), pushKey: key });
+    if (!r.ok) { msg('Воркер ответил ' + r.status + ' — проверь привязку KV = PUSH.'); return; }
+    banRemOn = true;
+    localStorage.setItem(LS_BANREM, '1');
+    banSent = {};
+    banRemSync(true);
+    drawBanners();
+  } catch (e) { msg('Не вышло: ' + ((e && e.message) || e)); }
+}
+// текст под кнопкой: что именно и когда придёт
+function banRemText() {
+  if (!banRemOn) return 'Push за ' + BAN_DAYS + ' дня до закрытия фазы — приходит и при закрытом сайте.';
+  const plan = banRemPlan().filter(r => r.end > Date.now());
+  if (!plan.length) return 'Напоминать сейчас не о чем: всех с текущих баннеров уже выбил.';
+  return plan.map(r => banDate(new Date(r.at).toISOString().slice(0, 10)) +
+    ' → ' + r.names).join(' · ');
+}
+
 function drawBanners() {
   const box = $('bannerBox');
   if (!box) return;
@@ -5972,6 +6115,12 @@ function drawBanners() {
   const sect = (t, list) => !list.length ? '' :
     '<div class="cap2" style="margin:0 0 6px">' + t + '</div>' + list.map(banRow).join('');
   box.innerHTML =
+    '<div class="ban-rem">' +
+      '<button id="banRemBtn" class="' + (banRemOn ? 'on' : '') + '">' +
+        (banRemOn ? '🔔 Напоминание включено' : '🔕 Напомнить за ' + BAN_DAYS + ' дня') +
+      '</button>' +
+      '<span id="banRemMsg">' + esc(banRemText()) + '</span>' +
+    '</div>' +
     sect('СЕЙЧАС', cur) +
     (next.length ? '<div class="cap2" style="margin:14px 0 6px">ДАЛЬШЕ</div>' +
       next.map(banRow).join('') : '') +
@@ -5979,6 +6128,7 @@ function drawBanners() {
       '" target="_blank" rel="noopener">prydwen.gg</a>' +
       (bn.updated ? ', обновлено ' + esc(banDate(bn.updated) + '.' + bn.updated.slice(0, 4)) : '') +
       '. Сроки указаны для европейского сервера и могут сдвинуться.</div>';
+  if ($('banRemBtn')) $('banRemBtn').onclick = banRemToggle;
 }
 
 
