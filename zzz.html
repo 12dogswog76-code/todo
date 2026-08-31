@@ -1450,7 +1450,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v139';
+const APP_VER = 'v140';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2545,6 +2545,26 @@ function pctOf(id) {
   return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length * 100);
 }
 function isDone(id) { return pctOf(id) >= 100; }
+
+// Чего именно не хватает до цели. «Готовность 84%» само по себе не говорит,
+// за что браться, — а «навыки 43/60» говорит.
+function pctGaps(id) {
+  const p = prog[id];
+  if (!p || !p.have) return [];
+  const t = tgtOf(p);
+  const out = [];
+  if (t.lvl && (p.lvl || 0) < t.lvl)  out.push('уровень ' + (p.lvl || 0) + '/' + t.lvl);
+  if (t.core && (p.core || 0) < t.core) out.push('ядро ' + (p.core || 0) + '/' + t.core);
+  if (t.w && ((p.w && p.w.lvl) || 0) < t.w)
+    out.push('оружие ' + ((p.w && p.w.lvl) || 0) + '/' + t.w);
+  let s = 0, n = 0;
+  SKILL_IDX.forEach(o => {
+    if (!t.sk[o.i]) return;
+    s += Math.min(t.sk[o.i], (p.sk && p.sk[o.i]) || 1); n += t.sk[o.i];
+  });
+  if (n && s < n) out.push('навыки ' + s + '/' + n);
+  return out;
+}
 
 // ─────────────── отрисовка ───────────────
 function renderFilters() {
@@ -5824,7 +5844,7 @@ function todoList() {
     const iss = buildIssues(a, p);
     // всё доделано и замечаний нет — агент в списке не нужен
     if (pc >= 100 && !iss.length) return;
-    out.push({ a: a, pc: pc, tier: t.tier, iss: iss.length,
+    out.push({ a: a, pc: pc, tier: t.tier, iss: iss.length, gaps: pctGaps(a.id),
                hard: iss.filter(x => x.lvl === 'hard').length });
   });
   out.sort((x, y) => (TIER_RANK[x.tier] - TIER_RANK[y.tier]) || (x.pc - y.pc));
@@ -5837,8 +5857,10 @@ function drawTodo() {
   if (!list.length) { box.innerHTML = ''; return; }
   const rows = list.slice(0, TODO_MAX).map(x => {
     const pic = x.a.icon ? imgUrl('agents', x.a.icon) : '';
+    // Пишем не «готовность 84%», а чего конкретно не хватает: иначе непонятно,
+    // за что браться — докачать навыки или перебрать диски.
     const why = [];
-    if (x.pc < 100) why.push('готовность ' + x.pc + '%');
+    if (x.gaps.length) why.push(x.gaps.join(', '));
     if (x.iss) why.push(x.iss + ' ' + plural(x.iss, 'замечание', 'замечания', 'замечаний'));
     return '<div class="td-r" data-id="' + x.a.id + '">' +
       (pic ? img(pic, 'td-ic', x.a.ru, true) : '<span class="td-ic"></span>') +
