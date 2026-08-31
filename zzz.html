@@ -624,6 +624,37 @@
     padding:6px 9px;margin-top:8px;font-size:12px;display:flex;align-items:center;gap:8px}
   .infobox .mainst em{margin-left:auto;font-style:normal;color:var(--gold);font-weight:800}
 
+  /* ── баннеры ── */
+  .ban{display:flex;align-items:center;gap:11px;padding:8px 11px;margin-bottom:6px;
+    border-radius:12px;border:1px solid var(--line);
+    background:linear-gradient(120deg,var(--pan2),var(--pan));box-shadow:var(--glass)}
+  .ban.now{border-color:#4ade8040;background:linear-gradient(120deg,#4ade800f,var(--pan))}
+  .ban.soon{border-style:dashed}
+  .ban-ic{width:44px;height:44px;flex:none;border-radius:10px;object-fit:cover;
+    object-position:top center;background:#0b0d11}
+  .ban-none{display:grid;place-items:center;color:var(--tx3);font-size:20px;font-weight:800;
+    border:1px dashed var(--line)}
+  .ban-t{min-width:0;flex:1;display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+  .ban-t b{font-size:13.5px}
+  .ban-t i{font-style:normal;font-size:11px;color:var(--tx3);flex-basis:100%}
+  .ban-t u{text-decoration:none;font-size:10.5px;color:var(--tx2);flex-basis:100%;
+    overflow-wrap:anywhere}
+  .ban-k{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);
+    border:1px solid var(--line);border-radius:20px;padding:1px 7px}
+  .ban-k.new{color:var(--warn);border-color:#fbbf2455;background:#fbbf2414}
+  .ban-tier{font-size:10px;font-weight:800;color:var(--gold)}
+  .ban-have{font-size:9.5px;color:var(--acc);border:1px solid #4ade8044;
+    border-radius:20px;padding:1px 7px}
+  .ban-wait{font-style:normal;font-size:10px;color:var(--tx3);opacity:.8;flex-basis:100%}
+  .ban-when{margin-left:auto;text-align:right;flex:none;font-size:11px;color:var(--tx2);
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ban-when i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:2px}
+  .ban.now .ban-when i{color:var(--acc)}
+  @media(max-width:760px){
+    .ban{gap:9px;padding:8px 9px}
+    .ban-when{margin-left:0;flex-basis:100%;text-align:left}
+  }
+
   /* ── вкладка «Гайд»: сборка с prydwen ── */
   .ggoals{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:6px}
   .gg{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:11px;
@@ -1067,6 +1098,7 @@
     <button class="tbtn" id="enkaBtn">⟳ Импорт из игры</button>
     <button class="tbtn" id="cloudBtn">☁ Облако и данные</button>
     <button class="tbtn" id="modBtn">📊 Модификаторы</button>
+    <button class="tbtn" id="bannerBtn" title="Кто сейчас на баннерах и кто дальше">🎟 Баннеры</button>
     <button class="tbtn" id="helpBtn" title="Как всё устроено">Справка</button>
   </div>
 
@@ -1231,6 +1263,8 @@
     <div id="modBox"></div>
   </div>
 
+  <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
+
   <div class="panel" id="helpPanel">
     <div class="hint hlp" style="margin-top:0">
       <b>Трекер прокачки агентов Zenless Zone Zero.</b> Данные лежат в браузере,
@@ -1298,7 +1332,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v124';
+const APP_VER = 'v125';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5385,20 +5419,92 @@ $('rebuildDb').onclick = async () => {
 function togglePanel(id) {
   const zone = $('panelZone');
   if (zone && $(id) && $(id).parentNode !== zone) zone.appendChild($(id));
-  ['enkaPanel', 'cloudPanel', 'modPanel', 'helpPanel'].forEach(p => {
+  ['enkaPanel', 'cloudPanel', 'modPanel', 'bannerPanel', 'helpPanel'].forEach(p => {
     if (p !== id) $(p).classList.remove('open');
   });
-  ['enkaBtn', 'cloudBtn', 'modBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
+  ['enkaBtn', 'cloudBtn', 'modBtn', 'bannerBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
   const wasOpen = $(id).classList.contains('open');
   $(id).classList.toggle('open', !wasOpen);
   const map = { enkaPanel: 'enkaBtn', cloudPanel: 'cloudBtn', modPanel: 'modBtn',
-                helpPanel: 'helpBtn' };
+                bannerPanel: 'bannerBtn', helpPanel: 'helpBtn' };
   if (!wasOpen) $(map[id]).classList.add('on');
 }
 $('enkaBtn').onclick  = () => { togglePanel('enkaPanel'); refreshEnkaLinks(); };
 $('cloudBtn').onclick = () => { togglePanel('cloudPanel'); cloudUI(); };
 $('modBtn').onclick   = () => { togglePanel('modPanel'); drawModTable(); };
+$('bannerBtn').onclick = () => { togglePanel('bannerPanel'); drawBanners(); };
 $('helpBtn').onclick  = () => togglePanel('helpPanel');
+
+// ─────────────── баннеры ───────────────
+// Список берём из zzz-guide.json, собирается вместе со сборками с prydwen.
+// Портрет показываем свой, из базы. У только что анонсированных агентов картинки
+// нет нигде, кроме баннерного арта на чужом сайте, — вместо неё ставим заглушку
+// и честно пишем, что данные появятся, когда агент выйдет в игру.
+const BAN_KIND = { new: 'новый', rerun: 'повтор' };
+function banDate(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+  if (!m) return s || '';
+  return m[3] + '.' + m[2];
+}
+// сколько дней осталось до даты, по локальному дню
+function daysLeft(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+  if (!m) return null;
+  const end = new Date(+m[1], +m[2] - 1, +m[3]);
+  const now = new Date();
+  return Math.round((end - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+}
+function banRow(b) {
+  const a = b.id ? DB.byId[b.id] : null;
+  const p = b.id ? prog[b.id] : null;
+  const pic = a ? agentPic(a, 'card') : '';
+  const left = b.cur ? daysLeft(b.to) : daysLeft(b.from);
+  const when = banDate(b.from) + ' – ' + banDate(b.to);
+  return '<div class="ban' + (b.cur ? ' now' : '') + (a ? '' : ' soon') + '">' +
+    (pic ? img(pic, 'ban-ic', a.ru, true)
+         : '<span class="ban-ic ban-none" title="Агента ещё нет в игре">?</span>') +
+    '<div class="ban-t">' +
+      '<b>' + esc(a ? a.ru : b.name) + '</b>' +
+      '<span class="ban-k' + (b.kind === 'new' ? ' new' : '') + '">' + (BAN_KIND[b.kind] || '') + '</span>' +
+      (b.tier ? '<span class="ban-tier">' + esc(b.tier) + '</span>' : '') +
+      (p && p.have ? '<span class="ban-have">есть</span>' : '') +
+      '<i>' + esc([b.role, b.el].filter(Boolean).join(' · ')) + '</i>' +
+      (b.eng ? '<u>' + esc(b.eng) + '</u>' : '') +
+      (a ? '' : '<em class="ban-wait">данные появятся, когда агент выйдет в игру</em>') +
+    '</div>' +
+    '<div class="ban-when"><span>' + esc(when) + '</span>' +
+      (left != null && left >= 0
+        ? '<i>' + (b.cur ? 'ещё ' : 'через ') + left + ' ' + plural(left, 'день', 'дня', 'дней') + '</i>'
+        : '') +
+    '</div></div>';
+}
+function plural(n, one, few, many) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  return b === 1 ? one : many;
+}
+function drawBanners() {
+  const box = $('bannerBox');
+  if (!box) return;
+  const bn = (GUIDE && GUIDE.banners) || null;
+  if (!bn || !(bn.list || []).length) {
+    box.innerHTML = '<div class="hint" style="margin-top:0">Список баннеров пока не собран. ' +
+      'Он приезжает вместе со сборками — прогони <b>pryd.js</b> в консоли на prydwen.gg.</div>';
+    return;
+  }
+  const cur = bn.list.filter(b => b.cur), next = bn.list.filter(b => !b.cur);
+  const sect = (t, list) => !list.length ? '' :
+    '<div class="cap2" style="margin:0 0 6px">' + t + '</div>' + list.map(banRow).join('');
+  box.innerHTML =
+    sect('СЕЙЧАС', cur) +
+    (next.length ? '<div class="cap2" style="margin:14px 0 6px">ДАЛЬШЕ</div>' +
+      next.map(banRow).join('') : '') +
+    '<div class="hint">Даты и состав — с <a href="' + esc(bn.src || 'https://www.prydwen.gg/zenless/banners') +
+      '" target="_blank" rel="noopener">prydwen.gg</a>' +
+      (bn.updated ? ', обновлено ' + esc(banDate(bn.updated) + '.' + bn.updated.slice(0, 4)) : '') +
+      '. Сроки указаны для европейского сервера и могут сдвинуться.</div>';
+}
 
 
 
