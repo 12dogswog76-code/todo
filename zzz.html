@@ -628,6 +628,34 @@
     padding:6px 9px;margin-top:8px;font-size:12px;display:flex;align-items:center;gap:8px}
   .infobox .mainst em{margin-left:auto;font-style:normal;color:var(--gold);font-weight:800}
 
+  /* ── кого качать дальше ── */
+  .todo{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));box-shadow:var(--glass)}
+  .todo>summary{list-style:none;cursor:pointer;padding:10px 13px;display:flex;
+    align-items:center;gap:9px;user-select:none;flex-wrap:wrap}
+  .todo>summary::-webkit-details-marker{display:none}
+  .todo>summary::before{content:'▸';color:var(--tx3);transition:.15s;font-size:11px}
+  .todo[open]>summary::before{transform:rotate(90deg)}
+  .todo>summary b{font-size:13px}
+  .todo>summary i{font-style:normal;font-size:10.5px;color:var(--tx3)}
+  .td-n{font-size:10px;color:var(--gold);border:1px solid #ffd54a44;border-radius:20px;
+    padding:1px 8px;background:#ffd54a12}
+  .td-r{display:flex;align-items:center;gap:10px;padding:7px 13px;cursor:pointer;
+    border-top:1px solid #ffffff0d;transition:background .12s}
+  .td-r:hover{background:#ffffff08}
+  .td-ic{width:30px;height:30px;flex:none;border-radius:50%;object-fit:cover;
+    object-position:top center}
+  .td-r b{font-size:12.5px;flex:0 0 auto}
+  .td-t{flex:none;display:flex;align-items:center}
+  /* класс, а не тег: внутри значка ранга тоже есть <i> с буквой */
+  .td-w{font-size:11px;color:var(--tx3);margin-left:auto;text-align:right}
+  .td-h{font-style:normal;font-size:10px;font-weight:800;color:#e5484d;flex:none;
+    border:1px solid #e5484d44;border-radius:20px;padding:1px 7px;background:#e5484d14}
+  @media(max-width:760px){
+    .td-r{flex-wrap:wrap}
+    .td-w{margin-left:0;flex-basis:100%;text-align:left;padding-left:40px}
+  }
+
   /* ── сверка сборки с гайдом ── */
   .iss{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;
     background:linear-gradient(120deg,var(--pan2),var(--pan))}
@@ -1196,6 +1224,7 @@
 
   <div id="main" style="display:none">
     <div class="sum" id="summary"></div>
+    <div id="todoBox"></div>
     <div class="fil" id="filters"></div>
     <div class="grid" id="grid"></div>
     <div class="empty" id="emptyMsg" style="display:none">Под эти фильтры никто не подходит</div>
@@ -1421,7 +1450,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v137';
+const APP_VER = 'v139';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2642,6 +2671,7 @@ function render() {
     };
   });
   renderSummary();
+  drawTodo();
 }
 
 function imgUrl(kind, v) {
@@ -5773,6 +5803,62 @@ function plural(n, one, few, many) {
   if (b > 1 && b < 5) return few;
   return b === 1 ? one : many;
 }
+// ─────────────── кого качать дальше ───────────────
+// Пересечение тир-листа и собственной готовности: сильные по мнению prydwen,
+// но недоделанные у тебя. Сорок с лишним агентов глазами не окинуть, а вопрос
+// «кем заняться сегодня» возникает каждый раз.
+//
+// Порядок: сначала тир, внутри тира — чем хуже готовность, тем выше. Так наверх
+// попадает то, что даёт наибольшую отдачу за вложенные материалы.
+const TODO_MAX = 8;
+function todoList() {
+  const src = tierSrc();
+  if (!src) return [];
+  const out = [];
+  DB.agents.forEach(a => {
+    const p = prog[a.id];
+    if (!p || !p.have) return;
+    const t = tierOf(a.id);
+    if (!t || TIER_RANK[t.tier] > TIER_RANK['A']) return;   // ниже A не зовём
+    const pc = pctOf(a.id);
+    const iss = buildIssues(a, p);
+    // всё доделано и замечаний нет — агент в списке не нужен
+    if (pc >= 100 && !iss.length) return;
+    out.push({ a: a, pc: pc, tier: t.tier, iss: iss.length,
+               hard: iss.filter(x => x.lvl === 'hard').length });
+  });
+  out.sort((x, y) => (TIER_RANK[x.tier] - TIER_RANK[y.tier]) || (x.pc - y.pc));
+  return out;
+}
+function drawTodo() {
+  const box = $('todoBox');
+  if (!box) return;
+  const list = todoList();
+  if (!list.length) { box.innerHTML = ''; return; }
+  const rows = list.slice(0, TODO_MAX).map(x => {
+    const pic = x.a.icon ? imgUrl('agents', x.a.icon) : '';
+    const why = [];
+    if (x.pc < 100) why.push('готовность ' + x.pc + '%');
+    if (x.iss) why.push(x.iss + ' ' + plural(x.iss, 'замечание', 'замечания', 'замечаний'));
+    return '<div class="td-r" data-id="' + x.a.id + '">' +
+      (pic ? img(pic, 'td-ic', x.a.ru, true) : '<span class="td-ic"></span>') +
+      '<b>' + esc(x.a.ru) + '</b>' +
+      '<span class="td-t">' + rankBadge(x.tier, 'sm') + '</span>' +
+      '<span class="td-w">' + esc(why.join(' · ')) + '</span>' +
+      (x.hard ? '<em class="td-h">' + x.hard + '</em>' : '') +
+      '</div>';
+  }).join('');
+  box.innerHTML = '<details class="todo"' + (ui.todoOpen ? ' open' : '') + '><summary>' +
+    '<b>Кого качать дальше</b><span class="td-n">' + list.length + '</span>' +
+    '<i>сильные по тир-листу, но недоделанные</i></summary>' + rows +
+    (list.length > TODO_MAX
+      ? '<div class="hint" style="padding:0 12px 10px">и ещё ' + (list.length - TODO_MAX) + '</div>'
+      : '') + '</details>';
+  box.querySelectorAll('.td-r').forEach(r => r.onclick = () => openAgent(+r.dataset.id));
+  const dt = box.querySelector('details.todo');
+  if (dt) dt.ontoggle = () => { if (ui.todoOpen !== dt.open) { ui.todoOpen = dt.open; save(); } };
+}
+
 // ─────────────── сверка сборки с гайдом ───────────────
 // Всё, что трекер уже умеет проверять поодиночке, собрано в один список.
 // Проверяем только то, в чём уверены: главные характеристики дисков 4–6,
