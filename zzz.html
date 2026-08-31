@@ -642,12 +642,18 @@
   .mt-h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
   .mt-h b{font-size:12px}
   .mt-h span{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px}
-  .mt-c{display:flex;align-items:stretch;gap:6px}
+  .mt-c{display:flex;align-items:stretch;gap:6px;margin-bottom:4px}
+  .mt-lab{flex:0 0 118px;font-style:normal;font-size:9.5px;color:var(--tx3);
+    text-transform:uppercase;letter-spacing:.4px;align-self:center;text-align:right}
   .mt-c code{flex:1;min-width:0;background:#0b0d11;border:1px solid var(--line);
     border-radius:8px;padding:7px 10px;font-family:var(--mono);font-size:11px;
     color:var(--tx2);overflow-x:auto;white-space:nowrap}
   .mt-copy{flex:none;white-space:nowrap}
-  @media(max-width:760px){ .mt-c{flex-wrap:wrap} .mt-c code{flex-basis:100%} }
+  @media(max-width:760px){
+    .mt-c{flex-wrap:wrap}
+    .mt-lab{flex-basis:100%;text-align:left}
+    .mt-c code{flex-basis:100%}
+  }
 
   /* ── баннеры ── */
   .ban{display:flex;align-items:center;gap:11px;padding:8px 11px;margin-bottom:6px;
@@ -1368,7 +1374,8 @@
     </div>
   </div>
 
-  <div class="foot">
+  <!-- ссылки на соседние разделы — личные, гостям трекера они ни к чему -->
+  <div class="foot" id="foot" style="display:none">
     <a href="./">задачи</a> · <a href="money.html">деньги</a>
   </div>
 </div>
@@ -1379,7 +1386,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v131';
+const APP_VER = 'v132';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2385,6 +2392,7 @@ function boot() {
   if ($('appVer')) $('appVer').textContent = APP_VER;
   showWorkerVer();
   setNick();
+  ownerUI();
   renderFilters();
   render();
   if (sync) setTimeout(() => cloudSync(true), 250);
@@ -4925,6 +4933,7 @@ $('hoyoGo').onclick = async () => {
   const msg = $('enkaMsg');
   if (!uid) { msg.innerHTML = '<b>Впиши UID.</b> Он виден в игре внизу экрана профиля.'; return; }
   localStorage.setItem(LS + '_uid', uid);
+  ownerUI();   // UID мог появиться только что — показываем личные блоки сразу
   msg.textContent = 'Гружу весь аккаунт из хроники…';
 
   let data = null, lastErr = '';
@@ -5032,6 +5041,7 @@ $('enkaGo').onclick = async () => {
   const uid = $('uidInput').value.trim().replace(/\D/g, '');
   if (!uid) { $('enkaMsg').innerHTML = '<b>Впиши UID.</b> Он виден в игре внизу экрана профиля.'; return; }
   localStorage.setItem(LS + '_uid', uid);
+  ownerUI();   // UID мог появиться только что — показываем личные блоки сразу
   $('enkaMsg').textContent = 'Гружу профиль…';
   const api = enkaApiUrl(uid);
 
@@ -5523,14 +5533,32 @@ function ageDays(s) {
   const d = new Date(+m[1], +m[2] - 1, +m[3]);
   return Math.floor((Date.now() - d) / 86400000);
 }
-function maintCmd(title, why, cmd, note) {
+// Одна строка с командой и кнопкой «копировать». Меток может быть несколько:
+// у сбора с prydwen нужен и запуск в консоли браузера, и путь, куда сохранить.
+function maintLine(cmd, lab) {
+  return '<div class="mt-c">' +
+    (lab ? '<em class="mt-lab">' + lab + '</em>' : '') +
+    '<code>' + esc(cmd) + '</code>' +
+    '<button class="ghost2 mt-copy" data-cmd="' + esc(cmd) + '">копировать</button></div>';
+}
+function maintCmd(title, why, cmds, note) {
+  const list = Array.isArray(cmds) ? cmds : [[cmds, '']];
   return '<div class="mt-row">' +
     '<div class="mt-h"><b>' + title + '</b>' + (why ? '<span>' + why + '</span>' : '') + '</div>' +
-    '<div class="mt-c"><code>' + esc(cmd) + '</code>' +
-      '<button class="ghost2 mt-copy" data-cmd="' + esc(cmd) + '">копировать</button></div>' +
+    list.map(c => maintLine(c[0], c[1])).join('') +
     (note ? '<div class="hint" style="margin:4px 0 0">' + note + '</div>' : '') +
     '</div>';
 }
+// Личные части интерфейса. Зовётся при запуске и после импорта: UID может
+// появиться уже по ходу дела, и тогда блоки должны показаться без перезагрузки.
+function ownerUI() {
+  const on = isOwner();
+  const f = $('foot');
+  if (f) f.style.display = on ? '' : 'none';
+  const m = $('maint');
+  if (m && !on) m.style.display = 'none';
+}
+
 function drawMaint() {
   const box = $('maint');
   if (!box) return;
@@ -5566,30 +5594,34 @@ function drawMaint() {
     h += '<div class="mt-ok">Всё свежее, делать нечего.</div>';
   }
 
+  // Порядок важен: сначала данные, потом сборка справочника, в конце выкладка.
+  // Выкладка идёт последней, потому что забирает всё, что положили шаги до неё.
+  let n = 0;
+
   // 1. Prydwen — только руками: сайт закрыт проверкой Cloudflare
-  h += maintCmd('1. Сборки, тир-лист и баннеры', 'вручную, ~5 мин',
-    "fetch('https://alextask.ru/pryd.js').then(r=>r.text()).then(eval)",
+  h += maintCmd(++n + '. Сборки, тир-лист и баннеры', 'вручную, ~5 мин',
+    [["fetch('https://alextask.ru/pryd.js').then(r=>r.text()).then(eval)", 'в консоли браузера'],
+     [SITE_DIR + '\\zzz-guide.json', 'сохранить сюда']],
     'Открой <a href="https://www.prydwen.gg/zenless/tier-list" target="_blank" rel="noopener">' +
-    'prydwen.gg</a>, нажми <b>F12</b> → вкладка <b>Console</b>, вставь строку выше и жми Enter. ' +
-    'Через пять минут результат сам скопируется в буфер — сохрани его как ' +
-    '<b>zzz-guide.json</b> в папку сайта.');
+    'prydwen.gg</a>, нажми <b>F12</b> → вкладка <b>Console</b>, вставь первую строку и жми Enter. ' +
+    'Через пять минут результат сам скопируется в буфер — сохрани его по пути из второй строки, ' +
+    'заменив старый файл.');
 
   if (missing.length) {
-    h += maintCmd('2. Справочник и картинки нового агента', 'нужно сейчас',
+    h += maintCmd(++n + '. Справочник и картинки нового агента', 'нужно сейчас',
       'cd "' + SITE_DIR + '"; .\\build-zzz-db.ps1',
-      'Заберёт с Enka нового агента, его портреты и значки.');
+      'Заберёт с Enka нового агента, его портреты и значки. Пока агент не вышел в игру, ' +
+      'данных о нём нет и в Enka — запускать раньше смысла нет.');
   }
 
-  h += maintCmd((missing.length ? '3' : '2') + '. Всё остальное и выкладка', 'само',
+  h += maintCmd(++n + '. Досбор и выкладка', 'одной командой',
     'cd "' + SITE_DIR + '"; .\\go.ps1',
-    'Значки интерфейса, досбор описаний с gachabase и игровых дампов, запасной ' +
-    'тир-лист, потом выкладка на сайт.');
+    'Значки интерфейса, описания комплектов и движков с gachabase и игровых дампов, ' +
+    'запасной тир-лист — и сразу выкладка на сайт. После неё обновлять больше нечего.');
 
-  h += maintCmd((missing.length ? '4' : '3') + '. Только выложить', 'если правился лишь код',
-    'cd "' + SITE_DIR + '"; .\\go.ps1 -OnlyDeploy -SkipWorkflows', '');
-
-  h += maintCmd((missing.length ? '5' : '4') + '. Копия боевых файлов', 'задачи и деньги',
-    'cd "' + SITE_DIR + '"; .\\бэкап-боевых.ps1', '');
+  h += maintCmd(++n + '. Только выложить', 'если правился лишь код',
+    'cd "' + SITE_DIR + '"; .\\go.ps1 -OnlyDeploy -SkipWorkflows',
+    'Пропускает досбор. Годится, когда данные уже собраны, а изменился сам трекер.');
 
   h += '</div>';
   box.innerHTML = h;
