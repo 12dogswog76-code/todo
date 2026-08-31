@@ -770,6 +770,46 @@
     .ban-when i{display:inline;margin-left:8px}
   }
 
+  /* ── вкладка «Команды» ── */
+  .tm-list{display:flex;flex-direction:column;gap:5px}
+  .tm-row{display:flex;align-items:center;gap:10px;padding:7px 11px;border-radius:11px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  /* состав, который собирается целиком, подсвечиваем: это цель, а не мечта */
+  .tm-row.full{border-color:#4ade8044;background:linear-gradient(120deg,#4ade800d,var(--pan))}
+  .tm-rank{flex:none;width:34px;font-size:11px;font-weight:800;color:var(--tx3);
+    font-variant-numeric:tabular-nums}
+  .tm-row.full .tm-rank{color:var(--acc)}
+  .tm-ags{display:flex;align-items:center;gap:9px;flex:1 1 210px;min-width:0;flex-wrap:wrap}
+  .tm-a{display:flex;align-items:center;gap:5px;min-width:0}
+  .tm-a i{font-style:normal;font-size:10.5px;color:var(--tx2);white-space:nowrap}
+  /* чужих не прячем совсем: важно видеть, кого именно не хватает */
+  .tm-a.off{opacity:.42}
+  .tm-a.off i{text-decoration:line-through;text-decoration-thickness:1px}
+  .tm-ic{width:26px;height:26px;flex:none;border-radius:50%;object-fit:cover}
+  .tm-none{display:grid;place-items:center;background:var(--pan2);color:var(--tx3);
+    font-size:12px;font-weight:800}
+  .tm-boo{flex:0 0 150px;min-width:0;font-size:10.5px;color:var(--tx2);line-height:1.35}
+  .tm-boo-n{display:block;font-weight:700;color:var(--gold);overflow-wrap:anywhere}
+  .tm-boo i{font-style:normal;font-size:9.5px;color:var(--tx3)}
+  .tm-num{flex:0 0 64px;text-align:right;font-size:11.5px;color:var(--tx2);
+    font-variant-numeric:tabular-nums}
+  .tm-num i{display:block;font-style:normal;font-size:9.5px;color:var(--tx3);margin-top:1px}
+  .tm-row.full .tm-num i{color:var(--acc)}
+  .tm-fac{font-size:11px;color:var(--tx2);margin:0 0 10px;line-height:1.6}
+  .tm-fac i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:2px}
+  .tm-has{color:var(--acc)}
+  .tm-no{color:var(--tx3);opacity:.75}
+  @media(max-width:760px){
+    .tm-row{flex-wrap:wrap;gap:7px}
+    .tm-ags{flex:1 1 100%;order:1}
+    .tm-rank{order:0}
+    .tm-num{order:0;flex:1;text-align:right}
+    /* бангбу уводим под состав: в три колонки на телефоне не влезает */
+    .tm-boo{order:2;flex:1 1 100%;padding-top:5px;border-top:1px solid var(--line)}
+    .tm-boo-n{display:inline;margin-right:6px}
+    .tm-a i{display:none}
+  }
+
   /* ── вкладка «Гайд»: сборка с prydwen ── */
   .ggoals{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:6px}
   .gg{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:11px;
@@ -1456,7 +1496,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v142';
+const APP_VER = 'v144';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3614,6 +3654,164 @@ function guideHtml(a, p, T) {
   return h;
 }
 
+// ─────────────── вкладка «Команды» ───────────────
+// Здесь не чьи-то советы, а срез по реальным прохождениям эндгейма с prydwen:
+// какие составы люди действительно берут в Оборону Шиюй и Deadly Assault, как
+// часто и с каким результатом. Своих агентов подсвечиваем, чужих гасим — сразу
+// видно, до какого состава тебе не хватает одного человека.
+function teamsOf(id) {
+  const g = guideOf(id);
+  const t = g && g.teams;
+  if (!t) return null;
+  return (t.shiyu || []).length || (t.da || []).length ? t : null;
+}
+// фракция агента лежит в гайде: в игровых данных её нет
+function factionOf(id) {
+  const g = (GUIDE && GUIDE.agents && GUIDE.agents[id]) || null;
+  return (g && g.faction) || '';
+}
+// Бангбу под состав. У каждого в пассивке условие: двое одной стихии, двое
+// одной фракции, хотя бы один нужной специализации или конкретный агент.
+// Проверяем состав по всем четырём видам и оставляем то, что реально включится.
+const BOO_ELEM = { physical:'Physical', fire:'Fire', ice:'Ice', electric:'Electric',
+                   ether:'Ether', wind:'Wind', lumiflux:'Lumiflux', auricink:'Auric Ink' };
+const BOO_PROF = { attack:'Attack', stun:'Stun', anomaly:'Anomaly',
+                   support:'Support', defense:'Defense', rupture:'Rupture' };
+function facKey(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function bangbooFor(ids) {
+  const list = (GUIDE && GUIDE.bangboo && GUIDE.bangboo.list) || [];
+  if (!list.length || !ids.length) return [];
+  const ags = ids.map(i => DB.byId[i]).filter(Boolean);
+  const elems = {}, profs = {}, facs = {}, names = {};
+  ags.forEach(a => {
+    const e = BOO_ELEM[(a.element || [])[0]] || '';
+    if (e) elems[e] = (elems[e] || 0) + 1;
+    const pr = BOO_PROF[a.prof] || '';
+    if (pr) profs[pr] = (profs[pr] || 0) + 1;
+    const f = factionOf(a.id);
+    if (f && f !== 'Unknown') facs[f] = (facs[f] || 0) + 1;
+    names[(a.en || '').toLowerCase()] = 1;
+  });
+  const out = [];
+  list.forEach(b => {
+    const p = b.p || '';
+    let why = '', rank = 3;
+    // «When <Имя> is in the squad» — самый узкий и самый сильный случай
+    const nm = p.match(/^When ([A-Z][A-Za-z'\- ]{2,20}) is in the squad/);
+    if (nm && names[nm[1].toLowerCase()]) { why = nm[1]; rank = 0; }
+    if (!why) {
+      // «2 or more X Attribute characters» / «2 or more <фракция> characters»
+      const two = p.match(/(?:2|two|at least 2)\s+or\s+more\s+(.+?)\s+(?:character|characters)/i)
+               || p.match(/at least 2\s+(.+?)\s+(?:character|characters)/i);
+      if (two) {
+        const what = two[1].replace(/\s+Attribute$/i, '').trim();
+        if (elems[what] >= 2) { why = 'двое со стихией ' + elemRu(what); rank = 1; }
+        else {
+          // Названия фракций у бангбу и на странице агента пишутся по-разному:
+          // «Hollow Special Operations Section 6» против просто «Section 6»,
+          // «Victoria Housekeeping Co.» против «Victoria Housekeeping».
+          // Поэтому сверяем по вхождению, а не по точному совпадению.
+          const key = facKey(what);
+          const hit = Object.keys(facs).filter(f => {
+            const k = facKey(f);
+            return facs[f] >= 2 && (k === key || k.indexOf(key) >= 0 || key.indexOf(k) >= 0);
+          })[0];
+          if (hit) { why = 'двое из ' + hit; rank = 1; }
+        }
+      }
+    }
+    if (!why) {
+      // «at least 1 Support character», иногда «Attack or Anomaly»
+      const one = p.match(/at least (?:1|one)\s+(.+?)(?:-type)?\s+character/i);
+      if (one) {
+        const parts = one[1].split(/\s+or\s+/).map(x => x.trim());
+        const hit = parts.filter(x => profs[x]);
+        if (hit.length) { why = 'в отряде ' + profRu(hit[0]); rank = 2; }
+      }
+    }
+    if (why) out.push({ b: b, why: why, rank: rank, dmg: /DMG|Anomaly Buildup|Daze/i.test(p) ? 1 : 0 });
+  });
+  // Сначала точные попадания (конкретный агент → стихия/фракция → общее
+  // условие), внутри — S-ранг, а среди равных те, кто добавляет урон, а не
+  // лечение: хилящий бангбу формально подходит почти всем и забивал бы выдачу.
+  return out.sort((x, y) => (x.rank - y.rank) ||
+    ((y.b.r === 'S' ? 1 : 0) - (x.b.r === 'S' ? 1 : 0)) ||
+    (y.dmg - x.dmg)).slice(0, 3);
+}
+function elemRu(en) {
+  const k = Object.keys(BOO_ELEM).filter(x => BOO_ELEM[x] === en)[0];
+  return (k && ELEM[k] ? ELEM[k].ru : en).toLowerCase();
+}
+function profRu(en) {
+  const k = Object.keys(BOO_PROF).filter(x => BOO_PROF[x] === en)[0];
+  return (k && PROF[k] ? PROF[k] : en).toLowerCase();
+}
+// одна строка состава
+function teamRow(t, mine) {
+  const ics = t.ids.map(id => {
+    const a = DB.byId[id];
+    const have = !!(prog[id] && prog[id].have);
+    if (!a) return '<span class="tm-ic tm-none" title="нет в базе">?</span>';
+    return '<span class="tm-a' + (have ? '' : ' off') + '" title="' + esc(a.ru) +
+      (have ? '' : ' — у тебя нет') + '">' +
+      (a.icon ? img(imgUrl('agents', a.icon), 'tm-ic', a.ru, true)
+              : '<span class="tm-ic tm-none">?</span>') +
+      '<i>' + esc(shortRu(a.ru)) + '</i></span>';
+  }).join('');
+  const miss = t.ids.filter(id => !(prog[id] && prog[id].have)).length;
+  const boo = bangbooFor(t.ids);
+  return '<div class="tm-row' + (miss ? '' : ' full') + '">' +
+    '<div class="tm-rank" title="Место состава в общем рейтинге">#' + (t.r || '—') + '</div>' +
+    '<div class="tm-ags">' + ics + '</div>' +
+    (boo.length
+      ? '<div class="tm-boo" title="Бангбу, у которого с этим составом включается пассивка">' +
+          '<span class="tm-boo-n">' + esc(boo[0].b.n) + '</span>' +
+          '<i>' + esc(boo[0].why) + '</i></div>'
+      : '<div class="tm-boo"></div>') +
+    '<div class="tm-num">' +
+      '<span>' + (t.u ? t.u.toFixed(1) + '%' : '—') + '</span>' +
+      '<i>' + (miss ? 'нет ' + miss : 'есть все') + '</i>' +
+    '</div></div>';
+}
+// имя в строке состава: три иконки в ряд, длинные имена ломают вёрстку
+function shortRu(s) {
+  const w = String(s || '').split(' ');
+  return w[0].length > 9 ? w[0].slice(0, 8) + '.' : w[0];
+}
+function teamHtml(a) {
+  const t = teamsOf(a.id);
+  if (!t) return '<div class="hint" style="margin-top:0">Составов для этого агента нет.</div>';
+  const g = guideOf(a.id);
+  const sect = (title, note, rows) => !rows.length ? '' :
+    '<div class="sect"><h4><span class="tt">' + title + '<i>' + note + '</i></span></h4>' +
+    '<div class="tm-list">' + rows.map(r => teamRow(r)).join('') + '</div></div>';
+  let h = '';
+  const fac = factionOf(a.id);
+  if (fac && fac !== 'Unknown') {
+    const mates = DB.agents.filter(x => x.id !== a.id && factionOf(x.id) === fac);
+    if (mates.length) h += '<div class="tm-fac">Фракция <b>' + esc(fac) + '</b>: ' +
+      mates.map(x => '<span class="' + (prog[x.id] && prog[x.id].have ? 'tm-has' : 'tm-no') + '">' +
+        esc(x.ru) + '</span>').join(', ') +
+      '<i>двое из одной фракции включают пассивку у части бангбу</i></div>';
+  }
+  h += sect('Оборона Шиюй', 'SHIYU DEFENSE', t.shiyu || []);
+  h += sect('Deadly Assault', 'DEADLY ASSAULT', t.da || []);
+  // авторские варианты напарников: состав без чужого текста
+  if (g && (g.mates || []).length) {
+    h += '<div class="sect"><h4><span class="tt">Кого ставят рядом<i>SYNERGY</i></span></h4>' +
+      '<div class="tm-list">' + g.mates.map(ids => teamRow({ r: 0, ids: ids })).join('') +
+      '</div></div>';
+  }
+  h += '<div class="hint">Составы — статистика прохождений с <a href="' +
+    esc(prydUrl(a) || 'https://www.prydwen.gg/zenless/') + '" target="_blank" rel="noopener">prydwen.gg</a>' +
+    (GUIDE && GUIDE.built ? ', собраны ' + esc(GUIDE.built) : '') +
+    '. Процент — как часто состав встречается, «#» — место в общем рейтинге. ' +
+    'Приглушённые агенты — те, кого у тебя нет.</div>';
+  return h;
+}
+
 function renderSheet() {
   const a = DB.byId[curId], p = P(curId);
   const el = (a.element || [])[0] || '';
@@ -3672,6 +3870,10 @@ function renderSheet() {
         ? '<button class="htab' + (curTab === 'guide' ? ' on' : '') + '" data-tab="guide" ' +
           'title="Рекомендуемая сборка с prydwen.gg">Гайд</button>'
         : '') +
+      (teamsOf(curId)
+        ? '<button class="htab' + (curTab === 'team' ? ' on' : '') + '" data-tab="team" ' +
+          'title="С кем ходят в эндгейме — по статистике прохождений">Команды</button>'
+        : '') +
       // Сброс плана: убирает только задуманное, а надетое остаётся. После него
       // вкладка «План» показывает ровно то же, что «Сейчас», — можно набирать заново.
       (curTab === 'plan' && planCount(p)
@@ -3687,7 +3889,8 @@ function renderSheet() {
       '<button class="htab' + (p.fav ? ' favon' : '') + '" id="favTog" title="в избранное">' +
         (p.fav ? '★ в избранном' : '☆ в избранное') + '</button></div>';
 
-    if (curTab === 'guide') { h += guideHtml(a, p, nowT); } else {
+    if (curTab === 'guide') { h += guideHtml(a, p, nowT); }
+    else if (curTab === 'team') { h += teamHtml(a); } else {
 
     // ── сверка с гайдом ──
     // Список замечаний сразу под вкладками: раньше это же было размазано по
@@ -5755,6 +5958,11 @@ function drawMaint() {
     .filter(b => !b.id).map(b => b.name);
   // и по гайду: агент в базе есть, а сборки на него нет
   const noGuide = (DB.agents || []).filter(a => !guideOf(a.id)).map(a => a.ru);
+  // команды и бангбу появились в pryd.js v4: если файл собран старой версией,
+  // сборки на месте, а этих полей нет — по возрасту файла это не видно
+  const gAg = (GUIDE && GUIDE.agents) || {};
+  const noTeams = Object.keys(gAg).length && !Object.keys(gAg).some(k => gAg[k].teams);
+  const noBoo = !(GUIDE && GUIDE.bangboo && (GUIDE.bangboo.list || []).length);
 
   const old = (n, lim) => n != null && n > lim;
   let h = '<div class="mt"><div class="cap2">ОБСЛУЖИВАНИЕ</div>';
@@ -5766,11 +5974,14 @@ function drawMaint() {
       (dAge == null ? 'нет данных' : dAge + ' ' + plural(dAge, 'день', 'дня', 'дней') + ' назад') + '</span>' +
     '</div>';
 
-  if (missing.length || noGuide.length || old(gAge, 21)) {
+  if (missing.length || noGuide.length || noTeams || noBoo || old(gAge, 21)) {
     h += '<div class="mt-todo">' +
       (missing.length ? '<div>Вышли новые агенты, их нет в справочнике: <b>' +
         esc(missing.join(', ')) + '</b></div>' : '') +
       (noGuide.length ? '<div>Без сборки с prydwen: <b>' + esc(noGuide.join(', ')) + '</b></div>' : '') +
+      (noTeams ? '<div>Нет составов команд — файл собран до <b>pryd.js v4</b>, ' +
+        'прогони шаг 1 заново</div>' : '') +
+      (noBoo ? '<div>Нет бангбу — прогони шаг 1 <b>со страницы бангбу</b></div>' : '') +
       (old(gAge, 21) && !noGuide.length ? '<div>Сборки давно не обновлялись — вышел ли патч?</div>' : '') +
       '</div>';
   } else {
@@ -5781,14 +5992,17 @@ function drawMaint() {
   // Выкладка идёт последней, потому что забирает всё, что положили шаги до неё.
   let n = 0;
 
-  // 1. Prydwen — только руками: сайт закрыт проверкой Cloudflare
-  h += maintCmd(++n + '. Сборки, тир-лист и баннеры', 'вручную, ~5 мин',
+  // 1. Prydwen — только руками: сайт закрыт проверкой Cloudflare.
+  // Страницу указываем не любую, а именно бангбу: их пассивки читаются только
+  // из живой страницы, всё остальное скрипт добирает сам через fetch.
+  h += maintCmd(++n + '. Сборки, тир-лист, баннеры, команды и бангбу', 'вручную, ~5 мин',
     [["fetch('https://alextask.ru/pryd.js').then(r=>r.text()).then(eval)", 'в консоли браузера'],
      [SITE_DIR + '\\zzz-guide.json', 'сохранить сюда']],
-    'Открой <a href="https://www.prydwen.gg/zenless/tier-list" target="_blank" rel="noopener">' +
-    'prydwen.gg</a>, нажми <b>F12</b> → вкладка <b>Console</b>, вставь первую строку и жми Enter. ' +
-    'Через пять минут результат сам скопируется в буфер — сохрани его по пути из второй строки, ' +
-    'заменив старый файл.');
+    'Открой <a href="https://www.prydwen.gg/zenless/bangboo" target="_blank" rel="noopener">' +
+    'страницу бангбу</a> — именно её, а не тир-лист: условия пассивок бангбу подставляются ' +
+    'только в браузере, с других страниц они не соберутся. Дальше <b>F12</b> → вкладка ' +
+    '<b>Console</b>, вставь первую строку и жми Enter. Через пять минут результат сам ' +
+    'скопируется в буфер — сохрани его по пути из второй строки, заменив старый файл.');
 
   if (missing.length) {
     h += maintCmd(++n + '. Справочник и картинки нового агента', 'нужно сейчас',

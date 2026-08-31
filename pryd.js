@@ -1,5 +1,5 @@
 /**
- * pryd.js v3 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
+ * pryd.js v4 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
  *              за один прогон и складывает всё в один файл.
  *
  * Зачем через браузер: сайт закрыт проверкой Cloudflare, скрипту снаружи он
@@ -7,7 +7,9 @@
  * своим же страницам идут как обычные.
  *
  * Как пользоваться:
- *   1. Открыть любую страницу https://www.prydwen.gg/zenless/
+ *   1. Открыть https://www.prydwen.gg/zenless/bangboo
+ *      (можно любую страницу раздела, но со страницы бангбу заодно соберутся
+ *      и они: их пассивки читаются только из живой страницы)
  *   2. F12 → вкладка Console
  *   3. Вставить весь этот файл, нажать Enter
  *   4. Ждать. В консоли идёт счётчик, всего около пяти минут
@@ -25,6 +27,13 @@
  *   set2       — комплекты на 2 предмета: { n: имя, rec: рекомендованный }
  *   engines    — движки: { n: имя, r: копия S1..S5, pct: сила от лучшего }
  *   skills     — порядок прокачки навыков
+ *   faction    — фракция агента (в игровых данных Enka её нет)
+ *   teams      — составы из статистики: shiyu (Оборона Шиюй) и da (Deadly
+ *                Assault), в каждом ранг, частота и средний результат
+ *   mates      — варианты напарников из авторского разбора, только состав
+ *
+ * Плюс общий список бангбу с условием пассивки — если запуск был со страницы
+ * /zenless/bangboo.
  *
  * Разница с v1 и v2: комплекты и движки берутся по классам разметки, а не из
  * текста. Разметка на сервере и в браузере разная: имя движка лежит в
@@ -249,6 +258,59 @@
     return { s4: s4.slice(0, 3), s2: s2.slice(0, 4) };
   }
 
+  // ── команды ───────────────────────────────────────────────────────────────
+  // На странице агента два блока .team-container-moc: сверху статистика по
+  // Обороне Шиюй (в строках «Avg. time»), снизу по Deadly Assault («Avg. score»).
+  // Это не чьё-то мнение, а срез по реальным прохождениям: ранг состава,
+  // как часто его берут и средний результат. Порядок блоков не фиксируем —
+  // определяем по подписи, иначе смена вёрстки молча перепутает местами.
+  function readTeams(doc) {
+    const out = { shiyu: [], da: [] };
+    doc.querySelectorAll('.team-container-moc').forEach(box => {
+      const isDA = /Avg\.\s*score/i.test(box.textContent);
+      const dst = isDA ? out.da : out.shiyu;
+      box.querySelectorAll('.team-row').forEach(row => {
+        const info = clean((row.querySelector('.column.info') || {}).textContent || '');
+        const rank = (info.match(/Rank\s+(\d+)/i) || [])[1];
+        const rate = (info.match(/rate:\s*([\d.]+)%/i) || [])[1];
+        const val  = (info.match(/(?:time|score):\s*([\d,]+)/i) || [])[1];
+        const ids = [];
+        row.querySelectorAll('.column.characters a[href*="/characters/"]').forEach(a => {
+          const m = (a.getAttribute('href') || '').match(/\/characters\/([a-z0-9\-]+)/);
+          const id = m ? SLUGS[m[1]] : 0;
+          if (id && ids.indexOf(id) < 0) ids.push(id);
+        });
+        if (ids.length >= 2) dst.push({
+          r: rank ? +rank : 0,
+          u: rate ? +rate : 0,
+          v: val ? +val.replace(/,/g, '') : 0,
+          ids: ids
+        });
+      });
+    });
+    return (out.shiyu.length || out.da.length) ? out : null;
+  }
+
+  // Варианты напарников из авторского разбора: берём только состав, сам текст
+  // не трогаем — он чужой. Признак блока: в одном пункте списка стоят подряд
+  // несколько ссылок-агентов .inline-character-zzz.
+  function readMates(doc) {
+    const out = [];
+    doc.querySelectorAll('li').forEach(li => {
+      const links = li.querySelectorAll('.inline-character-zzz');
+      if (links.length < 2) return;
+      const ids = [];
+      links.forEach(el => {
+        const a = el.matches('a') ? el : el.querySelector('a');
+        const m = a ? (a.getAttribute('href') || '').match(/\/characters\/([a-z0-9\-]+)/) : null;
+        const id = m ? SLUGS[m[1]] : 0;
+        if (id && ids.indexOf(id) < 0) ids.push(id);
+      });
+      if (ids.length >= 2 && !out.some(x => x.join() === ids.join())) out.push(ids);
+    });
+    return out.slice(0, 6);
+  }
+
   function readAgent(doc, slug) {
     const box = buildBox(doc);
     if (!box) throw new Error('нет блока сборки');
@@ -293,6 +355,58 @@
     const page = toText(doc.body ? doc.body.innerHTML : '');
     const sk = page.match(/Skill priority\n((?:.+\n){1,6}?)(?:Video guides|Teams)/);
     out.skills = sk ? sk[1].split('\n').map(x => x.trim()).filter(Boolean).slice(0, 5) : [];
+
+    // Фракция — из вводного абзаца. Она нужна не сама по себе: половина бангбу
+    // включает пассивку только при двух агентах одной фракции, а в игровых
+    // данных Enka фракций нет вовсе.
+    const fm = page.replace(/\n/g, ' ')
+      .match(/is part of the (.+?) faction/i);
+    out.faction = fm ? clean(fm[1]) : '';
+
+    out.teams = readTeams(doc);
+    out.mates = readMates(doc);
+    return out;
+  }
+
+  // ── бангбу ────────────────────────────────────────────────────────────────
+  // Условие пассивки («когда в отряде двое из Cunning Hares») лежит не в
+  // разметке, а в данных, которые страница подставляет уже в браузере: в
+  // исходном HTML на его месте стоит ссылка вида «$32», и её содержимое
+  // приезжает отдельно. Поэтому бангбу читаются только из живой страницы —
+  // если скрипт запущен на /zenless/bangboo. Вкладку «SKILL 2 — PASSIVE» надо
+  // сначала открыть: обычный el.click() React игнорирует, нужна полная цепочка
+  // событий мыши.
+  function readBangboo() {
+    if (location.pathname.indexOf('/zenless/bangboo') < 0) return null;
+    const cards = document.querySelectorAll('.single-bangboo');
+    if (!cards.length) return null;
+    const fire = el => ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']
+      .forEach(t => el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window })));
+    cards.forEach(one => {
+      const tab = [].slice.call(one.querySelectorAll('[role="tab"]'))
+        .filter(t => /passive/i.test(t.textContent || ''))[0];
+      if (tab) fire(tab);
+    });
+    return cards;
+  }
+  function collectBangboo(cards) {
+    const seen = {}, out = [];
+    [].forEach.call(cards, one => {
+      const nm = clean((one.querySelector('.name') || {}).textContent || '');
+      if (!nm || seen[nm]) return;
+      const img = one.querySelector('img');
+      const txt = clean(one.textContent || '');
+      const m = txt.match(/STATS\s+(.+?)\s+Level\.?\s*1\s+(.+?)(?:\s*Multipliers|$)/);
+      if (!m) return;
+      seen[nm] = 1;
+      out.push({
+        n: nm,
+        r: img && /rarity-S/.test(img.parentElement.className) ? 'S' : 'A',
+        icon: img ? img.src.split('/').pop() : '',
+        pn: clean(m[1]).slice(0, 60),
+        p: clean(m[2]).slice(0, 400)
+      });
+    });
     return out;
   }
 
@@ -345,11 +459,14 @@
           window.__prydBad = { slug: slug, html: box ? box.innerHTML.slice(0, 4000) : 'блока нет' };
         }
       }
+      const tn = a.teams ? (a.teams.shiyu.length + a.teams.da.length) : 0;
       console.log('  ' + (i + 1) + '/' + slugs.length + '  ' + slug +
                   '  диски ' + (a.disk5 ? '✓' : '·') +
                   '  цели ' + (Object.keys(a.goals).length || '·') +
                   '  сеты ' + (a.set4.length || '·') +
-                  '  движки ' + (a.engines.length || '·'));
+                  '  движки ' + (a.engines.length || '·') +
+                  '  команды ' + (tn || '·') +
+                  '  фракция ' + (a.faction || '·'));
     } catch (e) {
       fail++;
       console.warn('  ' + (i + 1) + '/' + slugs.length + '  ' + slug + '  — ' + e.message);
@@ -383,6 +500,27 @@
     console.warn('  баннеры не собрались: ' + e.message);
   }
 
+  // ── бангбу ────────────────────────────────────────────────────────────────
+  let bangboo = null;
+  try {
+    const cards = readBangboo();
+    if (cards) {
+      await sleep(1500);                 // ждём, пока откроются вкладки пассивок
+      const list = collectBangboo(cards);
+      if (list.length) {
+        bangboo = { updated: new Date().toISOString().slice(0, 10),
+                    src: 'https://www.prydwen.gg/zenless/bangboo', list: list };
+        console.log('  бангбу: ' + list.length +
+                    ' (с условием: ' + list.filter(x => /squad/i.test(x.p)).length + ')');
+      }
+    } else {
+      console.log('%c  бангбу пропущены: чтобы собрать и их, запусти скрипт со страницы ' +
+                  'https://www.prydwen.gg/zenless/bangboo', 'color:#8ab4f8');
+    }
+  } catch (e) {
+    console.warn('  бангбу не собрались: ' + e.message);
+  }
+
   const json = JSON.stringify({
     sourceName: 'prydwen.gg',
     source: 'https://www.prydwen.gg/zenless/',
@@ -390,8 +528,9 @@
     built: new Date().toISOString().slice(0, 16).replace('T', ' '),
     roles: { dmg: 'Урон', anomaly: 'Урон аномалии', support: 'Поддержка' },
     tiers: tierRes.tiers,
-    // если баннеры не разобрались, поле не пишем — трекер оставит прежние
+    // если баннеры или бангбу не разобрались, поле не пишем — трекер оставит прежние
     banners: banners || undefined,
+    bangboo: bangboo || undefined,
     agents: agents
   });
 
