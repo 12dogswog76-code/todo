@@ -1496,7 +1496,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v145';
+const APP_VER = 'v146';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3684,8 +3684,9 @@ function bangbooFor(ids) {
   const list = (GUIDE && GUIDE.bangboo && GUIDE.bangboo.list) || [];
   if (!list.length || !ids.length) return [];
   const ags = ids.map(i => DB.byId[i]).filter(Boolean);
-  const elems = {}, profs = {}, facs = {}, names = {};
+  const elems = {}, profs = {}, facs = {}, names = {}, ruByEn = {};
   ags.forEach(a => {
+    ruByEn[(a.en || '').toLowerCase()] = a.ru;
     const e = BOO_ELEM[(a.element || [])[0]] || '';
     if (e) elems[e] = (elems[e] || 0) + 1;
     const pr = BOO_PROF[a.prof] || '';
@@ -3700,7 +3701,12 @@ function bangbooFor(ids) {
     let why = '', rank = 3;
     // «When <Имя> is in the squad» — самый узкий и самый сильный случай
     const nm = p.match(/^When ([A-Z][A-Za-z'\- ]{2,20}) is in the squad/);
-    if (nm && names[nm[1].toLowerCase()]) { why = nm[1]; rank = 0; }
+    // имя пишем по-русски: в пассивке оно английское, а в строке рядом
+    // стоят русские имена агентов, и «Ariel (Remielle)» читается как ошибка
+    if (nm && names[nm[1].toLowerCase()]) {
+      why = 'в отряде ' + (ruByEn[nm[1].toLowerCase()] || nm[1]);
+      rank = 0;
+    }
     if (!why) {
       // «2 or more X Attribute characters» / «2 or more <фракция> characters»
       const two = p.match(/(?:2|two|at least 2)\s+or\s+more\s+(.+?)\s+(?:character|characters)/i)
