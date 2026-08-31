@@ -628,6 +628,27 @@
     padding:6px 9px;margin-top:8px;font-size:12px;display:flex;align-items:center;gap:8px}
   .infobox .mainst em{margin-left:auto;font-style:normal;color:var(--gold);font-weight:800}
 
+  /* ── обслуживание: видно только владельцу ── */
+  .mt{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}
+  .mt-age{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .mt-age span{font-size:10.5px;color:var(--tx3);border:1px solid var(--line);
+    border-radius:20px;padding:2px 9px}
+  .mt-age span.warn2{color:var(--warn);border-color:#fbbf2455;background:#fbbf2412}
+  .mt-todo{font-size:11.5px;line-height:1.6;color:var(--tx2);background:#fbbf240f;
+    border:1px solid #fbbf2433;border-radius:10px;padding:8px 11px;margin-bottom:10px}
+  .mt-todo b{color:var(--warn)}
+  .mt-ok{font-size:11.5px;color:var(--acc);margin-bottom:10px}
+  .mt-row{margin-bottom:11px}
+  .mt-h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+  .mt-h b{font-size:12px}
+  .mt-h span{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px}
+  .mt-c{display:flex;align-items:stretch;gap:6px}
+  .mt-c code{flex:1;min-width:0;background:#0b0d11;border:1px solid var(--line);
+    border-radius:8px;padding:7px 10px;font-family:var(--mono);font-size:11px;
+    color:var(--tx2);overflow-x:auto;white-space:nowrap}
+  .mt-copy{flex:none;white-space:nowrap}
+  @media(max-width:760px){ .mt-c{flex-wrap:wrap} .mt-c code{flex-basis:100%} }
+
   /* ── баннеры ── */
   .ban{display:flex;align-items:center;gap:11px;padding:8px 11px;margin-bottom:6px;
     border-radius:12px;border:1px solid var(--line);
@@ -1235,6 +1256,10 @@
           <button id="manualPaste" class="ghost2">Вставить из буфера</button></div>
       </div>
     </details>
+
+    <!-- Обслуживание. Видно только владельцу: остальным эти команды ни к чему
+         и запустить их всё равно негде. -->
+    <div id="maint" style="display:none"></div>
   </div>
 
   <div class="panel" id="cloudPanel">
@@ -1351,7 +1376,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v129';
+const APP_VER = 'v130';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5469,9 +5494,109 @@ function togglePanel(id) {
                 bannerPanel: 'bannerBtn', helpPanel: 'helpBtn' };
   if (!wasOpen) $(map[id]).classList.add('on');
 }
-$('enkaBtn').onclick  = () => { togglePanel('enkaPanel'); refreshEnkaLinks(); };
+$('enkaBtn').onclick  = () => { togglePanel('enkaPanel'); refreshEnkaLinks(); drawMaint(); };
 $('cloudBtn').onclick = () => { togglePanel('cloudPanel'); cloudUI(); };
 $('modBtn').onclick   = () => { togglePanel('modPanel'); drawModTable(); };
+// ─────────────── обслуживание ───────────────
+// Блок с командами и возрастом данных. Показывается только владельцу: гостям
+// он бесполезен, а запустить эти команды им всё равно негде. Признак — UID
+// в трекере; можно включить принудительно, открыв страницу с ?dev=1.
+const OWNER_UID = '1502024259';
+const SITE_DIR = 'F:\\Claude cowork\\сайт';
+function isOwner() {
+  try {
+    if (localStorage.getItem(LS + '_dev') === '1') return true;
+    if (/[?&]dev=1/.test(location.search)) {
+      localStorage.setItem(LS + '_dev', '1');
+      return true;
+    }
+    return (localStorage.getItem(LS + '_uid') || '') === OWNER_UID;
+  } catch (e) { return false; }
+}
+// сколько дней прошло с даты вида «2026-08-09 06:17» или «2026-08-09»
+function ageDays(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ''));
+  if (!m) return null;
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return Math.floor((Date.now() - d) / 86400000);
+}
+function maintCmd(title, why, cmd, note) {
+  return '<div class="mt-row">' +
+    '<div class="mt-h"><b>' + title + '</b>' + (why ? '<span>' + why + '</span>' : '') + '</div>' +
+    '<div class="mt-c"><code>' + esc(cmd) + '</code>' +
+      '<button class="ghost2 mt-copy" data-cmd="' + esc(cmd) + '">копировать</button></div>' +
+    (note ? '<div class="hint" style="margin:4px 0 0">' + note + '</div>' : '') +
+    '</div>';
+}
+function drawMaint() {
+  const box = $('maint');
+  if (!box) return;
+  if (!isOwner()) { box.style.display = 'none'; return; }
+  box.style.display = '';
+
+  const gAge = GUIDE ? ageDays(GUIDE.built) : null;
+  const dAge = DB ? ageDays(DB.built) : null;
+  // новый агент виден по баннерам: он там есть, а в базе его ещё нет
+  const missing = ((GUIDE && GUIDE.banners && GUIDE.banners.list) || [])
+    .filter(b => !b.id).map(b => b.name);
+  // и по гайду: агент в базе есть, а сборки на него нет
+  const noGuide = (DB.agents || []).filter(a => !guideOf(a.id)).map(a => a.ru);
+
+  const old = (n, lim) => n != null && n > lim;
+  let h = '<div class="mt"><div class="cap2">ОБСЛУЖИВАНИЕ</div>';
+
+  h += '<div class="mt-age">' +
+    '<span' + (old(gAge, 21) ? ' class="warn2"' : '') + '>сборки с prydwen: ' +
+      (gAge == null ? 'нет данных' : gAge + ' ' + plural(gAge, 'день', 'дня', 'дней') + ' назад') + '</span>' +
+    '<span' + (old(dAge, 45) ? ' class="warn2"' : '') + '>справочник Enka: ' +
+      (dAge == null ? 'нет данных' : dAge + ' ' + plural(dAge, 'день', 'дня', 'дней') + ' назад') + '</span>' +
+    '</div>';
+
+  if (missing.length || noGuide.length || old(gAge, 21)) {
+    h += '<div class="mt-todo">' +
+      (missing.length ? '<div>Вышли новые агенты, их нет в справочнике: <b>' +
+        esc(missing.join(', ')) + '</b></div>' : '') +
+      (noGuide.length ? '<div>Без сборки с prydwen: <b>' + esc(noGuide.join(', ')) + '</b></div>' : '') +
+      (old(gAge, 21) && !noGuide.length ? '<div>Сборки давно не обновлялись — вышел ли патч?</div>' : '') +
+      '</div>';
+  } else {
+    h += '<div class="mt-ok">Всё свежее, делать нечего.</div>';
+  }
+
+  // 1. Prydwen — только руками: сайт закрыт проверкой Cloudflare
+  h += maintCmd('1. Сборки, тир-лист и баннеры', 'вручную, ~5 мин',
+    "fetch('https://alextask.ru/pryd.js').then(r=>r.text()).then(eval)",
+    'Открой <a href="https://www.prydwen.gg/zenless/tier-list" target="_blank" rel="noopener">' +
+    'prydwen.gg</a>, нажми <b>F12</b> → вкладка <b>Console</b>, вставь строку выше и жми Enter. ' +
+    'Через пять минут результат сам скопируется в буфер — сохрани его как ' +
+    '<b>zzz-guide.json</b> в папку сайта.');
+
+  if (missing.length) {
+    h += maintCmd('2. Справочник и картинки нового агента', 'нужно сейчас',
+      'cd "' + SITE_DIR + '"; .\\build-zzz-db.ps1',
+      'Заберёт с Enka нового агента, его портреты и значки.');
+  }
+
+  h += maintCmd((missing.length ? '3' : '2') + '. Всё остальное и выкладка', 'само',
+    'cd "' + SITE_DIR + '"; .\\go.ps1',
+    'Значки интерфейса, досбор описаний с gachabase и игровых дампов, запасной ' +
+    'тир-лист, потом выкладка на сайт.');
+
+  h += maintCmd((missing.length ? '4' : '3') + '. Только выложить', 'если правился лишь код',
+    'cd "' + SITE_DIR + '"; .\\go.ps1 -OnlyDeploy -SkipWorkflows', '');
+
+  h += maintCmd((missing.length ? '5' : '4') + '. Копия боевых файлов', 'задачи и деньги',
+    'cd "' + SITE_DIR + '"; .\\бэкап-боевых.ps1', '');
+
+  h += '</div>';
+  box.innerHTML = h;
+  box.querySelectorAll('.mt-copy').forEach(b => b.onclick = async () => {
+    try { await navigator.clipboard.writeText(b.dataset.cmd); b.textContent = 'скопировано ✓'; }
+    catch (e) { b.textContent = 'выдели и скопируй сам'; }
+    setTimeout(() => { b.textContent = 'копировать'; }, 2000);
+  });
+}
+
 $('bannerBtn').onclick = () => { togglePanel('bannerPanel'); drawBanners(); };
 $('helpBtn').onclick  = () => togglePanel('helpPanel');
 
