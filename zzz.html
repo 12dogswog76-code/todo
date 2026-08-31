@@ -680,6 +680,7 @@
   .ban-eng span{min-width:0;font-size:11.5px;color:var(--tx2);overflow-wrap:anywhere}
   .ban-eng em{display:block;font-style:normal;font-size:9px;color:var(--tx3);
     text-transform:uppercase;letter-spacing:.5px}
+  .ban-ename{font-weight:400}
   .ban-k{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);
     border:1px solid var(--line);border-radius:20px;padding:1px 7px}
   .ban-k.new{color:var(--warn);border-color:#fbbf2455;background:#fbbf2414}
@@ -693,12 +694,18 @@
   .ban-when i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:2px}
   .ban.now .ban-when i{color:var(--acc)}
   @media(max-width:760px){
-    .ban{gap:9px;padding:8px 9px}
-    /* на узком экране блоки встают друг под друга, черта слева не нужна */
-    .ban-t{flex:1 1 auto}
-    .ban-eng{flex:1 1 100%;padding-left:0;border-left:none;padding-top:6px;
-      border-top:1px solid var(--line);margin-left:55px}
-    .ban-when{margin-left:0;flex:1 1 100%;text-align:left}
+    /* Без переноса всё сжималось в одну строку, и название движка ломалось
+       по одной букве в столбик. */
+    .ban{gap:9px;padding:8px 9px;flex-wrap:wrap;align-items:flex-start}
+    .ban-t{flex:1 1 120px}
+    /* Место на телефоне дорогое: от сигны оставляем подпись и значок, название
+       убираем — по значку и так понятно, о чём речь. */
+    .ban-eng{flex:0 0 auto;margin-left:auto;padding-left:10px;border-left:1px solid var(--line)}
+    .ban-ename{display:none}
+    .ban-eng span{font-size:9px}
+    .ban-when{margin-left:0;flex:1 1 100%;text-align:left;padding-top:6px;
+      border-top:1px solid var(--line);margin-top:2px}
+    .ban-when i{display:inline;margin-left:8px}
   }
 
   /* ── вкладка «Гайд»: сборка с prydwen ── */
@@ -1386,7 +1393,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v132';
+const APP_VER = 'v133';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5679,7 +5686,8 @@ function banRow(b) {
       ? '<div class="ban-eng" title="Сигнатурный W-Engine">' +
           (w && w.icon ? img(imgUrl('engines', w.icon), 'ban-eic', w.ru || b.eng, true)
                        : '<span class="ban-eic ban-none">?</span>') +
-          '<span><em>сигна</em>' + esc(w ? (w.ru || w.en) : b.eng) + '</span>' +
+          '<span><em>сигна</em><b class="ban-ename">' +
+            esc(w ? (w.ru || w.en) : b.eng) + '</b></span>' +
         '</div>'
       : '') +
     '<div class="ban-when"><span>' + esc(when) + '</span>' +
