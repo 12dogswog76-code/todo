@@ -1,5 +1,5 @@
 /**
- * pryd.js v4.2 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
+ * pryd.js v4.3 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
  *              за один прогон и складывает всё в один файл.
  *
  * Зачем через браузер: сайт закрыт проверкой Cloudflare, скрипту снаружи он
@@ -50,7 +50,7 @@
   // строкой в консоли, и браузер спокойно отдаёт его из кэша — прогон на пять
   // минут уходил впустую на старом коде, а понять это было можно только по
   // готовому файлу.
-  const VER = 'v4.2';
+  const VER = 'v4.3';
   const PAUSE = 5000;          // пауза между страницами
   const TIER_URL = '/zenless/tier-list';
 
@@ -399,17 +399,29 @@
   // если скрипт запущен на /zenless/bangboo. Вкладку «SKILL 2 — PASSIVE» надо
   // сначала открыть: обычный el.click() React игнорирует, нужна полная цепочка
   // событий мыши.
-  function readBangboo() {
+  //
+  // Раскрывать надо в два шага. На свежей странице карточки свёрнуты, и внутри
+  // них нет ни вкладок, ни панелей вообще — содержимое рендерится только при
+  // раскрытии аккордеона. Сначала открываем карточку, ждём, и только потом
+  // ищем вкладку «SKILL 2 — PASSIVE». Без первого шага скрипт молча собирал
+  // ноль бангбу: искать было нечего.
+  const fireMouse = el => ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']
+    .forEach(t => el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window })));
+  async function readBangboo() {
     if (location.pathname.indexOf('/zenless/bangboo') < 0) return null;
     const cards = document.querySelectorAll('.single-bangboo');
     if (!cards.length) return null;
-    const fire = el => ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']
-      .forEach(t => el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window })));
+    cards.forEach(one => {
+      const btn = one.querySelector('button[data-radix-collection-item], .pw-accordion-button');
+      if (btn && btn.getAttribute('aria-expanded') === 'false') fireMouse(btn);
+    });
+    await sleep(1500);
     cards.forEach(one => {
       const tab = [].slice.call(one.querySelectorAll('[role="tab"]'))
         .filter(t => /passive/i.test(t.textContent || ''))[0];
-      if (tab) fire(tab);
+      if (tab) fireMouse(tab);
     });
+    await sleep(1500);
     return cards;
   }
   // Текст берём из открытой панели, а не из карточки целиком: в textContent
@@ -547,9 +559,8 @@
   // ── бангбу ────────────────────────────────────────────────────────────────
   let bangboo = null;
   try {
-    const cards = readBangboo();
+    const cards = await readBangboo();
     if (cards) {
-      await sleep(1500);                 // ждём, пока откроются вкладки пассивок
       const list = collectBangboo(cards);
       if (list.length) {
         bangboo = { updated: new Date().toISOString().slice(0, 10),
