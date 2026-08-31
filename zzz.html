@@ -1332,7 +1332,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v125';
+const APP_VER = 'v126';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -4881,14 +4881,32 @@ $('hoyoGo').onclick = async () => {
   {
     // Сначала убеждаемся, что рабочий адрес известен. Иначе тяжёлый запрос
     // пойдёт гонкой сразу на все адреса, и сервер трижды опросит хронику.
-    if (!API_OK) await apiFetch('/ping', { headers: { 'Accept': 'application/json' } }, 8000);
-    // хроника отвечает не мгновенно: агентов опрашивают пачками, даём минуту
-    const res = await apiFetch('/hoyo/' + uid + '/full',
-      { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 60000);
-    if (!res.ok) lastErr = res.err;
-    else if (res.data && res.data.error) lastErr = res.data.error;
-    else if (res.data && res.data.avatars && res.data.avatars.length) data = res.data;
-    else lastErr = 'ответ без агентов';
+    if (!API_OK) {
+      msg.textContent = 'Ищу рабочий адрес сервера…';
+      const ping = await apiFetch('/ping', { headers: { 'Accept': 'application/json' } }, 8000);
+      if (!ping.ok) {
+        msg.innerHTML = '<b>Нет связи с сервером:</b> ' + esc(ping.err) +
+          '<br>Проверь связь кнопкой «Проверить связь» в панели «☁ Облако и данные».';
+        return;
+      }
+    }
+    // Хроника отвечает не мгновенно: сервер перебирает игровые регионы, потом
+    // опрашивает агентов пачками по шесть. На большом аккаунте это десятки
+    // секунд, поэтому ждём до двух минут и всё это время показываем, что живы.
+    let sec = 0;
+    const tick = setInterval(() => {
+      sec += 1;
+      msg.textContent = 'Гружу весь аккаунт из хроники… ' + sec + ' сек' +
+        (sec > 25 ? ' (на большом аккаунте это нормально)' : '');
+    }, 1000);
+    try {
+      const res = await apiFetch('/hoyo/' + uid + '/full',
+        { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 120000);
+      if (!res.ok) lastErr = res.err;
+      else if (res.data && res.data.error) lastErr = res.data.error;
+      else if (res.data && res.data.avatars && res.data.avatars.length) data = res.data;
+      else lastErr = 'ответ без агентов';
+    } finally { clearInterval(tick); }
   }
 
   if (!data) {
