@@ -1,5 +1,5 @@
 /**
- * pryd.js v4.1 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
+ * pryd.js v4.2 — забирает с prydwen.gg тир-лист и данные по сборкам агентов
  *              за один прогон и складывает всё в один файл.
  *
  * Зачем через браузер: сайт закрыт проверкой Cloudflare, скрипту снаружи он
@@ -259,16 +259,34 @@
   }
 
   // ── команды ───────────────────────────────────────────────────────────────
-  // На странице агента два блока .team-container-moc: сверху статистика по
-  // Обороне Шиюй (в строках «Avg. time»), снизу по Deadly Assault («Avg. score»).
-  // Это не чьё-то мнение, а срез по реальным прохождениям: ранг состава,
-  // как часто его берут и средний результат. Порядок блоков не фиксируем —
-  // определяем по подписи, иначе смена вёрстки молча перепутает местами.
+  // На странице агента два блока .team-container-moc: Оборона Шиюй и Deadly
+  // Assault. Это не чьё-то мнение, а срез по реальным прохождениям: ранг
+  // состава, как часто его берут и средний результат.
+  //
+  // Различать блоки по подписи в строках нельзя: раньше в Шиюй писали
+  // «Avg. time», а в DA «Avg. score», сейчас в обоих «Avg. Score» — и весь
+  // Шиюй молча уезжал в DA. Надёжный признак — заголовок над блоком
+  // («Teams (Shiyu Defense)») и абзац-пояснение под ним. Порядок блоков тоже
+  // не фиксируем: по заголовку понятно и так.
+  function teamKind(box) {
+    // поднимаемся вверх, собирая текст предыдущих соседей: заголовок лежит
+    // не внутри блока, а перед ним, иногда через обёртку
+    let el = box;
+    for (let hop = 0; hop < 12 && el; hop++) {
+      el = el.previousElementSibling ||
+           (el.parentElement ? (el.parentElement.previousElementSibling || el.parentElement) : null);
+      if (!el) break;
+      const t = clean(el.textContent || '');
+      if (!t || t.length > 400) continue;
+      if (/Deadly\s*Assault/i.test(t)) return 'da';
+      if (/Shiyu\s*Defen/i.test(t)) return 'shiyu';
+    }
+    return 'shiyu';
+  }
   function readTeams(doc) {
     const out = { shiyu: [], da: [] };
     doc.querySelectorAll('.team-container-moc').forEach(box => {
-      const isDA = /Avg\.\s*score/i.test(box.textContent);
-      const dst = isDA ? out.da : out.shiyu;
+      const dst = teamKind(box) === 'da' ? out.da : out.shiyu;
       box.querySelectorAll('.team-row').forEach(row => {
         const info = clean((row.querySelector('.column.info') || {}).textContent || '');
         const rank = (info.match(/Rank\s+(\d+)/i) || [])[1];
@@ -389,22 +407,31 @@
     });
     return cards;
   }
+  // Текст берём из открытой панели, а не из карточки целиком: в textContent
+  // соседние узлы слипаются без пробелов («StatsStreet CodeLevel. 1When...»),
+  // и разбор по словам-разделителям разваливается. В панели лежит ровно
+  // «<название> Level. 1 <условие>».
   function collectBangboo(cards) {
     const seen = {}, out = [];
     [].forEach.call(cards, one => {
       const nm = clean((one.querySelector('.name') || {}).textContent || '');
       if (!nm || seen[nm]) return;
-      const img = one.querySelector('img');
-      const txt = clean(one.textContent || '');
-      const m = txt.match(/STATS\s+(.+?)\s+Level\.?\s*1\s+(.+?)(?:\s*Multipliers|$)/);
-      if (!m) return;
+      const pane = one.querySelector('.pw-tab-pane[data-state="active"]') ||
+                   one.querySelector('[role="tabpanel"][data-state="active"]');
+      if (!pane) return;
+      const txt = clean(pane.textContent || '');
+      // «Street CodeLevel. 1When there are 2 or more...»: пробелов между
+      // частями нет, поэтому режем по самим меткам, а не по пробелам
+      const m = txt.match(/^(.*?)Level\.?\s*1\s*(.+)$/);
+      if (!m || !m[2]) return;
       seen[nm] = 1;
+      const img = one.querySelector('img');
       out.push({
         n: nm,
         r: img && /rarity-S/.test(img.parentElement.className) ? 'S' : 'A',
         icon: img ? img.src.split('/').pop() : '',
         pn: clean(m[1]).slice(0, 60),
-        p: clean(m[2]).slice(0, 400)
+        p: clean(m[2]).replace(/\s*Multipliers$/, '').slice(0, 400)
       });
     });
     return out;
@@ -469,13 +496,15 @@
           window.__prydBad = { slug: slug, html: box ? box.innerHTML.slice(0, 4000) : 'блока нет' };
         }
       }
-      const tn = a.teams ? (a.teams.shiyu.length + a.teams.da.length) : 0;
+      // шиюй и DA пишем раздельно: если разделение блоков сломается, перекос
+      // вида «0 / 20» видно сразу, а не после разбора готового файла
+      const tm = a.teams ? (a.teams.shiyu.length + ' / ' + a.teams.da.length) : '·';
       console.log('  ' + (i + 1) + '/' + slugs.length + '  ' + slug +
                   '  диски ' + (a.disk5 ? '✓' : '·') +
                   '  цели ' + (Object.keys(a.goals).length || '·') +
                   '  сеты ' + (a.set4.length || '·') +
                   '  движки ' + (a.engines.length || '·') +
-                  '  команды ' + (tn || '·') +
+                  '  шиюй/DA ' + tm +
                   '  фракция ' + (a.faction || '·'));
     } catch (e) {
       fail++;
