@@ -977,6 +977,20 @@
   .panel .cmp-top input[type=text]{flex:1 1 220px;min-width:0;margin-bottom:0}
   .cmp-top button{flex:none}
   .cmp-top span{flex:1 1 100%;font-size:11px;color:var(--tx3);line-height:1.5}
+  /* сохранённые профили: ник кликом, крестик убирает из списка */
+  .cmp-saved{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+  .cmp-chip{display:inline-flex;align-items:center;gap:2px;padding:4px 4px 4px 12px;
+    border-radius:20px;background:#ffffff08;border:1px solid var(--line);cursor:pointer;
+    transition:.14s}
+  .cmp-chip:hover{border-color:var(--acc)}
+  .cmp-chip.on{border-color:var(--acc);background:#4ade8014}
+  .cmp-chip b{font-size:11.5px;color:var(--tx2);font-weight:600}
+  .cmp-chip.on b{color:#a7f3c0}
+  .cmp-chip:hover b{color:var(--tx)}
+  .cmp-del{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+    border-radius:50%;text-decoration:none;font-size:9px;color:transparent;transition:.14s}
+  .cmp-chip:hover .cmp-del{color:var(--tx3)}
+  .cmp-del:hover{background:#e5484d22;color:#f0787c!important}
   .cmp-sum{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
   .cmp-s{display:flex;flex-direction:column;padding:7px 14px;border-radius:12px;
     background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
@@ -1868,7 +1882,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v169';
+const APP_VER = 'v170';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6318,6 +6332,7 @@ function payload() {
   // это данные аккаунта, их терять нельзя.
   return { v: 1, prog: prog, uid: localStorage.getItem(LS + '_uid') || '',
            hist: hist, boo: (ui && ui.boo) || {}, booT: (ui && ui.booT) || 0,
+           cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
            t: Date.now() };
 }
 
@@ -6453,6 +6468,14 @@ function mergeProg(remote) {
     try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
     changed = true;
   }
+  // Список профилей для сравнения — по той же схеме: UID друзей набираются
+  // долго, а на новом устройстве их взять неоткуда.
+  if (Array.isArray(remote.cmpList) && (remote.cmpT || 0) > (ui.cmpT || 0)) {
+    ui.cmpList = remote.cmpList;
+    ui.cmpT = remote.cmpT || 0;
+    try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+    changed = true;
+  }
   if (!remote.prog) return changed;
   Object.keys(remote.prog).forEach(id => {
     const r = remote.prog[id], l = prog[id];
@@ -6494,6 +6517,7 @@ async function cloudSync(quiet) {
     // панель банбу render() не трогает — обновим её отдельно, иначе приехавшие
     // отметки видны только после переоткрытия раздела
     if (menuCur === 'boo') drawBoo();
+    if (menuCur === 'cmp') drawCmp();
   }
   // локальное свежее — вернём в облако, иначе второе устройство своё потеряет
   const newLocalN = progCount(prog);
@@ -6515,6 +6539,7 @@ function hasNewerLocal(rec) {
   // связи), синхронизация считала, что отдавать нечего, и отметки оставались
   // на одном устройстве.
   if ((ui.booT || 0) > (rec && rec.booT || 0)) return true;
+  if ((ui.cmpT || 0) > (rec && rec.cmpT || 0)) return true;
   return Object.keys(prog).some(id => {
     const l = prog[id], r = rp[id];
     return l && (l.have || l.lvl || l.core) && (!r || (l.mod || 0) > (r.mod || 0));
@@ -7839,6 +7864,25 @@ function drawBoo() {
 // точки отсчёта готовность несравнима.
 let CMP = null;         // { uid, nick, lvl, rows, shown, at }
 let cmpBusy = false;
+const CMP_KEEP = 8;     // сколько профилей помним
+
+// Список тех, с кем уже сравнивался: ник и UID. Хранится в ui и едет в облако
+// вместе с отметками банбу — UID друзей набираются долго, терять их при смене
+// устройства обидно.
+function cmpList() { return (ui && Array.isArray(ui.cmpList)) ? ui.cmpList : []; }
+function cmpRemember(uid, nick) {
+  const list = cmpList().filter(x => x && x.uid !== uid);
+  list.unshift({ uid: uid, nick: nick || uid, at: Date.now() });
+  ui.cmpList = list.slice(0, CMP_KEEP);
+  ui.cmpT = Date.now();
+  save();
+}
+function cmpForget(uid) {
+  ui.cmpList = cmpList().filter(x => x && x.uid !== uid);
+  ui.cmpT = Date.now();
+  save();
+  drawCmp();
+}
 
 function cmpStats(p, id) {
   const t = p && p.cur ? p.cur : {};
@@ -7885,7 +7929,8 @@ async function cmpRun(uid) {
             lvl: (pi.SocialDetail && pi.SocialDetail.ProfileDetail
                   ? pi.SocialDetail.ProfileDetail.Level : pi.Level) || 0,
             rows: rows, shown: list.length, at: Date.now() };
-    ui.cmpUid = uid; save();
+    ui.cmpUid = uid;
+    cmpRemember(uid, CMP.nick);      // save() внутри
     drawCmp();
   } catch (e) {
     msg('<b>Не вышло:</b> ' + esc((e && e.message) || String(e)));
@@ -7943,6 +7988,17 @@ function drawCmp() {
     '<span id="cmpMsg">' + (CMP ? '' :
       'Enka отдаёт только витрину — тех агентов, кого игрок выставил в профиле.') + '</span>' +
     '</div>';
+
+  const saved = cmpList();
+  if (saved.length) {
+    h += '<div class="cmp-saved">' + saved.map(x =>
+      '<span class="cmp-chip' + (CMP && CMP.uid === x.uid ? ' on' : '') + '" ' +
+        'data-uid="' + esc(x.uid) + '" title="UID ' + esc(x.uid) +
+        (x.at ? ' · сравнивал ' + banDate(new Date(x.at).toISOString().slice(0, 10)) : '') + '">' +
+        '<b>' + esc(x.nick || x.uid) + '</b>' +
+        '<u class="cmp-del" data-uid="' + esc(x.uid) + '" title="Убрать из списка">✕</u>' +
+      '</span>').join('') + '</div>';
+  }
 
   if (CMP) {
     const rows = CMP.rows.slice().sort((x, y) => (y.my ? 1 : 0) - (x.my ? 1 : 0) ||
@@ -8007,6 +8063,16 @@ function drawCmp() {
   };
   if ($('cmpGo')) $('cmpGo').onclick = go;
   if ($('cmpUid')) $('cmpUid').onkeydown = e => { if (e.key === 'Enter') go(); };
+  box.querySelectorAll('.cmp-chip').forEach(el => el.onclick = e => {
+    if (e.target.closest('.cmp-del')) return;
+    const u = el.dataset.uid;
+    if ($('cmpUid')) $('cmpUid').value = u;
+    cmpRun(u);
+  });
+  box.querySelectorAll('.cmp-del').forEach(el => el.onclick = e => {
+    e.stopPropagation();
+    cmpForget(el.dataset.uid);
+  });
   // Клик по строке раскрывает характеристики, карточка открывается кнопкой:
   // иначе посмотреть цифры, не уйдя со страницы сравнения, было бы нельзя.
   box.querySelectorAll('.cmp-item').forEach(el => {
