@@ -972,6 +972,37 @@
     .boo-ic{width:34px;height:34px}
   }
 
+  /* ── крутки ── */
+  .pl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+  .pl-card{padding:12px 14px 13px;border-radius:14px;border:1px solid var(--line);
+    background:linear-gradient(120deg,var(--pan2),var(--pan))}
+  .pl-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .pl-head b{font-size:13px;color:var(--tx)}
+  .pl-head i{font-style:normal;font-size:10.5px;color:var(--tx3)}
+  /* полоса пити: желтеет на мягком пити, когда шанс резко растёт */
+  .pl-pity{display:flex;align-items:center;gap:10px}
+  .pl-bar{flex:1;height:8px;border-radius:20px;background:#ffffff10;overflow:hidden}
+  .pl-bar i{display:block;height:100%;border-radius:20px;background:var(--acc);
+    transition:width .3s}
+  .pl-num{flex:none;font-variant-numeric:tabular-nums}
+  .pl-num b{font-size:18px;color:var(--tx)}
+  .pl-num span{font-size:11px;color:var(--tx3)}
+  .pl-facts{display:flex;gap:14px;flex-wrap:wrap;margin-top:11px}
+  .pl-facts span{display:flex;flex-direction:column;line-height:1.25}
+  .pl-facts b{font-size:14px;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .pl-facts i{font-style:normal;font-size:9.5px;color:var(--tx3)}
+  .pl-facts .warn b{color:var(--gold)}
+  /* последние S-ранги: зелёный — выигранный 50/50, красный — проигранный */
+  .pl-s{display:flex;gap:4px;flex-wrap:wrap;margin-top:11px;padding-top:10px;
+    border-top:1px solid var(--line)}
+  .pl-si{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;
+    background:#ffffff08;border:1px solid var(--line);font-size:10px;color:var(--tx3);
+    white-space:nowrap}
+  .pl-si b{font-size:10.5px;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .pl-si.won{border-color:#4ade8044} .pl-si.won b{color:var(--acc)}
+  .pl-si.lost{border-color:#e5484d33} .pl-si.lost b{color:#f0787c}
+  @media(max-width:760px){ .pl-list{grid-template-columns:1fr} }
+
   /* ── снаряжение: движки и комплекты ── */
   .gr-list{display:flex;flex-direction:column;gap:3px}
   .gr{display:grid;grid-template-columns:minmax(110px,1.1fr) minmax(150px,1.4fr) 2fr;
@@ -1932,6 +1963,7 @@
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
   <div class="panel" id="cmpPanel"><div id="cmpBox"></div></div>
   <div class="panel" id="gearPanel"><div id="gearBox"></div></div>
+  <div class="panel" id="pullPanel"><div id="pullBox"></div></div>
 
   <div class="panel" id="helpPanel">
     <div class="hint hlp" style="margin-top:0">
@@ -2001,7 +2033,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v181';
+const APP_VER = 'v182';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6499,6 +6531,7 @@ function payload() {
   return { v: 1, prog: prog, uid: localStorage.getItem(LS + '_uid') || '',
            hist: hist, boo: (ui && ui.boo) || {}, booT: (ui && ui.booT) || 0,
            cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
+           pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            t: Date.now() };
 }
 
@@ -6636,6 +6669,22 @@ function mergeProg(remote) {
   }
   // Список профилей для сравнения — по той же схеме: UID друзей набираются
   // долго, а на новом устройстве их взять неоткуда.
+  // Крутки склеиваем по id, а не по времени: история только растёт, и если на
+  // одном устройстве импортировали свежее, а на другом — старое, объединение
+  // даёт полную картину, тогда как «побеждает свежее» потеряло бы половину.
+  if (Array.isArray(remote.pulls) && remote.pulls.length) {
+    const have = {};
+    PULLS.list.forEach(x => { have[x.id] = 1; });
+    let add = 0;
+    remote.pulls.forEach(x => { if (x && x.id && !have[x.id]) { PULLS.list.push(x); add++; } });
+    if (add) {
+      PULLS.list.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+      PULLS.at = Math.max(PULLS.at || 0, remote.pullsT || 0);
+      try { localStorage.setItem(LS_PULLS, JSON.stringify(PULLS)); } catch (e) {}
+      changed = true;
+      if (menuCur === 'pull') drawPulls();
+    }
+  }
   if (Array.isArray(remote.cmpList) && (remote.cmpT || 0) > (ui.cmpT || 0)) {
     ui.cmpList = remote.cmpList;
     ui.cmpT = remote.cmpT || 0;
@@ -6706,6 +6755,8 @@ function hasNewerLocal(rec) {
   // на одном устройстве.
   if ((ui.booT || 0) > (rec && rec.booT || 0)) return true;
   if ((ui.cmpT || 0) > (rec && rec.cmpT || 0)) return true;
+  // своих круток больше, чем в облаке — значит есть что отдать
+  if ((PULLS.list || []).length > (((rec && rec.pulls) || []).length)) return true;
   return Object.keys(prog).some(id => {
     const l = prog[id], r = rp[id];
     return l && (l.have || l.lvl || l.core) && (!r || (l.mod || 0) > (r.mod || 0));
@@ -6952,6 +7003,7 @@ const MENU = [
   { k: 'mod',    p: 'modPanel',    i: '📊', n: 'Модификаторы',    d: 'Сумма по каждому агенту' },
   { k: 'gear',   p: 'gearPanel',   i: '⚙',  n: 'Снаряжение',      d: 'Движки и комплекты по всем' },
   { k: 'boo',    p: 'booPanel',    i: '🤖', n: 'Банбу',          d: 'Кто что включает и кто есть у тебя' },
+  { k: 'pull',   p: 'pullPanel',   i: '🎲', n: 'Крутки',          d: 'Пити, гарант и вся история' },
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
   { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Шиюй и Опасный штурм' },
   { k: 'hist',   p: 'histPanel',   i: '📈', n: 'История',         d: 'График и журнал изменений' },
@@ -6988,6 +7040,7 @@ function menuGo(k) {
   if (k === 'cloud')  cloudUI();
   if (k === 'mod')    drawModTable();
   if (k === 'gear')   drawGear();
+  if (k === 'pull')   drawPulls();
   if (k === 'banner') drawBanners();
   if (k === 'end')    drawEndgame();
   if (k === 'hist')   drawHist();
@@ -8020,6 +8073,183 @@ function drawBoo() {
   box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
     ui.booMode = b.dataset.m; save(); drawBoo();
   });
+}
+
+// ─────────────── крутки: пити, гарант, история ───────────────
+// Игра не отдаёт историю круток наружу. Но когда открываешь в ней «Записи
+// сигналов», клиент ходит на сервер по адресу с временным ключом authkey, и
+// этот адрес оседает в локальном кеше игры. Скрипт get-signal-link.ps1
+// достаёт его и кладёт в буфер, а трекер по этой ссылке читает историю через
+// свой воркер — напрямую из браузера нельзя, у серверов игры нет CORS.
+//
+// Ключ живёт около суток и открывает только историю круток. Уезжает он в
+// теле запроса, не в адресе: адреса оседают в логах и кешах.
+const PULL_KINDS = [
+  { k: '2001', n: 'Эксклюзивный канал',  pity: 90, soft: 74, half: true  },
+  { k: '3001', n: 'W-Engine',            pity: 80, soft: 65, half: true  },
+  { k: '5001', n: 'Банбу',               pity: 80, soft: 65, half: true  },
+  { k: '1001', n: 'Стабильный канал',    pity: 90, soft: 74, half: false }
+];
+// Кто попадает в стандартный пул. Нужен, чтобы отличить выигранный 50/50 от
+// проигранного: если из лимитированного канала выпал стандартный S — значит
+// половинка проиграна и следующий S гарантирован.
+const PULL_STD = [
+  'Грейс Говард', 'Коляда Белобог', 'Фон Ликаон', 'Нэкомата', 'Рина Александрина',
+  'Солдат 11', 'Грейс', 'Коляда', 'Ликаон', 'Рина',
+  'Стальная подушка', 'Сера', 'Колыбель кракена', 'Подавитель бунта Mk.VI',
+  'Гость из морских глубин', 'Компилятор синтеза'
+];
+const LS_PULLS = LS + '_pulls';
+let PULLS = null;
+try { PULLS = JSON.parse(localStorage.getItem(LS_PULLS) || 'null'); } catch (e) { PULLS = null; }
+if (!PULLS || !Array.isArray(PULLS.list)) PULLS = { v: 1, list: [], at: 0, uid: '' };
+function pullsSave() {
+  PULLS.at = Date.now();
+  try { localStorage.setItem(LS_PULLS, JSON.stringify(PULLS)); } catch (e) {}
+  scheduleSync();
+}
+function isStd(name) {
+  const n = String(name || '').toLowerCase();
+  return PULL_STD.some(x => n === x.toLowerCase() || n.indexOf(x.toLowerCase()) === 0);
+}
+// Разбор одного канала: пити, гарант, средний пити, список S-рангов.
+// История от API идёт от новых к старым — считаем по возрастанию времени.
+function pullStat(kind) {
+  const k = PULL_KINDS.filter(x => x.k === kind)[0] || PULL_KINDS[0];
+  const list = PULLS.list.filter(x => x.g === kind)
+    .slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const out = { kind: k, total: list.length, pity: 0, aPity: 0, guar: false,
+                s: [], a: 0, won: 0, lost: 0, first: null, last: null };
+  if (!list.length) return out;
+  out.first = list[0].t; out.last = list[list.length - 1].t;
+  let since = 0, sinceA = 0, guar = false;
+  list.forEach(x => {
+    since++; sinceA++;
+    if (x.r === 4) {                        // S-ранг
+      const std = isStd(x.n);
+      // Победой считаем только там, где 50/50 вообще есть
+      const win = k.half ? (guar ? null : !std) : null;
+      if (win === true) out.won++;
+      if (win === false) out.lost++;
+      out.s.push({ n: x.n, t: x.t, pity: since, guar: guar, std: std, win: win });
+      guar = k.half ? std : false;          // проиграл — следующий гарантирован
+      since = 0; sinceA = 0;
+    } else if (x.r === 3) { out.a++; sinceA = 0; }
+  });
+  out.pity = since; out.aPity = sinceA; out.guar = guar;
+  const ss = out.s.filter(z => z.pity > 0);
+  out.avg = ss.length ? Math.round(ss.reduce((a, b) => a + b.pity, 0) / ss.length) : 0;
+  return out;
+}
+async function pullsImport() {
+  const inp = $('pullUrl'), msg = t => { const e = $('pullMsg'); if (e) e.innerHTML = t; };
+  const url = (inp && inp.value || '').trim();
+  if (!url) { msg('<b>Вставь ссылку</b>, её даёт скрипт get-signal-link.ps1.'); return; }
+  if (url.indexOf('authkey') < 0) { msg('<b>В ссылке нет authkey</b> — это не та ссылка.'); return; }
+  const btn = $('pullGo');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ гружу…'; }
+  msg('Читаю историю с серверов игры, это до минуты…');
+  try {
+    const res = await apiFetch('/gacha', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    }, 120000);
+    if (!res.ok || !res.data || !res.data.list) {
+      const e = (res.data && res.data.error) || res.err || 'сервер не ответил';
+      msg('<b>Не вышло:</b> ' + esc(e) +
+        (String(e).indexOf('authkey') >= 0 || (res.data && res.data.retcode === -101)
+          ? '<br>Ключ протух — открой в игре «Записи сигналов» и прогони скрипт заново.'
+          : '<br>Если воркер старой версии, нужен маршрут <b>/api/zzz/gacha</b>.'));
+      return;
+    }
+    // Склейка по id: повторный импорт добавляет только новое, старое не трогает
+    const have = {};
+    PULLS.list.forEach(x => { have[x.id] = 1; });
+    let add = 0;
+    res.data.list.forEach(x => { if (!have[x.id]) { PULLS.list.push(x); add++; } });
+    PULLS.list.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+    pullsSave();
+    drawPulls();
+    const m = $('pullMsg');
+    if (m) m.innerHTML = add
+      ? 'Добавлено круток: <b>' + add + '</b> · всего в истории ' + PULLS.list.length
+      : 'Новых круток нет, всего в истории ' + PULLS.list.length;
+  } catch (e) {
+    msg('<b>Не вышло:</b> ' + esc((e && e.message) || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Загрузить'; }
+  }
+}
+function pullDate(t) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(t || ''));
+  return m ? banDate(m[1] + '-' + m[2] + '-' + m[3]) : '';
+}
+function drawPulls() {
+  const box = $('pullBox');
+  if (!box) return;
+  let h = '<div class="cmp-top">' +
+    '<input type="text" id="pullUrl" placeholder="Ссылка из игры (её даёт get-signal-link.ps1)">' +
+    '<button id="pullGo">Загрузить</button>' +
+    '<span id="pullMsg">' + (PULLS.list.length
+      ? 'В истории ' + PULLS.list.length + ' ' + plural(PULLS.list.length, 'крутка', 'крутки', 'круток') +
+        (PULLS.at ? ' · обновлено ' + new Date(PULLS.at).toLocaleDateString('ru-RU') : '')
+      : 'Запусти <b>get-signal-link.ps1</b> при открытых «Записях сигналов» — ' +
+        'он положит ссылку в буфер.') + '</span>' +
+    '</div>';
+
+  if (!PULLS.list.length) {
+    h += '<div class="howto"><h5>Как получить ссылку</h5><ol>' +
+      '<li>Запусти игру и открой <b>«Записи сигналов»</b> — историю круток.</li>' +
+      '<li>В PowerShell из папки сайта: <code>.\\get-signal-link.ps1</code></li>' +
+      '<li>Ссылка окажется в буфере — вставь её сюда.</li>' +
+      '</ol><p class="hint" style="margin:6px 0 0">Ключ в ссылке живёт около суток и ' +
+      'открывает только историю круток: ни аккаунта, ни почты, ни платежей он не касается. ' +
+      'Читается всё через <b>твой</b> воркер, никуда больше не уходит.</p></div>';
+    box.innerHTML = h;
+    if ($('pullGo')) $('pullGo').onclick = pullsImport;
+    return;
+  }
+
+  h += '<div class="pl-list">' + PULL_KINDS.map(k => {
+    const st = pullStat(k.k);
+    if (!st.total) return '';
+    const left = Math.max(0, k.pity - st.pity);
+    const soft = st.pity >= k.soft;
+    return '<div class="pl-card">' +
+      '<div class="pl-head"><b>' + esc(k.n) + '</b>' +
+        '<i>' + st.total + ' ' + plural(st.total, 'крутка', 'крутки', 'круток') +
+        (st.first ? ' · с ' + pullDate(st.first) : '') + '</i></div>' +
+      '<div class="pl-pity">' +
+        '<div class="pl-bar"><i style="width:' + Math.min(100, st.pity / k.pity * 100) + '%' +
+          (soft ? ';background:var(--gold)' : '') + '"></i></div>' +
+        '<div class="pl-num"><b>' + st.pity + '</b><span>/ ' + k.pity + '</span></div>' +
+      '</div>' +
+      '<div class="pl-facts">' +
+        '<span><b>' + left + '</b><i>до гаранта</i></span>' +
+        '<span><b>' + (st.avg || '—') + '</b><i>средний пити</i></span>' +
+        '<span><b>' + st.s.length + '</b><i>S-рангов</i></span>' +
+        (k.half ? '<span class="' + (st.guar ? 'warn' : '') + '"><b>' +
+          (st.guar ? 'да' : st.won + '/' + (st.won + st.lost)) + '</b><i>' +
+          (st.guar ? 'гарант' : 'выиграно 50/50') + '</i></span>' : '') +
+      '</div>' +
+      (st.s.length ? '<div class="pl-s">' + st.s.slice(-8).reverse().map(z =>
+        '<span class="pl-si' + (z.win === false ? ' lost' : (z.win === true ? ' won' : '')) +
+          '" title="' + esc(z.n + ' · ' + pullDate(z.t) + ' · пити ' + z.pity +
+            (z.win === false ? ' · проигран 50/50' : (z.win === true ? ' · выигран 50/50' : '')) +
+            (z.guar ? ' · был гарант' : '')) + '">' +
+          esc(shortRu(z.n)) + '<b>' + z.pity + '</b></span>').join('') + '</div>' : '') +
+      '</div>';
+  }).join('') + '</div>';
+
+  h += '<div class="hint">Пити — сколько круток прошло с последнего S-ранга. ' +
+    'Полоса желтеет, когда начинается мягкий пити и шанс резко растёт. ' +
+    '«Выиграно 50/50» считается по стандартному пулу: если из лимитированного канала ' +
+    'выпал стандартный S, половинка проиграна и следующий S гарантирован. ' +
+    'История хранится у тебя и едет в облако вместе с прогрессом — ' +
+    'повторный импорт добавляет только новые крутки.</div>';
+  box.innerHTML = h;
+  if ($('pullGo')) $('pullGo').onclick = pullsImport;
+  if ($('pullUrl')) $('pullUrl').onkeydown = e => { if (e.key === 'Enter') pullsImport(); };
 }
 
 // ─────────────── карточка агента картинкой ───────────────
