@@ -1950,7 +1950,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v175';
+const APP_VER = 'v176';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2507,6 +2507,22 @@ function elIcon(el, size) {
   const nm = (ELEM[el] && ELEM[el].ru) || el;
   return iconImg(uiIcon('el-' + (EL_ALIAS[el] || el)),
     svgW(EL_PATH[el] || '<circle cx="12" cy="12" r="7"/>', c, size), size, nm);
+}
+// Значок стихии без обёртки с картинкой: только путь, как у значков
+// характеристик. Нужен там, где иконка живёт внутри тесной строки текста.
+//
+// У части агентов element — массив: у Мияби это ["firefrost","ice"], у Исюань
+// ["auricether","ether"]. Массив как ключ не находится ни в EL_PATH, ни в
+// ELEM, и вместо значка рисовался запасной кружок — та самая «точка посреди
+// слова». Берём первую стихию, она же основная.
+function elKey(el) {
+  const k = Array.isArray(el) ? el[0] : el;
+  return EL_PATH[k] ? k : (EL_ALIAS[k] && EL_PATH[EL_ALIAS[k]] ? EL_ALIAS[k] : k);
+}
+function elSvg(el, size) {
+  const k = elKey(el);
+  const c = (ELEM[k] && ELEM[k].c) || '#8b92a3';
+  return svgW(EL_PATH[k] || '<circle cx="12" cy="12" r="7"/>', c, size || 14);
 }
 function profIcon(pr, size, col) {
   return iconImg(uiIcon('pr-' + pr),
@@ -8066,8 +8082,13 @@ function cmpFull(r, eng) {
     const d = (a == null || !b) ? null : Math.round((a - b) / b * 100);
     const cls = a == null ? '' : (a > b ? ' up' : (a < b ? ' down' : ''));
     // У бонуса стихии своего значка нет и быть не может: он зависит от стихии
-    // агента, поэтому берём её иконку.
-    const ic = o.k === 'dmg' ? elIcon(r.a.element, 12) : statIcon(o.k, 12);
+    // агента, поэтому рисуем её.
+    //
+    // Именно svgW, а не elIcon: тот заворачивает картинку в <span class="ic">
+    // с абсолютным позиционированием внутри, и в узкой flex-строке обёртка
+    // расползалась — значок оказывался посреди слова. Остальные значки в этом
+    // списке тоже голые inline-SVG, так что вид получается единый.
+    const ic = o.k === 'dmg' ? elSvg(r.a.element, 12) : statIcon(o.k, 12);
     return '<div class="cmp-st' + cls + '">' +
       '<span class="cmp-st-n" data-mrun>' + ic + esc(o.n) + '</span>' +
       '<b>' + (a == null ? '—' : num(a, o.pct, o.k)) + '</b>' +
