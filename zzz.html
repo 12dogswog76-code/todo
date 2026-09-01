@@ -293,7 +293,13 @@
              filter:drop-shadow(0 0 4px #7d8494a6) drop-shadow(0 1px 2px #000)}
 
   /* ── сетка агентов ── */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px}
+  /* align-items:start — чтобы карточка не тянулась по высоте соседа. У агента,
+     которого нет, полосок прокачки нет, карточка короче, и в смешанном ряду
+     она растягивалась с пустотой снизу. Секции держат карточки одного вида в
+     одной строке, но правило нужно и само по себе: фильтры могут снова
+     перемешать высокие и низкие. */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px;
+    align-items:start}
   /* Вся палитра карточки выводится из одного цвета стихии, который приходит
      в разметке как --el. Осветляем его, потом сильно затемняем — так получается
      глубокий цветной тёмный, а не грязь. Никакого JS: считает сам CSS. */
@@ -1710,7 +1716,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v156';
+const APP_VER = 'v157';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2981,17 +2987,30 @@ function render() {
     return (x.ru || '').localeCompare(y.ru || '', 'ru');
   });
 
-  // Избранные показываем отдельной полосой сверху, чтобы не искать их в общем
-  // списке. Заголовок появляется только когда избранные вообще есть.
-  const fav = list.filter(a => prog[a.id] && prog[a.id].fav);
+  // Три полосы: избранные, свои, остальные.
+  //
+  // Разделение на «есть» и «нет» не только для наглядности. Карточка агента,
+  // которого нет, короче: у неё нет полосок прокачки. В общей сетке строка
+  // тянется по самой высокой карточке, и там, где ряд смешанный, у пустых
+  // карточек снизу оставалась дыра в половину высоты. Сколько таких карточек
+  // окажется в ряду, зависит от ширины экрана, поэтому у всех выглядело
+  // по-разному. Разложив по секциям, мы держим в каждой строке карточки
+  // одного вида — и растягивать нечего.
+  const fav  = list.filter(a => prog[a.id] && prog[a.id].fav);
   const rest = list.filter(a => !(prog[a.id] && prog[a.id].fav));
-  $('grid').innerHTML = fav.length
-    ? '<div class="gsec"><h4><span class="gstar">★</span>Избранные<i>' + fav.length + '</i></h4>' +
-      '<div class="grid">' + fav.map(cardHTML).join('') + '</div></div>' +
-      (rest.length ? '<div class="gsec"><h4>Остальные<i>' + rest.length + '</i></h4>' +
-        '<div class="grid">' + rest.map(cardHTML).join('') + '</div></div>' : '')
+  const mine = rest.filter(a => prog[a.id] && prog[a.id].have);
+  const none = rest.filter(a => !(prog[a.id] && prog[a.id].have));
+  const sec = (title, arr, star) => !arr.length ? '' :
+    '<div class="gsec"><h4>' + (star ? '<span class="gstar">★</span>' : '') +
+    title + '<i>' + arr.length + '</i></h4>' +
+    '<div class="grid">' + arr.map(cardHTML).join('') + '</div></div>';
+  const split = !!fav.length || (mine.length && none.length);
+  $('grid').innerHTML = split
+    ? sec('Избранные', fav, true) +
+      sec(fav.length ? 'Мои агенты' : 'Есть у меня', mine) +
+      sec('Ещё не выбиты', none)
     : list.map(cardHTML).join('');
-  $('grid').classList.toggle('split', !!fav.length);
+  $('grid').classList.toggle('split', split);
   $('emptyMsg').style.display = list.length ? 'none' : 'block';
   document.querySelectorAll('.card').forEach(c => {
     c.onclick = e => {
