@@ -81,10 +81,14 @@
 
   /* ── шапка ── */
   .top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+  /* логотип теперь кнопка «наверх» — сбрасываем оформление кнопки */
   .logo{
     display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;letter-spacing:.5px;
     flex-wrap:wrap;min-width:0;
+    background:none;border:0;padding:0;cursor:pointer;font-family:inherit;text-align:left;
+    color:inherit;
   }
+  .logo:hover .mark img{filter:drop-shadow(0 2px 10px #4ade8066)}
   /* Логотип: если рядом лежит img/zzz/ui/logo.png — показываем его,
      иначе остаётся прежний значок. Файл не обязателен. */
   .logo .mark{
@@ -154,6 +158,11 @@
   .sc.lead img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;
     border:2px solid var(--ok);background:#0b0d11}
   .sc.lead > div{min-width:0}
+  /* плитка, за которой есть подробности */
+  .sc.go{cursor:pointer}
+  .sc.go:hover{border-color:var(--acc)}
+  .sc.go::before{content:'';position:absolute;right:9px;top:9px;width:5px;height:5px;
+    border-radius:50%;background:var(--acc);opacity:.55}
   .sc{
     --sc-c:var(--gold);
     background:linear-gradient(160deg,var(--pan2),var(--pan));
@@ -629,19 +638,19 @@
   .infobox .mainst em{margin-left:auto;font-style:normal;color:var(--gold);font-weight:800}
 
   /* ── кого качать дальше ── */
-  .todo{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;
-    background:linear-gradient(120deg,var(--pan2),var(--pan));box-shadow:var(--glass)}
-  .todo>summary{list-style:none;cursor:pointer;padding:10px 13px;display:flex;
-    align-items:center;gap:9px;user-select:none;flex-wrap:wrap}
-  .todo>summary::-webkit-details-marker{display:none}
-  .todo>summary::before{content:'▸';color:var(--tx3);transition:.15s;font-size:11px}
-  .todo[open]>summary::before{transform:rotate(90deg)}
-  .todo>summary b{font-size:13px}
-  .todo>summary i{font-style:normal;font-size:10.5px;color:var(--tx3)}
-  .td-n{font-size:10px;color:var(--gold);border:1px solid #ffd54a44;border-radius:20px;
-    padding:1px 8px;background:#ffd54a12}
+  /* «Кого качать»: переключатель режимов и список */
+  .td-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+  .td-cnt{font-size:11px;color:var(--gold);border:1px solid #ffd54a44;border-radius:20px;
+    padding:2px 9px;background:#ffd54a12;margin-right:4px}
+  .td-sw{background:var(--pan2);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
+    border-radius:20px;padding:5px 12px;font-size:11px;font-family:inherit;transition:.14s}
+  .td-sw:hover{border-color:var(--acc);color:var(--tx)}
+  .td-sw.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0}
+  .td-list{border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    background:linear-gradient(120deg,var(--pan2),var(--pan))}
   .td-r{display:flex;align-items:center;gap:10px;padding:7px 13px;cursor:pointer;
     border-top:1px solid #ffffff0d;transition:background .12s}
+  .td-list .td-r:first-child{border-top:0}
   .td-r:hover{background:#ffffff08}
   .td-ic{width:30px;height:30px;flex:none;border-radius:50%;object-fit:cover;
     object-position:top center}
@@ -1153,6 +1162,54 @@
   .panel{background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:14px;
     margin-top:11px;display:none}
   .panel.open{display:block}
+  /* внутри меню панель — уже само окно, вторая рамка и отступ там лишние */
+  .mmslot .panel{border:0;background:none;padding:0;margin:0;border-radius:0}
+
+  /* ── меню ── */
+  .mmwrap{display:none;position:fixed;inset:0;background:#000000cc;z-index:120;
+    padding:24px 16px;overflow:auto;backdrop-filter:blur(3px)}
+  .mmwrap.open{display:flex;align-items:flex-start;justify-content:center}
+  /* Окно узкое, пока раздел не выбран: видно только колонку. Раскрывается
+     вправо, а не вниз — колонка остаётся на месте, как арт в карточке агента. */
+  .mmbox{position:relative;display:flex;gap:0;width:auto;max-width:100%;
+    background:var(--pan);border:1px solid var(--line);border-radius:16px;
+    box-shadow:0 24px 70px #000a;overflow:hidden;
+    transition:width .18s ease;margin:auto}
+  .mmbox.open{width:min(1180px,100%)}
+  .mmnav{flex:none;width:252px;padding:12px;display:flex;flex-direction:column;gap:3px;
+    border-right:1px solid var(--line);background:linear-gradient(180deg,var(--pan2),var(--pan));
+    max-height:calc(100vh - 48px);overflow:auto}
+  .mmi{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;
+    background:none;border:1px solid transparent;color:var(--tx2);cursor:pointer;
+    text-align:left;font-family:inherit;transition:.14s}
+  .mmi:hover{background:var(--pan2);border-color:var(--line);color:var(--tx)}
+  .mmi.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0}
+  .mmi u{flex:none;width:22px;text-align:center;text-decoration:none;font-size:14px}
+  .mmi span{min-width:0;display:block}
+  .mmi b{display:block;font-size:12.5px;font-weight:700}
+  .mmi i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:1px}
+  .mmi.on i{color:#a7f3c099}
+  .mmbody{flex:1;min-width:0;padding:0;max-height:calc(100vh - 48px);overflow:auto;
+    display:none}
+  .mmbox.open .mmbody{display:block}
+  .mmslot{padding:16px 18px 20px}
+  .mmx{position:absolute;top:9px;right:11px;width:28px;height:28px;border-radius:50%;
+    background:var(--pan2);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
+    font-size:13px;line-height:1;display:none}
+  .mmbox.open .mmx{display:block}
+  .mmx:hover{border-color:var(--acc);color:var(--tx)}
+  body.noscroll{overflow:hidden}
+  @media(max-width:900px){
+    /* на телефоне разворот вправо некуда: колонка сверху, содержимое под ней */
+    .mmwrap{padding:12px 8px}
+    .mmbox,.mmbox.open{width:100%;flex-direction:column}
+    .mmnav{width:auto;flex-direction:row;flex-wrap:wrap;border-right:0;
+      border-bottom:1px solid var(--line);max-height:none;gap:4px}
+    .mmi{flex:1 1 46%;padding:7px 9px}
+    .mmi i{display:none}
+    .mmbody{max-height:none}
+    .mmslot{padding:12px 12px 16px}
+  }
   .panel input[type=text]{width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:8px;
     color:var(--tx);padding:9px 12px;font-size:13px;outline:none;margin-bottom:8px;font-family:inherit}
   .panel input[type=text]:focus{border-color:var(--acc)}
@@ -1304,22 +1361,20 @@
 <div class="wrap">
 
   <div class="top">
-    <div class="logo">
+    <!-- Логотип — кнопка возврата к началу страницы: список агентов длинный,
+         и промотать его вверх иначе нечем. -->
+    <button class="logo" id="homeBtn" title="Наверх">
       <span class="mark"><img src="img/zzz/ui/logo.png" alt=""
         onerror="this.parentNode.classList.add('noimg');this.remove()"><b>⚔</b></span>
       <span>ZZZ Трекер<small id="stats"></small></span>
       <span class="who" id="whoAmI" hidden></span>
       <span class="ver" id="appVer" title="версия трекера"></span>
       <span id="cloudDot" title="облако не подключено"></span>
-    </div>
+    </button>
     <span class="sp"></span>
-    <button class="tbtn" id="enkaBtn">⟳ Импорт из игры</button>
-    <button class="tbtn" id="cloudBtn">☁ Облако и данные</button>
-    <button class="tbtn" id="modBtn">📊 Модификаторы</button>
-    <button class="tbtn" id="bannerBtn" title="Кто сейчас на баннерах и кто дальше">🎟 Баннеры</button>
-    <button class="tbtn" id="endBtn" title="Текущая фаза Обороны Шиюй и Опасного штурма">⚔ Эндгейм</button>
-    <button class="tbtn" id="histBtn" title="Как рос аккаунт: график и журнал изменений">📈 История</button>
-    <button class="tbtn" id="helpBtn" title="Как всё устроено">Справка</button>
+    <!-- Семь кнопок занимали всю строку и лезли во вторую. Теперь одна, всё
+         остальное — разделами внутри меню. -->
+    <button class="tbtn tbtn-menu" id="menuBtn" title="Импорт, облако, баннеры, эндгейм и прочее">☰ Меню</button>
   </div>
 
   <div id="noDb" class="warn" style="display:none">
@@ -1335,10 +1390,19 @@
 
   <div id="main" style="display:none">
     <div class="sum" id="summary"></div>
-    <div id="todoBox"></div>
     <div class="fil" id="filters"></div>
     <div class="grid" id="grid"></div>
     <div class="empty" id="emptyMsg" style="display:none">Под эти фильтры никто не подходит</div>
+  </div>
+
+  <!-- Меню. Панели физически остаются на своих местах в разметке, а сюда
+       переезжают по клику — так весь прежний код рисования работает как был. -->
+  <div class="mmwrap" id="menuWrap">
+    <div class="mmbox" id="menuBox">
+      <nav class="mmnav" id="menuNav"></nav>
+      <div class="mmbody" id="menuBody"><div class="mmslot" id="menuSlot"></div></div>
+      <button class="mmx" id="menuClose" title="Закрыть">✕</button>
+    </div>
   </div>
 
   <div class="panel" id="enkaPanel">
@@ -1491,6 +1555,7 @@
     <div id="modBox"></div>
   </div>
 
+  <div class="panel" id="todoPanel"><div id="todoBox"></div></div>
   <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
   <div class="panel" id="endPanel"><div id="endBox"></div></div>
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
@@ -1563,7 +1628,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v151';
+const APP_VER = 'v152';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2857,7 +2922,8 @@ function render() {
     };
   });
   renderSummary();
-  drawTodo();
+  // «Кого качать» переехал в меню и рисуется при открытии раздела: гонять
+  // его на каждый render незачем, там перебор всех агентов с buildIssues
 }
 
 function imgUrl(kind, v) {
@@ -3048,23 +3114,31 @@ function renderSummary() {
     if (!buildIssues(a, p).length) clean++;
   });
 
+  // Плитки, за которыми есть что показать, открывают нужный раздел меню:
+  // цифра сама по себе ничего не объясняет, а лезть за подробностями некуда.
   const cards = [
-    ['', have + ' / ' + all, 'агентов есть'],
-    ['a', avg + '%', 'средняя готовность'],
-    ['a', String(mAvg), 'средний модификатор']
+    ['', have + ' / ' + all, 'агентов есть', ''],
+    ['a', avg + '%', 'средняя готовность', ''],
+    ['a', String(mAvg), 'средний модификатор', 'mod']
   ];
   if (checked) cards.push([clean === checked ? 'g' : 'a',
-    clean + ' / ' + checked, 'сборок по гайду']);
+    clean + ' / ' + checked, 'сборок по гайду', 'clean']);
   let html = cards.map(c =>
-    '<div class="sc ' + c[0] + '"><b>' + esc(c[1]) + '</b><span>' + esc(c[2]) + '</span></div>').join('');
+    '<div class="sc ' + c[0] + (c[3] ? ' go' : '') + '"' +
+      (c[3] ? ' data-go="' + c[3] + '" title="Показать подробно"' : '') +
+      '><b>' + esc(c[1]) + '</b><span>' + esc(c[2]) + '</span></div>').join('');
   if (best) {
     const face = best.icon ? imgUrl('agents', best.icon) : '';
-    html += '<div class="sc g lead">' +
+    html += '<div class="sc g lead go" data-go="mod" title="Показать подробно">' +
       (face ? '<img src="' + esc(face) + '" alt="" title="' + esc(best.ru || best.en) +
         '" onerror="this.style.display=\'none\'">' : '') +
       '<div><b>' + bestVal + '</b><span>лидер модификации</span></div></div>';
   }
   $('summary').innerHTML = html;
+  $('summary').querySelectorAll('.sc.go').forEach(el => el.onclick = () => {
+    if (el.dataset.go === 'clean') { menuOpen('todo'); cleanShow(); }
+    else menuOpen(el.dataset.go);
+  });
   markMarquee($('summary'));
   const dbi = $('dbInfo');
   if (dbi) dbi.innerHTML = 'Справочник собран <b>' + esc(DB.built || '?') + '</b>: ' +
@@ -6025,22 +6099,95 @@ $('rebuildDb').onclick = async () => {
 };
 
 // ─────────────── панели, тема, поиск ───────────────
-function togglePanel(id) {
-  const zone = $('panelZone');
-  if (zone && $(id) && $(id).parentNode !== zone) zone.appendChild($(id));
-  ['enkaPanel', 'cloudPanel', 'modPanel', 'bannerPanel', 'endPanel', 'histPanel', 'helpPanel'].forEach(p => {
-    if (p !== id) $(p).classList.remove('open');
-  });
-  ['enkaBtn', 'cloudBtn', 'modBtn', 'bannerBtn', 'endBtn', 'histBtn', 'helpBtn'].forEach(b => $(b).classList.remove('on'));
-  const wasOpen = $(id).classList.contains('open');
-  $(id).classList.toggle('open', !wasOpen);
-  const map = { enkaPanel: 'enkaBtn', cloudPanel: 'cloudBtn', modPanel: 'modBtn',
-                bannerPanel: 'bannerBtn', endPanel: 'endBtn', histPanel: 'histBtn', helpPanel: 'helpBtn' };
-  if (!wasOpen) $(map[id]).classList.add('on');
+// ─────────────── меню ───────────────
+// Семь кнопок в шапке лезли во вторую строку и мешали. Теперь одна, а разделы
+// живут в модалке: слева список, справа содержимое. Панели физически остаются
+// на своих местах в разметке и переезжают в слот по клику — так весь прежний
+// код рисования (drawBanners, drawEndgame, drawModTable…) работает без правок.
+//
+// Пока раздел не выбран, окно узкое — только колонка с пунктами. Выбрал —
+// раскрывается вправо, колонка остаётся на месте.
+const MENU = [
+  { k: 'enka',   p: 'enkaPanel',   i: '⟳',  n: 'Импорт из игры',  d: 'Забрать аккаунт из игры' },
+  { k: 'cloud',  p: 'cloudPanel',  i: '☁',  n: 'Облако и данные', d: 'Синхронизация, бэкап, обслуживание' },
+  { k: 'todo',   p: 'todoPanel',   i: '🎯', n: 'Кого качать',     d: 'Сильные, но недоделанные' },
+  { k: 'mod',    p: 'modPanel',    i: '📊', n: 'Модификаторы',    d: 'Сумма по каждому агенту' },
+  { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
+  { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Шиюй и Опасный штурм' },
+  { k: 'hist',   p: 'histPanel',   i: '📈', n: 'История',         d: 'График и журнал изменений' },
+  { k: 'help',   p: 'helpPanel',   i: '?',  n: 'Справка',         d: 'Как всё устроено' }
+];
+let menuCur = '';
+function menuDraw() {
+  const nav = $('menuNav');
+  if (!nav) return;
+  nav.innerHTML = MENU.map(m =>
+    '<button class="mmi' + (menuCur === m.k ? ' on' : '') + '" data-k="' + m.k + '">' +
+      '<u>' + m.i + '</u><span><b>' + esc(m.n) + '</b><i>' + esc(m.d) + '</i></span></button>').join('');
+  nav.querySelectorAll('.mmi').forEach(b => b.onclick = () => menuGo(b.dataset.k));
 }
-$('enkaBtn').onclick  = () => { togglePanel('enkaPanel'); refreshEnkaLinks(); drawMaint(); };
-$('cloudBtn').onclick = () => { togglePanel('cloudPanel'); cloudUI(); };
-$('modBtn').onclick   = () => { togglePanel('modPanel'); drawModTable(); };
+function menuGo(k) {
+  const m = MENU.filter(x => x.k === k)[0];
+  if (!m) return;
+  // повторный клик по открытому разделу — сворачиваем обратно к колонке
+  if (menuCur === k) { menuCur = ''; menuPark(); $('menuBox').classList.remove('open'); menuDraw(); return; }
+  menuCur = k;
+  // Прежнюю панель возвращаем в panelZone, а не чистим слот через innerHTML:
+  // innerHTML='' уничтожает узел вместе со всеми обработчиками, и следующее
+  // открытие того же раздела падало на пустом месте.
+  menuPark();
+  const slot = $('menuSlot'), panel = $(m.p);
+  if (slot && panel) {
+    slot.appendChild(panel);
+    panel.classList.add('open');
+  }
+  $('menuBox').classList.add('open');
+  menuDraw();
+  if (k === 'enka')   { refreshEnkaLinks(); drawMaint(); }
+  if (k === 'cloud')  cloudUI();
+  if (k === 'mod')    drawModTable();
+  if (k === 'banner') drawBanners();
+  if (k === 'end')    drawEndgame();
+  if (k === 'hist')   drawHist();
+  if (k === 'todo')   drawTodo();
+  const body = $('menuBody');
+  if (body) body.scrollTop = 0;
+}
+function menuOpen(k) {
+  $('menuWrap').classList.add('open');
+  document.body.classList.add('noscroll');
+  menuCur = '';
+  $('menuBox').classList.remove('open');
+  menuDraw();
+  if (k) menuGo(k);
+}
+// вернуть все панели на их законное место вне меню
+function menuPark() {
+  const zone = $('panelZone');
+  if (!zone) return;
+  MENU.forEach(m => {
+    const el = $(m.p);
+    if (el && el.parentNode !== zone) { el.classList.remove('open'); zone.appendChild(el); }
+  });
+}
+function menuClose() {
+  $('menuWrap').classList.remove('open');
+  document.body.classList.remove('noscroll');
+  menuPark();
+  menuCur = '';
+}
+$('menuBtn').onclick   = () => menuOpen('');
+$('menuClose').onclick = menuClose;
+$('menuWrap').onclick  = e => { if (e.target === $('menuWrap')) menuClose(); };
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('menuWrap').classList.contains('open') &&
+      !$('modal').classList.contains('open')) menuClose();
+});
+// логотип — возврат к началу списка
+$('homeBtn').onclick = () => {
+  menuClose();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 // ─────────────── обслуживание ───────────────
 // Блок с командами и возрастом данных. Показывается только владельцу: гостям
 // он бесполезен, а запустить эти команды им всё равно негде. Признак — UID
@@ -6186,10 +6333,7 @@ function drawMaint() {
   });
 }
 
-$('bannerBtn').onclick = () => { togglePanel('bannerPanel'); drawBanners(); };
-$('endBtn').onclick    = () => { togglePanel('endPanel'); drawEndgame(); };
-$('histBtn').onclick   = () => { togglePanel('histPanel'); drawHist(); };
-$('helpBtn').onclick  = () => togglePanel('helpPanel');
+
 
 // ─────────────── баннеры ───────────────
 // Список берём из zzz-guide.json, собирается вместе со сборками с prydwen.
@@ -6258,55 +6402,88 @@ function plural(n, one, few, many) {
 //
 // Порядок: сначала тир, внутри тира — чем хуже готовность, тем выше. Так наверх
 // попадает то, что даёт наибольшую отдачу за вложенные материалы.
-const TODO_MAX = 8;
-function todoList() {
+// Кого качать. По умолчанию только сильные по тир-листу — ради этого блок и
+// заводился. Но тир-лист меняется каждый патч, и агент, который вчера был S+,
+// сегодня уходит в A, хотя качать его ты всё равно собирался. Поэтому есть
+// переключатель: показать всех, у кого что-то не доделано.
+// Кого качать. Три режима:
+//   tier  — только сильные по тир-листу, ради этого блок и заводился
+//   all   — все, у кого что-то не доделано: тир-лист меняется каждый патч, и
+//           агент, вчера бывший S+, сегодня уходит в A, а качать его всё равно надо
+//   clean — наоборот, те, кто уже сходится с гайдом полностью
+function todoList(mode) {
   const src = tierSrc();
-  if (!src) return [];
   const out = [];
   DB.agents.forEach(a => {
     const p = prog[a.id];
     if (!p || !p.have) return;
-    const t = tierOf(a.id);
-    if (!t || TIER_RANK[t.tier] > TIER_RANK['A']) return;   // ниже A не зовём
+    const t = src ? tierOf(a.id) : null;
+    if (mode === 'tier' && (!t || TIER_RANK[t.tier] > TIER_RANK['A'])) return;
     const pc = pctOf(a.id);
     const iss = buildIssues(a, p);
-    // всё доделано и замечаний нет — агент в списке не нужен
-    if (pc >= 100 && !iss.length) return;
-    out.push({ a: a, pc: pc, tier: t.tier, iss: iss.length, gaps: pctGaps(a.id),
+    const done = pc >= 100 && !iss.length;
+    if (mode === 'clean') { if (!guideOf(a.id) || iss.length) return; }
+    else if (done) return;                       // доделанным в списке делать нечего
+    out.push({ a: a, pc: pc, tier: (t && t.tier) || '', iss: iss.length, gaps: pctGaps(a.id),
                hard: iss.filter(x => x.lvl === 'hard').length });
   });
-  out.sort((x, y) => (TIER_RANK[x.tier] - TIER_RANK[y.tier]) || (x.pc - y.pc));
+  const rank = x => x.tier ? TIER_RANK[x.tier] : 99;
+  out.sort((x, y) => mode === 'clean'
+    ? ((rank(x) - rank(y)) || (y.pc - x.pc))
+    : ((rank(x) - rank(y)) || (x.pc - y.pc)));
   return out;
 }
+const TODO_MODES = [
+  ['tier',  'По тир-листу'],
+  ['all',   'Все, кто не доделан'],
+  ['clean', 'Собраны по гайду']
+];
+function cleanShow() { ui.todoMode = 'clean'; save(); drawTodo(); }
 function drawTodo() {
   const box = $('todoBox');
   if (!box) return;
-  const list = todoList();
-  if (!list.length) { box.innerHTML = ''; return; }
-  const rows = list.slice(0, TODO_MAX).map(x => {
+  const mode = TODO_MODES.some(m => m[0] === ui.todoMode) ? ui.todoMode : 'tier';
+  const list = todoList(mode);
+  const rows = list.map(x => {
     const pic = x.a.icon ? imgUrl('agents', x.a.icon) : '';
     // Пишем не «готовность 84%», а чего конкретно не хватает: иначе непонятно,
     // за что браться — докачать навыки или перебрать диски.
     const why = [];
-    if (x.gaps.length) why.push(x.gaps.join(', '));
-    if (x.iss) why.push(x.iss + ' ' + plural(x.iss, 'замечание', 'замечания', 'замечаний'));
+    if (mode === 'clean') { if (x.pc < 100) why.push('готовность ' + x.pc + '%'); }
+    else {
+      if (x.gaps.length) why.push(x.gaps.join(', '));
+      if (x.iss) why.push(x.iss + ' ' + plural(x.iss, 'замечание', 'замечания', 'замечаний'));
+    }
     return '<div class="td-r" data-id="' + x.a.id + '">' +
       (pic ? img(pic, 'td-ic', x.a.ru, true) : '<span class="td-ic"></span>') +
       '<b>' + esc(x.a.ru) + '</b>' +
-      '<span class="td-t">' + rankBadge(x.tier, 'sm') + '</span>' +
+      '<span class="td-t">' + (x.tier ? rankBadge(x.tier, 'sm') : '') + '</span>' +
       '<span class="td-w">' + esc(why.join(' · ')) + '</span>' +
       (x.hard ? '<em class="td-h">' + x.hard + '</em>' : '') +
       '</div>';
   }).join('');
-  box.innerHTML = '<details class="todo"' + (ui.todoOpen ? ' open' : '') + '><summary>' +
-    '<b>Кого качать дальше</b><span class="td-n">' + list.length + '</span>' +
-    '<i>сильные по тир-листу, но недоделанные</i></summary>' + rows +
-    (list.length > TODO_MAX
-      ? '<div class="hint" style="padding:0 12px 10px">и ещё ' + (list.length - TODO_MAX) + '</div>'
-      : '') + '</details>';
+  const empty = {
+    tier:  'Из сильных по тир-листу всё доделано — переключись на «Все».',
+    all:   'Все агенты доведены до целей. ',
+    clean: 'Пока ни одна сборка не сходится с гайдом полностью.'
+  }[mode];
+  box.innerHTML =
+    '<div class="td-head">' +
+      '<span class="td-cnt">' + list.length + ' ' +
+        plural(list.length, 'агент', 'агента', 'агентов') + '</span>' +
+      TODO_MODES.map(m => '<button class="td-sw' + (mode === m[0] ? ' on' : '') +
+        '" data-m="' + m[0] + '">' + m[1] + '</button>').join('') +
+    '</div>' +
+    (list.length ? '<div class="td-list">' + rows + '</div>'
+                 : '<div class="hint" style="margin-top:0">' + empty + '</div>') +
+    '<div class="hint">' + (mode === 'clean'
+      ? 'Здесь те, у кого диски, комплекты и цели сходятся с гайдом prydwen. Готовность может быть и меньше 100%: она считается по прокачке, а замечания — по сборке.'
+      : 'Слева тир по prydwen, справа — чего не хватает до твоих целей.') +
+    ' Строка кликается и открывает карточку.</div>';
   box.querySelectorAll('.td-r').forEach(r => r.onclick = () => openAgent(+r.dataset.id));
-  const dt = box.querySelector('details.todo');
-  if (dt) dt.ontoggle = () => { if (ui.todoOpen !== dt.open) { ui.todoOpen = dt.open; save(); } };
+  box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+    ui.todoMode = b.dataset.m; save(); drawTodo();
+  });
 }
 
 // ─────────────── сверка сборки с гайдом ───────────────
