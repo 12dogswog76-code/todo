@@ -108,10 +108,10 @@
      Заливка и свечение — как у значка ранга S+, чтобы шапка не выглядела
      блёклой рядом с карточками. */
   .logo-btn>span:nth-of-type(2){
-    background-image:linear-gradient(165deg,#ffffff 4%,#a8ecff 28%,#3fd0ff 58%,#0aa2f0 100%);
+    background-image:linear-gradient(165deg,#ffffff 6%,#eaf4fb 30%,#c3d4e0 62%,#93a7b8 100%);
     -webkit-background-clip:text;background-clip:text;
     -webkit-text-fill-color:transparent;color:transparent;
-    filter:drop-shadow(0 0 8px #48d3ff66) drop-shadow(0 1px 1px #0009);
+    filter:drop-shadow(0 0 7px #bcd8ea3d) drop-shadow(0 1px 1px #0009);
   }
   /* Строка под названием. Раньше тут был состав базы, из-за него шапка занимала
      две строки и кнопки съезжали вниз. Теперь сюда попадают только сообщения о
@@ -1200,10 +1200,17 @@
   .mt-find::before{content:'⌕';color:var(--tx3);font-size:15px;line-height:1;flex:none;
     opacity:.6;transition:.14s}
   .mt-find:focus-within::before{opacity:1;color:var(--acc)}
-  .mt-find input{background:none;border:0;outline:none;box-shadow:none;color:var(--tx);
-    font-family:inherit;font-size:11.5px;width:112px;padding:2px 0;margin:0}
-  .mt-find input:focus{border:0;outline:none}
-  .mt-find input::placeholder{color:var(--tx3);opacity:.7}
+  /* Селектор нарочно длинный. Глобальное .panel input[type=text] задаёт
+     width:100%, рамку и отступы; у него специфичность (0,2,1) — ровно столько
+     же, сколько у .panel .mt-find input, и при равенстве побеждает то правило,
+     что ниже в файле. Добавляем [type=text], получаем (0,3,1) и выигрываем
+     независимо от порядка. */
+  .panel .mt-find input[type=text],.mt-find input[type=text]{
+    background:none;border:0;outline:none;box-shadow:none;color:var(--tx);
+    font-family:inherit;font-size:11.5px;width:96px;padding:2px 0;margin:0;border-radius:0}
+  .panel .mt-find input[type=text]:focus,.mt-find input[type=text]:focus{
+    border:0;outline:none;box-shadow:none}
+  .mt-find input::placeholder{color:var(--tx3);opacity:.6}
   .mt-none{font-size:11.5px;color:var(--tx3);padding:8px 0 2px}
   /* найденное подсвечиваем, первое совпадение ещё и мигает пару секунд */
   tr.hit td{background:#ffd54a14}
@@ -1703,7 +1710,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v155';
+const APP_VER = 'v156';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6579,18 +6586,15 @@ function drawTodo() {
     // такая же красная «5 критических» ничего не добавляет.
     let iss = '';
     if (mode !== 'clean' && x.iss) {
-      const soft = x.iss - x.hard;
+      // Первое число — всего замечаний, включая критические. Раньше там стояли
+      // только мелкие, и «3 замечания, 1 критическое» читалось как четыре штуки.
+      const allTxt = '<em class="td-h" title="Всего расхождений с гайдом">' +
+        x.iss + ' ' + plural(x.iss, 'замечание', 'замечания', 'замечаний') + '</em>';
       const hardTxt = x.hard
-        ? '<em class="td-h hard" title="Расходится с гайдом по сути: не тот главный стат диска или не тот комплект">' +
+        ? '<em class="td-h hard" title="Из них по сути: не тот главный стат диска или не тот комплект">' +
           x.hard + ' ' + plural(x.hard, 'критическое', 'критических', 'критических') + '</em>'
         : '';
-      // когда все замечания критические, второй раз то же число не пишем
-      const softTxt = soft
-        ? '<em class="td-h" title="Мелкие расхождения с гайдом">' +
-          soft + ' ' + plural(soft, 'замечание', 'замечания', 'замечаний') + '</em>'
-        : (x.hard ? '' : '<em class="td-h">' + x.iss + ' ' +
-            plural(x.iss, 'замечание', 'замечания', 'замечаний') + '</em>');
-      iss = softTxt + hardTxt;
+      iss = allTxt + hardTxt;
     }
     return '<div class="td-r" data-id="' + x.a.id + '">' +
       (pic ? img(pic, 'td-ic', x.a.ru, true) : '<span class="td-ic"></span>') +
