@@ -972,6 +972,46 @@
     .boo-ic{width:34px;height:34px}
   }
 
+  /* ── сравнение профилей ── */
+  .cmp-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+  .cmp-top input[type=text]{flex:1 1 220px;min-width:0;margin-bottom:0}
+  .cmp-top button{flex:none}
+  .cmp-top span{flex:1 1 100%;font-size:11px;color:var(--tx3);line-height:1.5}
+  .cmp-sum{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+  .cmp-s{display:flex;flex-direction:column;padding:7px 14px;border-radius:12px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  .cmp-s b{font-size:15px;color:var(--tx)}
+  .cmp-s i{font-style:normal;font-size:10px;color:var(--tx3)}
+  .cmp-s.up{border-color:#4ade8044} .cmp-s.up b{color:var(--acc)}
+  .cmp-s.down{border-color:#e5484d33} .cmp-s.down b{color:#f0787c}
+  /* Одна сетка на шапку и строки: колонки должны совпадать по ширине, а
+     таблицей это не сделать — в каждой ячейке два числа друг под другом. */
+  .cmp-head,.cmp-row{display:grid;grid-template-columns:minmax(96px,1.4fr) repeat(7,minmax(52px,1fr));
+    gap:4px;align-items:center}
+  .cmp-head{font-size:9px;letter-spacing:.08em;color:var(--tx3);padding:0 8px 6px;
+    border-bottom:1px solid var(--line);margin-bottom:4px}
+  .cmp-head span{text-align:center}
+  .cmp-head span:first-child{text-align:left}
+  .cmp-row{padding:6px 8px;border-radius:10px;cursor:pointer;transition:.14s}
+  .cmp-row:hover{background:#ffffff08}
+  .cmp-row.none{opacity:.55}
+  .cmp-a{display:flex;align-items:center;gap:7px;min-width:0}
+  .cmp-ic{width:26px;height:26px;flex:none;border-radius:50%;object-fit:cover}
+  .cmp-a b{font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .cmp-v{display:flex;flex-direction:column;align-items:center;line-height:1.25}
+  .cmp-v b{font-size:11.5px;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .cmp-v i{font-style:normal;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums}
+  .cmp-v.up b{color:var(--acc)}
+  .cmp-v.down b{color:#f0787c}
+  .cmp-eng{display:none}
+  @media(max-width:900px){
+    /* На узком экране семь колонок не помещаются: прячем производные числа,
+       оставляя то, по чему сравнивают в первую очередь. */
+    .cmp-head,.cmp-row{grid-template-columns:minmax(80px,1.4fr) repeat(4,minmax(44px,1fr))}
+    .cmp-head span:nth-child(n+6),.cmp-row>.cmp-v:nth-of-type(n+5){display:none}
+  }
+
   /* ── панель «Эндгейм» ── */
   .eg-head{font-size:12px;color:var(--tx2);margin:0 0 12px;padding-bottom:10px;
     border-bottom:1px solid var(--line)}
@@ -1731,6 +1771,7 @@
   <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
   <div class="panel" id="endPanel"><div id="endBox"></div></div>
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
+  <div class="panel" id="cmpPanel"><div id="cmpBox"></div></div>
 
   <div class="panel" id="helpPanel">
     <div class="hint hlp" style="margin-top:0">
@@ -1800,7 +1841,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v166';
+const APP_VER = 'v167';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3085,8 +3126,11 @@ function tgtHTML(p, id) {
       (g ? 'Вернуть по гайду' : 'Сбросить на максимум') + '</button></div></div>';
 }
 
-function pctOf(id) {
-  const p = prog[id];
+function pctOf(id) { return pctOfP(prog[id], id); }
+// Готовность считаем от переданного профиля, а не только от своего: та же
+// формула нужна для чужого аккаунта в разделе «Сравнение». Цели при этом
+// остаются наши — иначе сравнивать было бы не с чем.
+function pctOfP(p, id) {
   if (!p || !p.have) return 0;
   const t = tgtOf(p, id);
   const parts = [];
@@ -5528,7 +5572,16 @@ function calcTotals(a, p, discs) {
 function applyEnka(av) {
   const a = DB.byId[av.Id];
   if (!a) return null;
-  const p = P(av.Id);
+  return enkaInto(av, P(av.Id)) ? a : null;
+}
+// Тот же разбор, но в чужой объект: для сравнения профилей нужен разобранный
+// агент, которого нельзя записывать в свой прогресс.
+function enkaRead(av) {
+  return DB.byId[av && av.Id] ? enkaInto(av, blank()) : null;
+}
+function enkaInto(av, p) {
+  const a = DB.byId[av.Id];
+  if (!a) return null;
   p.have = true;
   p.lvl  = av.Level || 0;
   p.core = av.CoreSkillEnhancement || 0;
@@ -5572,7 +5625,7 @@ function applyEnka(av) {
     er: t.er, dmg: Math.round(t.dmg * 10) / 10
   };
   p.mod = Date.now();
-  return a;
+  return p;
 }
 
 // ── импорт всего аккаунта из боевой хроники HoYoLab ──────────────────────────
@@ -5710,6 +5763,40 @@ function applyHoyo(raw) {
 }
 
 function enkaApiUrl(uid) { return 'https://enka.network/api/zzz/uid/' + uid + '/'; }
+
+// Витрина по UID. Свой прокси идёт первым: он на этом же домене, поэтому не
+// упирается ни в CORS, ни в блокировки сети. Остальное — запасные варианты на
+// случай, если воркер ещё не настроен (см. cloudflare/НАСТРОЙКА.md).
+// Отдаёт { data, err, viaProxy }: тем же путём грузится и чужой профиль для
+// сравнения, поэтому цепочка живёт отдельно от обработчика кнопки.
+async function enkaByUid(uid) {
+  const api = enkaApiUrl(uid);
+  const mine = myApiUrls('/uid/' + uid);
+  const tries = mine.concat([
+    api,
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(api),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(api),
+    'https://corsproxy.io/?' + encodeURIComponent(api)
+  ]);
+  let err = '';
+  for (let i = 0; i < tries.length; i++) {
+    try {
+      // без ограничения по времени один зависший адрес держит всю очередь,
+      // и со стороны это выглядит как намертво повисший сайт
+      const r = await fetch(tries[i], { headers: { 'Accept': 'application/json' },
+                                        signal: abortIn(15000) });
+      const t = await r.text();
+      let j = null;
+      try { j = JSON.parse(t); } catch (e) { err = 'HTTP ' + r.status; continue; }
+      // свой прокси на понятные беды отвечает текстом, а не кодом
+      if (j && j.error) { err = j.error; continue; }
+      if (!r.ok) { err = 'HTTP ' + r.status; continue; }
+      if (j && j.PlayerInfo) return { data: j, err: '', viaProxy: i < mine.length };
+      err = 'ответ без данных профиля';
+    } catch (e) { err = netMsg(e); }
+  }
+  return { data: null, err: err, viaProxy: false };
+}
 
 // раскладываем полученный ответ по агентам
 // Ссылки на данные Enka всегда под рукой: и витрина по UID, и все сборки.
@@ -6144,37 +6231,9 @@ $('enkaGo').onclick = async () => {
   localStorage.setItem(LS + '_uid', uid);
   ownerUI();   // UID мог появиться только что — показываем личные блоки сразу
   $('enkaMsg').textContent = 'Гружу профиль…';
-  const api = enkaApiUrl(uid);
-
-  // Свой прокси идёт первым: он на этом же домене, поэтому не упирается ни в CORS,
-  // ни в блокировки сети. Остальное — запасные варианты на случай, если воркер
-  // ещё не настроен (см. cloudflare/НАСТРОЙКА.md).
-  const mine = myApiUrls('/uid/' + uid);
-  const tries = mine.concat([
-    api,
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(api),
-    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(api),
-    'https://corsproxy.io/?' + encodeURIComponent(api)
-  ]);
-  let data = null, lastErr = '', viaProxy = false;
-  for (let i = 0; i < tries.length; i++) {
-    try {
-      // без ограничения по времени один зависший адрес держит всю очередь,
-      // и со стороны это выглядит как намертво повисший сайт
-      const r = await fetch(tries[i], { headers: { 'Accept': 'application/json' },
-                                        signal: abortIn(15000) });
-      const t = await r.text();
-      let j = null;
-      try { j = JSON.parse(t); } catch (e) { lastErr = 'HTTP ' + r.status; continue; }
-      // свой прокси на понятные беды отвечает текстом, а не кодом
-      if (j && j.error) { lastErr = j.error; continue; }
-      if (!r.ok) { lastErr = 'HTTP ' + r.status; continue; }
-      if (j && j.PlayerInfo) { data = j; viaProxy = (i < mine.length); break; }
-      lastErr = 'ответ без данных профиля';
-    } catch (e) { lastErr = netMsg(e); }
-  }
-
-  if (data) { useEnkaData(data, viaProxy); return; }
+  const got = await enkaByUid(uid);
+  if (got.data) { useEnkaData(got.data, got.viaProxy); return; }
+  const lastErr = got.err;
 
   // автоматика не прошла — ручной путь и так на виду, просто подсказываем
   refreshEnkaLinks();
@@ -6677,6 +6736,7 @@ const MENU = [
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
   { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Шиюй и Опасный штурм' },
   { k: 'hist',   p: 'histPanel',   i: '📈', n: 'История',         d: 'График и журнал изменений' },
+  { k: 'cmp',    p: 'cmpPanel',    i: '⚖',  n: 'Сравнение',       d: 'Свой профиль против чужого' },
   { k: 'help',   p: 'helpPanel',   i: '?',  n: 'Справка',         d: 'Как всё устроено' }
 ];
 let menuCur = '';
@@ -6711,6 +6771,7 @@ function menuGo(k) {
   if (k === 'banner') drawBanners();
   if (k === 'end')    drawEndgame();
   if (k === 'hist')   drawHist();
+  if (k === 'cmp')    drawCmp();
   if (k === 'todo')   drawTodo();
   if (k === 'mats')   drawMats();
   if (k === 'boo')    drawBoo();
@@ -7738,6 +7799,157 @@ function drawBoo() {
   });
   box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
     ui.booMode = b.dataset.m; save(); drawBoo();
+  });
+}
+
+// ─────────────── сравнение профилей ───────────────
+// Enka по UID отдаёт только витрину — тех агентов, кого игрок сам выставил в
+// профиле (обычно 3–8). Всего ростера чужого аккаунта не отдаёт никто: боевая
+// хроника HoYoLab требует cookie владельца. Поэтому сравниваем по витрине и
+// честно пишем, сколько агентов в ней было.
+//
+// Цели прокачки берутся наши: у чужого профиля их взять неоткуда, а без общей
+// точки отсчёта готовность несравнима.
+let CMP = null;         // { uid, nick, lvl, rows, shown, at }
+let cmpBusy = false;
+
+function cmpStats(p, id) {
+  const t = p && p.cur ? p.cur : {};
+  return {
+    lvl:  p.lvl || 0,
+    mind: p.mind || 0,
+    w:    (p.w && p.w.lvl) || 0,
+    wph:  (p.w && p.w.phase) || 1,
+    wid:  (p.w && p.w.id) || 0,
+    pct:  pctOfP(p, id),
+    mods: modifiersOf(id, p).sum,
+    atk:  t.atk || 0,
+    cr:   t.cr || 0,
+    cd:   t.cd || 0
+  };
+}
+async function cmpRun(uid) {
+  if (cmpBusy) return;
+  cmpBusy = true;
+  const msg = t => { const el = $('cmpMsg'); if (el) el.innerHTML = t; };
+  msg('Гружу профиль ' + esc(uid) + '…');
+  try {
+    const got = await enkaByUid(uid);
+    if (!got.data) {
+      msg('<b>Не вышло:</b> ' + esc(got.err || 'нет данных') +
+          '. Профиль должен быть открыт, а витрина — не пустой.');
+      return;
+    }
+    const pi = got.data.PlayerInfo || {};
+    const list = ((pi.ShowcaseDetail || {}).AvatarList) || [];
+    const rows = [];
+    list.forEach(av => {
+      const a = DB.byId[av.Id];
+      if (!a) return;
+      const his = enkaRead(av);
+      if (!his) return;
+      const my = prog[av.Id] && prog[av.Id].have ? prog[av.Id] : null;
+      rows.push({ a: a, his: cmpStats(his, av.Id),
+                  my: my ? cmpStats(my, av.Id) : null });
+    });
+    CMP = { uid: uid, nick: (pi.SocialDetail || {}).ProfileDetail
+              ? ((pi.SocialDetail.ProfileDetail || {}).Nickname || '') : (pi.Nickname || ''),
+            lvl: (pi.SocialDetail && pi.SocialDetail.ProfileDetail
+                  ? pi.SocialDetail.ProfileDetail.Level : pi.Level) || 0,
+            rows: rows, shown: list.length, at: Date.now() };
+    ui.cmpUid = uid; save();
+    drawCmp();
+  } catch (e) {
+    msg('<b>Не вышло:</b> ' + esc((e && e.message) || String(e)));
+  } finally { cmpBusy = false; }
+}
+// одна метрика: два числа и кто впереди
+function cmpCell(mine, his, fmt, more) {
+  const f = fmt || (v => nfmt(Math.round(v)));
+  const win = mine == null ? 0 : (mine > his ? 1 : (mine < his ? -1 : 0));
+  const cls = win > 0 ? ' up' : (win < 0 ? ' down' : '');
+  return '<span class="cmp-v' + cls + '">' +
+    '<b>' + (mine == null ? '—' : f(mine)) + '</b>' +
+    '<i>' + f(his) + '</i></span>';
+}
+function drawCmp() {
+  const box = $('cmpBox');
+  if (!box) return;
+  const mine = Object.keys(prog).filter(id => prog[id] && prog[id].have).length;
+  let h = '<div class="cmp-top">' +
+    '<input type="text" id="cmpUid" placeholder="UID друга, например 1502024259" ' +
+      'value="' + esc((ui && ui.cmpUid) || '') + '">' +
+    '<button id="cmpGo">Сравнить</button>' +
+    '<span id="cmpMsg">' + (CMP ? '' :
+      'Enka отдаёт только витрину — тех агентов, кого игрок выставил в профиле.') + '</span>' +
+    '</div>';
+
+  if (CMP) {
+    const rows = CMP.rows.slice().sort((x, y) => (y.my ? 1 : 0) - (x.my ? 1 : 0) ||
+      (y.his.pct - x.his.pct));
+    const both = rows.filter(r => r.my);
+    const iWin  = both.filter(r => r.my.pct > r.his.pct).length;
+    const heWin = both.filter(r => r.my.pct < r.his.pct).length;
+    const nomy  = rows.filter(r => !r.my);
+
+    h += '<div class="eg-head">Профиль <b>' + esc(CMP.nick || CMP.uid) + '</b>' +
+      (CMP.lvl ? ' · уровень ' + CMP.lvl : '') +
+      ' · в витрине ' + CMP.shown + ' ' + plural(CMP.shown, 'агент', 'агента', 'агентов') +
+      (both.length ? ' · общих с тобой ' + both.length : '') + '</div>';
+
+    if (both.length) {
+      h += '<div class="cmp-sum">' +
+        '<span class="cmp-s up"><b>' + iWin + '</b><i>где ты впереди</i></span>' +
+        '<span class="cmp-s down"><b>' + heWin + '</b><i>где он впереди</i></span>' +
+        '<span class="cmp-s"><b>' + (both.length - iWin - heWin) + '</b><i>поровну</i></span>' +
+        '</div>';
+    }
+
+    h += '<div class="cmp-head"><span></span><span>УРОВЕНЬ</span><span>М</span>' +
+      '<span>ОРУЖИЕ</span><span>ГОТОВНОСТЬ</span><span>МОДИФ.</span><span>АТАКА</span>' +
+      '<span>КРИТ</span></div>';
+    h += rows.map(r => {
+      const my = r.my, his = r.his;
+      const eng = DB.engById && DB.engById[his.wid];
+      return '<div class="cmp-row' + (my ? '' : ' none') + '" data-id="' + r.a.id + '">' +
+        '<span class="cmp-a">' +
+          (r.a.icon ? img(imgUrl('agents', r.a.icon), 'cmp-ic', r.a.ru, true)
+                    : '<span class="cmp-ic tm-none">?</span>') +
+          '<b>' + esc(shortRu(r.a.ru)) + '</b></span>' +
+        cmpCell(my && my.lvl, his.lvl, v => String(v)) +
+        cmpCell(my && my.mind, his.mind, v => 'M' + v) +
+        cmpCell(my && my.w, his.w, v => v ? ('ур.' + v) : '—') +
+        cmpCell(my && my.pct, his.pct, v => v + '%') +
+        cmpCell(my && my.mods, his.mods, v => String(v)) +
+        cmpCell(my && my.atk, his.atk) +
+        cmpCell(my && (my.cr * 2 + my.cd), his.cr * 2 + his.cd,
+                v => Math.round(v) + '') +
+        (eng ? '<span class="cmp-eng" title="Его движок">' + esc(eng.ru || '') + '</span>' : '') +
+        '</div>';
+    }).join('');
+
+    if (nomy.length) {
+      h += '<div class="hint">Нет у тебя: ' +
+        nomy.map(r => esc(r.a.ru)).join(', ') + '.</div>';
+    }
+    h += '<div class="hint">Верхнее число — твоё, нижнее — его; зелёное значит, что ты ' +
+      'впереди. Готовность считается по <b>твоим</b> целям: у чужого профиля их взять ' +
+      'неоткуда. Колонка «крит» — шанс×2 + урон, так две половины крита сводятся ' +
+      'в одно число. Данные с <a href="https://enka.network/zzz/" target="_blank" ' +
+      'rel="noopener">enka.network</a>, у тебя отмечено ' + mine + ' ' +
+      plural(mine, 'агент', 'агента', 'агентов') + '.</div>';
+  }
+  box.innerHTML = h;
+
+  const go = () => {
+    const v = ($('cmpUid').value || '').trim().replace(/\D/g, '');
+    if (!v) { $('cmpMsg').innerHTML = '<b>Впиши UID.</b>'; return; }
+    cmpRun(v);
+  };
+  if ($('cmpGo')) $('cmpGo').onclick = go;
+  if ($('cmpUid')) $('cmpUid').onkeydown = e => { if (e.key === 'Enter') go(); };
+  box.querySelectorAll('.cmp-row').forEach(el => el.onclick = () => {
+    if (prog[el.dataset.id] && prog[el.dataset.id].have) openAgent(+el.dataset.id);
   });
 }
 
