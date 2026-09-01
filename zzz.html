@@ -81,14 +81,15 @@
 
   /* ── шапка ── */
   .top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
-  /* логотип теперь кнопка «наверх» — сбрасываем оформление кнопки */
   .logo{
     display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;letter-spacing:.5px;
     flex-wrap:wrap;min-width:0;
-    background:none;border:0;padding:0;cursor:pointer;font-family:inherit;text-align:left;
-    color:inherit;
   }
-  .logo:hover .mark img{filter:drop-shadow(0 2px 10px #4ade8066)}
+  /* сама кнопка «наверх»: оформление кнопки убираем, подсветку не добавляем —
+     мигающий логотип при каждом проходе мыши только раздражает */
+  .logo-btn{display:flex;align-items:center;gap:10px;min-width:0;
+    background:none;border:0;padding:0;cursor:pointer;font-family:inherit;
+    font-size:inherit;font-weight:inherit;letter-spacing:inherit;color:inherit;text-align:left}
   /* Логотип: если рядом лежит img/zzz/ui/logo.png — показываем его,
      иначе остаётся прежний значок. Файл не обязателен. */
   .logo .mark{
@@ -114,16 +115,23 @@
     -webkit-text-fill-color:var(--tx3)}
   .logo small:empty{display:none}
   /* ник владельца профиля, который загружали последним */
+  /* Плашка ника — она же кнопка «обновить из игры». Раньше это был просто
+     текст с зелёной точкой, и догадаться, что он кликается, было нельзя.
+     Теперь впереди значок обновления, а при загрузке он крутится. */
   .logo .who{font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:0;
-    background:#ffffff0d;border:1px solid var(--line);border-radius:20px;padding:3px 11px;
-    display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-  .logo .who::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--ok);
-    box-shadow:0 0 7px var(--ok)}
+    background:#ffffff0d;border:1px solid var(--line);border-radius:20px;padding:4px 12px;
+    display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+    cursor:pointer;transition:.15s;font-family:inherit}
+  .logo .who .sy{flex:none;font-size:12px;line-height:1;color:var(--ok);
+    display:inline-block;transform-origin:50% 50%}
   .logo .who b{font-weight:700;color:var(--tx)}
-  .logo .who{cursor:pointer;transition:.15s}
+  .logo .who i{font-style:normal;color:var(--tx3);font-size:10px}
   .logo .who:hover{border-color:var(--ok);color:var(--tx);background:#4ade801a;
     box-shadow:0 0 14px #4ade8033}
-  .logo .who.busy{opacity:.55;pointer-events:none}
+  .logo .who:hover .sy{transform:rotate(180deg);transition:transform .3s}
+  .logo .who.busy{opacity:.7;pointer-events:none}
+  .logo .who.busy .sy{animation:whospin 1s linear infinite}
+  @keyframes whospin{to{transform:rotate(360deg)}}
   .top .sp{flex:1}
   .top a.back{color:var(--tx2);text-decoration:none;font-size:12.5px}
   .top a.back:hover{color:var(--acc)}
@@ -159,10 +167,10 @@
     border:2px solid var(--ok);background:#0b0d11}
   .sc.lead > div{min-width:0}
   /* плитка, за которой есть подробности */
+  /* Плитка с подробностями. Ничего не дорисовываем: своя рамка и подсветка у
+     .sc уже есть, а зелёная точка перебивала полоску слева и давала двойной
+     ободок — жёлтый от .sc и зелёный поверх. */
   .sc.go{cursor:pointer}
-  .sc.go:hover{border-color:var(--acc)}
-  .sc.go::before{content:'';position:absolute;right:9px;top:9px;width:5px;height:5px;
-    border-radius:50%;background:var(--acc);opacity:.55}
   .sc{
     --sc-c:var(--gold);
     background:linear-gradient(160deg,var(--pan2),var(--pan));
@@ -1201,14 +1209,35 @@
   body.noscroll{overflow:hidden}
   @media(max-width:900px){
     /* на телефоне разворот вправо некуда: колонка сверху, содержимое под ней */
-    .mmwrap{padding:12px 8px}
+    .mmwrap{padding:10px 6px}
     .mmbox,.mmbox.open{width:100%;flex-direction:column}
     .mmnav{width:auto;flex-direction:row;flex-wrap:wrap;border-right:0;
-      border-bottom:1px solid var(--line);max-height:none;gap:4px}
-    .mmi{flex:1 1 46%;padding:7px 9px}
+      border-bottom:1px solid var(--line);max-height:none;gap:4px;padding:9px}
+    .mmi{flex:1 1 46%;padding:8px 9px}
     .mmi i{display:none}
+    .mmi u{width:18px;font-size:13px}
+    .mmi b{font-size:12px}
+    /* Раздел выбран — колонка из восьми кнопок съела бы пол-экрана. Сворачиваем
+       её в ленту с горизонтальной прокруткой: и переключаться удобно, и место
+       остаётся содержимому. */
+    .mmbox.open .mmnav{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+      scrollbar-width:none;padding:7px 8px}
+    .mmbox.open .mmnav::-webkit-scrollbar{display:none}
+    .mmbox.open .mmi{flex:0 0 auto;padding:6px 11px}
+    .mmbox.open .mmi b{white-space:nowrap;font-size:11.5px}
     .mmbody{max-height:none}
-    .mmslot{padding:12px 12px 16px}
+    .mmslot{padding:12px 11px 16px}
+    /* длинные пути и команды в обслуживании не должны распирать окно */
+    .mmslot code,.mmslot .mt-line,.mmslot pre{overflow-wrap:anywhere;word-break:break-word}
+    /* Таблицу модификаторов (четыре колонки) на телефоне не сжать до читаемого
+       вида — пускаем горизонтальную прокрутку у обёртки, а таблице задаём
+       минимальную ширину, иначе колонки схлопываются в кашу. */
+    .mmslot .editbox{overflow-x:auto}
+    .mmslot table{min-width:470px}
+    /* переключатели режимов в «Кого качать» переносим, а не жмём */
+    .td-head{gap:5px}
+    .td-sw{padding:5px 10px;font-size:10.5px}
+    .mmx{top:7px;right:8px;width:26px;height:26px}
   }
   .panel input[type=text]{width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:8px;
     color:var(--tx);padding:9px 12px;font-size:13px;outline:none;margin-bottom:8px;font-family:inherit}
@@ -1363,14 +1392,18 @@
   <div class="top">
     <!-- Логотип — кнопка возврата к началу страницы: список агентов длинный,
          и промотать его вверх иначе нечем. -->
-    <button class="logo" id="homeBtn" title="Наверх">
-      <span class="mark"><img src="img/zzz/ui/logo.png" alt=""
-        onerror="this.parentNode.classList.add('noimg');this.remove()"><b>⚔</b></span>
-      <span>ZZZ Трекер<small id="stats"></small></span>
-      <span class="who" id="whoAmI" hidden></span>
+    <div class="logo">
+      <!-- Логотип — кнопка возврата к началу. Плашка ника рядом, а не внутри:
+           кнопку в кнопку не вложить, а клик по нику должен звать импорт. -->
+      <button class="logo-btn" id="homeBtn" title="Наверх">
+        <span class="mark"><img src="img/zzz/ui/logo.png" alt=""
+          onerror="this.parentNode.classList.add('noimg');this.remove()"><b>⚔</b></span>
+        <span>ZZZ Трекер<small id="stats"></small></span>
+      </button>
+      <button class="who" id="whoAmI" hidden></button>
       <span class="ver" id="appVer" title="версия трекера"></span>
       <span id="cloudDot" title="облако не подключено"></span>
-    </button>
+    </div>
     <span class="sp"></span>
     <!-- Семь кнопок занимали всю строку и лезли во вторую. Теперь одна, всё
          остальное — разделами внутри меню. -->
@@ -1628,7 +1661,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v152';
+const APP_VER = 'v153';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2987,12 +3020,18 @@ function setNick(nick, uid) {
   const u = uid || localStorage.getItem(LS + '_uid') || '';
   if (!n && !u) { el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = n ? '<b>' + esc(n) + '</b>' + (u ? ' · ' + esc(u) : '') : esc(u);
+  // Значок обновления впереди: без него плашка выглядела просто подписью, и
+  // самый частый сценарий — «подтянуть аккаунт из игры» — был спрятан в меню.
+  el.innerHTML = '<span class="sy">⟳</span>' +
+    (n ? '<b>' + esc(n) + '</b>' + (u ? ' · ' + esc(u) : '') : esc(u));
   el.title = 'Обновить данные из игры — то же, что «Загрузить весь аккаунт»';
-  el.onclick = () => {
+  el.onclick = e => {
+    e.stopPropagation();
     if (!$('hoyoGo')) return;
     el.classList.add('busy');
     if ($('uidInput') && u) $('uidInput').value = u;
+    // кнопка импорта живёт в панели, которая может быть внутри закрытого меню —
+    // клик по ней работает и так, панель для этого открывать не нужно
     $('hoyoGo').click();
     setTimeout(() => el.classList.remove('busy'), 12000);
   };
@@ -3118,7 +3157,7 @@ function renderSummary() {
   // цифра сама по себе ничего не объясняет, а лезть за подробностями некуда.
   const cards = [
     ['', have + ' / ' + all, 'агентов есть', ''],
-    ['a', avg + '%', 'средняя готовность', ''],
+    ['a', avg + '%', 'средняя готовность', 'hist'],
     ['a', String(mAvg), 'средний модификатор', 'mod']
   ];
   if (checked) cards.push([clean === checked ? 'g' : 'a',
