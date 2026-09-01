@@ -868,6 +868,19 @@
     .mt-i b{font-size:11.5px}
   }
 
+  /* разбивка фарма по частям */
+  .mp-list{display:flex;flex-direction:column;gap:5px}
+  .mp-row{display:flex;align-items:center;gap:12px;padding:8px 11px;border-radius:12px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line);
+    flex-wrap:wrap}
+  .mp-n{flex:0 0 128px;min-width:0}
+  .mp-n b{display:block;font-size:12px;color:var(--tx)}
+  .mp-n i{font-style:normal;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums}
+  .mp-row .mt-items{flex:1;min-width:0}
+  @media(max-width:760px){
+    .mp-n{flex:1 1 100%}
+  }
+
   /* ── панель «История» ── */
   .hs-now{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
   .hs-now span{flex:1 1 130px;padding:9px 12px;border-radius:11px;
@@ -1730,7 +1743,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v158';
+const APP_VER = 'v159';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2662,23 +2675,32 @@ function loadMats() {
     .catch(() => {});
 }
 // Что нужно агенту, чтобы дойти от нынешнего состояния до своих целей.
-// Возвращает { gold, exp, items:{id:кол}, has } или null, если данных нет.
+// Возвращает { gold, exp, items, has, parts } или null, если данных нет.
+// parts — та же стоимость, но разложенная по частям: уровень, ядро, каждый
+// навык, оружие. В карточке агента это полезнее общей кучи: сразу видно, за
+// что именно платишь и что можно отложить.
 function matsNeed(id) {
   if (!MATS || !MATS.a[id]) return null;
   const p = prog[id];
   if (!p || !p.have) return null;
   const set = MATS.a[id], t = tgtOf(p, id);
-  const res = { gold: 0, exp: 0, items: {}, has: false };
+  const res = { gold: 0, exp: 0, items: {}, has: false, parts: [] };
+  let cur = null;
+  const part = (n, from, to) => { cur = { n: n, from: from, to: to, gold: 0, exp: 0, items: {} };
+                                  res.parts.push(cur); return cur; };
   const add = row => {
     res.gold += row.g || 0;
+    if (cur) cur.gold += row.g || 0;
     (row.m || []).forEach(pair => {
       const it = set[pair[0]];
       if (!it) return;
       res.items[it] = (res.items[it] || 0) + pair[1];
+      if (cur) cur.items[it] = (cur.items[it] || 0) + pair[1];
       res.has = true;
     });
     if (row.g) res.has = true;
   };
+
   // Уровень: опыт по таблице плюс материалы прорыва на каждой границе.
   //
   // Ступень с lv:50 — это прорыв, который открывает путь с 50 до 60, поэтому
@@ -2688,37 +2710,50 @@ function matsNeed(id) {
   // даже когда уровень пока равен границе.
   const lf = p.lvl || 1, lt = t.lvl || 0;
   const promo = p.promo != null ? p.promo : Math.max(0, Math.ceil(lf / 10) - 1);
-  for (let l = lf; l < lt; l++) res.exp += (MATS.lvl && MATS.lvl[l]) || 0;
-  if (res.exp) res.has = true;
-  (MATS.tpl.adv || []).forEach(r => {
-    if (r.lv >= lf && r.lv < lt && r.st > promo) add(r);
-  });
+  if (lt > lf) {
+    part('Уровень', lf, lt);
+    for (let l = lf; l < lt; l++) {
+      const e = (MATS.lvl && MATS.lvl[l]) || 0;
+      res.exp += e; cur.exp += e;
+    }
+    if (res.exp) res.has = true;
+    (MATS.tpl.adv || []).forEach(r => {
+      if (r.lv >= lf && r.lv < lt && r.st > promo) add(r);
+    });
+  }
+  // ядро
+  const cf = p.core || 0, ct = t.core || 0;
+  if (ct > cf) {
+    part('Ядро', cf, ct);
+    (MATS.tpl.core || []).forEach(r => { if (r.st > cf && r.st <= ct) add(r); });
+  }
   // навыки: строка шаблона с номером L — это переход с уровня L на L+1
   SKILL_IDX.forEach(o => {
     const f = (p.sk && p.sk[o.i]) || 1, g = t.sk[o.i] || 0;
+    if (g <= f) return;
+    part(o.n, f, g);
     for (let l = f; l < g; l++) {
       const row = (MATS.tpl.skill || [])[l - 1];
       if (row) add(row);
     }
   });
-  // ядро
-  const cf = p.core || 0, ct = t.core || 0;
-  (MATS.tpl.core || []).forEach(r => { if (r.st > cf && r.st <= ct) add(r); });
   // оружие: в таблицах есть опыт и денни, но сами модули усиления там не
   // расписаны — показываем то, что знаем точно
   const w = p.w && p.w.id ? DB.engById[p.w.id] : null;
   const wf = (p.w && p.w.lvl) || 0, wt = t.w || 0;
   if (w && wt > wf && MATS.wexp) {
+    part('Оружие', wf, wt);
     const rar = { S: '4', A: '3', B: '2' }[w.rarity] || '4';
     const tab = MATS.wexp[rar] || {};
     for (let l = wf; l < wt; l++) {
       const row = tab[l];
-      if (row) { res.gold += row[1] || 0; res.has = true; }
+      if (row) { res.gold += row[1] || 0; cur.gold += row[1] || 0; res.has = true; }
     }
     (MATS.wstar && MATS.wstar[rar] || []).forEach(r => {
-      if (r.lv > wf && r.lv <= wt) { res.gold += r.g || 0; }
+      if (r.lv > wf && r.lv <= wt) { res.gold += r.g || 0; cur.gold += r.g || 0; }
     });
   }
+  res.parts = res.parts.filter(x => x.gold || x.exp || Object.keys(x.items).length);
   return res.has ? res : null;
 }
 // Журналы опыта: сколько понадобится, если брать самые крупные.
@@ -4010,6 +4045,57 @@ function guideHtml(a, p, T) {
   return h;
 }
 
+// ─────────────── вкладка «Фарм» ───────────────
+// То же, что раздел «Что фармить», но по одному агенту и с разбивкой: видно,
+// сколько стоит каждая часть отдельно. Часто выясняется, что дорог не сам
+// агент, а последние два уровня навыка — их можно и отложить.
+function matsHtml(a) {
+  const n = matsNeed(a.id);
+  if (!n) return '<div class="hint" style="margin-top:0">' +
+    (MATS ? 'Этот агент уже доведён до своих целей — фармить нечего.'
+          : 'Нет файла <b>zzz-mats.json</b>: его собирает <b>build-zzz-mats.ps1</b>.') + '</div>';
+  const short = id => {
+    let t = (MATS.items && MATS.items[id]) || ('#' + id);
+    t = t.replace(/^Высокоразмерные данные:\s*/i, '')
+         .replace(/^Базовый\s+/i, 'баз. ').replace(/^Продвинутый\s+/i, 'прод. ')
+         .replace(/^Специализированный\s+/i, 'спец. ')
+         .replace(/\s+начального уровня$/i, ' (I)').replace(/\s+высшего уровня$/i, ' (II)')
+         .replace(/^Жетон\s+/i, 'жетон ')
+         .replace(/^Пропуск в «Хомячью клетку»$/i, 'пропуск в клетку');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
+  const chip = (id, cnt) => '<span class="mt-i" title="' +
+    esc((MATS.items && MATS.items[id]) || ('#' + id)) + '"><b>' + nfmt(cnt) + '</b>' +
+    esc(short(id)) + '</span>';
+  const books = expBooks(n.exp);
+
+  let h = '<div class="mt-sum">' +
+    '<div class="cap2" style="margin:0 0 7px">ВСЕГО ДО ЦЕЛЕЙ</div>' +
+    '<div class="mt-items">' +
+      (n.gold ? chip('10', n.gold) : '') +
+      books.map(b => chip(b[0], b[1])).join('') +
+      Object.keys(n.items).map(id => chip(id, n.items[id])).join('') +
+    '</div></div>';
+
+  // по частям: слева что качаем и с какого на какое, справа — цена
+  h += '<div class="cap2" style="margin:14px 0 6px">ПО ЧАСТЯМ</div><div class="mp-list">' +
+    n.parts.map(x => {
+      const bk = expBooks(x.exp);
+      const cells = (x.gold ? [chip('10', x.gold)] : [])
+        .concat(bk.map(b => chip(b[0], b[1])))
+        .concat(Object.keys(x.items).map(id => chip(id, x.items[id])));
+      return '<div class="mp-row">' +
+        '<div class="mp-n"><b>' + esc(x.n) + '</b><i>' + x.from + ' → ' + x.to + '</i></div>' +
+        '<div class="mt-items">' + cells.join('') + '</div></div>';
+    }).join('') + '</div>';
+
+  h += '<div class="hint">Считается до целей из кнопки «🎯 цели» — поменяешь их, ' +
+    'пересчитается и это. Оружие учтено только по денни: модули усиления в игровых ' +
+    'таблицах не расписаны. Данные из дампов игры' +
+    (MATS.built ? ', собраны ' + esc(MATS.built) : '') + '.</div>';
+  return h;
+}
+
 // ─────────────── вкладка «Команды» ───────────────
 // Здесь не чьи-то советы, а срез по реальным прохождениям эндгейма с prydwen:
 // какие составы люди действительно берут в Оборону Шиюй и Deadly Assault, как
@@ -4299,6 +4385,10 @@ function renderSheet() {
         ? '<button class="htab' + (curTab === 'guide' ? ' on' : '') + '" data-tab="guide" ' +
           'title="Рекомендуемая сборка с prydwen.gg">Гайд</button>'
         : '') +
+      (matsNeed(curId)
+        ? '<button class="htab' + (curTab === 'mats' ? ' on' : '') + '" data-tab="mats" ' +
+          'title="Сколько материалов до целей этого агента">Фарм</button>'
+        : '') +
       (teamsOf(curId)
         ? '<button class="htab' + (curTab === 'team' ? ' on' : '') + '" data-tab="team" ' +
           'title="С кем ходят в эндгейме — по статистике прохождений">Команды</button>'
@@ -4319,6 +4409,7 @@ function renderSheet() {
         (p.fav ? '★ в избранном' : '☆ в избранное') + '</button></div>';
 
     if (curTab === 'guide') { h += guideHtml(a, p, nowT); }
+    else if (curTab === 'mats') { h += matsHtml(a); }
     else if (curTab === 'team') { h += teamHtml(a); } else {
 
     // ── сверка с гайдом ──
