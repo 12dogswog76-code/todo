@@ -855,6 +855,19 @@
     .tm-a i{display:none}
   }
 
+  /* ── что фармить ── */
+  .mt-sum{border:1px solid var(--line);border-radius:14px;padding:12px 13px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan))}
+  .mt-items{display:flex;flex-wrap:wrap;gap:6px}
+  .mt-i{display:inline-flex;align-items:baseline;gap:6px;padding:5px 11px;border-radius:20px;
+    background:#ffffff08;border:1px solid var(--line);font-size:11px;color:var(--tx2);
+    white-space:nowrap}
+  .mt-i b{font-size:12.5px;color:var(--gold);font-variant-numeric:tabular-nums}
+  @media(max-width:760px){
+    .mt-i{font-size:10.5px;padding:4px 9px}
+    .mt-i b{font-size:11.5px}
+  }
+
   /* ── панель «История» ── */
   .hs-now{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
   .hs-now span{flex:1 1 130px;padding:9px 12px;border-radius:11px;
@@ -1644,6 +1657,7 @@
   </div>
 
   <div class="panel" id="todoPanel"><div id="todoBox"></div></div>
+  <div class="panel" id="matsPanel"><div id="matsBox"></div></div>
   <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
   <div class="panel" id="endPanel"><div id="endBox"></div></div>
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
@@ -1716,7 +1730,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v157';
+const APP_VER = 'v158';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2633,6 +2647,95 @@ function loadGuide() {
     .then(() => { try { banRemSync(); } catch (e) {} })
     .catch(() => {});
 }
+
+// ─────────────── стоимость прокачки ───────────────
+// Собирает build-zzz-mats.ps1 из игровых таблиц. Хитрость в формате: стоимость
+// прокачки у всех агентов одинаковая, различаются только сами предметы — чипы
+// по стихии, жетоны по специализации, материал недельного босса и личный
+// материал. Поэтому в файле один общий шаблон, а у агента лежит только его
+// набор из девяти предметов; шаблон ссылается на них номерами.
+let MATS = null;
+function loadMats() {
+  return fetch('zzz-mats.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(x => { if (x && x.tpl && x.a) MATS = x; })
+    .catch(() => {});
+}
+// Что нужно агенту, чтобы дойти от нынешнего состояния до своих целей.
+// Возвращает { gold, exp, items:{id:кол}, has } или null, если данных нет.
+function matsNeed(id) {
+  if (!MATS || !MATS.a[id]) return null;
+  const p = prog[id];
+  if (!p || !p.have) return null;
+  const set = MATS.a[id], t = tgtOf(p, id);
+  const res = { gold: 0, exp: 0, items: {}, has: false };
+  const add = row => {
+    res.gold += row.g || 0;
+    (row.m || []).forEach(pair => {
+      const it = set[pair[0]];
+      if (!it) return;
+      res.items[it] = (res.items[it] || 0) + pair[1];
+      res.has = true;
+    });
+    if (row.g) res.has = true;
+  };
+  // Уровень: опыт по таблице плюс материалы прорыва на каждой границе.
+  //
+  // Ступень с lv:50 — это прорыв, который открывает путь с 50 до 60, поэтому
+  // условие «строго больше текущего уровня» неверно: стоя ровно на 50, ты как
+  // раз в него и упёрся. Считаем ступени, чьи границы лежат в [текущий, цель).
+  // И сверяемся с p.promo: если прорыв уже сделан, материалы за него не нужны,
+  // даже когда уровень пока равен границе.
+  const lf = p.lvl || 1, lt = t.lvl || 0;
+  const promo = p.promo != null ? p.promo : Math.max(0, Math.ceil(lf / 10) - 1);
+  for (let l = lf; l < lt; l++) res.exp += (MATS.lvl && MATS.lvl[l]) || 0;
+  if (res.exp) res.has = true;
+  (MATS.tpl.adv || []).forEach(r => {
+    if (r.lv >= lf && r.lv < lt && r.st > promo) add(r);
+  });
+  // навыки: строка шаблона с номером L — это переход с уровня L на L+1
+  SKILL_IDX.forEach(o => {
+    const f = (p.sk && p.sk[o.i]) || 1, g = t.sk[o.i] || 0;
+    for (let l = f; l < g; l++) {
+      const row = (MATS.tpl.skill || [])[l - 1];
+      if (row) add(row);
+    }
+  });
+  // ядро
+  const cf = p.core || 0, ct = t.core || 0;
+  (MATS.tpl.core || []).forEach(r => { if (r.st > cf && r.st <= ct) add(r); });
+  // оружие: в таблицах есть опыт и денни, но сами модули усиления там не
+  // расписаны — показываем то, что знаем точно
+  const w = p.w && p.w.id ? DB.engById[p.w.id] : null;
+  const wf = (p.w && p.w.lvl) || 0, wt = t.w || 0;
+  if (w && wt > wf && MATS.wexp) {
+    const rar = { S: '4', A: '3', B: '2' }[w.rarity] || '4';
+    const tab = MATS.wexp[rar] || {};
+    for (let l = wf; l < wt; l++) {
+      const row = tab[l];
+      if (row) { res.gold += row[1] || 0; res.has = true; }
+    }
+    (MATS.wstar && MATS.wstar[rar] || []).forEach(r => {
+      if (r.lv > wf && r.lv <= wt) { res.gold += r.g || 0; }
+    });
+  }
+  return res.has ? res : null;
+}
+// Журналы опыта: сколько понадобится, если брать самые крупные.
+// Остаток добиваем меньшими — так и делают в игре.
+function expBooks(exp) {
+  if (!exp || !MATS || !MATS.exp) return [];
+  const list = Object.keys(MATS.exp).map(id => [id, +MATS.exp[id]])
+    .filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+  const out = [];
+  let left = exp;
+  list.forEach((x, i) => {
+    if (left <= 0) return;
+    const n = i === list.length - 1 ? Math.ceil(left / x[1]) : Math.floor(left / x[1]);
+    if (n > 0) { out.push([x[0], n]); left -= n * x[1]; }
+  });
+  return out;
+}
 // Первая версия pryd.js складывала сюда сырые куски текста: engines и sets были
 // строками, целей не было вовсе. Такой файл ещё может лежать на диске, поэтому
 // проверяем форму данных и отдаём агента только если он разобран как надо.
@@ -2723,6 +2826,7 @@ function boot() {
   // сборки с prydwen: от них зависят и вкладка «Гайд», и веса в оценке дисков,
   // поэтому после загрузки перерисовываем и сетку, и открытую карточку
   if (!GUIDE) { loadGuide().then(() => { if (GUIDE) { render(); if (curId) renderSheet(); } }); }
+  if (!MATS) { loadMats(); }
   DB.byId = {};
   DB.agents.forEach(a => { DB.byId[a.id] = a; });
   DB.suitById = {};
@@ -6259,6 +6363,7 @@ const MENU = [
   { k: 'enka',   p: 'enkaPanel',   i: '⟳',  n: 'Импорт из игры',  d: 'Забрать аккаунт из игры' },
   { k: 'cloud',  p: 'cloudPanel',  i: '☁',  n: 'Облако и данные', d: 'Синхронизация, бэкап, обслуживание' },
   { k: 'todo',   p: 'todoPanel',   i: '🎯', n: 'Кого качать',     d: 'Сильные, но недоделанные' },
+  { k: 'mats',   p: 'matsPanel',   i: '🧱', n: 'Что фармить',     d: 'Материалы до твоих целей' },
   { k: 'mod',    p: 'modPanel',    i: '📊', n: 'Модификаторы',    d: 'Сумма по каждому агенту' },
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
   { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Шиюй и Опасный штурм' },
@@ -6298,6 +6403,7 @@ function menuGo(k) {
   if (k === 'end')    drawEndgame();
   if (k === 'hist')   drawHist();
   if (k === 'todo')   drawTodo();
+  if (k === 'mats')   drawMats();
   const body = $('menuBody');
   if (body) body.scrollTop = 0;
 }
@@ -6404,6 +6510,7 @@ function drawMaint() {
   const noTeams = Object.keys(gAg).length && !Object.keys(gAg).some(k => gAg[k].teams);
   const noBoo = !(GUIDE && GUIDE.bangboo && (GUIDE.bangboo.list || []).length);
   const noEnd = !egOf();
+  const noMats = !MATS;
 
   const old = (n, lim) => n != null && n > lim;
   let h = '<div class="mt"><div class="cap2">ОБСЛУЖИВАНИЕ</div>';
@@ -6415,7 +6522,7 @@ function drawMaint() {
       (dAge == null ? 'нет данных' : dAge + ' ' + plural(dAge, 'день', 'дня', 'дней') + ' назад') + '</span>' +
     '</div>';
 
-  if (missing.length || noGuide.length || noTeams || noBoo || noEnd || old(gAge, 21)) {
+  if (missing.length || noGuide.length || noTeams || noBoo || noEnd || noMats || old(gAge, 21)) {
     h += '<div class="mt-todo">' +
       (missing.length ? '<div>Вышли новые агенты, их нет в справочнике: <b>' +
         esc(missing.join(', ')) + '</b></div>' : '') +
@@ -6424,6 +6531,7 @@ function drawMaint() {
         'прогони шаг 1 заново</div>' : '') +
       (noBoo ? '<div>Нет бангбу — прогони шаг 1 <b>со страницы бангбу</b></div>' : '') +
       (noEnd ? '<div>Нет аналитики эндгейма — нужен <b>pryd.js v4.4</b> и выше</div>' : '') +
+      (noMats ? '<div>Нет стоимости прокачки — запусти <b>build-zzz-mats.ps1</b></div>' : '') +
       (old(gAge, 21) && !noGuide.length ? '<div>Сборки давно не обновлялись — вышел ли патч?</div>' : '') +
       '</div>';
   } else {
@@ -6447,6 +6555,13 @@ function drawMaint() {
     '<b>Console</b>, вставь первую строку и жми Enter. Через пять минут результат сам ' +
     'скопируется в буфер — сохрани его по пути из второй строки, заменив старый файл. '  +
     'Первой строкой скрипт пишет свою версию — сверься, что она свежая.');
+
+  if (noMats) {
+    h += maintCmd(++n + '. Стоимость прокачки', 'один раз в патч',
+      'cd "' + SITE_DIR + '"; .\\build-zzz-mats.ps1',
+      'Собирает <b>zzz-mats.json</b> из игровых таблиц: сколько чипов, жетонов и денни ' +
+      'нужно на прокачку. Кеш общий с досбором, так что TextMap второй раз не качается.');
+  }
 
   if (!noBoo) {
     h += maintCmd(++n + '. Значки бангбу', 'после сбора с prydwen',
@@ -6587,6 +6702,130 @@ const TODO_MODES = [
   ['clean', 'Собраны по гайду']
 ];
 function cleanShow() { ui.todoMode = 'clean'; save(); drawTodo(); }
+// ─────────────── что фармить ───────────────
+// Складываем стоимость прокачки по выбранным агентам. Три режима: только
+// избранные (ты сам отметил, кем занимаешься), все из «Кого качать» и вообще
+// все, у кого что-то не доделано.
+const MATS_MODES = [
+  ['fav',  'Избранные'],
+  ['todo', 'Кого качать'],
+  ['all',  'Все мои']
+];
+function matsAgents(mode) {
+  return (DB.agents || []).filter(a => {
+    const p = prog[a.id];
+    if (!p || !p.have) return false;
+    if (mode === 'fav') return !!p.fav;
+    if (mode === 'todo') {
+      const t = tierOf(a.id);
+      return t && TIER_RANK[t.tier] <= TIER_RANK['A'];
+    }
+    return true;
+  });
+}
+function drawMats() {
+  const box = $('matsBox');
+  if (!box) return;
+  if (!MATS) {
+    box.innerHTML = '<div class="hint" style="margin-top:0">Нет файла <b>zzz-mats.json</b> — ' +
+      'его собирает <b>build-zzz-mats.ps1</b> из игровых таблиц. Запусти его и выложи сайт.</div>';
+    return;
+  }
+  const mode = MATS_MODES.some(m => m[0] === ui.matsMode) ? ui.matsMode : 'fav';
+  const list = matsAgents(mode);
+  // складываем всё в одну кучу и попутно держим разбивку по агентам
+  const total = { gold: 0, exp: 0, items: {} };
+  const rows = [];
+  list.forEach(a => {
+    const n = matsNeed(a.id);
+    if (!n) return;
+    total.gold += n.gold; total.exp += n.exp;
+    Object.keys(n.items).forEach(k => { total.items[k] = (total.items[k] || 0) + n.items[k]; });
+    rows.push({ a: a, n: n });
+  });
+  // предметы: сначала редкие (личные и боссовые), потом расходники
+  const order = id => {
+    const nm = (MATS.items && MATS.items[id]) || '';
+    if (/Пропуск/i.test(nm)) return 0;
+    if (/данные/i.test(nm)) return 1;
+    if (/Специализированный|контролёр|победител/i.test(nm)) return 2;
+    if (/Продвинутый|высшего/i.test(nm)) return 3;
+    if (/Базовый|начального/i.test(nm)) return 4;
+    return 2;
+  };
+  const items = Object.keys(total.items).sort((x, y) =>
+    (order(x) - order(y)) || (total.items[y] - total.items[x]));
+  // Названия в игре длинные: «Высокоразмерные данные: громовой дракон»,
+  // «Жетон Аномалии начального уровня». В чип такое не влезает, поэтому режем
+  // до сути, а полное имя оставляем в подсказке.
+  const short = id => {
+    let n = (MATS.items && MATS.items[id]) || ('#' + id);
+    n = n.replace(/^Высокоразмерные данные:\s*/i, '')
+         .replace(/^Базовый\s+/i, 'баз. ').replace(/^Продвинутый\s+/i, 'прод. ')
+         .replace(/^Специализированный\s+/i, 'спец. ')
+         .replace(/\s+начального уровня$/i, ' (I)').replace(/\s+высшего уровня$/i, ' (II)')
+         .replace(/^Жетон\s+/i, 'жетон ')
+         .replace(/^Пропуск в «Хомячью клетку»$/i, 'пропуск в клетку')
+         .replace(/^Курс обучения 4 уровня$/i, 'курс 4 ур.');
+    return n.charAt(0).toUpperCase() + n.slice(1);
+  };
+  const chip = (id, cnt) => '<span class="mt-i" title="' +
+    esc((MATS.items && MATS.items[id]) || ('#' + id)) + '"><b>' + nfmt(cnt) + '</b>' +
+    esc(short(id)) + '</span>';
+
+  let h = '<div class="td-head">' +
+    '<span class="td-cnt">' + rows.length + ' ' +
+      plural(rows.length, 'агент', 'агента', 'агентов') + '</span>' +
+    MATS_MODES.map(m => '<button class="td-sw' + (mode === m[0] ? ' on' : '') +
+      '" data-m="' + m[0] + '">' + m[1] + '</button>').join('') +
+    '</div>';
+
+  if (!rows.length) {
+    h += '<div class="hint" style="margin-top:0">' +
+      (mode === 'fav' ? 'Ни один избранный агент не требует прокачки — или избранных нет.'
+                      : 'Все выбранные агенты доведены до целей.') + '</div>';
+    box.innerHTML = h;
+    box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+      ui.matsMode = b.dataset.m; save(); drawMats();
+    });
+    return;
+  }
+
+  const books = expBooks(total.exp);
+  h += '<div class="mt-sum">' +
+    '<div class="cap2" style="margin:0 0 7px">ВСЕГО ПОНАДОБИТСЯ</div>' +
+    '<div class="mt-items">' +
+      (total.gold ? chip('10', total.gold) : '') +
+      books.map(b => chip(b[0], b[1])).join('') +
+      items.map(id => chip(id, total.items[id])).join('') +
+    '</div>' +
+    (total.exp ? '<div class="hint" style="margin-top:8px">Опыта нужно ' + nfmt(total.exp) +
+      ' — журналы посчитаны от самых крупных, остаток добит мелкими.</div>' : '') +
+  '</div>';
+
+  h += '<div class="cap2" style="margin:14px 0 6px">ПО АГЕНТАМ</div><div class="td-list">' +
+    rows.sort((x, y) => y.n.gold - x.n.gold).map(r => {
+      const its = Object.keys(r.n.items).sort((x, y) => order(x) - order(y));
+      const txt = its.slice(0, 3).map(id => short(id) + ' ×' + r.n.items[id]).join(', ');
+      return '<div class="td-r" data-id="' + r.a.id + '">' +
+        (r.a.icon ? img(imgUrl('agents', r.a.icon), 'td-ic', r.a.ru, true) : '<span class="td-ic"></span>') +
+        '<b>' + esc(r.a.ru) + '</b>' +
+        '<span class="td-w">' + esc(txt) + (its.length > 3 ? ' и ещё ' + (its.length - 3) : '') + '</span>' +
+        '<em class="td-h">' + nfmt(r.n.gold) + ' денни</em>' +
+        '</div>';
+    }).join('') + '</div>';
+
+  h += '<div class="hint">Считается от текущего состояния до целей агента (кнопка «🎯 цели» ' +
+    'в карточке). Оружие учтено только по денни: модули усиления в игровых таблицах ' +
+    'не расписаны. Данные — из дампов игры' +
+    (MATS.built ? ', собраны ' + esc(MATS.built) : '') + '.</div>';
+  box.innerHTML = h;
+  box.querySelectorAll('.td-r').forEach(r => r.onclick = () => openAgent(+r.dataset.id));
+  box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+    ui.matsMode = b.dataset.m; save(); drawMats();
+  });
+}
+
 function drawTodo() {
   const box = $('todoBox');
   if (!box) return;
