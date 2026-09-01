@@ -973,6 +973,18 @@
   }
 
   /* ── крутки ── */
+  /* команда для PowerShell: длинная, поэтому переносится и скроллится */
+  .pl-cmd{display:flex;align-items:center;gap:8px;margin:6px 0 2px;padding:8px 10px;
+    border-radius:9px;background:#0b0d11;border:1px solid var(--line)}
+  .pl-cmd code{flex:1;min-width:0;font-size:11.5px;color:var(--acc);
+    font-family:var(--mono);overflow-x:auto;white-space:nowrap;padding-bottom:2px}
+  .pl-cmd button{flex:none}
+  .pl-how{margin-top:14px}
+  .pl-how summary{cursor:pointer;list-style:none}
+  .pl-how summary::-webkit-details-marker{display:none}
+  .pl-how summary h5{margin:0}
+  .pl-how summary::after{content:'▾';margin-left:6px;color:var(--tx3);font-size:11px}
+  .pl-how[open] summary::after{content:'▴'}
   .pl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
   .pl-card{padding:12px 14px 13px;border-radius:14px;border:1px solid var(--line);
     background:linear-gradient(120deg,var(--pan2),var(--pan))}
@@ -2033,7 +2045,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v182';
+const APP_VER = 'v183';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8184,6 +8196,25 @@ function pullDate(t) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(t || ''));
   return m ? banDate(m[1] + '-' + m[2] + '-' + m[3]) : '';
 }
+const PULL_CMD = 'iwr -useb https://alextask.ru/zzz-signal.ps1 | iex';
+function pullHowto(open) {
+  return '<details class="howto pl-how"' + (open ? ' open' : '') + '><summary>' +
+    '<h5 style="display:inline">Как получить ссылку</h5></summary><ol>' +
+    '<li>Запусти игру и открой <b>«Записи сигналов»</b> — историю круток.</li>' +
+    '<li>Открой <b>Windows PowerShell</b> (найдётся поиском в пуске) и выполни ' +
+      'команду:<div class="pl-cmd"><code id="pullCmd">' + esc(PULL_CMD) + '</code>' +
+      '<button id="pullCopy" class="ghost2">копировать</button></div></li>' +
+    '<li>Ссылка окажется в буфере обмена — вставь её в поле выше.</li>' +
+    '</ol>' +
+    '<p class="hint" style="margin:6px 0 0">Команда скачивает и запускает ' +
+    '<a href="zzz-signal.ps1" target="_blank" rel="noopener">zzz-signal.ps1</a> ' +
+    '— его можно открыть по этой же ссылке и прочитать: он только читает кеш игры ' +
+    'и кладёт найденный адрес в буфер, никуда ничего не отправляя. ' +
+    'Если игра стоит не в обычном месте, скрипт подскажет, как указать путь.</p>' +
+    '<p class="hint" style="margin:4px 0 0">Ключ в ссылке живёт около суток и открывает ' +
+    'только историю круток: ни аккаунта, ни почты, ни платежей он не касается. ' +
+    'Историю читает <b>твой</b> воркер, больше она никуда не уходит.</p></details>';
+}
 function drawPulls() {
   const box = $('pullBox');
   if (!box) return;
@@ -8198,15 +8229,9 @@ function drawPulls() {
     '</div>';
 
   if (!PULLS.list.length) {
-    h += '<div class="howto"><h5>Как получить ссылку</h5><ol>' +
-      '<li>Запусти игру и открой <b>«Записи сигналов»</b> — историю круток.</li>' +
-      '<li>В PowerShell из папки сайта: <code>.\\get-signal-link.ps1</code></li>' +
-      '<li>Ссылка окажется в буфере — вставь её сюда.</li>' +
-      '</ol><p class="hint" style="margin:6px 0 0">Ключ в ссылке живёт около суток и ' +
-      'открывает только историю круток: ни аккаунта, ни почты, ни платежей он не касается. ' +
-      'Читается всё через <b>твой</b> воркер, никуда больше не уходит.</p></div>';
+    h += pullHowto();
     box.innerHTML = h;
-    if ($('pullGo')) $('pullGo').onclick = pullsImport;
+    pullBind();
     return;
   }
 
@@ -8241,6 +8266,7 @@ function drawPulls() {
       '</div>';
   }).join('') + '</div>';
 
+  h += pullHowto(false);
   h += '<div class="hint">Пити — сколько круток прошло с последнего S-ранга. ' +
     'Полоса желтеет, когда начинается мягкий пити и шанс резко растёт. ' +
     '«Выиграно 50/50» считается по стандартному пулу: если из лимитированного канала ' +
@@ -8248,8 +8274,16 @@ function drawPulls() {
     'История хранится у тебя и едет в облако вместе с прогрессом — ' +
     'повторный импорт добавляет только новые крутки.</div>';
   box.innerHTML = h;
+  pullBind();
+}
+function pullBind() {
   if ($('pullGo')) $('pullGo').onclick = pullsImport;
   if ($('pullUrl')) $('pullUrl').onkeydown = e => { if (e.key === 'Enter') pullsImport(); };
+  const cp = $('pullCopy');
+  if (cp) cp.onclick = () => {
+    const done = () => { cp.textContent = 'скопировано'; setTimeout(() => { cp.textContent = 'копировать'; }, 1800); };
+    if (navigator.clipboard) navigator.clipboard.writeText(PULL_CMD).then(done, done); else done();
+  };
 }
 
 // ─────────────── карточка агента картинкой ───────────────
