@@ -1037,24 +1037,45 @@
   /* Диски: два ряда по шесть слотов, мои сверху. Ряд, а не карточки как в
      профиле агента: здесь важно сравнить слот со слотом, а не разглядывать
      каждый диск — для этого есть карточка. */
-  .cmp-drow{display:flex;align-items:center;gap:5px;margin-top:8px;flex-wrap:wrap}
-  .cmp-dl{flex:none;width:64px;font-size:10.5px;color:var(--tx3)}
-  .cmp-dl b{color:var(--tx2);font-variant-numeric:tabular-nums}
-  .cmp-d{position:relative;width:42px;height:42px;flex:none;border-radius:10px;
-    background:#ffffff08;border:1px solid var(--line);display:flex;
-    align-items:center;justify-content:center;transition:.14s}
+  .cmp-drow{display:flex;align-items:stretch;gap:5px;margin-top:8px;flex-wrap:wrap}
+  .cmp-dl{flex:none;width:58px;align-self:center;font-size:10.5px;color:var(--tx3)}
+  .cmp-dl b{display:block;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .cmp-d{position:relative;flex:1 1 84px;min-width:78px;max-width:120px;padding:5px 5px 6px;
+    border-radius:10px;background:#ffffff08;border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;gap:2px;transition:.14s}
   .cmp-d:hover{border-color:var(--acc)}
   .cmp-d.empty{opacity:.4;border-style:dashed}
+  .cmp-d-top{position:relative;display:flex;align-items:center;justify-content:center;
+    width:34px;height:34px}
   .cmp-d img{width:30px;height:30px;object-fit:contain}
-  .cmp-d-n{position:absolute;top:1px;left:4px;font-style:normal;font-size:8.5px;color:var(--tx3)}
+  .cmp-d-n{position:absolute;top:-3px;left:-4px;font-style:normal;font-size:8.5px;color:var(--tx3)}
   .cmp-d-x{font-style:normal;font-size:12px;color:var(--tx3)}
-  /* бейдж ранга садится в угол плитки, поверх значка комплекта */
-  .cmp-d .rankb{position:absolute;right:-3px;bottom:-3px;transform:scale(.82);
+  /* бейдж ранга садится в угол значка комплекта */
+  .cmp-d-top .rankb{position:absolute;right:-7px;bottom:-5px;transform:scale(.78);
     transform-origin:100% 100%}
+  .cmp-d-m{font-size:9.5px;color:var(--gold);text-align:center;line-height:1.2;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  /* доп. характеристики: видны сразу, нужные агенту — зелёным */
+  .cmp-d-s{display:flex;flex-direction:column;gap:0;width:100%}
+  .cmp-d-s span{font-size:9px;color:var(--tx3);line-height:1.35;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;text-align:center}
+  .cmp-d-s span.good{color:var(--acc)}
+  .cmp-d-s b{font-weight:700;color:var(--tx2)}
+  .cmp-d-s span.good b{color:#a7f3c0}
+  /* движок — справа от дисков, той же высоты */
+  .cmp-w{position:relative;flex:none;width:60px;border-radius:10px;padding:5px;
+    background:#ffffff08;border:1px solid var(--line);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:3px}
+  .cmp-w.empty{opacity:.4;border-style:dashed}
+  .cmp-w img{width:34px;height:34px;object-fit:contain;border-radius:6px}
+  .cmp-w-l{font-size:9.5px;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .cmp-w-p{position:absolute;top:3px;right:5px;font-style:normal;font-size:9px;
+    font-weight:800;color:var(--gold)}
   @media(max-width:760px){
-    .cmp-d{width:36px;height:36px}
+    .cmp-d{flex:1 1 68px;min-width:62px}
     .cmp-d img{width:26px;height:26px}
-    .cmp-dl{width:100%}
+    .cmp-d-s span{font-size:8.5px}
+    .cmp-dl{width:100%;align-self:auto}
   }
   .cmp-note{margin-top:9px;font-size:11px;color:var(--tx3);display:flex;
     align-items:center;gap:10px;flex-wrap:wrap}
@@ -1912,7 +1933,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v172';
+const APP_VER = 'v173';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8097,25 +8118,50 @@ function cmpDiscRow(a, p, label) {
     const d = list.filter(x => x && x.slot === sl)[0] || null;
     const sc = d ? discScore(d, mk, pri, wts) : null;
     const suit = d && DB.suitById ? DB.suitById[d.suit] : null;
+    // Доп. характеристики видны сразу, без наведения: ради них сравнение и
+    // затевалось — по одной букве оценки не понять, чем сборки различаются.
+    // Полезные агенту подсвечены тем же правилом, что и в карточке.
+    const subs = ((d && d.subs) || []).map(sp => {
+      const r = subRolls(sp);
+      return '<span' + (isModSub(sp, mk) ? ' class="good"' : '') + '>' +
+        esc(shortName(sp.p)) + (r ? '<b>+' + r + '</b>' : '') + '</span>';
+    }).join('');
     cells += '<span class="cmp-d' + (d ? '' : ' empty') + '" title="' +
       esc((suit ? (suit.ru || suit.en) : 'слот ' + sl) +
-          (d ? ' · ' + shortName(d.mainP) + ' · +' + (d.lvl || 0) : ' — пусто') +
-          (sc ? ' · ' + sc.grade + ' (' + sc.pct + '%)' : '')) + '">' +
-      '<i class="cmp-d-n">' + sl + '</i>' +
-      (suit && suit.icon
-        ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" loading="lazy" ' +
-          'onerror="this.style.visibility=\'hidden\'">'
-        : '<em class="cmp-d-x">—</em>') +
-      (sc ? rankBadge(sc.grade, 'sm') : '') +
+          (d ? ' · +' + (d.lvl || 0) : ' — пусто') +
+          (sc ? ' · ' + sc.grade + ' (' + sc.pct + '%)' : '') +
+          (d && d.subs ? '\n' + d.subs.map(subText).join('\n') : '')) + '">' +
+      '<span class="cmp-d-top">' +
+        '<i class="cmp-d-n">' + sl + '</i>' +
+        (suit && suit.icon
+          ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" loading="lazy" ' +
+            'onerror="this.style.visibility=\'hidden\'">'
+          : '<em class="cmp-d-x">—</em>') +
+        (sc ? rankBadge(sc.grade, 'sm') : '') +
+      '</span>' +
+      (d ? '<b class="cmp-d-m">' + esc(shortName(d.mainP)) + '</b>' : '') +
+      (subs ? '<span class="cmp-d-s">' + subs + '</span>' : '') +
       '</span>';
   }
   // средняя оценка сборки: по ней видно, кто собран ровнее, а не «повезло с одним диском»
   const scores = list.map(d => discScore(d, mk, pri, wts)).filter(Boolean);
   const avg = scores.length ? Math.round(scores.reduce((x, y) => x + y.pct, 0) / scores.length) : 0;
+  // движок справа от дисков: он часть той же сборки, и без него картина неполная
+  const w = p.w && p.w.id && DB.engById ? DB.engById[p.w.id] : null;
+  const eng = '<span class="cmp-w' + (w ? '' : ' empty') + '" title="' +
+    esc(w ? (w.ru || w.en) + ' · ур.' + ((p.w && p.w.lvl) || 0) +
+            ' · P' + ((p.w && p.w.phase) || 1) : 'движка нет') + '">' +
+    (w && w.icon
+      ? '<img src="' + esc(imgUrl('engines', w.icon)) + '" alt="" loading="lazy" ' +
+        'onerror="this.style.visibility=\'hidden\'">'
+      : '<em class="cmp-d-x">—</em>') +
+    (w ? '<b class="cmp-w-l">ур.' + ((p.w && p.w.lvl) || 0) + '</b>' +
+         '<i class="cmp-w-p">P' + ((p.w && p.w.phase) || 1) + '</i>' : '') +
+    '</span>';
   return '<div class="cmp-drow">' +
     '<span class="cmp-dl">' + esc(label) +
       (scores.length ? ' <b>' + avg + '%</b>' : '') + '</span>' +
-    cells + '</div>';
+    cells + eng + '</div>';
 }
 // одна метрика: два числа и кто впереди
 function cmpCell(mine, his, fmt, more) {
