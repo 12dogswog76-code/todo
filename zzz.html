@@ -1029,6 +1029,9 @@
   .cmp-st:hover{background:#ffffff06}
   .cmp-st-n{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx3);
     min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Без flex:none значок схлопывался в ноль: во flex-контейнере с overflow
+     длинное название («Контроль аномалии») выдавливало SVG. */
+  .cmp-st-n>svg,.cmp-st-n>.ic{flex:none}
   .cmp-st b{font-size:11.5px;color:var(--tx2);min-width:52px;text-align:right}
   .cmp-st i{font-style:normal;font-size:11px;color:var(--tx3);min-width:52px;text-align:right}
   .cmp-st u{text-decoration:none;font-size:10px;color:var(--tx3);min-width:44px;text-align:right}
@@ -1077,6 +1080,15 @@
     .cmp-d-s span{font-size:8.5px}
     .cmp-dl{width:100%;align-self:auto}
   }
+  /* ── бегущая строка для того, что не влезло ── */
+  .mrun{text-overflow:clip!important}
+  .mrun>i{display:inline-block;font-style:normal;white-space:nowrap;padding-right:22px;
+    animation:mrun 8s linear infinite}
+  .mrun>i::after{content:attr(data-t);padding-left:22px}
+  /* значок остаётся на месте, бежит только текст справа от него */
+  .cmp-st-n.mrun>i{flex:1 1 auto;min-width:0;overflow:hidden}
+  @keyframes mrun{to{transform:translateX(-50%)}}
+  @media(prefers-reduced-motion:reduce){ .mrun>i{animation:none} }
   .cmp-note{margin-top:9px;font-size:11px;color:var(--tx3);display:flex;
     align-items:center;gap:10px;flex-wrap:wrap}
   .panel .cmp-open{padding:5px 12px;font-size:11.5px}
@@ -1933,7 +1945,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v173';
+const APP_VER = 'v174';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3633,6 +3645,30 @@ function renderSummary() {
 // модифи…». Те, что не поместились, пускаем бегущей строкой: текст дублируется
 // внутри, поэтому лента идёт без разрыва. Проверяем по факту, а не по длине:
 // шрифт и ширина экрана у всех разные.
+// Бегущая строка для всего, что не влезло. Раньше такое было только в сводке
+// на телефоне; здесь пригодилось и на большом экране: «Контроль аномалии» и
+// «Знание аномалии» не помещаются в колонку ни при какой ширине.
+//
+// Проверяем по факту (scrollWidth против clientWidth), а не по длине строки:
+// шрифт, зум и ширина панели у всех разные. Работает только на видимых
+// элементах, поэтому вызываем после раскрытия блока, а не при отрисовке.
+function markRun(root) {
+  if (!root) return;
+  root.querySelectorAll('[data-mrun]').forEach(el => {
+    if (el.dataset.mrunDone) return;
+    if (el.scrollWidth <= el.clientWidth + 1) return;
+    el.dataset.mrunDone = '1';
+    el.classList.add('mrun');
+    // Текст дублируется через ::after, поэтому лента идёт без разрыва. Значок,
+    // если он есть, оставляем снаружи ленты: иначе он уезжал бы вместе с
+    // текстом, и строка оставалась бы без иконки половину времени.
+    const t = el.textContent.trim();
+    const ic = el.querySelector('svg, .ic');
+    const tape = '<i data-t="' + esc(t) + '">' + esc(t) + '</i>';
+    if (ic) { el.innerHTML = ''; el.appendChild(ic); el.insertAdjacentHTML('beforeend', tape); }
+    else el.innerHTML = tape;
+  });
+}
 function markMarquee(box) {
   if (!box || window.innerWidth > 760) return;
   box.querySelectorAll('.sc span').forEach(el => {
@@ -8021,8 +8057,11 @@ function cmpFull(r, eng) {
     if (!a && !b) return '';                       // характеристика не задействована
     const d = (a == null || !b) ? null : Math.round((a - b) / b * 100);
     const cls = a == null ? '' : (a > b ? ' up' : (a < b ? ' down' : ''));
+    // У бонуса стихии своего значка нет и быть не может: он зависит от стихии
+    // агента, поэтому берём её иконку.
+    const ic = o.k === 'dmg' ? elIcon(r.a.element, 12) : statIcon(o.k, 12);
     return '<div class="cmp-st' + cls + '">' +
-      '<span class="cmp-st-n">' + statIcon(o.k, 12) + esc(o.n) + '</span>' +
+      '<span class="cmp-st-n" data-mrun>' + ic + esc(o.n) + '</span>' +
       '<b>' + (a == null ? '—' : num(a, o.pct, o.k)) + '</b>' +
       '<i>' + num(b, o.pct, o.k) + '</i>' +
       '<u>' + (d == null ? '' : (d > 0 ? '+' : '') + d + '%') + '</u>' +
@@ -8123,7 +8162,7 @@ function cmpDiscRow(a, p, label) {
     // Полезные агенту подсвечены тем же правилом, что и в карточке.
     const subs = ((d && d.subs) || []).map(sp => {
       const r = subRolls(sp);
-      return '<span' + (isModSub(sp, mk) ? ' class="good"' : '') + '>' +
+      return '<span' + (isModSub(sp, mk) ? ' class="good"' : '') + ' data-mrun>' +
         esc(shortName(sp.p)) + (r ? '<b>+' + r + '</b>' : '') + '</span>';
     }).join('');
     cells += '<span class="cmp-d' + (d ? '' : ' empty') + '" title="' +
@@ -8139,7 +8178,7 @@ function cmpDiscRow(a, p, label) {
           : '<em class="cmp-d-x">—</em>') +
         (sc ? rankBadge(sc.grade, 'sm') : '') +
       '</span>' +
-      (d ? '<b class="cmp-d-m">' + esc(shortName(d.mainP)) + '</b>' : '') +
+      (d ? '<b class="cmp-d-m" data-mrun>' + esc(shortName(d.mainP)) + '</b>' : '') +
       (subs ? '<span class="cmp-d-s">' + subs + '</span>' : '') +
       '</span>';
   }
@@ -8299,7 +8338,10 @@ function drawCmp() {
   // иначе посмотреть цифры, не уйдя со страницы сравнения, было бы нельзя.
   box.querySelectorAll('.cmp-item').forEach(el => {
     const row = el.querySelector('.cmp-row');
-    if (row) row.onclick = () => el.classList.toggle('open');
+    if (row) row.onclick = () => {
+      el.classList.toggle('open');
+      if (el.classList.contains('open')) markRun(el);
+    };
   });
   box.querySelectorAll('.cmp-open').forEach(b => b.onclick = e => {
     e.stopPropagation();
