@@ -397,7 +397,9 @@
     font-weight:600;color:#fff}
 
   /* ── модалка ── */
-  .modal{display:none;position:fixed;inset:0;background:#000000cc;z-index:100;
+  /* Карточка агента должна открываться поверх меню: в него ведут «Кого качать»,
+     эндгейм и история, и клик по строке иначе уводил карточку под окно меню. */
+  .modal{display:none;position:fixed;inset:0;background:#000000cc;z-index:140;
     align-items:flex-start;justify-content:center;padding:0 12px 20px;overflow-y:auto}
   .sheet{margin-top:0}
   .modal.open{display:flex}
@@ -666,8 +668,11 @@
   .td-t{flex:none;display:flex;align-items:center}
   /* класс, а не тег: внутри значка ранга тоже есть <i> с буквой */
   .td-w{font-size:11px;color:var(--tx3);margin-left:auto;text-align:right}
-  .td-h{font-style:normal;font-size:10px;font-weight:800;color:#e5484d;flex:none;
-    border:1px solid #e5484d44;border-radius:20px;padding:1px 7px;background:#e5484d14}
+  /* подпись про замечания: критические красным, обычные приглушённо */
+  .td-h{font-style:normal;font-size:10px;font-weight:600;color:var(--tx3);flex:none;
+    border:1px solid var(--line);border-radius:20px;padding:2px 9px;background:#ffffff08;
+    white-space:nowrap}
+  .td-h.hard{color:#e5484d;font-weight:700;border-color:#e5484d44;background:#e5484d14}
   @media(max-width:760px){
     .td-r{flex-wrap:wrap}
     .td-w{margin-left:0;flex-basis:100%;text-align:left;padding-left:40px}
@@ -1173,6 +1178,27 @@
   /* внутри меню панель — уже само окно, вторая рамка и отступ там лишние */
   .mmslot .panel{border:0;background:none;padding:0;margin:0;border-radius:0}
 
+  /* ── поиск в таблице модификаторов ── */
+  .mt-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+  .mt-find{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
+    background:var(--pan2);border:1px solid var(--line);border-radius:20px;padding:3px 12px;
+    transition:.14s}
+  .mt-find:focus-within{border-color:var(--acc)}
+  .mt-find span{font-size:11px;opacity:.7;flex:none}
+  .mt-find input{background:none;border:0;outline:none;color:var(--tx);font-family:inherit;
+    font-size:11.5px;width:130px;padding:3px 0}
+  .mt-find input::placeholder{color:var(--tx3)}
+  .mt-none{font-size:11.5px;color:var(--tx3);padding:8px 0 2px}
+  /* найденное подсвечиваем, первое совпадение ещё и мигает пару секунд */
+  tr.hit td{background:#ffd54a14}
+  tr.hit td:first-child{box-shadow:inset 3px 0 0 var(--gold)}
+  @keyframes modblink{
+    0%,100%{background:#ffd54a14}
+    30%{background:#ffd54a44}
+    60%{background:#ffd54a14}
+  }
+  tr.blink td{animation:modblink .6s ease 3}
+
   /* ── меню ── */
   .mmwrap{display:none;position:fixed;inset:0;background:#000000cc;z-index:120;
     padding:24px 16px;overflow:auto;backdrop-filter:blur(3px)}
@@ -1661,7 +1687,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v153';
+const APP_VER = 'v154';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6076,6 +6102,9 @@ $('cloudOff').onclick = () => {
 };
 
 // ─────────────── импорт/экспорт файлом ───────────────
+// Список модификаторов — полсотни строк, глазами искать неудобно. Поиск не
+// фильтрует список, а подсвечивает и подкручивает к найденному: остальные
+// строки нужны для сравнения, ради них таблица и заводилась.
 function drawModTable() {
   const box = $('modBox');
   if (!box) return;
@@ -6083,24 +6112,62 @@ function drawModTable() {
     .map(a => {
       const m = modifiersOf(a.id, prog[a.id]);
       const by = Object.keys(m.by).map(k => statName(k) + ' ' + m.by[k]).join(', ');
-      return { n: a.ru, sum: m.sum, by: by || '—',
+      return { id: a.id, n: a.ru, en: a.en || '', sum: m.sum, by: by || '—',
                rec: subsOf(a.id, prog[a.id]).map(statName).join(', ') };
     })
     .sort((x, y) => y.sum - x.sum);
   if (!rows.length) { box.innerHTML = '<div class="hint">Нет агентов с заданными приоритетами.</div>'; return; }
   box.innerHTML = '<div class="editbox" style="margin:8px 0">' +
-    '<div class="cap2">МОДИФИКАТОРЫ ПО АГЕНТАМ</div>' +
+    '<div class="mt-top">' +
+      '<div class="cap2" style="margin:0">МОДИФИКАТОРЫ ПО АГЕНТАМ</div>' +
+      '<label class="mt-find"><span>🔍</span>' +
+        '<input type="text" id="modFind" placeholder="Найти агента" autocomplete="off"></label>' +
+    '</div>' +
     '<table style="width:100%;border-collapse:collapse;font-size:11.5px">' +
     '<tr style="color:var(--tx3)"><th style="text-align:left;padding:3px 0">Агент</th>' +
     '<th style="text-align:right;padding:3px 8px">Сайт</th>' +
     '<th style="text-align:left;padding:3px 8px">Рекомендации</th>' +
     '<th style="text-align:left;padding:3px 0">Из чего сложилось</th></tr>' +
-    rows.map(r => '<tr style="border-top:1px solid var(--line)">' +
+    rows.map(r => '<tr style="border-top:1px solid var(--line)" data-id="' + r.id +
+      '" data-n="' + esc((r.n + ' ' + r.en).toLowerCase()) + '">' +
       '<td style="padding:3px 0">' + esc(r.n) + '</td>' +
       '<td style="text-align:right;padding:3px 8px;font-weight:700;color:var(--gold)">' + r.sum + '</td>' +
       '<td style="padding:3px 8px;color:var(--tx3)">' + esc(r.rec) + '</td>' +
       '<td style="padding:3px 0;color:var(--tx2)">' + esc(r.by) + '</td></tr>').join('') +
-    '</table></div>';
+    '</table><div class="mt-none" id="modNone" hidden>Никого не нашлось</div></div>';
+
+  const inp = $('modFind');
+  if (!inp) return;
+  let timer = null;
+  const trs = [].slice.call(box.querySelectorAll('tr[data-id]'));
+  inp.oninput = () => {
+    const q = inp.value.trim().toLowerCase();
+    trs.forEach(t => t.classList.remove('hit'));
+    if (!q) { $('modNone').hidden = true; return; }
+    const found = trs.filter(t => t.dataset.n.indexOf(q) >= 0);
+    $('modNone').hidden = !!found.length;
+    if (!found.length) return;
+    found.forEach(t => t.classList.add('hit'));
+    // мигание перезапускаем принудительно: если класс уже висел, анимация
+    // второй раз сама не стартует
+    clearTimeout(timer);
+    const first = found[0];
+    first.classList.remove('blink');
+    void first.offsetWidth;
+    first.classList.add('blink');
+    timer = setTimeout(() => first.classList.remove('blink'), 2400);
+    // прокручиваем контейнер меню, а не окно: таблица лежит внутри модалки
+    const scroller = first.closest('.mmbody') || first.closest('.panel') || null;
+    const top = scroller
+      ? scroller.scrollTop + first.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top - scroller.clientHeight / 2
+      : 0;
+    // scrollTo у элемента есть не везде (и нет в тестовой среде) — подстраховка
+    if (scroller && scroller.scrollTo) scroller.scrollTo({ top: top, behavior: 'smooth' });
+    else if (scroller) scroller.scrollTop = top;
+    else if (first.scrollIntoView) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+  inp.onkeydown = e => { if (e.key === 'Escape') { inp.value = ''; inp.oninput(); } };
 }
 
 $('expFile').onclick = () => {
@@ -6489,16 +6556,26 @@ function drawTodo() {
     // за что браться — докачать навыки или перебрать диски.
     const why = [];
     if (mode === 'clean') { if (x.pc < 100) why.push('готовность ' + x.pc + '%'); }
-    else {
-      if (x.gaps.length) why.push(x.gaps.join(', '));
-      if (x.iss) why.push(x.iss + ' ' + plural(x.iss, 'замечание', 'замечания', 'замечаний'));
+    else if (x.gaps.length) why.push(x.gaps.join(', '));
+    // Раньше рядом висело красное число — и что оно значит, по нему было не
+    // понять. Пишем словами: сколько всего замечаний и сколько из них серьёзных.
+    let iss = '';
+    if (mode !== 'clean' && x.iss) {
+      iss = x.hard
+        ? (x.iss === x.hard
+            ? x.hard + ' ' + plural(x.hard, 'критическое замечание', 'критических замечания', 'критических замечаний')
+            : x.iss + ' ' + plural(x.iss, 'замечание', 'замечания', 'замечаний') +
+              ', ' + x.hard + ' ' + plural(x.hard, 'критическое', 'критических', 'критических'))
+        : x.iss + ' ' + plural(x.iss, 'замечание', 'замечания', 'замечаний');
     }
     return '<div class="td-r" data-id="' + x.a.id + '">' +
       (pic ? img(pic, 'td-ic', x.a.ru, true) : '<span class="td-ic"></span>') +
       '<b>' + esc(x.a.ru) + '</b>' +
       '<span class="td-t">' + (x.tier ? rankBadge(x.tier, 'sm') : '') + '</span>' +
       '<span class="td-w">' + esc(why.join(' · ')) + '</span>' +
-      (x.hard ? '<em class="td-h">' + x.hard + '</em>' : '') +
+      (iss ? '<em class="td-h' + (x.hard ? ' hard' : '') + '" title="' +
+        (x.hard ? 'Критическое — расходится с гайдом по сути: не тот главный стат диска или не тот комплект'
+                : 'Мелкие расхождения с гайдом') + '">' + esc(iss) + '</em>' : '') +
       '</div>';
   }).join('');
   const empty = {
