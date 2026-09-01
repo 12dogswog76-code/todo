@@ -2001,7 +2001,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v179';
+const APP_VER = 'v180';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8048,6 +8048,30 @@ function loadImg(src) {
     im.src = src;
   });
 }
+// Значок из ST_PATH / EL_PATH прямо на холсте. Наши пути живут в системе
+// 24×24, Path2D принимает их как есть — остаётся масштаб и сдвиг. Атрибуты
+// вроде transform и opacity игнорируем: у игровых значков их нет, а у пары
+// старых запасных смещение на пиксель незаметно.
+function cardIcon(c, svg, x, y, size, color) {
+  if (!svg) return;
+  const ds = String(svg).match(/\sd="([^"]+)"/g) || [];
+  if (!ds.length) return;
+  const k = size / 24;
+  c.save();
+  c.translate(x, y); c.scale(k, k);
+  c.fillStyle = color;
+  ds.forEach(m => {
+    const d = m.slice(4, -1);
+    try { c.fill(new Path2D(d)); } catch (e) {}
+  });
+  c.restore();
+}
+// Процентная характеристика или плоская: в игре у диска 6 стоит «Сила атаки»
+// с процентом, и по одной подписи не понять, процент это или плоское число.
+function pctProp(pid) {
+  const pr = DB.props && DB.props[String(pid)];
+  return !!(pr && pr.f && pr.f.indexOf('%') !== -1);
+}
 function cardRound(c, x, y, w, h, r) {
   c.beginPath();
   c.moveTo(x + r, y);
@@ -8104,10 +8128,13 @@ async function cardPng(id) {
   cardText(c, a.ru, 52, CARD_H - 96, AW - 56);
   c.fillStyle = CARD_TX3; c.font = cardFont(19, 500);
   cardText(c, a.en || '', 52, CARD_H - 68, AW - 56);
-  // плашка уровня
-  c.fillStyle = '#000000aa'; cardRound(c, 52, 52, 132, 40, 12); c.fill();
-  c.fillStyle = CARD_TX; c.font = cardFont(21, 800);
-  c.fillText('Ур. ' + (p.lvl || 0) + '  M' + (p.mind || 0), 68, 79);
+  // Плашка уровня со значком стихии: раньше на картинке была только
+  // специальность текстом, а стихии не было вовсе.
+  const ek = elKey(a.element);
+  c.fillStyle = '#000000aa'; cardRound(c, 52, 52, 168, 40, 12); c.fill();
+  cardIcon(c, EL_PATH[ek] || '', 62, 58, 26, elC);
+  c.fillStyle = CARD_TX; c.font = cardFont(20, 800);
+  c.fillText('Ур. ' + (p.lvl || 0) + '  M' + (p.mind || 0), 96, 79);
 
   // ── правая колонка ──
   let x = 24 + AW + 22, W = CARD_W - x - 24, y = 24;
@@ -8135,7 +8162,7 @@ async function cardPng(id) {
   // ── характеристики в два столбца ──
   const rows = STATS.map(o => {
     const v = (p.cur && p.cur[o.k]) || 0;
-    return { n: o.n, v: o.pct ? (Math.round(v * 10) / 10) + '%'
+    return { k: o.k, n: o.n, v: o.pct ? (Math.round(v * 10) / 10) + '%'
                               : (o.k === 'er' ? (Math.round(v * 100) / 100).toFixed(2)
                                               : nfmt(Math.round(v))) };
   });
@@ -8146,8 +8173,11 @@ async function cardPng(id) {
   rows.forEach((r, i) => {
     const col = i % 2, row = (i - col) / 2;
     const rx = x + 16 + col * (colW + 6), ry = y + 32 + row * SH;
+    // значок слева от названия — как в самом трекере
+    cardIcon(c, r.k === 'dmg' ? (EL_PATH[elKey(a.element)] || '') : (ST_PATH[r.k] || ''),
+             rx, ry - 14, 16, r.k === 'dmg' ? elC : CARD_TX3);
     c.fillStyle = CARD_TX3; c.font = cardFont(15, 500);
-    cardText(c, r.n, rx, ry, colW - 130);
+    cardText(c, r.n, rx + 24, ry, colW - 150);
     c.fillStyle = CARD_TX; c.font = cardFont(17, 700);
     c.textAlign = 'right';
     c.fillText(r.v, rx + colW - 34, ry);
@@ -8155,21 +8185,48 @@ async function cardPng(id) {
   });
   y += need + 16;
 
-  // ── движок ──
+  // ── движок и комплекты ──
+  // Комплекты рядом с движком, а не отдельной строкой: по шести значкам дисков
+  // не понять, собран ли 4+2, а место справа от движка всё равно пустовало.
   const w = p.w && p.w.id ? DB.engById[p.w.id] : null;
   c.fillStyle = CARD_PAN; cardRound(c, x, y, W, 88, 16); c.fill();
   c.strokeStyle = CARD_LINE; c.stroke();
+  const EW = Math.round(W * 0.56);
   const wi = w ? await loadImg(imgUrl('engines', w.icon)) : null;
   if (wi) { c.save(); cardRound(c, x + 14, y + 14, 60, 60, 12); c.clip();
             c.drawImage(wi, x + 14, y + 14, 60, 60); c.restore(); }
   c.fillStyle = CARD_TX3; c.font = cardFont(11, 700);
   c.fillText('W-ENGINE', x + 88, y + 28);
-  c.fillStyle = w ? CARD_TX : CARD_TX3; c.font = cardFont(22, 700);
-  cardText(c, w ? (w.ru || w.en) : 'движок не надет', x + 88, y + 56, W - 260);
+  c.fillStyle = w ? CARD_TX : CARD_TX3; c.font = cardFont(21, 700);
+  cardText(c, w ? (w.ru || w.en) : 'движок не надет', x + 88, y + 56, EW - 100);
   if (w) {
     c.fillStyle = CARD_TX3; c.font = cardFont(15, 500);
     c.fillText('Ур. ' + ((p.w && p.w.lvl) || 0) + ' · P' + ((p.w && p.w.phase) || 1),
                x + 88, y + 78);
+  }
+  // разделитель и сами комплекты
+  c.strokeStyle = CARD_LINE; c.beginPath();
+  c.moveTo(x + EW, y + 16); c.lineTo(x + EW, y + 72); c.stroke();
+  const sx = x + EW + 16;
+  c.fillStyle = CARD_TX3; c.font = cardFont(11, 700);
+  c.fillText('КОМПЛЕКТЫ', sx, y + 28);
+  const on = suitsOn(p).filter(z => z.n >= 2);
+  if (!on.length) {
+    c.fillStyle = CARD_TX3; c.font = cardFont(15, 500);
+    c.fillText('ни одного набора', sx, y + 58);
+  } else {
+    let cx2 = sx;
+    for (let i = 0; i < on.length && i < 2; i++) {
+      const z = on[i];
+      const ic = z.su ? await loadImg(imgUrl('discs', z.su.icon)) : null;
+      if (ic) c.drawImage(ic, cx2, y + 40, 30, 30);
+      c.fillStyle = CARD_GOLD; c.font = cardFont(17, 800);
+      c.fillText(z.n + '×', cx2 + 36, y + 54);
+      c.fillStyle = CARD_TX2; c.font = cardFont(13, 600);
+      const nm = cardText(c, z.su ? (z.su.ru || z.su.en) : '?', cx2 + 36, y + 70,
+                          (W - EW - 32) / Math.min(2, on.length) - 44);
+      cx2 += 36 + Math.max(c.measureText(nm).width, 40) + 26;
+    }
   }
   y += 88 + 16;
 
@@ -8198,7 +8255,8 @@ async function cardPng(id) {
     // главный стат
     c.textAlign = 'center';
     c.fillStyle = CARD_GOLD; c.font = cardFont(13, 700);
-    cardText(c, d ? shortName(d.mainP) : 'пусто', dx + dw / 2, y + 88, dw - 12);
+    cardText(c, d ? (shortName(d.mainP) + (pctProp(d.mainP) ? ' %' : '')) : 'пусто',
+             dx + dw / 2, y + 88, dw - 12);
     c.fillStyle = CARD_TX; c.font = cardFont(15, 700);
     cardText(c, d ? mainText(d.mainP, d.mainV, d.lvl) : '—', dx + dw / 2, y + 108, dw - 12);
     c.textAlign = 'left';
