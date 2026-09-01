@@ -1034,6 +1034,28 @@
   .cmp-st u{text-decoration:none;font-size:10px;color:var(--tx3);min-width:44px;text-align:right}
   .cmp-st.up b{color:var(--acc)} .cmp-st.up u{color:var(--acc)}
   .cmp-st.down b{color:#f0787c} .cmp-st.down u{color:#f0787c}
+  /* Диски: два ряда по шесть слотов, мои сверху. Ряд, а не карточки как в
+     профиле агента: здесь важно сравнить слот со слотом, а не разглядывать
+     каждый диск — для этого есть карточка. */
+  .cmp-drow{display:flex;align-items:center;gap:5px;margin-top:8px;flex-wrap:wrap}
+  .cmp-dl{flex:none;width:64px;font-size:10.5px;color:var(--tx3)}
+  .cmp-dl b{color:var(--tx2);font-variant-numeric:tabular-nums}
+  .cmp-d{position:relative;width:42px;height:42px;flex:none;border-radius:10px;
+    background:#ffffff08;border:1px solid var(--line);display:flex;
+    align-items:center;justify-content:center;transition:.14s}
+  .cmp-d:hover{border-color:var(--acc)}
+  .cmp-d.empty{opacity:.4;border-style:dashed}
+  .cmp-d img{width:30px;height:30px;object-fit:contain}
+  .cmp-d-n{position:absolute;top:1px;left:4px;font-style:normal;font-size:8.5px;color:var(--tx3)}
+  .cmp-d-x{font-style:normal;font-size:12px;color:var(--tx3)}
+  /* бейдж ранга садится в угол плитки, поверх значка комплекта */
+  .cmp-d .rankb{position:absolute;right:-3px;bottom:-3px;transform:scale(.82);
+    transform-origin:100% 100%}
+  @media(max-width:760px){
+    .cmp-d{width:36px;height:36px}
+    .cmp-d img{width:26px;height:26px}
+    .cmp-dl{width:100%}
+  }
   .cmp-note{margin-top:9px;font-size:11px;color:var(--tx3);display:flex;
     align-items:center;gap:10px;flex-wrap:wrap}
   .panel .cmp-open{padding:5px 12px;font-size:11.5px}
@@ -1890,7 +1912,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v171';
+const APP_VER = 'v172';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -7945,7 +7967,8 @@ async function cmpRun(uid) {
       const his = enkaRead(av);
       if (!his) return;
       const my = prog[av.Id] && prog[av.Id].have ? prog[av.Id] : null;
-      rows.push({ a: a, his: cmpStats(his, av.Id),
+      rows.push({ a: a, hisP: his, myP: my,
+                  his: cmpStats(his, av.Id),
                   my: my ? cmpStats(my, av.Id) : null });
     });
     CMP = { uid: uid, nick: (pi.SocialDetail || {}).ProfileDetail
@@ -7984,6 +8007,7 @@ function cmpFull(r, eng) {
       '<u>' + (d == null ? '' : (d > 0 ? '+' : '') + d + '%') + '</u>' +
       '</div>';
   }).join('') + '</div>';
+  h += cmpDiscRow(r.a, r.myP, 'мои') + cmpDiscRow(r.a, r.hisP, 'его');
   h += '<div class="cmp-note">' +
     (eng ? 'Его движок: <b>' + esc(eng.ru || '') + '</b> · ур.' + his.w +
            ' · P' + his.wph + '. ' : '') +
@@ -8044,7 +8068,8 @@ function cmpFromShare(code, d) {
     if (!a) return;
     const his = P0(prof[id]);
     const my = prog[id] && prog[id].have ? prog[id] : null;
-    rows.push({ a: a, his: cmpStats(his, id), my: my ? cmpStats(my, id) : null });
+    rows.push({ a: a, hisP: his, myP: my,
+                his: cmpStats(his, id), my: my ? cmpStats(my, id) : null });
   });
   CMP = { uid: d.uid || '', nick: d.nick || code, lvl: 0, rows: rows,
           shown: rows.length, full: true, code: code, at: d.at || Date.now() };
@@ -8058,6 +8083,39 @@ function P0(raw) {
   if (!Array.isArray(p.discs)) p.discs = [];
   p.have = true;
   return p;
+}
+// Ряд из шести дисков одного профиля: значок комплекта и оценка слота.
+// Веса считаются под конкретного агента, поэтому один и тот же диск у меня и
+// у него может получить разные буквы — это не ошибка, а разные цели сборки.
+function cmpDiscRow(a, p, label) {
+  if (!p) return '';
+  const wts = statWeights(a, p);
+  const mk = modKeys(a.id, p), pri = priOf(a.id, p);
+  const list = Array.isArray(p.discs) ? p.discs : [];
+  let cells = '';
+  for (let sl = 1; sl <= 6; sl++) {
+    const d = list.filter(x => x && x.slot === sl)[0] || null;
+    const sc = d ? discScore(d, mk, pri, wts) : null;
+    const suit = d && DB.suitById ? DB.suitById[d.suit] : null;
+    cells += '<span class="cmp-d' + (d ? '' : ' empty') + '" title="' +
+      esc((suit ? (suit.ru || suit.en) : 'слот ' + sl) +
+          (d ? ' · ' + shortName(d.mainP) + ' · +' + (d.lvl || 0) : ' — пусто') +
+          (sc ? ' · ' + sc.grade + ' (' + sc.pct + '%)' : '')) + '">' +
+      '<i class="cmp-d-n">' + sl + '</i>' +
+      (suit && suit.icon
+        ? '<img src="' + esc(imgUrl('discs', suit.icon)) + '" alt="" loading="lazy" ' +
+          'onerror="this.style.visibility=\'hidden\'">'
+        : '<em class="cmp-d-x">—</em>') +
+      (sc ? rankBadge(sc.grade, 'sm') : '') +
+      '</span>';
+  }
+  // средняя оценка сборки: по ней видно, кто собран ровнее, а не «повезло с одним диском»
+  const scores = list.map(d => discScore(d, mk, pri, wts)).filter(Boolean);
+  const avg = scores.length ? Math.round(scores.reduce((x, y) => x + y.pct, 0) / scores.length) : 0;
+  return '<div class="cmp-drow">' +
+    '<span class="cmp-dl">' + esc(label) +
+      (scores.length ? ' <b>' + avg + '%</b>' : '') + '</span>' +
+    cells + '</div>';
 }
 // одна метрика: два числа и кто впереди
 function cmpCell(mine, his, fmt, more) {
