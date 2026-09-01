@@ -972,6 +972,56 @@
     .boo-ic{width:34px;height:34px}
   }
 
+  /* ── снаряжение: движки и комплекты ── */
+  .gr-list{display:flex;flex-direction:column;gap:3px}
+  .gr{display:grid;grid-template-columns:minmax(110px,1.1fr) minmax(150px,1.4fr) 2fr;
+    gap:10px;align-items:center;padding:6px 8px;border-radius:10px;cursor:pointer;
+    transition:.14s}
+  .gr:hover{background:#ffffff08}
+  .gr-a{display:flex;align-items:center;gap:8px;min-width:0}
+  .gr-ic{width:28px;height:28px;flex:none;border-radius:50%;object-fit:cover}
+  .gr-a b{font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .gr-w{display:flex;align-items:center;gap:8px;min-width:0}
+  .gr-wic{width:26px;height:26px;flex:none;border-radius:6px;object-fit:contain;
+    background:#ffffff08}
+  .gr-w>span{min-width:0}
+  .gr-w b{display:block;font-size:11px;color:var(--tx2);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .gr-w i{display:block;font-style:normal;font-size:9.5px;color:var(--tx3);margin-top:1px}
+  .gr-w.ok i{color:var(--acc)}
+  .gr-w.bad i{color:#f0787c}
+  /* комплекты: сколько дисков какого сета надето */
+  .gr-sets{display:flex;gap:5px;flex-wrap:wrap;min-width:0}
+  .gr-set{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 3px;
+    border-radius:20px;background:#ffffff08;border:1px solid var(--line);
+    font-size:10px;color:var(--tx3);white-space:nowrap;max-width:100%;overflow:hidden}
+  .gr-set.ok{border-color:#4ade8044;color:var(--tx2)}
+  .gr-set.bad{border-color:#e5484d33}
+  .gr-set b{font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .gr-sic{width:20px;height:20px;flex:none;border-radius:50%;object-fit:contain}
+  .gr-none{font-style:normal;font-size:10.5px;color:var(--tx3)}
+  /* сводка по комплектам */
+  .gs-list{display:flex;flex-direction:column;gap:3px}
+  .gs-row2{display:grid;grid-template-columns:minmax(150px,1.6fr) 70px 90px 2fr;gap:10px;
+    align-items:center;padding:6px 8px;border-radius:10px}
+  .gs-row2:hover{background:#ffffff06}
+  .gs-n{display:flex;align-items:center;gap:8px;min-width:0}
+  .gs-n b{font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .gs-b{display:flex;flex-direction:column;line-height:1.2}
+  .gs-b b{font-size:12.5px;color:var(--tx);font-variant-numeric:tabular-nums}
+  .gs-b i{font-style:normal;font-size:9.5px;color:var(--tx3)}
+  .gs-who{display:flex;gap:3px;align-items:center;flex-wrap:wrap;min-width:0}
+  .gs-wic{width:22px;height:22px;border-radius:50%;object-fit:cover}
+  .gs-who i{font-style:normal;font-size:10px;color:var(--tx3);margin-left:2px}
+  @media(max-width:900px){
+    .gr{grid-template-columns:1fr 1fr;gap:6px}
+    .gr-sets{grid-column:1/-1}
+    .gs-row2{grid-template-columns:1fr 60px 76px;gap:6px}
+    .gs-who{grid-column:1/-1}
+  }
+
   /* ── сравнение профилей ── */
   .cmp-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
   .panel .cmp-top input[type=text]{flex:1 1 220px;min-width:0;margin-bottom:0}
@@ -1881,6 +1931,7 @@
   <div class="panel" id="endPanel"><div id="endBox"></div></div>
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
   <div class="panel" id="cmpPanel"><div id="cmpBox"></div></div>
+  <div class="panel" id="gearPanel"><div id="gearBox"></div></div>
 
   <div class="panel" id="helpPanel">
     <div class="hint hlp" style="margin-top:0">
@@ -1950,7 +2001,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v176';
+const APP_VER = 'v177';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6895,6 +6946,7 @@ const MENU = [
   { k: 'todo',   p: 'todoPanel',   i: '🎯', n: 'Кого качать',     d: 'Сильные, но недоделанные' },
   { k: 'mats',   p: 'matsPanel',   i: '🧱', n: 'Что фармить',     d: 'Материалы до твоих целей' },
   { k: 'mod',    p: 'modPanel',    i: '📊', n: 'Модификаторы',    d: 'Сумма по каждому агенту' },
+  { k: 'gear',   p: 'gearPanel',   i: '⚙',  n: 'Снаряжение',      d: 'Движки и комплекты по всем' },
   { k: 'boo',    p: 'booPanel',    i: '🤖', n: 'Банбу',          d: 'Кто что включает и кто есть у тебя' },
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
   { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Шиюй и Опасный штурм' },
@@ -6931,6 +6983,7 @@ function menuGo(k) {
   if (k === 'enka')   { refreshEnkaLinks(); drawMaint(); }
   if (k === 'cloud')  cloudUI();
   if (k === 'mod')    drawModTable();
+  if (k === 'gear')   drawGear();
   if (k === 'banner') drawBanners();
   if (k === 'end')    drawEndgame();
   if (k === 'hist')   drawHist();
@@ -7963,6 +8016,161 @@ function drawBoo() {
   box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
     ui.booMode = b.dataset.m; save(); drawBoo();
   });
+}
+
+// ─────────────── снаряжение: движки и комплекты ───────────────
+// В карточке агента видно снаряжение одного. Здесь весь ростер разом: у кого
+// движок не из гайда, где комплект собран вразнобой, какие сеты вообще в ходу.
+//
+// Чего трекер знать не может: что лежит в инвентаре. Enka и хроника отдают
+// только надетое, поэтому «свободных движков» тут нет — есть «этому агенту
+// гайд советует другой».
+const GEAR_MODES = [['bad', 'Есть что менять'], ['all', 'Все'], ['sets', 'По комплектам']];
+
+// Место надетого движка в списке гайда: 0 — лучший, null — его там нет вовсе.
+function engRank(id, wid) {
+  const g = guideOf(id);
+  if (!g || !wid || !Array.isArray(g.engines)) return { place: null, pct: 0, best: null };
+  const w = DB.engById && DB.engById[wid];
+  let place = null, pct = 0;
+  g.engines.forEach((e, i) => {
+    const eng = engByName(e.n);
+    if (eng && w && eng.id === w.id && place === null) { place = i; pct = +e.pct || 0; }
+  });
+  const b = g.engines[0] ? engByName(g.engines[0].n) : null;
+  return { place: place, pct: pct, best: b,
+           bestPct: g.engines[0] ? (+g.engines[0].pct || 0) : 0 };
+}
+// Что надето по комплектам: [{suit, n}] от большего к меньшему.
+function suitsOn(p) {
+  const cnt = {};
+  (p.discs || []).forEach(d => { if (d && d.suit) cnt[d.suit] = (cnt[d.suit] || 0) + 1; });
+  return Object.keys(cnt).map(sid => ({ sid: sid, n: cnt[sid], su: DB.suitById[sid] || null }))
+    .sort((x, y) => y.n - x.n);
+}
+// Собран ли комплект так, как советует гайд: четвёрка из set4 и двойка из set2.
+function suitFit(id, on) {
+  const g = guideOf(id);
+  if (!g) return null;
+  const four = on.filter(x => x.n >= 4)[0] || null;
+  const two = on.filter(x => x.n >= 2 && (!four || x.sid !== four.sid))[0] || null;
+  const ok4 = four ? (g.set4 || []).some(n => {
+    const s = suitByName(n); return s && String(s.id) === String(four.sid);
+  }) : false;
+  const ok2 = two ? (g.set2 || []).some(x => {
+    const s = suitByName((x && x.n) || x); return s && String(s.id) === String(two.sid);
+  }) : false;
+  return { four: four, two: two, ok4: ok4, ok2: ok2, has4: !!four };
+}
+function gearRow(a, p) {
+  const w = p.w && p.w.id ? DB.engById[p.w.id] : null;
+  const er = engRank(a.id, p.w && p.w.id);
+  const on = suitsOn(p);
+  const fit = suitFit(a.id, on);
+  // подпись движка: место в гайде или «не из гайда» с подсказкой, что советуют
+  let engNote = '', engCls = '';
+  if (!w) { engNote = 'движка нет'; engCls = ' bad'; }
+  else if (er.place === 0) { engNote = 'лучший по гайду'; engCls = ' ok'; }
+  else if (er.place != null) { engNote = (er.place + 1) + '-й по гайду'; engCls = ''; }
+  else if (er.best) { engNote = 'не из гайда'; engCls = ' bad'; }
+  else engNote = 'гайда нет';
+
+  const sets = on.map(x => '<span class="gr-set' +
+      (fit && fit.four && x.sid === fit.four.sid ? (fit.ok4 ? ' ok' : ' bad') : '') +
+      (fit && fit.two && x.sid === fit.two.sid ? (fit.ok2 ? ' ok' : ' bad') : '') + '">' +
+      (x.su && x.su.icon ? img(imgUrl('discs', x.su.icon), 'gr-sic', x.su.ru || x.su.en, true) : '') +
+      '<b>' + x.n + '</b>' + esc(x.su ? (x.su.ru || x.su.en) : '#' + x.sid) + '</span>').join('');
+
+  return '<div class="gr" data-id="' + a.id + '">' +
+    '<span class="gr-a">' +
+      (a.icon ? img(imgUrl('agents', a.icon), 'gr-ic', a.ru, true)
+              : '<span class="gr-ic tm-none">?</span>') +
+      '<b>' + esc(shortRu(a.ru)) + '</b></span>' +
+    '<span class="gr-w' + engCls + '" title="' +
+      esc(w ? (w.ru || w.en) + ' · ур.' + ((p.w && p.w.lvl) || 0) + ' · P' + ((p.w && p.w.phase) || 1) +
+              (er.best && er.place !== 0 ? '\nГайд советует: ' + (er.best.ru || er.best.en) : '')
+            : 'движок не надет') + '">' +
+      (w && w.icon ? img(imgUrl('engines', w.icon), 'gr-wic', w.ru || w.en, true)
+                   : '<span class="gr-wic tm-none">—</span>') +
+      '<span><b>' + esc(w ? (w.ru || w.en) : 'пусто') + '</b>' +
+      '<i>' + esc(engNote) + (w ? ' · P' + ((p.w && p.w.phase) || 1) : '') + '</i></span>' +
+    '</span>' +
+    '<span class="gr-sets">' + (sets || '<i class="gr-none">дисков нет</i>') + '</span>' +
+    '</div>';
+}
+function drawGear() {
+  const box = $('gearBox');
+  if (!box) return;
+  const mode = GEAR_MODES.some(m => m[0] === ui.gearMode) ? ui.gearMode : 'bad';
+  const list = DB.agents.filter(a => prog[a.id] && prog[a.id].have)
+    .map(a => ({ a: a, p: prog[a.id] }));
+
+  // «есть что менять»: движок не из гайда или нет вовсе, либо четвёрка не та
+  const flawed = list.filter(x => {
+    const er = engRank(x.a.id, x.p.w && x.p.w.id);
+    const fit = suitFit(x.a.id, suitsOn(x.p));
+    const engBad = !(x.p.w && x.p.w.id) || (er.best && er.place == null);
+    const setBad = fit && (!fit.has4 || !fit.ok4);
+    return engBad || setBad;
+  });
+
+  let h = '<div class="td-head">' +
+    '<span class="td-cnt">' + list.length + ' ' +
+      plural(list.length, 'агент', 'агента', 'агентов') +
+      (flawed.length ? ' · есть что менять у ' + flawed.length : '') + '</span>' +
+    GEAR_MODES.map(m => '<button class="td-sw' + (mode === m[0] ? ' on' : '') +
+      '" data-m="' + m[0] + '">' + m[1] + '</button>').join('') +
+    '</div>';
+
+  if (!list.length) {
+    box.innerHTML = h + '<div class="hint" style="margin-top:0">' +
+      'Сначала загрузи своих агентов на вкладке «Импорт из игры».</div>';
+    return;
+  }
+
+  if (mode === 'sets') {
+    // Сводка по комплектам: сколько дисков в ходу и у скольких агентов стоит
+    // четвёрка. По ней видно, какой сет действительно кормит ростер.
+    const by = {};
+    list.forEach(x => {
+      suitsOn(x.p).forEach(s => {
+        const r = by[s.sid] || (by[s.sid] = { su: s.su, discs: 0, who: [], four: 0 });
+        r.discs += s.n;
+        r.who.push(x.a);
+        if (s.n >= 4) r.four++;
+      });
+    });
+    const rows = Object.keys(by).map(k => by[k]).sort((x, y) => y.discs - x.discs);
+    h += '<div class="gs-list">' + rows.map(r =>
+      '<div class="gs-row2">' +
+        '<span class="gs-n">' +
+          (r.su && r.su.icon ? img(imgUrl('discs', r.su.icon), 'gr-sic', r.su.ru || r.su.en, true) : '') +
+          '<b>' + esc(r.su ? (r.su.ru || r.su.en) : '?') + '</b></span>' +
+        '<span class="gs-b"><b>' + r.discs + '</b><i>дисков</i></span>' +
+        '<span class="gs-b"><b>' + r.four + '</b><i>' +
+          plural(r.four, 'четвёрка', 'четвёрки', 'четвёрок') + '</i></span>' +
+        '<span class="gs-who">' + r.who.slice(0, 10).map(a =>
+          (a.icon ? img(imgUrl('agents', a.icon), 'gs-wic', a.ru, true) : '')).join('') +
+          (r.who.length > 10 ? '<i>+' + (r.who.length - 10) + '</i>' : '') + '</span>' +
+      '</div>').join('') + '</div>';
+    h += '<div class="hint">Сколько дисков каждого комплекта надето по всему ростеру и ' +
+      'у скольких агентов набралась четвёрка. Значки справа — кто носит.</div>';
+  } else {
+    const show = mode === 'bad' ? flawed : list;
+    h += show.length
+      ? '<div class="gr-list">' + show.map(x => gearRow(x.a, x.p)).join('') + '</div>'
+      : '<div class="hint" style="margin-top:0">Всё по гайду: движки лучшие, четвёрки на месте.</div>';
+    h += '<div class="hint">Зелёным — то, что совпадает с гайдом, красным — движка нет ' +
+      'или комплект не тот. Что лежит в инвентаре, трекер не знает: Enka и хроника ' +
+      'отдают только надетое, поэтому «свободных движков» здесь нет. Клик по строке ' +
+      'открывает карточку.</div>';
+  }
+  box.innerHTML = h;
+
+  box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+    ui.gearMode = b.dataset.m; save(); drawGear();
+  });
+  box.querySelectorAll('.gr').forEach(el => el.onclick = () => openAgent(+el.dataset.id));
 }
 
 // ─────────────── сравнение профилей ───────────────
