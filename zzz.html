@@ -859,13 +859,20 @@
   .mt-sum{border:1px solid var(--line);border-radius:14px;padding:12px 13px;
     background:linear-gradient(120deg,var(--pan2),var(--pan))}
   .mt-items{display:flex;flex-wrap:wrap;gap:6px}
-  .mt-i{display:inline-flex;align-items:baseline;gap:6px;padding:5px 11px;border-radius:20px;
-    background:#ffffff08;border:1px solid var(--line);font-size:11px;color:var(--tx2);
-    white-space:nowrap}
+  /* align-items:center вместо baseline: со значком выравнивание по базовой
+     линии кладёт картинку выше текста */
+  .mt-i{display:inline-flex;align-items:center;gap:6px;padding:4px 11px 4px 5px;
+    border-radius:20px;background:#ffffff08;border:1px solid var(--line);
+    font-size:11px;color:var(--tx2);white-space:nowrap}
   .mt-i b{font-size:12.5px;color:var(--gold);font-variant-numeric:tabular-nums}
+  .mt-ic{width:26px;height:26px;flex:none;border-radius:50%;object-fit:contain;
+    background:#ffffff0d}
+  .mt-stub{display:inline-flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:800;color:var(--tx3)}
   @media(max-width:760px){
-    .mt-i{font-size:10.5px;padding:4px 9px}
+    .mt-i{font-size:10.5px;padding:3px 9px 3px 4px}
     .mt-i b{font-size:11.5px}
+    .mt-ic{width:22px;height:22px}
   }
 
   /* разбивка фарма по частям */
@@ -1793,7 +1800,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v163';
+const APP_VER = 'v164';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2727,6 +2734,30 @@ function loadMats() {
     .then(x => { if (x && x.tpl && x.a) MATS = x; })
     .catch(() => {});
 }
+// Значки материалов. Расширения разные — часть анимированные .gif, — поэтому
+// имя файла берём из карты, а не собираем из id. Её пишет fetch-mat-icons.ps1.
+let MATIC = null;
+function loadMatIcons() {
+  return fetch('zzz-mat-icons.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(x => { if (x && x.files) MATIC = x.files; })
+    .catch(() => {});
+}
+// Картинка материала. Если значка нет (вики заводит свежие с задержкой) —
+// рисуем кружок с первой буквой, чтобы плитка не разъезжалась.
+function matIcon(id, name) {
+  const f = MATIC && MATIC[id];
+  if (f) return '<img class="mt-ic" src="' + imgUrl('mats', f) + '" alt="" loading="lazy" ' +
+    'onerror="this.replaceWith(matStub(' + JSON.stringify(String(name || '')) + '))">';
+  return '<span class="mt-ic mt-stub">' + esc(String(name || '?').charAt(0).toUpperCase()) + '</span>';
+}
+window.matStub = matStub;   // вызывается из onerror прямо в разметке
+function matStub(name) {
+  const el = document.createElement('span');
+  el.className = 'mt-ic mt-stub';
+  el.textContent = String(name || '?').charAt(0).toUpperCase();
+  return el;
+}
 // Что нужно агенту, чтобы дойти от нынешнего состояния до своих целей.
 // Возвращает { gold, exp, items, has, parts } или null, если данных нет.
 // parts — та же стоимость, но разложенная по частям: уровень, ядро, каждый
@@ -2915,6 +2946,9 @@ function boot() {
   // поэтому после загрузки перерисовываем и сетку, и открытую карточку
   if (!GUIDE) { loadGuide().then(() => { if (GUIDE) { render(); if (curId) renderSheet(); } }); }
   if (!MATS) { loadMats(); }
+  // Значки материалов подгружаем отдельно: файл маленький, но появляется он
+  // только после fetch-mat-icons.ps1, и без него всё должно работать как было.
+  if (!MATIC) { loadMatIcons().then(() => { if (MATIC && curId) renderSheet(); }); }
   DB.byId = {};
   DB.agents.forEach(a => { DB.byId[a.id] = a; });
   DB.suitById = {};
@@ -4117,9 +4151,11 @@ function matsHtml(a) {
          .replace(/^Пропуск в «Хомячью клетку»$/i, 'пропуск в клетку');
     return t.charAt(0).toUpperCase() + t.slice(1);
   };
-  const chip = (id, cnt) => '<span class="mt-i" title="' +
-    esc((MATS.items && MATS.items[id]) || ('#' + id)) + '"><b>' + nfmt(cnt) + '</b>' +
-    esc(short(id)) + '</span>';
+  const chip = (id, cnt) => {
+    const full = (MATS.items && MATS.items[id]) || ('#' + id);
+    return '<span class="mt-i" title="' + esc(full) + '">' + matIcon(id, full) +
+      '<b>' + nfmt(cnt) + '</b>' + esc(short(id)) + '</span>';
+  };
   const books = expBooks(n.exp);
 
   let h = '<div class="mt-sum">' +
@@ -7030,9 +7066,11 @@ function drawMats() {
          .replace(/^Курс обучения 4 уровня$/i, 'курс 4 ур.');
     return n.charAt(0).toUpperCase() + n.slice(1);
   };
-  const chip = (id, cnt) => '<span class="mt-i" title="' +
-    esc((MATS.items && MATS.items[id]) || ('#' + id)) + '"><b>' + nfmt(cnt) + '</b>' +
-    esc(short(id)) + '</span>';
+  const chip = (id, cnt) => {
+    const full = (MATS.items && MATS.items[id]) || ('#' + id);
+    return '<span class="mt-i" title="' + esc(full) + '">' + matIcon(id, full) +
+      '<b>' + nfmt(cnt) + '</b>' + esc(short(id)) + '</span>';
+  };
 
   let h = '<div class="td-head">' +
     '<span class="td-cnt">' + rows.length + ' ' +
