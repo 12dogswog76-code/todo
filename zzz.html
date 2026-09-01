@@ -974,7 +974,7 @@
 
   /* ── сравнение профилей ── */
   .cmp-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
-  .cmp-top input[type=text]{flex:1 1 220px;min-width:0;margin-bottom:0}
+  .panel .cmp-top input[type=text]{flex:1 1 220px;min-width:0;margin-bottom:0}
   .cmp-top button{flex:none}
   .cmp-top span{flex:1 1 100%;font-size:11px;color:var(--tx3);line-height:1.5}
   .cmp-sum{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
@@ -1378,11 +1378,15 @@
     display:none}
   .mmbox.open .mmbody{display:block}
   .mmslot{padding:16px 18px 20px}
-  .mmx{position:absolute;top:9px;right:11px;width:28px;height:28px;border-radius:50%;
-    background:var(--pan2);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
-    font-size:13px;line-height:1;display:none}
-  .mmbox.open .mmx{display:block}
-  .mmx:hover{border-color:var(--acc);color:var(--tx)}
+  /* Крестик снаружи окна, в углу экрана: внутри он налезал на содержимое
+     раздела — на «Сравнении» перекрывал кнопку, на других вкладках первую
+     строку. Заодно теперь виден и когда раздел ещё не выбран. */
+  .mmx{position:fixed;top:18px;right:20px;width:36px;height:36px;border-radius:50%;
+    background:#151922e6;border:1px solid var(--line);color:var(--tx2);cursor:pointer;
+    font-size:15px;line-height:1;display:none;z-index:2;
+    backdrop-filter:blur(2px);transition:.14s}
+  .mmwrap.open .mmx{display:block}
+  .mmx:hover{border-color:var(--acc);color:var(--tx);transform:rotate(90deg)}
   body.noscroll{overflow:hidden}
   @media(max-width:900px){
     /* на телефоне разворот вправо некуда: колонка сверху, содержимое под ней */
@@ -1414,7 +1418,7 @@
     /* переключатели режимов в «Кого качать» переносим, а не жмём */
     .td-head{gap:5px}
     .td-sw{padding:5px 10px;font-size:10.5px}
-    .mmx{top:7px;right:8px;width:26px;height:26px}
+    .mmx{top:8px;right:8px;width:32px;height:32px}
   }
   .panel input[type=text]{width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:8px;
     color:var(--tx);padding:9px 12px;font-size:13px;outline:none;margin-bottom:8px;font-family:inherit}
@@ -1611,8 +1615,8 @@
     <div class="mmbox" id="menuBox">
       <nav class="mmnav" id="menuNav"></nav>
       <div class="mmbody" id="menuBody"><div class="mmslot" id="menuSlot"></div></div>
-      <button class="mmx" id="menuClose" title="Закрыть">✕</button>
     </div>
+    <button class="mmx" id="menuClose" title="Закрыть">✕</button>
   </div>
 
   <div class="panel" id="enkaPanel">
@@ -1841,7 +1845,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v167';
+const APP_VER = 'v168';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
