@@ -933,11 +933,15 @@
   .boo-more em{display:block;margin-top:6px;font-style:normal;font-size:10.5px;color:var(--tx3)}
   /* галочка «есть у меня»: отдельная кнопка, чтобы клик по карточке раскрывал
      описание и не трогал отметку */
-  .boo-chk{flex:none;width:20px;height:20px;border-radius:6px;padding:0;font-size:11px;
-    line-height:1;color:var(--acc);background:#ffffff08;border:1px solid var(--line);
-    cursor:pointer;transition:.14s}
-  .boo-chk:hover{border-color:var(--acc)}
-  .boo.on .boo-chk{border-color:#4ade8066;background:#4ade8018}
+  /* Галочка «есть у меня». display:flex вместо голой кнопки: иначе символ
+     садится по базовой линии шрифта и выглядит смещённым вверх. */
+  .boo-chk{flex:none;display:flex;align-items:center;justify-content:center;
+    width:24px;height:24px;box-sizing:border-box;border-radius:7px;padding:0;
+    font-size:14px;font-weight:800;line-height:1;color:transparent;
+    background:#ffffff08;border:1.5px solid var(--line);cursor:pointer;transition:.14s}
+  .boo-chk:hover{border-color:var(--acc);color:#ffffff30}
+  .boo-chk::before{content:'✓'}
+  .boo.on .boo-chk{border-color:var(--acc);background:var(--acc);color:#06210f}
   /* отмеченные — свои: подсвечиваем рамкой, а не галочкой в углу */
   .boo.on{border-color:#4ade8055;background:linear-gradient(120deg,#4ade800f,var(--pan))}
   .boo-ic{width:38px;height:38px;flex:none;border-radius:50%;object-fit:cover;
@@ -1789,7 +1793,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v161';
+const APP_VER = 'v162';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6286,6 +6290,7 @@ async function cloudPush() {
     });
     setCloud('cloud-ok', 'синхронизировано ' + new Date().toTimeString().slice(0, 5));
     cloudLog('отправлено в облако: ' + progCount(body.prog) + ' агентов · ' +
+             Object.keys(body.boo || {}).length + ' бангбу · ' +
              new Date().toTimeString().slice(0, 8));
     return true;
   } catch (e) {
@@ -6348,6 +6353,9 @@ async function cloudSync(quiet) {
   if (changed) {
     writeProg();
     if (!$('modal').classList.contains('open')) render();
+    // панель бангбу render() не трогает — обновим её отдельно, иначе приехавшие
+    // отметки видны только после переоткрытия раздела
+    if (menuCur === 'boo') drawBoo();
   }
   // локальное свежее — вернём в облако, иначе второе устройство своё потеряет
   const newLocalN = progCount(prog);
@@ -6364,6 +6372,11 @@ async function cloudSync(quiet) {
 // есть ли локальные записи свежее облачных
 function hasNewerLocal(rec) {
   const rp = (rec && rec.prog) || {};
+  // Отметки бангбу живут вне prog. Без этой проверки они уезжали только по
+  // таймеру сразу после клика: если он не прошёл (закрыл вкладку, не было
+  // связи), синхронизация считала, что отдавать нечего, и отметки оставались
+  // на одном устройстве.
+  if ((ui.booT || 0) > (rec && rec.booT || 0)) return true;
   return Object.keys(prog).some(id => {
     const l = prog[id], r = rp[id];
     return l && (l.have || l.lvl || l.core) && (!r || (l.mod || 0) > (r.mod || 0));
@@ -7608,8 +7621,11 @@ function drawBoo() {
       booRu(x.b.n).localeCompare(booRu(y.b.n), 'ru'));
   const mine = rows.filter(r => r.have).length;
 
+  // Показываем и сколько карточек в текущем режиме, и сколько всего: иначе
+  // «4 из 41» рядом с 26 карточками читается так, будто список неполный.
   let h = '<div class="td-head">' +
-    '<span class="td-cnt">' + mine + ' из ' + rows.length + ' отмечено</span>' +
+    '<span class="td-cnt" data-all="' + rows.length + '">' +
+      shown.length + ' из ' + rows.length + ' · твоих ' + mine + '</span>' +
     BOO_MODES.map(m => '<button class="td-sw' + (mode === m[0] ? ' on' : '') +
       '" data-m="' + m[0] + '">' + m[1] + '</button>').join('') +
     '</div>';
@@ -7632,8 +7648,7 @@ function drawBoo() {
             '<span class="boo-r ' + (r.b.r === 'S' ? 'rs' : 'ra') + '">' + esc(r.b.r) + '</span>' +
             (r.fit ? '<span class="boo-fit" title="Столько твоих составов включают его пассивку">' +
               r.fit + '</span>' : '') +
-            '<button class="boo-chk" title="Отметить, что бангбу у тебя есть">' +
-              (r.have ? '✓' : '') + '</button>' +
+            '<button class="boo-chk" title="Отметить, что бангбу у тебя есть"></button>' +
           '</div>' +
           '<div class="boo-more">' +
             '<b>' + esc(p.n || 'Пассивка') + '</b>' +
@@ -7661,12 +7676,10 @@ function drawBoo() {
     const chk = el.querySelector('.boo-chk');
     if (chk) chk.onclick = () => {
       booToggle(el.dataset.n);
-      const on = booHave(el.dataset.n);
-      el.classList.toggle('on', on);
-      chk.textContent = on ? '✓' : '';
+      el.classList.toggle('on', booHave(el.dataset.n));
       const cnt = box.querySelector('.td-cnt');
-      if (cnt) cnt.textContent = (GUIDE.bangboo.list.filter(b => booHave(b.n)).length) +
-        ' из ' + rows.length + ' отмечено';
+      if (cnt) cnt.textContent = shown.length + ' из ' + rows.length + ' · твоих ' +
+        GUIDE.bangboo.list.filter(b => booHave(b.n)).length;
     };
   });
   box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
