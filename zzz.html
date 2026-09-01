@@ -986,15 +986,35 @@
   .cmp-s.down{border-color:#e5484d33} .cmp-s.down b{color:#f0787c}
   /* Одна сетка на шапку и строки: колонки должны совпадать по ширине, а
      таблицей это не сделать — в каждой ячейке два числа друг под другом. */
-  .cmp-head,.cmp-row{display:grid;grid-template-columns:minmax(96px,1.4fr) repeat(7,minmax(52px,1fr));
+  .cmp-head,.cmp-row{display:grid;grid-template-columns:minmax(110px,1.6fr) repeat(6,minmax(56px,1fr));
     gap:4px;align-items:center}
   .cmp-head{font-size:9px;letter-spacing:.08em;color:var(--tx3);padding:0 8px 6px;
     border-bottom:1px solid var(--line);margin-bottom:4px}
   .cmp-head span{text-align:center}
   .cmp-head span:first-child{text-align:left}
+  .cmp-item{border-radius:10px;transition:background .14s}
+  .cmp-item.open{background:#ffffff06}
+  .cmp-item.none{opacity:.55}
   .cmp-row{padding:6px 8px;border-radius:10px;cursor:pointer;transition:.14s}
   .cmp-row:hover{background:#ffffff08}
-  .cmp-row.none{opacity:.55}
+  .cmp-more{display:none;padding:2px 10px 12px}
+  .cmp-item.open .cmp-more{display:block}
+  /* Характеристики в раскрытии: имя, моё, его, разница. Своя сетка, а не
+     сетка строки выше — колонок другое число и выравнивание другое. */
+  .cmp-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:2px 14px}
+  .cmp-st{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;
+    padding:3px 8px;border-radius:7px;font-variant-numeric:tabular-nums}
+  .cmp-st:hover{background:#ffffff06}
+  .cmp-st-n{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx3);
+    min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cmp-st b{font-size:11.5px;color:var(--tx2);min-width:52px;text-align:right}
+  .cmp-st i{font-style:normal;font-size:11px;color:var(--tx3);min-width:52px;text-align:right}
+  .cmp-st u{text-decoration:none;font-size:10px;color:var(--tx3);min-width:44px;text-align:right}
+  .cmp-st.up b{color:var(--acc)} .cmp-st.up u{color:var(--acc)}
+  .cmp-st.down b{color:#f0787c} .cmp-st.down u{color:#f0787c}
+  .cmp-note{margin-top:9px;font-size:11px;color:var(--tx3);display:flex;
+    align-items:center;gap:10px;flex-wrap:wrap}
+  .panel .cmp-open{padding:5px 12px;font-size:11.5px}
   .cmp-a{display:flex;align-items:center;gap:7px;min-width:0}
   .cmp-ic{width:26px;height:26px;flex:none;border-radius:50%;object-fit:cover}
   .cmp-a b{font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;
@@ -1009,7 +1029,10 @@
     /* На узком экране семь колонок не помещаются: прячем производные числа,
        оставляя то, по чему сравнивают в первую очередь. */
     .cmp-head,.cmp-row{grid-template-columns:minmax(80px,1.4fr) repeat(4,minmax(44px,1fr))}
-    .cmp-head span:nth-child(n+6),.cmp-row>.cmp-v:nth-of-type(n+5){display:none}
+    /* на узком экране прячем ядро и оружие: их видно в раскрытии */
+    .cmp-head span:nth-child(4),.cmp-head span:nth-child(5),
+    .cmp-row>.cmp-v:nth-of-type(3),.cmp-row>.cmp-v:nth-of-type(4){display:none}
+    .cmp-stats{grid-template-columns:1fr}
   }
 
   /* ── панель «Эндгейм» ── */
@@ -1845,7 +1868,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v168';
+const APP_VER = 'v169';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -7819,17 +7842,18 @@ let cmpBusy = false;
 
 function cmpStats(p, id) {
   const t = p && p.cur ? p.cur : {};
+  const cur = {};
+  STATS.forEach(o => { cur[o.k] = +t[o.k] || 0; });
   return {
     lvl:  p.lvl || 0,
     mind: p.mind || 0,
     w:    (p.w && p.w.lvl) || 0,
     wph:  (p.w && p.w.phase) || 1,
     wid:  (p.w && p.w.id) || 0,
+    core: p.core || 0,
     pct:  pctOfP(p, id),
     mods: modifiersOf(id, p).sum,
-    atk:  t.atk || 0,
-    cr:   t.cr || 0,
-    cd:   t.cd || 0
+    cur:  cur
   };
 }
 async function cmpRun(uid) {
@@ -7866,6 +7890,38 @@ async function cmpRun(uid) {
   } catch (e) {
     msg('<b>Не вышло:</b> ' + esc((e && e.message) || String(e)));
   } finally { cmpBusy = false; }
+}
+// Все характеристики агента: они не помещаются в строку таблицы, поэтому
+// живут в раскрытии. Разница считается в процентах — абсолютные числа у HP и
+// у крита несопоставимы по масштабу, а доля читается одинаково.
+function cmpFull(r, eng) {
+  const my = r.my, his = r.his;
+  // Восстановление энергии дробное (1.24 ед/с) — округление до целого съедало
+  // всю разницу между сборками
+  const num = (v, pct, k) => pct ? (Math.round(v * 10) / 10) + '%'
+    : (k === 'er' ? (Math.round(v * 100) / 100).toFixed(2) : nfmt(Math.round(v)));
+  // cur может не быть у старого сохранённого сравнения — рисуем прочерки,
+  // а не роняем всю панель
+  const mc = (my && my.cur) || null, hc = his.cur || {};
+  let h = '<div class="cmp-stats">' + STATS.map(o => {
+    const a = mc ? (mc[o.k] || 0) : null, b = hc[o.k] || 0;
+    if (!a && !b) return '';                       // характеристика не задействована
+    const d = (a == null || !b) ? null : Math.round((a - b) / b * 100);
+    const cls = a == null ? '' : (a > b ? ' up' : (a < b ? ' down' : ''));
+    return '<div class="cmp-st' + cls + '">' +
+      '<span class="cmp-st-n">' + statIcon(o.k, 12) + esc(o.n) + '</span>' +
+      '<b>' + (a == null ? '—' : num(a, o.pct, o.k)) + '</b>' +
+      '<i>' + num(b, o.pct, o.k) + '</i>' +
+      '<u>' + (d == null ? '' : (d > 0 ? '+' : '') + d + '%') + '</u>' +
+      '</div>';
+  }).join('') + '</div>';
+  h += '<div class="cmp-note">' +
+    (eng ? 'Его движок: <b>' + esc(eng.ru || '') + '</b> · ур.' + his.w +
+           ' · P' + his.wph + '. ' : '') +
+    (my ? '<button class="cmp-open" data-id="' + r.a.id + '">Открыть карточку</button>'
+        : 'Этого агента у тебя нет.') +
+    '</div>';
+  return h;
 }
 // одна метрика: два числа и кто впереди
 function cmpCell(mine, his, fmt, more) {
@@ -7910,25 +7966,24 @@ function drawCmp() {
     }
 
     h += '<div class="cmp-head"><span></span><span>УРОВЕНЬ</span><span>М</span>' +
-      '<span>ОРУЖИЕ</span><span>ГОТОВНОСТЬ</span><span>МОДИФ.</span><span>АТАКА</span>' +
-      '<span>КРИТ</span></div>';
+      '<span>ЯДРО</span><span>ОРУЖИЕ</span><span>ГОТОВНОСТЬ</span><span>МОДИФ.</span></div>';
     h += rows.map(r => {
       const my = r.my, his = r.his;
       const eng = DB.engById && DB.engById[his.wid];
-      return '<div class="cmp-row' + (my ? '' : ' none') + '" data-id="' + r.a.id + '">' +
-        '<span class="cmp-a">' +
-          (r.a.icon ? img(imgUrl('agents', r.a.icon), 'cmp-ic', r.a.ru, true)
-                    : '<span class="cmp-ic tm-none">?</span>') +
-          '<b>' + esc(shortRu(r.a.ru)) + '</b></span>' +
-        cmpCell(my && my.lvl, his.lvl, v => String(v)) +
-        cmpCell(my && my.mind, his.mind, v => 'M' + v) +
-        cmpCell(my && my.w, his.w, v => v ? ('ур.' + v) : '—') +
-        cmpCell(my && my.pct, his.pct, v => v + '%') +
-        cmpCell(my && my.mods, his.mods, v => String(v)) +
-        cmpCell(my && my.atk, his.atk) +
-        cmpCell(my && (my.cr * 2 + my.cd), his.cr * 2 + his.cd,
-                v => Math.round(v) + '') +
-        (eng ? '<span class="cmp-eng" title="Его движок">' + esc(eng.ru || '') + '</span>' : '') +
+      return '<div class="cmp-item' + (my ? '' : ' none') + '" data-id="' + r.a.id + '">' +
+        '<div class="cmp-row">' +
+          '<span class="cmp-a">' +
+            (r.a.icon ? img(imgUrl('agents', r.a.icon), 'cmp-ic', r.a.ru, true)
+                      : '<span class="cmp-ic tm-none">?</span>') +
+            '<b>' + esc(shortRu(r.a.ru)) + '</b></span>' +
+          cmpCell(my && my.lvl, his.lvl, v => String(v)) +
+          cmpCell(my && my.mind, his.mind, v => 'M' + v) +
+          cmpCell(my && my.core, his.core, v => ['—','A','B','C','D','E','F'][v] || '—') +
+          cmpCell(my && my.w, his.w, v => v ? ('ур.' + v) : '—') +
+          cmpCell(my && my.pct, his.pct, v => v + '%') +
+          cmpCell(my && my.mods, his.mods, v => String(v)) +
+        '</div>' +
+        '<div class="cmp-more">' + cmpFull(r, eng) + '</div>' +
         '</div>';
     }).join('');
 
@@ -7937,9 +7992,9 @@ function drawCmp() {
         nomy.map(r => esc(r.a.ru)).join(', ') + '.</div>';
     }
     h += '<div class="hint">Верхнее число — твоё, нижнее — его; зелёное значит, что ты ' +
-      'впереди. Готовность считается по <b>твоим</b> целям: у чужого профиля их взять ' +
-      'неоткуда. Колонка «крит» — шанс×2 + урон, так две половины крита сводятся ' +
-      'в одно число. Данные с <a href="https://enka.network/zzz/" target="_blank" ' +
+      'впереди. Клик по строке раскрывает все характеристики с разницей в процентах. ' +
+      'Готовность считается по <b>твоим</b> целям: у чужого профиля их взять неоткуда. ' +
+      'Данные с <a href="https://enka.network/zzz/" target="_blank" ' +
       'rel="noopener">enka.network</a>, у тебя отмечено ' + mine + ' ' +
       plural(mine, 'агент', 'агента', 'агентов') + '.</div>';
   }
@@ -7952,8 +8007,15 @@ function drawCmp() {
   };
   if ($('cmpGo')) $('cmpGo').onclick = go;
   if ($('cmpUid')) $('cmpUid').onkeydown = e => { if (e.key === 'Enter') go(); };
-  box.querySelectorAll('.cmp-row').forEach(el => el.onclick = () => {
-    if (prog[el.dataset.id] && prog[el.dataset.id].have) openAgent(+el.dataset.id);
+  // Клик по строке раскрывает характеристики, карточка открывается кнопкой:
+  // иначе посмотреть цифры, не уйдя со страницы сравнения, было бы нельзя.
+  box.querySelectorAll('.cmp-item').forEach(el => {
+    const row = el.querySelector('.cmp-row');
+    if (row) row.onclick = () => el.classList.toggle('open');
+  });
+  box.querySelectorAll('.cmp-open').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    openAgent(+b.dataset.id);
   });
 }
 
