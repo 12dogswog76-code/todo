@@ -2001,7 +2001,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v180';
+const APP_VER = 'v181';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8066,6 +8066,13 @@ function cardIcon(c, svg, x, y, size, color) {
   });
   c.restore();
 }
+// Адрес родного значка стихии. Алиас берётся от ИСХОДНОЙ стихии, а не от той,
+// что вернул elKey: у пути и у картинки разные ключи — путь для мороза лежит
+// под firefrost, а файл называется el-frost.png.
+function elIconSrc(el) {
+  const k = Array.isArray(el) ? el[0] : el;
+  return uiIcon('el-' + (EL_ALIAS[k] || k));
+}
 // Процентная характеристика или плоская: в игре у диска 6 стоит «Сила атаки»
 // с процентом, и по одной подписи не понять, процент это или плоское число.
 function pctProp(pid) {
@@ -8131,10 +8138,15 @@ async function cardPng(id) {
   // Плашка уровня со значком стихии: раньше на картинке была только
   // специальность текстом, а стихии не было вовсе.
   const ek = elKey(a.element);
+  // Значок стихии — родной из игры (img/zzz/ui/el-*.png). Нарисованный путь
+  // остаётся запасным на случай, если файла нет: он узнаваем, но это не то же
+  // самое, что игровая иконка.
+  const elPng = await loadImg(elIconSrc(a.element));
   c.fillStyle = '#000000aa'; cardRound(c, 52, 52, 168, 40, 12); c.fill();
-  cardIcon(c, EL_PATH[ek] || '', 62, 58, 26, elC);
+  if (elPng) c.drawImage(elPng, 62, 58, 27, 27);
+  else cardIcon(c, EL_PATH[ek] || '', 62, 58, 26, elC);
   c.fillStyle = CARD_TX; c.font = cardFont(20, 800);
-  c.fillText('Ур. ' + (p.lvl || 0) + '  M' + (p.mind || 0), 96, 79);
+  c.fillText('Ур. ' + (p.lvl || 0) + '  M' + (p.mind || 0), 97, 79);
 
   // ── правая колонка ──
   let x = 24 + AW + 22, W = CARD_W - x - 24, y = 24;
@@ -8148,15 +8160,19 @@ async function cardPng(id) {
     ['СПЕЦИАЛЬНОСТЬ', PROF[a.prof] || a.prof || '—', CARD_TX]
   ];
   const cw = (W - 3 * 10) / 4;
-  chips.forEach((ch, i) => {
-    const cx = x + i * (cw + 10);
+  const prPng = await loadImg(uiIcon('pr-' + a.prof));
+  for (let i = 0; i < chips.length; i++) {
+    const ch = chips[i], cx = x + i * (cw + 10);
     c.fillStyle = CARD_PAN; cardRound(c, cx, y, cw, 74, 14); c.fill();
     c.strokeStyle = CARD_LINE; c.lineWidth = 1; c.stroke();
     c.fillStyle = CARD_TX3; c.font = cardFont(11, 700);
     cardText(c, ch[0], cx + 14, y + 26, cw - 28);
-    c.fillStyle = ch[2]; c.font = cardFont(26, 800);
-    cardText(c, ch[1], cx + 14, y + 58, cw - 28);
-  });
+    // у специальности тоже есть родной значок — ставим слева от подписи
+    const ic = (i === 3 && prPng) ? prPng : null;
+    if (ic) c.drawImage(ic, cx + 14, y + 36, 24, 24);
+    c.fillStyle = ch[2]; c.font = cardFont(ic ? 22 : 26, 800);
+    cardText(c, ch[1], cx + (ic ? 46 : 14), y + 58, cw - (ic ? 60 : 28));
+  }
   y += 74 + 16;
 
   // ── характеристики в два столбца ──
@@ -8174,8 +8190,9 @@ async function cardPng(id) {
     const col = i % 2, row = (i - col) / 2;
     const rx = x + 16 + col * (colW + 6), ry = y + 32 + row * SH;
     // значок слева от названия — как в самом трекере
-    cardIcon(c, r.k === 'dmg' ? (EL_PATH[elKey(a.element)] || '') : (ST_PATH[r.k] || ''),
-             rx, ry - 14, 16, r.k === 'dmg' ? elC : CARD_TX3);
+    if (r.k === 'dmg' && elPng) c.drawImage(elPng, rx, ry - 14, 16, 16);
+    else cardIcon(c, r.k === 'dmg' ? (EL_PATH[elKey(a.element)] || '') : (ST_PATH[r.k] || ''),
+                  rx, ry - 14, 16, r.k === 'dmg' ? elC : CARD_TX3);
     c.fillStyle = CARD_TX3; c.font = cardFont(15, 500);
     cardText(c, r.n, rx + 24, ry, colW - 150);
     c.fillStyle = CARD_TX; c.font = cardFont(17, 700);
