@@ -2001,7 +2001,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v177';
+const APP_VER = 'v179';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -4847,6 +4847,8 @@ function renderSheet() {
         return '<span class="hstat ok" title="Готовность: уровень, ядро, навыки и оружие">' +
                  '<b>' + pctOf(curId) + '%</b><i>готовность</i></span>';
       })() +
+      '<button class="htab" id="cardBtn" title="Сохранить сборку картинкой — ' +
+        'арт, характеристики, движок и диски одним PNG">🖼 картинкой</button>' +
       '<button class="htab' + (p.fav ? ' favon' : '') + '" id="favTog" title="в избранное">' +
         (p.fav ? '★ в избранном' : '☆ в избранное') + '</button></div>';
 
@@ -5091,6 +5093,8 @@ function bindSheet() {
   };
   const ft = $('favTog');
   if (ft) ft.onclick = () => { p.fav = !p.fav; p.mod = Date.now(); save(curId); renderSheet(); render(); };
+  const cb = $('cardBtn');
+  if (cb) cb.onclick = () => cardSave(curId);
   // помним, развёрнута сверка или свёрнута
   document.querySelectorAll('details.iss').forEach(el => el.ontoggle = () => {
     if (ui.issOpen !== el.open) { ui.issOpen = el.open; save(); }
@@ -8016,6 +8020,239 @@ function drawBoo() {
   box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
     ui.booMode = b.dataset.m; save(); drawBoo();
   });
+}
+
+// ─────────────── карточка агента картинкой ───────────────
+// Собирает PNG со сборкой: арт, характеристики, движок и шесть дисков. Нужна,
+// чтобы показать сборку там, где ссылку не откроют — в чате или на форуме.
+//
+// Всё рисуется на canvas вручную: html2canvas и подобные тянут стили из DOM,
+// а карточка на странице свёрстана под экран, а не под картинку.
+// Высота подобрана по содержимому: плитки дисков занимают ~215px, всё выше
+// них — фиксированной высоты. При 880 внизу оставалась пустая треть.
+const CARD_W = 1500, CARD_H = 700;
+const CARD_BG = '#0b0d11', CARD_PAN = '#141821', CARD_LINE = '#232936';
+const CARD_TX = '#e8ecf5', CARD_TX2 = '#c8ccd6', CARD_TX3 = '#8b92a3';
+const CARD_GOLD = '#ffd54a', CARD_OK = '#4ade80';
+
+function cardFont(px, w) { return (w || 600) + ' ' + px + 'px "Segoe UI", Roboto, sans-serif'; }
+// Картинка может не загрузиться (нет файла, оборвалась сеть) — тогда рисуем
+// без неё, а не роняем всю генерацию.
+function loadImg(src) {
+  return new Promise(res => {
+    if (!src) { res(null); return; }
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => res(im);
+    im.onerror = () => res(null);
+    im.src = src;
+  });
+}
+function cardRound(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+// текст с обрезкой по ширине: длинные имена комплектов иначе лезут на соседа
+function cardText(c, t, x, y, max) {
+  t = String(t == null ? '' : t);
+  if (max && c.measureText(t).width > max) {
+    while (t.length > 1 && c.measureText(t + '…').width > max) t = t.slice(0, -1);
+    t += '…';
+  }
+  c.fillText(t, x, y);
+  return t;
+}
+async function cardPng(id) {
+  const a = DB.byId[id], p = prog[id];
+  if (!a || !p) return null;
+  const cv = document.createElement('canvas');
+  cv.width = CARD_W; cv.height = CARD_H;
+  const c = cv.getContext('2d');
+  c.textBaseline = 'alphabetic';
+
+  // ── фон ──
+  c.fillStyle = CARD_BG; c.fillRect(0, 0, CARD_W, CARD_H);
+  const elC = (ELEM[elKey(a.element)] && ELEM[elKey(a.element)].c) || '#8b92a3';
+  const gl = c.createRadialGradient(300, 300, 40, 300, 300, 900);
+  gl.addColorStop(0, elC + '22'); gl.addColorStop(1, '#00000000');
+  c.fillStyle = gl; c.fillRect(0, 0, CARD_W, CARD_H);
+
+  // ── арт слева ──
+  const art = await loadImg(agentPic(a, 'hero')) || await loadImg(agentPic(a, 'card'));
+  const AW = 470;
+  c.save();
+  cardRound(c, 24, 24, AW, CARD_H - 48, 20); c.clip();
+  c.fillStyle = CARD_PAN; c.fillRect(24, 24, AW, CARD_H - 48);
+  if (art) {
+    // вписываем по высоте и центрируем: у артов разное соотношение сторон
+    const k = Math.max(AW / art.width, (CARD_H - 48) / art.height);
+    const w = art.width * k, hh = art.height * k;
+    c.drawImage(art, 24 + (AW - w) / 2, 24 + (CARD_H - 48 - hh) / 2, w, hh);
+  }
+  const sh = c.createLinearGradient(0, CARD_H - 260, 0, CARD_H);
+  sh.addColorStop(0, '#00000000'); sh.addColorStop(1, '#000000e6');
+  c.fillStyle = sh; c.fillRect(24, CARD_H - 260, AW, 236);
+  c.restore();
+
+  // имя и ранг поверх арта
+  c.fillStyle = CARD_TX; c.font = cardFont(44, 800);
+  cardText(c, a.ru, 52, CARD_H - 96, AW - 56);
+  c.fillStyle = CARD_TX3; c.font = cardFont(19, 500);
+  cardText(c, a.en || '', 52, CARD_H - 68, AW - 56);
+  // плашка уровня
+  c.fillStyle = '#000000aa'; cardRound(c, 52, 52, 132, 40, 12); c.fill();
+  c.fillStyle = CARD_TX; c.font = cardFont(21, 800);
+  c.fillText('Ур. ' + (p.lvl || 0) + '  M' + (p.mind || 0), 68, 79);
+
+  // ── правая колонка ──
+  let x = 24 + AW + 22, W = CARD_W - x - 24, y = 24;
+
+  // шапка: готовность, модификаторы, ядро, движок-фаза
+  const mods = modifiersOf(id, p).sum;
+  const chips = [
+    ['ГОТОВНОСТЬ', pctOf(id) + '%', pctOf(id) >= 100 ? CARD_OK : CARD_GOLD],
+    ['МОДИФИКАТОРЫ', String(mods), CARD_TX],
+    ['ЯДРО', ['—','A','B','C','D','E','F'][p.core || 0] || '—', CARD_TX],
+    ['СПЕЦИАЛЬНОСТЬ', PROF[a.prof] || a.prof || '—', CARD_TX]
+  ];
+  const cw = (W - 3 * 10) / 4;
+  chips.forEach((ch, i) => {
+    const cx = x + i * (cw + 10);
+    c.fillStyle = CARD_PAN; cardRound(c, cx, y, cw, 74, 14); c.fill();
+    c.strokeStyle = CARD_LINE; c.lineWidth = 1; c.stroke();
+    c.fillStyle = CARD_TX3; c.font = cardFont(11, 700);
+    cardText(c, ch[0], cx + 14, y + 26, cw - 28);
+    c.fillStyle = ch[2]; c.font = cardFont(26, 800);
+    cardText(c, ch[1], cx + 14, y + 58, cw - 28);
+  });
+  y += 74 + 16;
+
+  // ── характеристики в два столбца ──
+  const rows = STATS.map(o => {
+    const v = (p.cur && p.cur[o.k]) || 0;
+    return { n: o.n, v: o.pct ? (Math.round(v * 10) / 10) + '%'
+                              : (o.k === 'er' ? (Math.round(v * 100) / 100).toFixed(2)
+                                              : nfmt(Math.round(v))) };
+  });
+  const SH = 34, colW = (W - 14) / 2;
+  const need = Math.ceil(rows.length / 2) * SH + 20;
+  c.fillStyle = CARD_PAN; cardRound(c, x, y, W, need, 16); c.fill();
+  c.strokeStyle = CARD_LINE; c.stroke();
+  rows.forEach((r, i) => {
+    const col = i % 2, row = (i - col) / 2;
+    const rx = x + 16 + col * (colW + 6), ry = y + 32 + row * SH;
+    c.fillStyle = CARD_TX3; c.font = cardFont(15, 500);
+    cardText(c, r.n, rx, ry, colW - 130);
+    c.fillStyle = CARD_TX; c.font = cardFont(17, 700);
+    c.textAlign = 'right';
+    c.fillText(r.v, rx + colW - 34, ry);
+    c.textAlign = 'left';
+  });
+  y += need + 16;
+
+  // ── движок ──
+  const w = p.w && p.w.id ? DB.engById[p.w.id] : null;
+  c.fillStyle = CARD_PAN; cardRound(c, x, y, W, 88, 16); c.fill();
+  c.strokeStyle = CARD_LINE; c.stroke();
+  const wi = w ? await loadImg(imgUrl('engines', w.icon)) : null;
+  if (wi) { c.save(); cardRound(c, x + 14, y + 14, 60, 60, 12); c.clip();
+            c.drawImage(wi, x + 14, y + 14, 60, 60); c.restore(); }
+  c.fillStyle = CARD_TX3; c.font = cardFont(11, 700);
+  c.fillText('W-ENGINE', x + 88, y + 28);
+  c.fillStyle = w ? CARD_TX : CARD_TX3; c.font = cardFont(22, 700);
+  cardText(c, w ? (w.ru || w.en) : 'движок не надет', x + 88, y + 56, W - 260);
+  if (w) {
+    c.fillStyle = CARD_TX3; c.font = cardFont(15, 500);
+    c.fillText('Ур. ' + ((p.w && p.w.lvl) || 0) + ' · P' + ((p.w && p.w.phase) || 1),
+               x + 88, y + 78);
+  }
+  y += 88 + 16;
+
+  // ── диски ──
+  const mk = modKeys(id, p), pri = priOf(id, p), wts = statWeights(a, p);
+  const dw = (W - 5 * 8) / 6, dh = CARD_H - 24 - y;
+  for (let sl = 1; sl <= 6; sl++) {
+    const d = (p.discs || []).filter(z => z && z.slot === sl)[0] || null;
+    const sc = d ? discScore(d, mk, pri, wts) : null;
+    const su = d && DB.suitById ? DB.suitById[d.suit] : null;
+    const dx = x + (sl - 1) * (dw + 8);
+    c.fillStyle = CARD_PAN; cardRound(c, dx, y, dw, dh, 14); c.fill();
+    c.strokeStyle = sc ? CARD_LINE : '#1b202a'; c.stroke();
+    // номер слота и оценка
+    c.fillStyle = CARD_TX3; c.font = cardFont(12, 700);
+    c.fillText(String(sl), dx + 10, y + 20);
+    if (sc) {
+      c.textAlign = 'right';
+      c.fillStyle = sc.pct >= 44 ? CARD_OK : (sc.pct >= 33 ? CARD_GOLD : CARD_TX3);
+      c.font = cardFont(15, 800);
+      c.fillText(sc.grade, dx + dw - 10, y + 21);
+      c.textAlign = 'left';
+    }
+    const si = su ? await loadImg(imgUrl('discs', su.icon)) : null;
+    if (si) c.drawImage(si, dx + dw / 2 - 21, y + 26, 42, 42);
+    // главный стат
+    c.textAlign = 'center';
+    c.fillStyle = CARD_GOLD; c.font = cardFont(13, 700);
+    cardText(c, d ? shortName(d.mainP) : 'пусто', dx + dw / 2, y + 88, dw - 12);
+    c.fillStyle = CARD_TX; c.font = cardFont(15, 700);
+    cardText(c, d ? mainText(d.mainP, d.mainV, d.lvl) : '—', dx + dw / 2, y + 108, dw - 12);
+    c.textAlign = 'left';
+    // Доп. характеристики: имя слева, значение справа НА ТОЙ ЖЕ строке.
+    // Со сдвигом по вертикали строки наезжали друг на друга и превращались
+    // в кашу. Имя обрезаем с учётом того, сколько занимает число.
+    ((d && d.subs) || []).slice(0, 4).forEach((sp, i2) => {
+      const good = isModSub(sp, mk);
+      const ry = y + 138 + i2 * 21;
+      const val = subVal(sp), r = subRolls(sp);
+      c.font = cardFont(11.5, 600);
+      const vw = c.measureText(val).width;
+      c.fillStyle = good ? CARD_TX : CARD_TX3;
+      c.textAlign = 'right';
+      c.fillText(val, dx + dw - 9, ry);
+      c.textAlign = 'left';
+      c.fillStyle = good ? CARD_OK : CARD_TX3;
+      c.font = cardFont(11.5, good ? 700 : 500);
+      cardText(c, shortName(sp.p) + (r ? ' +' + r : ''), dx + 9, ry, dw - 24 - vw);
+    });
+  }
+
+  // ── подпись ──
+  c.fillStyle = CARD_TX3; c.font = cardFont(13, 500);
+  c.fillText('alextask.ru · ' + new Date().toLocaleDateString('ru-RU'), 52, CARD_H - 40);
+
+  return new Promise(res => cv.toBlob(res, 'image/png'));
+}
+async function cardSave(id) {
+  const btn = $('cardBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ рисую…'; }
+  try {
+    const blob = await cardPng(id);
+    if (!blob) throw new Error('нечего рисовать');
+    const a = DB.byId[id];
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'zzz-' + (a ? translit(a.ru) : id) + '.png';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) {
+    alert('Не вышло: ' + ((e && e.message) || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🖼 картинкой'; }
+  }
+}
+// имя файла латиницей: кириллица в именах скачиваемых файлов местами ломается
+const TRL = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',
+  л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',
+  ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',' ':'-' };
+function translit(s) {
+  return String(s || '').toLowerCase().split('').map(ch => TRL[ch] != null ? TRL[ch] :
+    (/[a-z0-9-]/.test(ch) ? ch : '')).join('') || 'agent';
 }
 
 // ─────────────── снаряжение: движки и комплекты ───────────────
