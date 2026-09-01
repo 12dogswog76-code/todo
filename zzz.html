@@ -916,6 +916,34 @@
     .hs-date{width:44px;font-size:10.5px}
   }
 
+  /* ── бангбу ── */
+  .boo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:6px}
+  .boo{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:12px;cursor:pointer;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line);
+    transition:.14s;position:relative}
+  .boo:hover{border-color:var(--acc);transform:translateY(-2px)}
+  /* отмеченные — свои: подсвечиваем рамкой, а не галочкой в углу */
+  .boo.on{border-color:#4ade8055;background:linear-gradient(120deg,#4ade800f,var(--pan))}
+  .boo-ic{width:38px;height:38px;flex:none;border-radius:50%;object-fit:cover;
+    background:#ffffff0a}
+  .boo.on .boo-ic{box-shadow:0 0 0 2px #4ade8055}
+  .boo-t{min-width:0;flex:1}
+  .boo-t b{display:block;font-size:12px;color:var(--tx2);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .boo.on .boo-t b{color:var(--tx)}
+  .boo-t i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:1px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .boo-r{flex:none;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:20px;
+    border:1px solid var(--line)}
+  .boo-r.rs{color:var(--gold);border-color:#ffd54a44;background:#ffd54a12}
+  .boo-r.ra{color:#b197fc;border-color:#b197fc33;background:#b197fc12}
+  .boo-fit{flex:none;font-size:10px;font-weight:800;color:var(--acc);
+    border:1px solid #4ade8044;background:#4ade8014;border-radius:20px;padding:1px 7px}
+  @media(max-width:760px){
+    .boo-grid{grid-template-columns:1fr}
+    .boo-ic{width:34px;height:34px}
+  }
+
   /* ── панель «Эндгейм» ── */
   .eg-head{font-size:12px;color:var(--tx2);margin:0 0 12px;padding-bottom:10px;
     border-bottom:1px solid var(--line)}
@@ -1671,6 +1699,7 @@
 
   <div class="panel" id="todoPanel"><div id="todoBox"></div></div>
   <div class="panel" id="matsPanel"><div id="matsBox"></div></div>
+  <div class="panel" id="booPanel"><div id="booBox"></div></div>
   <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
   <div class="panel" id="endPanel"><div id="endBox"></div></div>
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
@@ -1743,7 +1772,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v159';
+const APP_VER = 'v160';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6032,8 +6061,12 @@ function setCloud(cls, title) {
   d.title = title || '';
 }
 function payload() {
+  // Отметки бангбу едут в облако отдельным полем, а не всем ui: фильтры и
+  // режимы просмотра у каждого устройства свои, а «какие бангбу у меня есть» —
+  // это данные аккаунта, их терять нельзя.
   return { v: 1, prog: prog, uid: localStorage.getItem(LS + '_uid') || '',
-           hist: hist, t: Date.now() };
+           hist: hist, boo: (ui && ui.boo) || {}, booT: (ui && ui.booT) || 0,
+           t: Date.now() };
 }
 
 // сколько агентов реально заполнено (пустые болванки не считаем)
@@ -6158,6 +6191,15 @@ function mergeProg(remote) {
     if ($('uidInput')) $('uidInput').value = remote.uid;
   }
   let changed = mergeHist(remote.hist);
+  // Бангбу: у кого отметка свежее, тот и прав. Без времени пришлось бы или
+  // объединять всё подряд (тогда снятую отметку не убрать), или доверять
+  // случайному порядку синхронизаций.
+  if (remote.boo && (remote.booT || 0) > (ui.booT || 0)) {
+    ui.boo = remote.boo;
+    ui.booT = remote.booT || 0;
+    try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+    changed = true;
+  }
   if (!remote.prog) return changed;
   Object.keys(remote.prog).forEach(id => {
     const r = remote.prog[id], l = prog[id];
@@ -6456,6 +6498,7 @@ const MENU = [
   { k: 'todo',   p: 'todoPanel',   i: '🎯', n: 'Кого качать',     d: 'Сильные, но недоделанные' },
   { k: 'mats',   p: 'matsPanel',   i: '🧱', n: 'Что фармить',     d: 'Материалы до твоих целей' },
   { k: 'mod',    p: 'modPanel',    i: '📊', n: 'Модификаторы',    d: 'Сумма по каждому агенту' },
+  { k: 'boo',    p: 'booPanel',    i: '🤖', n: 'Бангбу',          d: 'Кто что включает и кто есть у тебя' },
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
   { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Шиюй и Опасный штурм' },
   { k: 'hist',   p: 'histPanel',   i: '📈', n: 'История',         d: 'График и журнал изменений' },
@@ -6495,6 +6538,7 @@ function menuGo(k) {
   if (k === 'hist')   drawHist();
   if (k === 'todo')   drawTodo();
   if (k === 'mats')   drawMats();
+  if (k === 'boo')    drawBoo();
   const body = $('menuBody');
   if (body) body.scrollTop = 0;
 }
@@ -7367,6 +7411,133 @@ function drawHist() {
     ' дней. В журнал попадают появление и уход агентов, выход на 100% и рост готовности ' +
     'от ' + HIST_STEP + '% за раз.</div>';
   box.innerHTML = h;
+}
+
+// ─────────────── бангбу ───────────────
+// Что есть у тебя — отмечается руками: ни Enka, ни боевая хроника HoYoLab
+// список бангбу не отдают, только агентов. Отметки живут в ui.boo и едут в
+// облако вместе с остальными настройками.
+function booHave(n) { return !!(ui.boo && ui.boo[n]); }
+function booToggle(n) {
+  if (!ui.boo) ui.boo = {};
+  if (ui.boo[n]) delete ui.boo[n]; else ui.boo[n] = 1;
+  ui.booT = Date.now();     // отметка времени нужна для слияния с облаком
+  save();
+}
+// Условие пассивки по-русски, без привязки к конкретному составу.
+// Разбираем те же четыре вида, что и bangbooFor, но выводим общий текст.
+function booCond(b) {
+  const p = (b && b.p) || '';
+  const nm = p.match(/^When ([A-Z][A-Za-z'\- ]{2,20}) is in the squad/);
+  if (nm) {
+    const ru = (DB.agents || []).filter(a => (a.en || '').toLowerCase() === nm[1].toLowerCase())[0];
+    return { t: 'в отряде ' + esc(ru ? ru.ru : nm[1]), k: 'agent' };
+  }
+  const two = p.match(/(?:2|two|at least 2)\s+or\s+more\s+(.+?)\s+(?:character|characters)/i)
+           || p.match(/at least 2\s+(.+?)\s+(?:character|characters)/i);
+  if (two) {
+    const what = two[1].replace(/\s+Attribute$/i, '').trim();
+    const el = Object.keys(BOO_ELEM).filter(x => BOO_ELEM[x] === what)[0];
+    if (el) return { t: 'двое со стихией ' + elemRu(what), k: 'elem' };
+    return { t: 'двое из фракции ' + esc(facRu(what)), k: 'fac' };
+  }
+  const one = p.match(/at least (?:1|one)\s+(.+?)(?:-type)?\s+character/i);
+  if (one) {
+    const parts = one[1].split(/\s+or\s+/).map(x => x.trim());
+    const ru = parts.map(x => {
+      const k = Object.keys(BOO_PROF).filter(y => BOO_PROF[y] === x)[0];
+      return k ? PROF[k].toLowerCase() : x.toLowerCase();
+    });
+    return { t: 'в отряде ' + ru.join(' или '), k: 'prof' };
+  }
+  return { t: '', k: '' };
+}
+// у скольких твоих составов из эндгейма и карточек срабатывает этот бангбу
+function booFit(name) {
+  let n = 0;
+  const seen = {};
+  const check = ids => {
+    if (!ids || ids.length < 2) return;
+    if (ids.some(id => !(prog[id] && prog[id].have))) return;   // состав недоступен
+    const key = ids.slice().sort().join(',');
+    if (seen[key]) return;
+    seen[key] = 1;
+    if (bangbooFor(ids).some(x => x.b.n === name)) n++;
+  };
+  (DB.agents || []).forEach(a => {
+    const t = teamsOf(a.id);
+    if (!t) return;
+    (t.stages || []).forEach(g => (g.teams || []).forEach(r => check(r.ids)));
+    (t.shiyu || []).forEach(r => check(r.ids));
+    (t.da || []).forEach(r => check(r.ids));
+  });
+  const e = egOf();
+  if (e) ['shiyu', 'da'].forEach(k => (e[k] && e[k].stages || []).forEach(
+    g => (g.teams || []).forEach(r => check(r.ids))));
+  return n;
+}
+const BOO_MODES = [
+  ['fit',  'Полезные мне'],
+  ['have', 'Есть у меня'],
+  ['all',  'Все']
+];
+function drawBoo() {
+  const box = $('booBox');
+  if (!box) return;
+  const list = (GUIDE && GUIDE.bangboo && GUIDE.bangboo.list) || [];
+  if (!list.length) {
+    box.innerHTML = '<div class="hint" style="margin-top:0">Список бангбу пока не собран. ' +
+      'Он приезжает вместе со сборками — прогони <b>pryd.js</b> со страницы бангбу на prydwen.gg.</div>';
+    return;
+  }
+  const mode = BOO_MODES.some(m => m[0] === ui.booMode) ? ui.booMode : 'fit';
+  const rows = list.map(b => ({ b: b, cond: booCond(b), fit: booFit(b.n), have: booHave(b.n) }));
+  const shown = rows.filter(r => mode === 'all' ? true : mode === 'have' ? r.have : r.fit > 0)
+    .sort((x, y) => (y.fit - x.fit) ||
+      ((y.b.r === 'S' ? 1 : 0) - (x.b.r === 'S' ? 1 : 0)) ||
+      booRu(x.b.n).localeCompare(booRu(y.b.n), 'ru'));
+  const mine = rows.filter(r => r.have).length;
+
+  let h = '<div class="td-head">' +
+    '<span class="td-cnt">' + mine + ' из ' + rows.length + ' отмечено</span>' +
+    BOO_MODES.map(m => '<button class="td-sw' + (mode === m[0] ? ' on' : '') +
+      '" data-m="' + m[0] + '">' + m[1] + '</button>').join('') +
+    '</div>';
+
+  h += !shown.length
+    ? '<div class="hint" style="margin-top:0">' +
+      (mode === 'have' ? 'Ни один бангбу не отмечен — жми по карточкам, чтобы отметить свои.'
+       : mode === 'fit' ? 'Ни один бангбу не срабатывает на твоих составах. Собери составы во вкладке «Команды».'
+       : 'Пусто.') + '</div>'
+    : '<div class="boo-grid">' + shown.map(r =>
+        '<div class="boo' + (r.have ? ' on' : '') + '" data-n="' + esc(r.b.n) + '" ' +
+          'title="' + esc(r.b.pn ? r.b.pn + ': ' + r.b.p : r.b.p) + '">' +
+          (r.b.icon ? img(imgUrl('bangboo', r.b.icon), 'boo-ic', booRu(r.b.n), true)
+                    : '<span class="boo-ic tm-none">?</span>') +
+          '<div class="boo-t">' +
+            '<b>' + esc(booRu(r.b.n)) + '</b>' +
+            '<i>' + (r.cond.t || 'без условия') + '</i>' +
+          '</div>' +
+          '<span class="boo-r ' + (r.b.r === 'S' ? 'rs' : 'ra') + '">' + esc(r.b.r) + '</span>' +
+          (r.fit ? '<span class="boo-fit" title="Столько твоих составов включают его пассивку">' +
+            r.fit + '</span>' : '') +
+        '</div>').join('') + '</div>';
+
+  h += '<div class="hint">Клик по карточке отмечает, что бангбу у тебя есть — эти отметки ' +
+    'едут в облако. Число справа: сколько твоих собираемых составов включают его пассивку. ' +
+    'Условия и список — с <a href="https://www.prydwen.gg/zenless/bangboo" target="_blank" ' +
+    'rel="noopener">prydwen.gg</a>, названия из игры.</div>';
+  box.innerHTML = h;
+  box.querySelectorAll('.boo').forEach(el => el.onclick = () => {
+    booToggle(el.dataset.n);
+    el.classList.toggle('on');
+    const cnt = box.querySelector('.td-cnt');
+    if (cnt) cnt.textContent = (GUIDE.bangboo.list.filter(b => booHave(b.n)).length) +
+      ' из ' + rows.length + ' отмечено';
+  });
+  box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+    ui.booMode = b.dataset.m; save(); drawBoo();
+  });
 }
 
 // ─────────────── панель «Эндгейм» ───────────────
