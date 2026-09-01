@@ -991,6 +991,14 @@
     border-radius:50%;text-decoration:none;font-size:9px;color:transparent;transition:.14s}
   .cmp-chip:hover .cmp-del{color:var(--tx3)}
   .cmp-del:hover{background:#e5484d22;color:#f0787c!important}
+  .cmp-share{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:0 0 14px;
+    padding:9px 11px;border-radius:12px;border:1px dashed var(--line);background:#ffffff05}
+  .cmp-share button{flex:none}
+  .cmp-share span{flex:1 1 200px;min-width:0;font-size:11px;color:var(--tx3);line-height:1.5}
+  .cmp-code{flex:none!important;font-size:15px;font-weight:800;letter-spacing:.12em;
+    color:var(--gold);cursor:pointer;padding:4px 12px;border-radius:8px;
+    background:#ffd54a12;border:1px solid #ffd54a44}
+  .cmp-code:hover{border-color:var(--gold)}
   .cmp-sum{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
   .cmp-s{display:flex;flex-direction:column;padding:7px 14px;border-radius:12px;
     background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
@@ -1882,7 +1890,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v170';
+const APP_VER = 'v171';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -7900,12 +7908,28 @@ function cmpStats(p, id) {
     cur:  cur
   };
 }
+// В одном поле и UID, и код общего профиля: у первого только цифры, у второго
+// вид ABC-234 — перепутать нельзя, а второе поле было бы лишним.
+function cmpIsCode(v) { return /^[A-Za-z0-9]{3}-?[A-Za-z0-9]{3}$/.test(String(v || '').trim()); }
 async function cmpRun(uid) {
   if (cmpBusy) return;
   cmpBusy = true;
   const msg = t => { const el = $('cmpMsg'); if (el) el.innerHTML = t; };
   msg('Гружу профиль ' + esc(uid) + '…');
   try {
+    if (cmpIsCode(uid)) {
+      const code = uid.toUpperCase().replace(/^(.{3})-?(.{3})$/, '$1-$2');
+      const res = await apiFetch('/share/' + code, { headers: { 'Accept': 'application/json' } }, 25000);
+      if (!res.ok || !res.data || !res.data.prof) {
+        msg('<b>Не вышло:</b> ' + esc((res.data && res.data.error) || res.err || 'нет данных') + '.');
+        return;
+      }
+      cmpFromShare(code, res.data);
+      ui.cmpUid = code;
+      cmpRemember(code, CMP.nick);
+      drawCmp();
+      return;
+    }
     const got = await enkaByUid(uid);
     if (!got.data) {
       msg('<b>Не вышло:</b> ' + esc(got.err || 'нет данных') +
@@ -7968,6 +7992,73 @@ function cmpFull(r, eng) {
     '</div>';
   return h;
 }
+// ── общий профиль: весь ростер вместо витрины ───────────────────────────────
+// Enka отдаёт только витрину. Если друг тоже ведёт трекер, он публикует слепок
+// своего прогресса и присылает короткий код — тогда видно всех его агентов.
+//
+// Кодом подключения к облаку делиться нельзя: он даёт и запись. Здесь на
+// сервер уезжает отдельная копия, только на чтение, и живёт 120 дней с
+// последней публикации.
+function shareTrim() {
+  // Заметки, планы и цели не отдаём: они личные и для сравнения не нужны.
+  // Оставляем ровно то, из чего считаются готовность, модификаторы и итоговые
+  // характеристики.
+  const out = {};
+  Object.keys(prog).forEach(id => {
+    const p = prog[id];
+    if (!p || !p.have) return;
+    out[id] = { have: 1, lvl: p.lvl || 0, core: p.core || 0, mind: p.mind || 0,
+                promo: p.promo || 0, sk: p.sk || {},
+                w: p.w || { id: 0, lvl: 0, br: 0, phase: 1 },
+                discs: p.discs || [], cur: p.cur || {} };
+  });
+  return out;
+}
+async function shareGo() {
+  const msg = t => { const el = $('cmpShareMsg'); if (el) el.innerHTML = t; };
+  const prof = shareTrim();
+  const n = Object.keys(prof).length;
+  if (!n) { msg('<b>Сначала загрузи своих агентов</b> — публиковать пока нечего.'); return; }
+  msg('Публикую ' + n + ' ' + plural(n, 'агента', 'агентов', 'агентов') + '…');
+  const nick = (ui && ui.shareNick) || localStorage.getItem(LS + '_uid') || 'профиль';
+  const res = await apiFetch('/share', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: (ui && ui.shareCode) || '', nick: nick,
+                           uid: localStorage.getItem(LS + '_uid') || '', prof: prof })
+  }, 30000);
+  if (!res.ok || !res.data || !res.data.code) {
+    msg('<b>Не вышло:</b> ' + esc((res.data && res.data.error) || res.err || 'сервер не ответил') +
+        '.<br>Похоже, воркер ещё старой версии — нужен маршрут <b>/api/zzz/share</b>.');
+    return;
+  }
+  ui.shareCode = res.data.code; ui.shareT = Date.now(); save();
+  drawCmp();
+}
+// собрать сравнение из опубликованного профиля
+function cmpFromShare(code, d) {
+  const prof = (d && d.prof) || {};
+  const rows = [];
+  Object.keys(prof).forEach(id => {
+    const a = DB.byId[id];
+    if (!a) return;
+    const his = P0(prof[id]);
+    const my = prog[id] && prog[id].have ? prog[id] : null;
+    rows.push({ a: a, his: cmpStats(his, id), my: my ? cmpStats(my, id) : null });
+  });
+  CMP = { uid: d.uid || '', nick: d.nick || code, lvl: 0, rows: rows,
+          shown: rows.length, full: true, code: code, at: d.at || Date.now() };
+}
+// приводим присланный кусок к виду, который понимают pctOfP и modifiersOf
+function P0(raw) {
+  const p = blank();
+  Object.keys(raw || {}).forEach(k => { p[k] = raw[k]; });
+  if (!p.sk) p.sk = { 0: 1, 1: 1, 2: 1, 3: 1, 6: 1 };
+  if (!p.w) p.w = { id: 0, lvl: 0, br: 0, phase: 1 };
+  if (!Array.isArray(p.discs)) p.discs = [];
+  p.have = true;
+  return p;
+}
 // одна метрика: два числа и кто впереди
 function cmpCell(mine, his, fmt, more) {
   const f = fmt || (v => nfmt(Math.round(v)));
@@ -7982,11 +8073,12 @@ function drawCmp() {
   if (!box) return;
   const mine = Object.keys(prog).filter(id => prog[id] && prog[id].have).length;
   let h = '<div class="cmp-top">' +
-    '<input type="text" id="cmpUid" placeholder="UID друга, например 1502024259" ' +
+    '<input type="text" id="cmpUid" placeholder="UID друга или код профиля, вида ABC-234" ' +
       'value="' + esc((ui && ui.cmpUid) || '') + '">' +
     '<button id="cmpGo">Сравнить</button>' +
     '<span id="cmpMsg">' + (CMP ? '' :
-      'Enka отдаёт только витрину — тех агентов, кого игрок выставил в профиле.') + '</span>' +
+      'По UID видно только витрину. Если друг тоже ведёт трекер, попроси у него ' +
+      'код профиля — тогда будет весь его ростер.') + '</span>' +
     '</div>';
 
   const saved = cmpList();
@@ -8000,6 +8092,18 @@ function drawCmp() {
       '</span>').join('') + '</div>';
   }
 
+  const code = (ui && ui.shareCode) || '';
+  h += '<div class="cmp-share">' +
+    '<button id="cmpShare">' + (code ? '↻ Обновить мой код' : '↗ Поделиться профилем') + '</button>' +
+    (code ? '<span class="cmp-code" id="cmpCode" title="Нажми, чтобы скопировать">' +
+            esc(code) + '</span>' : '') +
+    '<span id="cmpShareMsg">' + (code
+      ? 'Дай другу этот код — он увидит всех твоих агентов. После прокачки жми ' +
+        '«Обновить», чтобы у него были свежие числа.'
+      : 'Опубликует копию твоего прогресса и выдаст короткий код. Заметки, планы и ' +
+        'цели не уезжают — только то, из чего считается сравнение.') + '</span>' +
+    '</div>';
+
   if (CMP) {
     const rows = CMP.rows.slice().sort((x, y) => (y.my ? 1 : 0) - (x.my ? 1 : 0) ||
       (y.his.pct - x.his.pct));
@@ -8010,8 +8114,13 @@ function drawCmp() {
 
     h += '<div class="eg-head">Профиль <b>' + esc(CMP.nick || CMP.uid) + '</b>' +
       (CMP.lvl ? ' · уровень ' + CMP.lvl : '') +
-      ' · в витрине ' + CMP.shown + ' ' + plural(CMP.shown, 'агент', 'агента', 'агентов') +
-      (both.length ? ' · общих с тобой ' + both.length : '') + '</div>';
+      (CMP.full ? ' · весь ростер: ' + CMP.shown + ' ' +
+                    plural(CMP.shown, 'агент', 'агента', 'агентов')
+                : ' · в витрине ' + CMP.shown + ' ' +
+                    plural(CMP.shown, 'агент', 'агента', 'агентов')) +
+      (both.length ? ' · общих с тобой ' + both.length : '') +
+      (CMP.full && CMP.at ? ' · слепок от ' +
+        esc(banDate(new Date(CMP.at).toISOString().slice(0, 10))) : '') + '</div>';
 
     if (both.length) {
       h += '<div class="cmp-sum">' +
@@ -8050,6 +8159,7 @@ function drawCmp() {
     h += '<div class="hint">Верхнее число — твоё, нижнее — его; зелёное значит, что ты ' +
       'впереди. Клик по строке раскрывает все характеристики с разницей в процентах. ' +
       'Готовность считается по <b>твоим</b> целям: у чужого профиля их взять неоткуда. ' +
+      (CMP.full ? 'Это полный ростер из опубликованного профиля. ' : '') +
       'Данные с <a href="https://enka.network/zzz/" target="_blank" ' +
       'rel="noopener">enka.network</a>, у тебя отмечено ' + mine + ' ' +
       plural(mine, 'агент', 'агента', 'агентов') + '.</div>';
@@ -8057,11 +8167,19 @@ function drawCmp() {
   box.innerHTML = h;
 
   const go = () => {
-    const v = ($('cmpUid').value || '').trim().replace(/\D/g, '');
-    if (!v) { $('cmpMsg').innerHTML = '<b>Впиши UID.</b>'; return; }
+    const raw = ($('cmpUid').value || '').trim();
+    const v = cmpIsCode(raw) ? raw : raw.replace(/\D/g, '');
+    if (!v) { $('cmpMsg').innerHTML = '<b>Впиши UID или код профиля.</b>'; return; }
     cmpRun(v);
   };
   if ($('cmpGo')) $('cmpGo').onclick = go;
+  if ($('cmpShare')) $('cmpShare').onclick = shareGo;
+  if ($('cmpCode')) $('cmpCode').onclick = () => {
+    const c = (ui && ui.shareCode) || '';
+    if (!c) return;
+    const done = () => { const el = $('cmpShareMsg'); if (el) el.textContent = 'Код скопирован: ' + c; };
+    if (navigator.clipboard) navigator.clipboard.writeText(c).then(done, done); else done();
+  };
   if ($('cmpUid')) $('cmpUid').onkeydown = e => { if (e.key === 'Enter') go(); };
   box.querySelectorAll('.cmp-chip').forEach(el => el.onclick = e => {
     if (e.target.closest('.cmp-del')) return;
