@@ -2045,7 +2045,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v183';
+const APP_VER = 'v184';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8196,7 +8196,11 @@ function pullDate(t) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(t || ''));
   return m ? banDate(m[1] + '-' + m[2] + '-' + m[3]) : '';
 }
-const PULL_CMD = 'iwr -useb https://alextask.ru/zzz-signal.ps1 | iex';
+// Читаем сырые байты и разбираем их как UTF-8. Простое «iwr … | iex» не
+// годится: GitHub Pages отдаёт .ps1 как application/octet-stream без charset,
+// PowerShell декодирует такой ответ как latin1, и весь русский текст в скрипте
+// превращается в «????».
+const PULL_CMD = 'iex ([Text.Encoding]::UTF8.GetString((iwr -useb https://alextask.ru/zzz-signal.ps1).RawContentStream.ToArray()))';
 function pullHowto(open) {
   return '<details class="howto pl-how"' + (open ? ' open' : '') + '><summary>' +
     '<h5 style="display:inline">Как получить ссылку</h5></summary><ol>' +

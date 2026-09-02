@@ -16,7 +16,12 @@
     3. Вставь ссылку в трекере: Меню → Крутки → поле «Ссылка из игры».
 
   Запуск одной строкой (Windows PowerShell, ничего скачивать не надо):
-      iwr -useb https://alextask.ru/zzz-signal.ps1 | iex
+      iex ([Text.Encoding]::UTF8.GetString((iwr -useb https://alextask.ru/zzz-signal.ps1).RawContentStream.ToArray()))
+
+  Байты читаются напрямую и разбираются как UTF-8: короткое «iwr … | iex» не
+  подходит, потому что GitHub Pages отдаёт .ps1 как application/octet-stream
+  без charset, а PowerShell такой ответ декодирует как latin1 — и весь русский
+  текст превращается в «????».
 
   Или скачай файл и запусти локально:
       .\zzz-signal.ps1
@@ -41,6 +46,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# Консоль по умолчанию в кодировке 866, а скрипт в UTF-8 — без этой строки
+# русский текст выводится вопросительными знаками.
+try {
+    [Console]::OutputEncoding = [Text.Encoding]::UTF8
+    $OutputEncoding = [Text.Encoding]::UTF8
+} catch {}
 function Say($m, $c = "Gray") { Write-Host $m -ForegroundColor $c }
 
 Write-Host ""
@@ -53,6 +64,18 @@ Say ("─" * 46) DarkGray
 function Find-GameDir {
     if ($GameDir) { return $GameDir }
 
+    # Самый надёжный способ: игра запущена (иначе истории круток и не будет),
+    # значит путь можно взять прямо у процесса — никакого гадания по дискам.
+    foreach ($nm in @('ZenlessZoneZero', 'ZenlessZoneZeroBeta')) {
+        try {
+            $pr = Get-Process -Name $nm -ErrorAction Stop | Select-Object -First 1
+            if ($pr -and $pr.Path) {
+                $d = Join-Path (Split-Path $pr.Path -Parent) 'ZenlessZoneZero_Data'
+                if (Test-Path $d) { return $d }
+            }
+        } catch {}
+    }
+
     $reg = @(
         'HKCU:\Software\Cognosphere\HYP\1_1\ZenlessZoneZero',
         'HKCU:\Software\Cognosphere\HYP\standalone\1_1\ZenlessZoneZero',
@@ -64,6 +87,21 @@ function Find-GameDir {
             if ($v -and (Test-Path $v)) { return (Join-Path $v 'ZenlessZoneZero_Data') }
         } catch {}
     }
+    # список установленных программ: лаунчер прописывает туда путь установки
+    foreach ($un in @('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                      'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                      'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*')) {
+        try {
+            $app = Get-ItemProperty $un -ErrorAction SilentlyContinue |
+                   Where-Object { $_.DisplayName -match 'Zenless' -and $_.InstallLocation } |
+                   Select-Object -First 1
+            if ($app) {
+                $d = Join-Path $app.InstallLocation 'ZenlessZoneZero_Data'
+                if (Test-Path $d) { return $d }
+            }
+        } catch {}
+    }
+
     # запасной вариант: пробуем обычные места установки на всех дисках
     foreach ($d in (Get-PSDrive -PSProvider FileSystem).Name) {
         foreach ($tail in @('Program Files\ZenlessZoneZero Game\ZenlessZoneZero_Data',
@@ -85,11 +123,15 @@ if (-not $GameDir -and (Get-Variable -Name zzzPath -Scope Global -ErrorAction Si
 $dir = Find-GameDir
 if (-not $dir -or -not (Test-Path $dir)) {
     Say "Не нашёл папку игры." Red
-    Say "Укажи её вручную — это папка ZenlessZoneZero_Data:" Yellow
     Write-Host ""
-    Say '   $zzzPath="D:\Games\ZenlessZoneZero Game\ZenlessZoneZero_Data"; iwr -useb https://alextask.ru/zzz-signal.ps1 | iex' Cyan
+    Say "Проще всего: запусти игру и повтори команду — тогда путь возьмётся" Yellow
+    Say "прямо у запущенного процесса." Yellow
     Write-Host ""
-    Say '   или, если скачал файл:  .\zzz-signal.ps1 -GameDir "…\ZenlessZoneZero_Data"' DarkGray
+    Say "Либо укажи вручную. Где смотреть: правый клик по ярлыку игры →" DarkGray
+    Say "«Расположение файла». Нужна папка ZenlessZoneZero_Data рядом с exe." DarkGray
+    Write-Host ""
+    Say '$zzzPath="D:\Games\ZenlessZoneZero Game\ZenlessZoneZero_Data"' Cyan
+    Say 'iex ([Text.Encoding]::UTF8.GetString((iwr -useb https://alextask.ru/zzz-signal.ps1).RawContentStream.ToArray()))' Cyan
     exit 1
 }
 Say ("   игра: {0}" -f $dir)
