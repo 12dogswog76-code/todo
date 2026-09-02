@@ -1004,15 +1004,26 @@
   .pl-facts b{font-size:14px;color:var(--tx2);font-variant-numeric:tabular-nums}
   .pl-facts i{font-style:normal;font-size:9.5px;color:var(--tx3)}
   .pl-facts .warn b{color:var(--gold)}
-  /* последние S-ранги: зелёный — выигранный 50/50, красный — проигранный */
-  .pl-s{display:flex;gap:4px;flex-wrap:wrap;margin-top:11px;padding-top:10px;
+  .pl-facts .pl-of{font-size:10px;color:var(--tx3);font-weight:500}
+  /* Последние S-ранги значками, как в игре: обводка показывает исход 50/50,
+     число в углу — на каком пити выпало. */
+  .pl-s{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:11px;
     border-top:1px solid var(--line)}
-  .pl-si{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;
-    background:#ffffff08;border:1px solid var(--line);font-size:10px;color:var(--tx3);
-    white-space:nowrap}
-  .pl-si b{font-size:10.5px;color:var(--tx2);font-variant-numeric:tabular-nums}
-  .pl-si.won{border-color:#4ade8044} .pl-si.won b{color:var(--acc)}
-  .pl-si.lost{border-color:#e5484d33} .pl-si.lost b{color:#f0787c}
+  .pl-si{position:relative;width:44px;height:44px;flex:none;border-radius:50%;
+    background:#ffffff08;border:2px solid var(--line);transition:.14s}
+  .pl-si:hover{transform:translateY(-2px)}
+  .pl-si.sq{border-radius:12px}
+  .pl-pic{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+  .pl-si.sq .pl-pic{border-radius:10px;object-fit:contain;background:#ffffff08}
+  .pl-noimg{display:flex;align-items:center;justify-content:center;font-size:15px;
+    font-weight:800;color:var(--tx3)}
+  /* число пити висит на кружке, поэтому ему нужна своя подложка */
+  .pl-si b{position:absolute;right:-4px;bottom:-4px;min-width:20px;padding:1px 4px;
+    border-radius:20px;background:#0f1218;border:1px solid var(--line);
+    font-size:10px;line-height:1.5;text-align:center;color:var(--tx2);
+    font-variant-numeric:tabular-nums}
+  .pl-si.won{border-color:var(--acc)} .pl-si.won b{color:var(--acc);border-color:#4ade8055}
+  .pl-si.lost{border-color:#e5484d88} .pl-si.lost b{color:#f0787c;border-color:#e5484d55}
   @media(max-width:760px){ .pl-list{grid-template-columns:1fr} }
 
   /* ── снаряжение: движки и комплекты ── */
@@ -2045,7 +2056,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v187';
+const APP_VER = 'v189';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -4620,6 +4631,7 @@ function booPas(b) {
            : { n: b.pn || '', d: b.p || '', ru: false };
 }
 const RU_BOO = {
+  'Ariel': 'Ариэль',
   'Eous': 'Эос', 'Penguinboo': 'Пингвибу', 'Luckyboo': 'Счастливчик',
   'Exploreboo': 'Искатель', 'Sumoboo': 'Сумобу', 'Paperboo': 'Бумабу',
   'Bagboo': 'Пакетник', 'Cryboo': 'Плаксабу', 'Avocaboo': 'Авокабу',
@@ -8145,7 +8157,8 @@ function pullStat(kind) {
       const win = k.half ? (guar ? null : !std) : null;
       if (win === true) out.won++;
       if (win === false) out.lost++;
-      out.s.push({ n: x.n, t: x.t, pity: since, guar: guar, std: std, win: win });
+      out.s.push({ n: x.n, t: x.t, iid: x.iid || '', pity: since,
+                   guar: guar, std: std, win: win });
       guar = k.half ? std : false;          // проиграл — следующий гарантирован
       since = 0; sinceA = 0;
     } else if (x.r === 3) { out.a++; sinceA = 0; }
@@ -8234,6 +8247,67 @@ async function pullsImport() {
     if (btn) { btn.disabled = false; btn.textContent = 'Загрузить'; }
   }
 }
+// Картинка выпавшего: имя из истории приходит по-русски, поэтому ищем по
+// русским названиям во всех трёх справочниках — агенты, движки, банбу.
+// Ключ нормализуем: в игре встречаются и «Ё», и лишние пробелы.
+let PULL_PIC = null;
+function pullKey(s) {
+  return String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]/g, '');
+}
+function pullPicMap() {
+  if (PULL_PIC) return PULL_PIC;
+  PULL_PIC = {};
+  (DB.agents || []).forEach(a => {
+    if (a.icon) PULL_PIC[pullKey(a.ru)] = { src: imgUrl('agents', a.icon), n: a.ru, id: a.id };
+  });
+  (DB.engines || []).forEach(w => {
+    if (w.icon) PULL_PIC[pullKey(w.ru)] = { src: imgUrl('engines', w.icon), n: w.ru, sq: true };
+  });
+  ((GUIDE && GUIDE.bangboo && GUIDE.bangboo.list) || []).forEach(b => {
+    if (b.icon) PULL_PIC[pullKey(booRu(b.n))] = { src: imgUrl('bangboo', b.icon), n: booRu(b.n) };
+  });
+  return PULL_PIC;
+}
+// Переводы у игры и у базы Enka местами разные: игра пишет «Драгоценное
+// ископаемое ядро», Enka — «Драгоценная окаменелость». Точного совпадения
+// не будет никогда, поэтому при промахе ищем по началам слов и берём
+// кандидата, у которого совпадений строго больше, чем у остальных.
+function pullWords(s) {
+  return String(s || '').toLowerCase().replace(/ё/g, 'е')
+    .split(/[^a-zа-я0-9]+/).filter(w => w.length >= 5).map(w => w.slice(0, 5));
+}
+let PULL_FUZZY = null;
+// iid — игровой номер предмета из истории. Он совпадает с id в базе, поэтому
+// это самый надёжный путь: имена у игры и у Enka местами разные («Драгоценное
+// ископаемое ядро» против «Драгоценной окаменелости»), а номера одни и те же.
+function pullPicById(iid) {
+  if (!iid) return null;
+  const a = DB.byId && DB.byId[iid];
+  if (a && a.icon) return { src: imgUrl('agents', a.icon), n: a.ru, id: a.id };
+  const w = DB.engById && DB.engById[iid];
+  if (w && w.icon) return { src: imgUrl('engines', w.icon), n: w.ru, sq: true };
+  return null;
+}
+function pullPic(n, iid) {
+  const byId = pullPicById(iid);
+  if (byId) return byId;
+  const map = pullPicMap();
+  const exact = map[pullKey(n)];
+  if (exact) return exact;
+  if (!PULL_FUZZY) {
+    PULL_FUZZY = Object.keys(map).map(k => ({ v: map[k], w: pullWords(map[k].n) }));
+  }
+  const mine = pullWords(n);
+  if (!mine.length) return null;
+  let best = null, bestN = 0, tie = false;
+  PULL_FUZZY.forEach(c => {
+    let hit = 0;
+    mine.forEach(w => { if (c.w.indexOf(w) >= 0) hit++; });
+    if (hit > bestN) { bestN = hit; best = c.v; tie = false; }
+    else if (hit === bestN && hit > 0) tie = true;
+  });
+  return (best && bestN > 0 && !tie) ? best : null;
+}
 function pullDate(t) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(t || ''));
   return m ? banDate(m[1] + '-' + m[2] + '-' + m[3]) : '';
@@ -8299,18 +8373,24 @@ function drawPulls() {
       '</div>' +
       '<div class="pl-facts">' +
         '<span><b>' + left + '</b><i>до гаранта</i></span>' +
+        '<span><b>' + st.aPity + '<span class="pl-of">/10</span></b><i>A-ранг</i></span>' +
         '<span><b>' + (st.avg || '—') + '</b><i>средний пити</i></span>' +
         '<span><b>' + st.s.length + '</b><i>S-рангов</i></span>' +
         (k.half ? '<span class="' + (st.guar ? 'warn' : '') + '"><b>' +
           (st.guar ? 'да' : st.won + '/' + (st.won + st.lost)) + '</b><i>' +
           (st.guar ? 'гарант' : 'выиграно 50/50') + '</i></span>' : '') +
       '</div>' +
-      (st.s.length ? '<div class="pl-s">' + st.s.slice(-8).reverse().map(z =>
-        '<span class="pl-si' + (z.win === false ? ' lost' : (z.win === true ? ' won' : '')) +
+      (st.s.length ? '<div class="pl-s">' + st.s.slice(-10).reverse().map(z => {
+        const pic = pullPic(z.n, z.iid);
+        return '<span class="pl-si' + (z.win === false ? ' lost' : (z.win === true ? ' won' : '')) +
+          (pic && pic.sq ? ' sq' : '') +
           '" title="' + esc(z.n + ' · ' + pullDate(z.t) + ' · пити ' + z.pity +
             (z.win === false ? ' · проигран 50/50' : (z.win === true ? ' · выигран 50/50' : '')) +
             (z.guar ? ' · был гарант' : '')) + '">' +
-          esc(shortRu(z.n)) + '<b>' + z.pity + '</b></span>').join('') + '</div>' : '') +
+          (pic ? img(pic.src, 'pl-pic', z.n, true)
+               : '<span class="pl-pic pl-noimg">' + esc(String(z.n).slice(0, 1)) + '</span>') +
+          '<b>' + z.pity + '</b></span>';
+      }).join('') + '</div>' : '') +
       '</div>';
   }).join('') + '</div>';
 
