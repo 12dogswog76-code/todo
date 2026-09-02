@@ -788,6 +788,48 @@
   .ban-when i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:2px}
   .ban.now .ban-when i{color:var(--acc)}
   /* строка с напоминанием: кнопка слева, что именно придёт — справа */
+  /* мои бои в эндгейме */
+  .rn-p{border:1px solid var(--line);border-radius:14px;background:var(--pan2);
+    padding:10px 12px 6px;margin-bottom:10px}
+  .rn-ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding-bottom:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+  .rn-ph b{font-size:12.5px}
+  .rn-ph span{font-size:11px;color:var(--tx3)}
+  .rn-rank{margin-left:auto;color:var(--info)!important}
+  .rn-st{font-size:11px;color:var(--gold);letter-spacing:1px}
+  .rn-st i{color:#ffffff1f;font-style:normal}
+  .rn-g{font-weight:700;color:var(--gold)!important;border:1px solid #ffd54a4d;
+    border-radius:6px;padding:1px 7px;background:#ffd54a14}
+  .rn-r{display:flex;align-items:center;gap:10px;padding:7px 0}
+  .rn-r+.rn-r{border-top:1px solid #ffffff0a}
+  .rn-bs{flex:none;width:42px;height:42px;border-radius:9px;object-fit:cover;
+    background:#0b0d11;border:1px solid var(--line)}
+  .rn-i{min-width:0;flex:1 1 120px}
+  .rn-n{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .rn-s{font-size:10.5px;color:var(--tx3);margin-top:2px}
+  .rn-team{display:flex;gap:4px;flex:none}
+  .rn-f{position:relative;width:38px;height:38px;border-radius:9px;overflow:hidden;
+    background:#0b0d11;border:1px solid var(--line)}
+  .rn-f img{width:100%;height:100%;object-fit:cover;display:block}
+  .rn-f u{display:flex;align-items:center;justify-content:center;height:100%;
+    font-size:14px;color:var(--tx3);text-decoration:none}
+  .rn-f b{position:absolute;right:0;bottom:0;font-size:8.5px;line-height:1;
+    padding:2px 3px;background:#000000cc;color:var(--gold);border-radius:5px 0 0 0}
+  .rn-boo{border-color:#60a5fa4d}
+  .rn-hh{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;
+    letter-spacing:.6px;text-transform:uppercase;color:var(--warn);
+    margin:8px 0 0;padding-top:8px;border-top:1px solid #fbbf2426}
+  .rn-buf{margin:0 0 6px}
+  .rn-buf summary{font-size:10.5px;color:var(--tx3);cursor:pointer;padding:2px 0}
+  .rn-buf summary:hover{color:var(--tx2)}
+  .rn-buf div{font-size:11px;color:var(--tx2);line-height:1.55;margin:4px 0 0;
+    padding:7px 9px;border-radius:9px;background:#0b0d11;border:1px solid var(--line)}
+  .rn-buf p{margin:3px 0 0;white-space:pre-line;color:var(--tx3)}
+  @media (max-width:560px){
+    .rn-r{flex-wrap:wrap}
+    .rn-team{width:100%;justify-content:flex-start}
+  }
   .ban-rem{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
   .ban-rem button{flex:none}
   .ban-rem button.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0}
@@ -2103,7 +2145,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v193';
+const APP_VER = 'v194';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6638,6 +6680,8 @@ function payload() {
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            pullsFull: !!(PULLS && PULLS.full),
            chron: (CHRON && CHRON.log) || [], chronT: (CHRON && CHRON.at) || 0,
+           runs: RUNS ? { mem: RUNS.mem, shiyu: RUNS.shiyu } : null,
+           runsT: (RUNS && RUNS.at) || 0,
            t: Date.now() };
 }
 
@@ -6808,6 +6852,26 @@ function mergeProg(remote) {
       if (CHRON.log.length > CHRON_KEEP) CHRON.log = CHRON.log.slice(0, CHRON_KEEP);
       try { localStorage.setItem(LS_CHRON, JSON.stringify(CHRON)); } catch (e) {}
       changed = true;
+    }
+  }
+  // Архив боёв объединяем по периодам, а не «побеждает свежее»: телефон и
+  // компьютер могли забрать разные периоды, и оба правы. Внутри периода берём
+  // запись с бо́льшим счётом — значит, её забирали позже.
+  if (remote.runs) {
+    let add = 0;
+    ['mem', 'shiyu'].forEach(kind => {
+      const src = remote.runs[kind] || {};
+      Object.keys(src).forEach(k => {
+        const r = src[k], mine = RUNS[kind][k];
+        if (!r) return;
+        if (!mine || (r.score || 0) > (mine.score || 0)) { RUNS[kind][k] = r; add++; }
+      });
+    });
+    if (add) {
+      RUNS.at = Math.max(RUNS.at || 0, remote.runsT || 0);
+      runsSave();
+      changed = true;
+      if (menuCur === 'end') drawEndgame();
     }
   }
   if (Array.isArray(remote.cmpList) && (remote.cmpT || 0) > (ui.cmpT || 0)) {
@@ -7131,7 +7195,7 @@ const MENU = [
   { k: 'boo',    p: 'booPanel',    i: '🤖', n: 'Банбу',          d: 'Кто что включает и кто есть у тебя' },
   { k: 'pull',   p: 'pullPanel',   i: '🎲', n: 'Крутки',          d: 'Сколько до гаранта и вся история' },
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
-  { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Шиюй и Опасный штурм' },
+  { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Твои прохождения и мета' },
   { k: 'hist',   p: 'histPanel',   i: '📈', n: 'История',         d: 'График и журнал изменений' },
   { k: 'cmp',    p: 'cmpPanel',    i: '⚖',  n: 'Сравнение',       d: 'Свой профиль против чужого' },
   { k: 'help',   p: 'helpPanel',   i: '?',  n: 'Справка',         d: 'Как всё устроено' }
@@ -7168,7 +7232,7 @@ function menuGo(k) {
   if (k === 'gear')   drawGear();
   if (k === 'pull')   drawPulls();
   if (k === 'banner') drawBanners();
-  if (k === 'end')    drawEndgame();
+  if (k === 'end')    { drawEndgame(); runsAuto(); }
   if (k === 'hist')   drawHist();
   if (k === 'cmp')    drawCmp();
   if (k === 'todo')   drawTodo();
@@ -9806,20 +9870,221 @@ function egSect(title, note, e) {
     ).join('') +
     '</div>';
 }
+// ─────────────── мои бои в эндгейме ───────────────
+// Хроника отдаёт только текущий период и прошлый (schedule_type 1 и 2), глубже
+// не заглянуть. Поэтому каждый забранный период кладём себе и больше не
+// теряем: через год тут будет вся история прохождений, которой нет нигде.
+//
+// Ключ периода — zone_id: он у каждого периода свой и не повторяется, так что
+// повторный импорт того же периода просто обновляет запись (счёт мог вырасти),
+// а не плодит дубли.
+const LS_RUNS = LS + '_runs';
+let RUNS = null;
+try { RUNS = JSON.parse(localStorage.getItem(LS_RUNS) || 'null'); } catch (e) { RUNS = null; }
+if (!RUNS || typeof RUNS !== 'object') RUNS = { mem: {}, shiyu: {}, at: 0 };
+if (!RUNS.mem) RUNS.mem = {};
+if (!RUNS.shiyu) RUNS.shiyu = {};
+function runsSave() {
+  try { localStorage.setItem(LS_RUNS, JSON.stringify(RUNS)); } catch (e) {}
+}
+// Периоды без прохождений не сохраняем: пустая запись только засорит архив.
+function runsPut(kind, list) {
+  let n = 0;
+  (list || []).forEach(p => {
+    if (!p || !p.zone) return;
+    const has = kind === 'mem' ? (p.runs || []).length : (p.layers || []).length;
+    if (!has) return;
+    const k = String(p.zone);
+    const old = RUNS[kind][k];
+    // счёт мог вырасти за период — перезаписываем только если стало не хуже
+    if (old && (old.score || 0) > (p.score || 0)) return;
+    RUNS[kind][k] = p;
+    n++;
+  });
+  return n;
+}
+function runsList(kind) {
+  return Object.keys(RUNS[kind] || {}).map(k => RUNS[kind][k])
+    .sort((a, b) => String(b.from || '').localeCompare(String(a.from || '')));
+}
+function runsCount() { return runsList('mem').length + runsList('shiyu').length; }
+
+// Загрузка боёв. Отдельно от импорта агентов: запрос лёгкий (4 подзапроса), его
+// не жалко дёрнуть хоть после каждого прохождения.
+async function runsLoad(btn, msgEl) {
+  const uid = localStorage.getItem(LS + '_uid') || '';
+  if (!uid) { if (msgEl) msgEl.innerHTML = '<b>Сначала впиши UID</b> в разделе «⟳ Импорт из игры».'; return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Гружу…'; }
+  const res = await apiFetch('/hoyo/' + uid + '/endgame',
+    { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 60000);
+  if (btn) { btn.disabled = false; btn.textContent = '⟳ Обновить бои'; }
+  const d = res.ok ? res.data : null;
+  if (!d || d.error) {
+    if (msgEl) msgEl.innerHTML = '<b>Не вышло:</b> ' + esc((d && d.error) || res.err);
+    return;
+  }
+  const a = runsPut('mem', d.mem), b = runsPut('shiyu', d.shiyu);
+  RUNS.at = Date.now();
+  runsSave();
+  scheduleSync();
+  drawEndgame();
+  if (msgEl) {
+    msgEl.innerHTML = (a + b)
+      ? '<b>Готово.</b> Периодов записано: <b>' + (a + b) + '</b>, всего в архиве: ' + runsCount() + '.'
+      : 'Новых прохождений нет — в архиве уже всё, что отдаёт хроника.';
+  }
+}
+
+// Обновление само собой при открытии раздела: прохождения меняются в лучшем
+// случае раз в пару дней, поэтому раз в шесть часов — с запасом. Молча: если
+// сети нет или хроника закрыта, человеку тут ничего чинить не надо, он просто
+// зашёл посмотреть.
+const RUNS_FRESH = 6 * 3600 * 1000;
+function runsAuto() {
+  if (!localStorage.getItem(LS + '_uid')) return;
+  if (Date.now() - (RUNS.at || 0) < RUNS_FRESH) return;
+  runsLoad(null, null);
+}
+
+// Аватар в составе: свою картинку берём по id, у незнакомых агентов (свежий
+// патч, база ещё не обновлена) остаётся квадрат от HoYoLab.
+function runFace(x) {
+  const a = DB.byId[x.id];
+  const src = a ? agentPic(a, 'card') : (x.pic || '');
+  const nm = a ? a.ru : ('id ' + x.id);
+  return '<div class="rn-f" title="' + esc(nm + ' · ур. ' + (x.lvl || 0) + ' · M' + (x.m || 0)) + '">' +
+    (src ? '<img src="' + esc(src) + '" alt="" loading="lazy">' : '<u>?</u>') +
+    (x.m ? '<b>M' + x.m + '</b>' : '') + '</div>';
+}
+function runTeam(list, boo) {
+  return '<div class="rn-team">' + (list || []).map(runFace).join('') +
+    (boo && boo.pic ? '<div class="rn-f rn-boo"><img src="' + esc(boo.pic) + '" alt="" loading="lazy"></div>' : '') +
+    '</div>';
+}
+// «топ 19,5 %» — так это подписано в самой хронике
+function runRank(v) {
+  return v ? '<span class="rn-rank" title="Место среди всех игроков по данным HoYoLab">топ ' +
+    String(Math.round(v * 10) / 10).replace('.', ',') + ' %</span>' : '';
+}
+function runStars(n, max) {
+  n = +n || 0; max = +max || 3;
+  return '<span class="rn-st">' + '★'.repeat(n) + '<i>' + '★'.repeat(Math.max(0, max - n)) + '</i></span>';
+}
+function runDate(s) { return String(s || '').slice(5, 10).replace('-', '.'); }
+function runPeriod(p) {
+  return runDate(p.from) + ' – ' + runDate(p.to);
+}
+// Баффы прячем под спойлер: текст длинный, а смотрят его редко.
+function runBuff(list) {
+  const arr = (list || []).filter(b => b && (b.n || b.d));
+  if (!arr.length) return '';
+  return '<details class="rn-buf"><summary>Условия периода</summary>' +
+    arr.map(b => '<div><b>' + esc(b.n || '') + '</b>' +
+      (b.d ? '<p>' + esc(b.d) + '</p>' : '') + '</div>').join('') + '</details>';
+}
+
+function runsMemRow(r) {
+  return '<div class="rn-r">' +
+      (r.boss && r.boss[0] && r.boss[0].pic
+        ? '<img class="rn-bs" src="' + esc(r.boss[0].pic) + '" alt="" loading="lazy">' : '<div class="rn-bs"></div>') +
+      '<div class="rn-i">' +
+        '<div class="rn-n">' + esc((r.boss && r.boss[0] && r.boss[0].n) || 'Бой') + '</div>' +
+        '<div class="rn-s">' + nfmt(r.score || 0) + ' · ' + runStars(r.star, r.max || 3) +
+          (r.ts ? ' · ' + esc(runDate(r.ts)) : '') + '</div>' +
+      '</div>' +
+      runTeam(r.team) +
+    '</div>' + runBuff(r.buff);
+}
+function runsMem(p) {
+  const total = (p.runs || []).reduce((s, r) => s + (+r.score || 0), 0);
+  // Сложный режим хроника отдаёт отдельным списком — своим счётом и своим
+  // местом в рейтинге, поэтому и показываем его отдельным блоком, а не
+  // подмешиваем к обычным боям.
+  const hard = p.hard && (p.hard.runs || []).length
+    ? '<div class="rn-hh">Сложный режим' + runRank(p.hard.rank) + '</div>' +
+      p.hard.runs.map(runsMemRow).join('')
+    : '';
+  return '<div class="rn-p">' +
+    '<div class="rn-ph"><b>' + esc(runPeriod(p)) + '</b>' +
+      '<span>' + nfmt(p.score || total) + ' очков</span>' +
+      runStars(p.star, ((p.runs || []).length || 3) * 3) + runRank(p.rank) + '</div>' +
+    (p.runs || []).map(runsMemRow).join('') + hard +
+    '</div>';
+}
+function runsShiyu(p) {
+  return '<div class="rn-p">' +
+    '<div class="rn-ph"><b>' + esc(runPeriod(p)) + '</b>' +
+      '<span>' + nfmt(p.score || 0) + (p.max ? ' из ' + nfmt(p.max) : '') + '</span>' +
+      (p.rating ? '<span class="rn-g rn-g' + esc(String(p.rating).replace('+', 'p')) + '">' +
+        esc(p.rating) + '</span>' : '') + runRank(p.rank) + '</div>' +
+    (p.layers || []).map(l =>
+      '<div class="rn-r">' +
+        (l.boss ? '<img class="rn-bs" src="' + esc(l.boss) + '" alt="" loading="lazy">' : '<div class="rn-bs"></div>') +
+        '<div class="rn-i">' +
+          '<div class="rn-n">' + esc((l.buff && l.buff.n) || ('Этаж ' + (l.id || ''))) + '</div>' +
+          '<div class="rn-s">' + nfmt(l.score || 0) + (l.max ? ' из ' + nfmt(l.max) : '') +
+            (l.rating ? ' · ' + esc(l.rating) : '') + (l.ts ? ' · ' + esc(runDate(l.ts)) : '') + '</div>' +
+        '</div>' +
+        runTeam(l.team, l.boo) +
+      '</div>' + runBuff(l.buff ? [l.buff] : [])).join('') +
+    '</div>';
+}
+
+function drawRuns() {
+  const mem = runsList('mem'), sh = runsList('shiyu');
+  const head =
+    '<div class="ban-rem">' +
+      '<button id="runsBtn">⟳ Обновить бои</button>' +
+      '<span id="runsMsg">' + (RUNS.at
+        ? 'В архиве периодов: ' + runsCount() + ', обновлено ' +
+          esc(new Date(RUNS.at).toLocaleDateString('ru-RU'))
+        : 'Данных пока нет — нажми кнопку.') + '</span>' +
+    '</div>';
+  if (!mem.length && !sh.length) {
+    return head + '<div class="hint" style="margin-top:10px">Бои приезжают из боевой хроники ' +
+      'HoYoLab по твоему UID. Хроника помнит только текущий период и прошлый, поэтому трекер ' +
+      'складывает каждый забранный период к себе — со временем тут соберётся история, ' +
+      'которой в игре нет.</div>';
+  }
+  return head +
+    (sh.length ? '<div class="cap2" style="margin:12px 0 6px">ОБОРОНА ШИЮЙ</div>' +
+      sh.map(runsShiyu).join('') : '') +
+    (mem.length ? '<div class="cap2" style="margin:14px 0 6px">ОПАСНЫЙ ШТУРМ</div>' +
+      mem.map(runsMem).join('') : '') +
+    '<div class="hint">Данные боевой хроники HoYoLab. Периоды старше прошлого хранятся ' +
+      'только у тебя — в облаке и в этом браузере.</div>';
+}
+
 function drawEndgame() {
   const box = $('endBox');
   if (!box) return;
+  // Вкладки: свои прохождения и метовая аналитика — разные вопросы к одному
+  // разделу, поэтому не мешаем их в одну простыню.
+  if (ui.egTab !== 'meta') ui.egTab = 'runs';
+  const tabs = '<div style="display:flex;gap:6px;margin:0 0 12px">' +
+    '<button class="htab' + (ui.egTab === 'runs' ? ' on' : '') + '" data-t="runs">Мои бои</button>' +
+    '<button class="htab' + (ui.egTab === 'meta' ? ' on' : '') + '" data-t="meta">Мета</button></div>';
+  box.innerHTML = tabs + '<div id="endTabBox">' +
+    (ui.egTab === 'runs' ? drawRuns() : drawEgMeta()) + '</div>';
+  box.querySelectorAll('.htab[data-t]').forEach(b => b.onclick = () => {
+    ui.egTab = b.dataset.t;
+    try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+    drawEndgame();
+  });
+  if ($('runsBtn')) $('runsBtn').onclick = () => runsLoad($('runsBtn'), $('runsMsg'));
+  if ($('egRemBtn')) $('egRemBtn').onclick = egRemToggle;
+}
+
+function drawEgMeta() {
   const e = egOf();
   if (!e) {
-    box.innerHTML = '<div class="hint" style="margin-top:0">Данных по эндгейму пока нет. ' +
+    return '<div class="hint" style="margin-top:0">Данных по эндгейму пока нет. ' +
       'Они приезжают вместе со сборками — прогони <b>pryd.js</b> в консоли на prydwen.gg ' +
       '(нужна версия v4.4 и выше).</div>';
-    return;
   }
   const any = e.shiyu || e.da;
   const ph = egPhaseInfo();
-  box.innerHTML =
-    '<div class="eg-head">Фаза <b>' + esc(any.phase || '?') + '</b>' +
+  return '<div class="eg-head">Фаза <b>' + esc(any.phase || '?') + '</b>' +
       (ph ? ' · до ' + esc(banDate(ymd(ph.to))) +
         (ph.left >= 0 ? ', осталось ' + ph.left + ' ' + plural(ph.left, 'день', 'дня', 'дней')
                       : ', фаза уже сменилась') : '') +
@@ -9840,7 +10105,6 @@ function drawEndgame() {
       '<b>▲</b> агент стал заходить лучше, <b>▼</b> просел. Составы отсортированы так же, ' +
       'как в карточке: сверху те, что собираешь целиком. Срок фазы посчитан по ' +
       'её номеру и датам патча — точных дат смены наружу никто не отдаёт.</div>';
-  if ($('egRemBtn')) $('egRemBtn').onclick = egRemToggle;
 }
 
 function drawBanners() {
