@@ -972,6 +972,34 @@
     .boo-ic{width:34px;height:34px}
   }
 
+  /* ── журнал изменений агента ── */
+  .ch-list{display:flex;flex-direction:column;gap:2px}
+  .ch-row{display:flex;gap:11px;padding:9px 10px;border-radius:11px;cursor:pointer;
+    transition:.14s}
+  .ch-row:hover{background:#ffffff08}
+  .ch-a{flex:none}
+  .ch-ic{width:34px;height:34px;border-radius:50%;object-fit:cover}
+  .ch-body{min-width:0;flex:1}
+  .ch-top{display:flex;align-items:baseline;gap:8px}
+  .ch-top b{font-size:12px;color:var(--tx)}
+  .ch-top i{font-style:normal;font-size:10px;color:var(--tx3)}
+  .ch-what{font-size:11.5px;color:var(--tx2);line-height:1.55;margin-top:2px}
+  .ch-what b{color:var(--tx);font-weight:700}
+  /* что было — тусклым и зачёркнутым, чтобы не спорило с тем, что стало */
+  .ch-what s{color:var(--tx3);opacity:.75;margin-left:5px;font-size:10.5px}
+  .ch-sep{margin:0 7px;color:var(--tx3);opacity:.5}
+  /* дельта характеристик отдельной строкой: главное, ради чего всё затевалось */
+  .ch-st{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+  .ch-st i{font-style:normal;font-size:10.5px;padding:2px 8px;border-radius:20px;
+    background:#ffffff08;border:1px solid var(--line);white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .ch-st i.up{color:var(--acc);border-color:#4ade8033}
+  .ch-st i.down{color:#f0787c;border-color:#e5484d2b}
+  @media(max-width:760px){
+    .ch-row{gap:8px;padding:8px}
+    .ch-ic{width:28px;height:28px}
+  }
+
   /* ── крутки ── */
   /* команда для PowerShell: длинная, поэтому переносится и скроллится */
   .pl-cmd{display:flex;align-items:center;gap:8px;margin:6px 0 2px;padding:8px 10px;
@@ -2073,7 +2101,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v191';
+const APP_VER = 'v192';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3268,7 +3296,7 @@ function boot() {
   // Снимок для истории. С задержкой и после облака: если запустить сразу, на
   // втором устройстве снимется состояние до синхронизации, и в журнал попадёт
   // ложное «агент убран» — просто потому, что данные ещё не приехали.
-  if (sync) setTimeout(() => cloudSync(true).then(() => histTick()), 250);
+  if (sync) setTimeout(() => cloudSync(true).then(() => { histTick(); chronScan(true); }), 250);
   else setTimeout(histTick, 400);
   cloudUI();
 }
@@ -4908,6 +4936,10 @@ function renderSheet() {
         ? '<button class="htab' + (curTab === 'team' ? ' on' : '') + '" data-tab="team" ' +
           'title="С кем ходят в эндгейме — по статистике прохождений">Команды</button>'
         : '') +
+      ((CHRON.log || []).some(e => e.id === curId)
+        ? '<button class="htab' + (curTab === 'chron' ? ' on' : '') + '" data-tab="chron" ' +
+          'title="Что менялось у этого агента: диски, движок, навыки">Журнал</button>'
+        : '') +
       // Сброс плана: убирает только задуманное, а надетое остаётся. После него
       // вкладка «План» показывает ровно то же, что «Сейчас», — можно набирать заново.
       (curTab === 'plan' && planCount(p)
@@ -4927,7 +4959,11 @@ function renderSheet() {
 
     if (curTab === 'guide') { h += guideHtml(a, p, nowT); }
     else if (curTab === 'mats') { h += matsHtml(a); }
-    else if (curTab === 'team') { h += teamHtml(a); } else {
+    else if (curTab === 'team') { h += teamHtml(a); }
+    else if (curTab === 'chron') {
+      h += '<div class="sect"><h4><span class="tt">Что менялось<i>CHANGELOG</i></span></h4>' +
+        chronHtml(curId, 40) + '</div>';
+    } else {
 
     // ── сверка с гайдом ──
     // Список замечаний сразу под вкладками: раньше это же было размазано по
@@ -6250,6 +6286,7 @@ $('enkaLocal').onclick = async () => {
     if (prof.uid) { localStorage.setItem(LS + '_uid', prof.uid); if ($('uidInput')) $('uidInput').value = prof.uid; }
 
     writeProg();
+    chronScan();          // записать, что изменилось с прошлого импорта
     scheduleSync();
     render();
     msg.innerHTML = 'Загружено агентов: <b>' + ok + '</b> · профиль ' +
@@ -6317,6 +6354,7 @@ $('enkaBuilds').onclick = async () => {
       if (applyEnka(av)) ok++;
     });
     writeProg();
+    chronScan();          // записать, что изменилось с прошлого импорта
     scheduleSync();
     render();
     $('enkaMsg').innerHTML = ok
@@ -6486,6 +6524,7 @@ $('hoyoGo').onclick = async () => {
 
   save();
   writeProg();
+  chronScan();            // записать, что изменилось с прошлого импорта
   scheduleSync();
   render();
   refreshEnkaLinks();
@@ -6574,6 +6613,7 @@ function payload() {
            cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            pullsFull: !!(PULLS && PULLS.full),
+           chron: (CHRON && CHRON.log) || [], chronT: (CHRON && CHRON.at) || 0,
            t: Date.now() };
 }
 
@@ -6728,6 +6768,23 @@ function mergeProg(remote) {
       if (menuCur === 'pull') drawPulls();
     }
   }
+  // Журнал склеиваем по времени и агенту: события с разных устройств
+  // дополняют друг друга, а снимок остаётся местный — он про то, с чем
+  // сравнивать дальше именно здесь.
+  if (Array.isArray(remote.chron) && remote.chron.length) {
+    const seen = {};
+    CHRON.log.forEach(e => { seen[e.t + ':' + e.id] = 1; });
+    let add = 0;
+    remote.chron.forEach(e => {
+      if (e && e.t && !seen[e.t + ':' + e.id]) { CHRON.log.push(e); add++; }
+    });
+    if (add) {
+      CHRON.log.sort((a, b) => b.t - a.t);
+      if (CHRON.log.length > CHRON_KEEP) CHRON.log = CHRON.log.slice(0, CHRON_KEEP);
+      try { localStorage.setItem(LS_CHRON, JSON.stringify(CHRON)); } catch (e) {}
+      changed = true;
+    }
+  }
   if (Array.isArray(remote.cmpList) && (remote.cmpT || 0) > (ui.cmpT || 0)) {
     ui.cmpList = remote.cmpList;
     ui.cmpT = remote.cmpT || 0;
@@ -6800,6 +6857,7 @@ function hasNewerLocal(rec) {
   if ((ui.cmpT || 0) > (rec && rec.cmpT || 0)) return true;
   // своих круток больше, чем в облаке — значит есть что отдать
   if ((PULLS.list || []).length > (((rec && rec.pulls) || []).length)) return true;
+  if ((CHRON.log || []).length > (((rec && rec.chron) || []).length)) return true;
   return Object.keys(prog).some(id => {
     const l = prog[id], r = rp[id];
     return l && (l.have || l.lvl || l.core) && (!r || (l.mod || 0) > (r.mod || 0));
@@ -7782,6 +7840,173 @@ function banRemText() {
     ' → ' + r.names).join(' · ');
 }
 
+// ─────────────── журнал изменений агента ───────────────
+// История готовности показывает, что цифра выросла. Журнал отвечает на другой
+// вопрос: что именно я поменял и что мне это дало. «Слот 5: Хаос-джаз →
+// Полярный хэви-метал, крит. урон +20.4%, шанс крита −9.6%».
+//
+// Устроено так: держим последний снимок каждого агента и при каждом импорте
+// сравниваем с ним. Различия становятся событиями, снимок обновляется. Полные
+// снимки по дням хранить нельзя — один такой весит под сотню килобайт.
+const LS_CHRON = LS + '_chron';
+const CHRON_KEEP = 600;        // событий храним, дальше режем самые старые
+let CHRON = null;
+try { CHRON = JSON.parse(localStorage.getItem(LS_CHRON) || 'null'); } catch (e) { CHRON = null; }
+if (!CHRON || !Array.isArray(CHRON.log)) CHRON = { v: 1, snap: {}, log: [], at: 0 };
+function chronSave() {
+  CHRON.at = Date.now();
+  if (CHRON.log.length > CHRON_KEEP) CHRON.log = CHRON.log.slice(0, CHRON_KEEP);
+  try { localStorage.setItem(LS_CHRON, JSON.stringify(CHRON)); } catch (e) {}
+  scheduleSync();
+}
+// Снимок агента: только то, что может измениться и что мы умеем показать.
+function chronShot(p) {
+  const d = {};
+  (p.discs || []).forEach(x => {
+    if (!x || !x.slot) return;
+    d[x.slot] = { suit: x.suit, main: x.mainP, lvl: x.lvl,
+                  subs: (x.subs || []).map(z => z.p + ':' + (z.l || 1)).sort().join(',') };
+  });
+  const cur = {};
+  STATS.forEach(o => { cur[o.k] = Math.round(((p.cur && p.cur[o.k]) || 0) * 10) / 10; });
+  return { lvl: p.lvl || 0, core: p.core || 0, mind: p.mind || 0,
+           sk: Object.assign({}, p.sk || {}),
+           w: { id: (p.w && p.w.id) || 0, lvl: (p.w && p.w.lvl) || 0,
+                ph: (p.w && p.w.phase) || 1 },
+           d: d, cur: cur };
+}
+// Что заметно изменилось в характеристиках. Мелочь вроде +1 HP не показываем:
+// она набегает от любого уровня и только зашумляет.
+function chronDiffStats(was, now) {
+  const out = [];
+  STATS.forEach(o => {
+    const a = (was && was[o.k]) || 0, b = (now && now[o.k]) || 0;
+    const d = Math.round((b - a) * 10) / 10;
+    if (!d) return;
+    if (o.pct ? Math.abs(d) < 0.5 : Math.abs(d) < Math.max(2, a * 0.005)) return;
+    out.push({ k: o.k, n: o.n, d: d, pct: o.pct });
+  });
+  return out;
+}
+function chronScan(quiet) {
+  if (!DB || !DB.byId) return 0;
+  const now = Date.now();
+  const add = [];
+  Object.keys(prog).forEach(id => {
+    const p = prog[id];
+    if (!p || !p.have || !DB.byId[id]) return;
+    const cur = chronShot(p), was = CHRON.snap[id];
+    CHRON.snap[id] = cur;
+    if (!was) {
+      // Первая встреча с агентом. Отличаем «только что получил» от «был до
+      // журнала»: у нового агента всё в начальном состоянии.
+      if (CHRON.at) add.push({ t: now, id: +id, k: 'new' });
+      return;
+    }
+    const st = chronDiffStats(was.cur, cur.cur);
+    const ev = [];
+    if (cur.lvl !== was.lvl)   ev.push({ k: 'lvl',  a: was.lvl, b: cur.lvl });
+    if (cur.core !== was.core) ev.push({ k: 'core', a: was.core, b: cur.core });
+    if (cur.mind !== was.mind) ev.push({ k: 'mind', a: was.mind, b: cur.mind });
+    SKILL_IDX.forEach(o => {
+      const a = was.sk[o.i] || 1, b = cur.sk[o.i] || 1;
+      if (a !== b) ev.push({ k: 'sk', i: o.i, a: a, b: b });
+    });
+    if (cur.w.id !== was.w.id) ev.push({ k: 'weng', a: was.w.id, b: cur.w.id, bl: cur.w.lvl });
+    else {
+      if (cur.w.lvl !== was.w.lvl) ev.push({ k: 'wlvl', a: was.w.lvl, b: cur.w.lvl });
+      if (cur.w.ph !== was.w.ph)   ev.push({ k: 'wph',  a: was.w.ph,  b: cur.w.ph });
+    }
+    for (let sl = 1; sl <= 6; sl++) {
+      const a = was.d[sl], b = cur.d[sl];
+      if (!a && !b) continue;
+      if (!a && b)  { ev.push({ k: 'disc', sl: sl, b: b }); continue; }
+      if (a && !b)  { ev.push({ k: 'discOff', sl: sl, a: a }); continue; }
+      // Смена диска и его прокачка — разные события: прокачка не меняет ни
+      // комплект, ни главный стат, только уровень и число прокруток.
+      if (a.suit !== b.suit || a.main !== b.main || a.subs !== b.subs) {
+        ev.push({ k: 'disc', sl: sl, a: a, b: b });
+      } else if (a.lvl !== b.lvl) {
+        ev.push({ k: 'discLvl', sl: sl, a: a.lvl, b: b.lvl });
+      }
+    }
+    if (!ev.length && !st.length) return;
+    add.push({ t: now, id: +id, k: 'upd', ev: ev, st: st });
+  });
+  if (add.length) {
+    CHRON.log = add.concat(CHRON.log);
+    chronSave();
+    if (!quiet && menuCur === 'hist') drawHist();
+  } else if (!CHRON.at) {
+    chronSave();     // первый прогон: запомнили состояние, событий ещё нет
+  }
+  return add.length;
+}
+
+// ── как всё это выглядит ────────────────────────────────────────────────────
+const CHRON_SK = { 0: 'Базовая атака', 1: 'Уклонение', 2: 'Особый приём',
+                   3: 'Цепь атак', 6: 'Помощь' };
+function chronStatLine(st) {
+  if (!st || !st.length) return '';
+  return '<span class="ch-st">' + st.slice(0, 6).map(x =>
+    '<i class="' + (x.d > 0 ? 'up' : 'down') + '">' + esc(x.n) + ' ' +
+    (x.d > 0 ? '+' : '−') + (x.pct ? Math.abs(x.d) + '%' : nfmt(Math.abs(x.d))) +
+    '</i>').join('') + '</span>';
+}
+function chronOne(e) {
+  const a = DB.byId[e.id];
+  if (!a) return '';
+  const suit = sid => { const s = DB.suitById && DB.suitById[sid]; return s ? (s.ru || s.en) : '?'; };
+  const eng = wid => { const w = DB.engById && DB.engById[wid]; return w ? (w.ru || w.en) : 'ничего'; };
+  const core = v => ['—','A','B','C','D','E','F'][v] || '—';
+  let lines = [];
+  if (e.k === 'new') lines.push('<b>получен</b>');
+  (e.ev || []).forEach(x => {
+    if (x.k === 'lvl')   lines.push('уровень <b>' + x.a + ' → ' + x.b + '</b>');
+    if (x.k === 'core')  lines.push('ядро <b>' + core(x.a) + ' → ' + core(x.b) + '</b>');
+    if (x.k === 'mind')  lines.push('М-ранг <b>M' + x.a + ' → M' + x.b + '</b>');
+    if (x.k === 'sk')    lines.push((CHRON_SK[x.i] || 'навык') + ' <b>' + x.a + ' → ' + x.b + '</b>');
+    if (x.k === 'weng')  lines.push('движок: ' + esc(eng(x.a)) + ' → <b>' + esc(eng(x.b)) + '</b>');
+    if (x.k === 'wlvl')  lines.push('движок прокачан <b>' + x.a + ' → ' + x.b + '</b>');
+    if (x.k === 'wph')   lines.push('фаза движка <b>P' + x.a + ' → P' + x.b + '</b>');
+    if (x.k === 'disc') {
+      const to = 'слот ' + x.sl + ': <b>' + esc(suit(x.b.suit)) + '</b> · ' +
+                 esc(shortName(x.b.main));
+      lines.push(x.a ? to + ' <s>' + esc(suit(x.a.suit)) + ' · ' + esc(shortName(x.a.main)) + '</s>'
+                     : to + ' <s>слот был пуст</s>');
+    }
+    if (x.k === 'discOff') lines.push('слот ' + x.sl + ': снят ' + esc(suit(x.a.suit)));
+    if (x.k === 'discLvl') lines.push('слот ' + x.sl + ' прокачан <b>+' + x.a + ' → +' + x.b + '</b>');
+  });
+  if (!lines.length) lines.push('характеристики пересчитаны');
+  return '<div class="ch-row" data-id="' + e.id + '">' +
+    '<span class="ch-a">' +
+      (a.icon ? img(imgUrl('agents', a.icon), 'ch-ic', a.ru, true)
+              : '<span class="ch-ic tm-none">?</span>') + '</span>' +
+    '<div class="ch-body">' +
+      '<div class="ch-top"><b>' + esc(a.ru) + '</b>' +
+        '<i>' + esc(new Date(e.t).toLocaleString('ru-RU',
+          { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) + '</i></div>' +
+      '<div class="ch-what">' + lines.join('<span class="ch-sep">·</span>') + '</div>' +
+      chronStatLine(e.st) +
+    '</div></div>';
+}
+function chronHtml(onlyId, limit) {
+  const log = (CHRON.log || []).filter(e => !onlyId || e.id === +onlyId);
+  if (!log.length) {
+    return '<div class="hint" style="margin-top:0">' + (onlyId
+      ? 'По этому агенту изменений пока не записано. Журнал начинается с первого ' +
+        'импорта после обновления трекера — дальше каждая замена диска, движка или ' +
+        'прокачка навыка попадёт сюда.'
+      : 'Журнал пуст. Он заполняется при импорте: трекер сравнивает новое ' +
+        'состояние со снимком и записывает, что изменилось.') + '</div>';
+  }
+  return '<div class="ch-list">' + log.slice(0, limit || 60).map(chronOne).join('') + '</div>' +
+    (log.length > (limit || 60)
+      ? '<div class="hint">Показаны последние ' + (limit || 60) + ' из ' + log.length + '.</div>'
+      : '');
+}
+
 // ─────────────── история прогресса ───────────────
 // Раз в день снимаем несколько чисел: сколько агентов есть, сколько собрано
 // целиком, средняя готовность, сколько замечаний по сборкам. Плюс события —
@@ -7922,6 +8147,7 @@ function drawHist() {
   const box = $('histBox');
   if (!box) return;
   histTick();
+  chronScan(true);
   const days = hist.days || [];
   if (!days.length) {
     box.innerHTML = '<div class="hint" style="margin-top:0">Истории пока нет. ' +
@@ -7964,7 +8190,16 @@ function drawHist() {
     'вместе с прогрессом, так что история общая на телефоне и ПК. Хранится ' + HIST_KEEP +
     ' дней. В журнал попадают появление и уход агентов, выход на 100% и рост готовности ' +
     'от ' + HIST_STEP + '% за раз.</div>';
+
+  // Подробный журнал: что именно менялось у агентов и что это дало
+  h += '<div class="cap2" style="margin:18px 0 6px">ПОДРОБНО ПО АГЕНТАМ</div>' +
+    chronHtml(null, 40) +
+    '<div class="hint">Записывается при импорте: трекер сравнивает новое состояние ' +
+    'со снимком и отмечает, что поменялось — диски, движок, навыки, ядро. ' +
+    'Рядом видно, как от этого сдвинулись характеристики. Клик по строке открывает ' +
+    'карточку агента.</div>';
   box.innerHTML = h;
+  box.querySelectorAll('.ch-row').forEach(el => el.onclick = () => openAgent(+el.dataset.id));
 }
 
 // ─────────────── банбу ───────────────
