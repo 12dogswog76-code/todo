@@ -61,17 +61,46 @@ Say ("─" * 46) DarkGray
 # ── где стоит игра ───────────────────────────────────────────────────────────
 # Путь ищем по порядку: заданный вручную → лаунчер в реестре → обычные места.
 # У лаунчера ключ свой на каждую игру, у ZZZ это ZenlessZoneZero.
-function Find-GameDir {
-    if ($GameDir) { return $GameDir }
+# От любой папки игры добираемся до ZenlessZoneZero_Data. Раскладка разная:
+# у лаунчера HoYoverse это «…\ZenlessZoneZero Game\ZenlessZoneZero_Data», а
+# Steam ставит игру ещё на уровень глубже — «…\Zenless Zone Zero\ZenlessZoneZero
+# Game\ZenlessZoneZero_Data». Поэтому не склеиваем путь вслепую, а ищем.
+function Resolve-DataDir([string]$root) {
+    if (-not $root) { return $null }
+    $root = $root.Trim('"').TrimEnd('\')
+    if (-not (Test-Path $root)) { return $null }
+    if ((Split-Path $root -Leaf) -eq 'ZenlessZoneZero_Data') { return $root }
+    $d = Join-Path $root 'ZenlessZoneZero_Data'
+    if (Test-Path $d) { return $d }
+    try {
+        $hit = Get-ChildItem $root -Directory -Recurse -Depth 2 `
+               -Filter 'ZenlessZoneZero_Data' -ErrorAction SilentlyContinue |
+               Select-Object -First 1
+        if ($hit) { return $hit.FullName }
+    } catch {}
+    return $null
+}
 
-    # Самый надёжный способ: игра запущена (иначе истории круток и не будет),
-    # значит путь можно взять прямо у процесса — никакого гадания по дискам.
+function Find-GameDir {
+    if ($GameDir) { return (Resolve-DataDir $GameDir) }
+
+    # Игра запущена (иначе истории круток и не будет), значит путь можно взять
+    # прямо у процесса. Свойство Path пустое, когда PowerShell запущен без прав
+    # администратора, — тогда тот же путь отдаёт WMI.
     foreach ($nm in @('ZenlessZoneZero', 'ZenlessZoneZeroBeta')) {
         try {
             $pr = Get-Process -Name $nm -ErrorAction Stop | Select-Object -First 1
             if ($pr -and $pr.Path) {
-                $d = Join-Path (Split-Path $pr.Path -Parent) 'ZenlessZoneZero_Data'
-                if (Test-Path $d) { return $d }
+                $d = Resolve-DataDir (Split-Path $pr.Path -Parent)
+                if ($d) { return $d }
+            }
+        } catch {}
+        try {
+            $w = Get-CimInstance Win32_Process -Filter "Name='$nm.exe'" -ErrorAction Stop |
+                 Select-Object -First 1
+            if ($w -and $w.ExecutablePath) {
+                $d = Resolve-DataDir (Split-Path $w.ExecutablePath -Parent)
+                if ($d) { return $d }
             }
         } catch {}
     }
@@ -84,7 +113,8 @@ function Find-GameDir {
     foreach ($k in $reg) {
         try {
             $v = (Get-ItemProperty -Path $k -ErrorAction Stop).GameInstallPath
-            if ($v -and (Test-Path $v)) { return (Join-Path $v 'ZenlessZoneZero_Data') }
+            $d = Resolve-DataDir $v
+            if ($d) { return $d }
         } catch {}
     }
     # список установленных программ: лаунчер прописывает туда путь установки
@@ -96,19 +126,41 @@ function Find-GameDir {
                    Where-Object { $_.DisplayName -match 'Zenless' -and $_.InstallLocation } |
                    Select-Object -First 1
             if ($app) {
-                $d = Join-Path $app.InstallLocation 'ZenlessZoneZero_Data'
-                if (Test-Path $d) { return $d }
+                # У Steam InstallLocation указывает на «Zenless Zone Zero», а сами
+                # данные лежат в подпапке «ZenlessZoneZero Game» — ищем внутрь.
+                $d = Resolve-DataDir $app.InstallLocation
+                if ($d) { return $d }
             }
         } catch {}
     }
 
-    # запасной вариант: пробуем обычные места установки на всех дисках
-    foreach ($d in (Get-PSDrive -PSProvider FileSystem).Name) {
-        foreach ($tail in @('Program Files\ZenlessZoneZero Game\ZenlessZoneZero_Data',
-                            'Games\ZenlessZoneZero Game\ZenlessZoneZero_Data',
-                            'ZenlessZoneZero Game\ZenlessZoneZero_Data')) {
-            $p = "${d}:\$tail"
-            if (Test-Path $p) { return $p }
+    # Библиотеки Steam: игра может лежать на любом диске, пути перечислены в
+    # libraryfolders.vdf рядом со Steam.
+    foreach ($sk in @('HKCU:\Software\Valve\Steam', 'HKLM:\SOFTWARE\WOW6432Node\Valve\Steam')) {
+        try {
+            $sp = (Get-ItemProperty -Path $sk -ErrorAction Stop)
+            $steam = if ($sp.SteamPath) { $sp.SteamPath } else { $sp.InstallPath }
+            if (-not $steam) { continue }
+            $vdf = Join-Path ($steam -replace '/', '\') 'steamapps\libraryfolders.vdf'
+            if (-not (Test-Path $vdf)) { continue }
+            foreach ($m in [regex]::Matches((Get-Content $vdf -Raw), '"path"\s+"([^"]+)"')) {
+                $lib = $m.Groups[1].Value -replace '\\\\', '\'
+                $d = Resolve-DataDir (Join-Path $lib 'steamapps\common\Zenless Zone Zero')
+                if ($d) { return $d }
+            }
+        } catch {}
+    }
+
+    # запасной вариант: обычные места установки на всех дисках
+    foreach ($dr in (Get-PSDrive -PSProvider FileSystem).Name) {
+        foreach ($tail in @('Program Files\ZenlessZoneZero Game',
+                            'Games\ZenlessZoneZero Game',
+                            'ZenlessZoneZero Game',
+                            'SteamLibrary\steamapps\common\Zenless Zone Zero',
+                            'Steam\steamapps\common\Zenless Zone Zero',
+                            'Program Files (x86)\Steam\steamapps\common\Zenless Zone Zero')) {
+            $d = Resolve-DataDir "${dr}:\$tail"
+            if ($d) { return $d }
         }
     }
     return $null
