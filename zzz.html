@@ -1073,6 +1073,29 @@
     color:#3b2c00;background:linear-gradient(135deg,#ffe066,var(--gold) 55%,#e0a800);
     box-shadow:0 0 12px #ffd54a33}
   /* полоса пити: желтеет на мягком пити, когда шанс резко растёт */
+  /* прогноз круток до конца патча */
+  .pl-plan{border:1px solid var(--line);border-radius:14px;background:var(--pan2);
+    padding:12px 13px;margin:0 0 12px}
+  .pl-ph{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+  .pl-ph b{font-size:12.5px}
+  .pl-ph span{font-size:11px;color:var(--tx3)}
+  .pl-big{margin-left:auto;font-style:normal;font-size:15px;font-weight:800;color:var(--gold);
+    border:1px solid #ffd54a4d;background:#ffd54a14;border-radius:9px;padding:3px 11px}
+  .pl-src{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+  .pl-src span{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:10px;
+    background:#0b0d11;border:1px solid var(--line)}
+  .pl-src b{font-size:14px;font-weight:700}
+  .pl-src i{font-style:normal;font-size:9.5px;color:var(--tx3);letter-spacing:.3px}
+  .pl-acts{display:flex;flex-direction:column;gap:4px}
+  .pl-act{display:flex;align-items:baseline;gap:8px;font-size:11.5px}
+  .pl-act b{font-weight:600;color:var(--tx2);min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .pl-act i{font-style:normal;font-size:10.5px;color:var(--tx3);margin-left:auto;
+    white-space:nowrap;flex:none}
+  .pl-verdict{margin-top:10px;font-size:11.5px;line-height:1.55;color:var(--warn);
+    background:#fbbf240f;border:1px solid #fbbf2426;border-radius:10px;padding:8px 10px}
+  .pl-verdict.ok{color:#a7f3c0;background:#4ade800f;border-color:#4ade8026}
+  @media (max-width:560px){ .pl-src{grid-template-columns:1fr 1fr} }
   .pl-pity{display:flex;align-items:center;gap:10px}
   .pl-bar{flex:1;height:8px;border-radius:20px;background:#ffffff10;overflow:hidden}
   .pl-bar i{display:block;height:100%;border-radius:20px;background:var(--acc);
@@ -2145,7 +2168,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v194';
+const APP_VER = 'v195';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -7230,7 +7253,7 @@ function menuGo(k) {
   if (k === 'cloud')  cloudUI();
   if (k === 'mod')    drawModTable();
   if (k === 'gear')   drawGear();
-  if (k === 'pull')   drawPulls();
+  if (k === 'pull')   { drawPulls(); planAuto(); }
   if (k === 'banner') drawBanners();
   if (k === 'end')    { drawEndgame(); runsAuto(); }
   if (k === 'hist')   drawHist();
@@ -8690,6 +8713,105 @@ function pullHowto(open) {
     'только историю круток: ни аккаунта, ни почты, ни платежей он не касается. ' +
     'Историю читает <b>твой</b> воркер, больше она никуда не уходит.</p></details>';
 }
+// ─────────────── сколько круток будет до конца патча ───────────────
+// Вопрос «хватит ли мне до баннера» упирается в то, что за патч дают разное
+// количество полихромов. Гадать не нужно: хроника отдаёт список событий с
+// точными числами — сколько полихромов даёт событие целиком и сколько игрок
+// уже забрал (activity_calendar, режим воркера /plan).
+//
+// Что учитывается точно: остаток по событиям. Что прикидкой: ежедневные
+// задания, 60 полихромов в день. Что не учитывается вовсе: эндгейм, почта,
+// компенсации за обслуживание, батарея, магазин — их хроника не отдаёт.
+// Поэтому итог всегда «не меньше чем», и так и подписан.
+const LS_PLAN = LS + '_plan';
+const PULL_COST = 160;      // полихромов за одну крутку
+const DAILY_POLY = 60;      // за четыре ежедневных задания
+const PLAN_FRESH = 3 * 3600 * 1000;
+let PLAN = null;
+try { PLAN = JSON.parse(localStorage.getItem(LS_PLAN) || 'null'); } catch (e) { PLAN = null; }
+
+async function planLoad(quiet) {
+  const uid = localStorage.getItem(LS + '_uid') || '';
+  if (!uid) return null;
+  const res = await apiFetch('/hoyo/' + uid + '/plan',
+    { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 30000);
+  const d = res.ok ? res.data : null;
+  if (!d || d.error || !Array.isArray(d.acts)) return null;
+  PLAN = { acts: d.acts, banners: d.banners || [], at: Date.now() };
+  try { localStorage.setItem(LS_PLAN, JSON.stringify(PLAN)); } catch (e) {}
+  if (!quiet && menuCur === 'pull') drawPulls();
+  return PLAN;
+}
+function planAuto() {
+  if (!localStorage.getItem(LS + '_uid')) return;
+  if (PLAN && Date.now() - (PLAN.at || 0) < PLAN_FRESH) return;
+  planLoad(false);
+}
+// Конец патча — по расписанию баннеров из самой хроники: это точные даты, в
+// отличие от собранных с Prydwen. Берём самый поздний конец среди тех, что
+// идут прямо сейчас.
+function planPatchEnd() {
+  const now = Math.floor(Date.now() / 1000);
+  let end = 0;
+  ((PLAN && PLAN.banners) || []).forEach(b => {
+    if (b.from && b.to && b.from <= now && now <= b.to) end = Math.max(end, b.to);
+  });
+  return end;
+}
+function planCalc() {
+  if (!PLAN || !PLAN.acts) return null;
+  const now = Math.floor(Date.now() / 1000);
+  // Событие с истёкшим сроком уже ничего не даст, даже если награда не забрана.
+  const live = PLAN.acts.filter(a => (a.all || 0) > (a.got || 0) && (!a.to || a.to > now));
+  const evt = live.reduce((s, a) => s + ((a.all || 0) - (a.got || 0)), 0);
+  const end = planPatchEnd();
+  const days = end ? Math.max(0, Math.ceil((end - now) / 86400)) : 0;
+  const daily = days * DAILY_POLY;
+  return { live: live, evt: evt, days: days, end: end, daily: daily,
+           poly: evt + daily, pulls: Math.floor((evt + daily) / PULL_COST) };
+}
+function planDate(ts) {
+  return ts ? new Date(ts * 1000).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) : '';
+}
+function drawPlan() {
+  if (!localStorage.getItem(LS + '_uid')) return '';
+  const c = planCalc();
+  if (!c) {
+    return '<div class="pl-plan"><div class="pl-ph"><b>До конца патча</b>' +
+      '<span id="planMsg">' + (PLAN ? 'Хроника не отдала события.' : 'Считаю…') + '</span></div></div>';
+  }
+  // Сопоставление с гарантом: до него столько-то круток, а придёт столько-то.
+  const ex = PULL_KINDS.filter(k => k.k === '2001')[0];
+  const st = PULLS.list.length ? pullStat('2001') : null;
+  const need = st ? Math.max(0, ex.pity - st.pity) : 0;
+  const enough = st ? c.pulls >= need : null;
+
+  return '<div class="pl-plan">' +
+    '<div class="pl-ph"><b>До конца патча</b>' +
+      '<span>' + (c.days ? 'осталось ' + c.days + ' ' + plural(c.days, 'день', 'дня', 'дней') +
+        ', до ' + esc(planDate(c.end)) : 'срок патча неизвестен') + '</span>' +
+      '<u class="pl-big">+' + c.pulls + ' ' + plural(c.pulls, 'крутка', 'крутки', 'круток') + '</u>' +
+    '</div>' +
+    '<div class="pl-src">' +
+      '<span><b>' + nfmt(c.evt) + '</b><i>из событий, точно</i></span>' +
+      '<span><b>' + nfmt(c.daily) + '</b><i>ежедневки, ' + DAILY_POLY + '/день</i></span>' +
+      '<span><b>' + nfmt(c.poly) + '</b><i>полихромов всего</i></span>' +
+    '</div>' +
+    (c.live.length ? '<div class="pl-acts">' + c.live.map(a =>
+      '<div class="pl-act"><b>' + esc(a.n) + '</b>' +
+        '<i>' + nfmt((a.all || 0) - (a.got || 0)) + ' из ' + nfmt(a.all || 0) +
+        (a.to ? ' · до ' + esc(planDate(a.to)) : '') + '</i></div>').join('') + '</div>'
+      : '<div class="pl-act" style="opacity:.7"><b>Все награды за события забраны</b></div>') +
+    (st ? '<div class="pl-verdict' + (enough ? ' ok' : '') + '">' +
+      (enough
+        ? 'На эксклюзивном канале до гаранта ' + need + ' — этого хватит с запасом в ' +
+          (c.pulls - need) + '.'
+        : 'На эксклюзивном канале до гаранта ' + need + ' — не хватает ' + (need - c.pulls) +
+          '. Разницу добирают эндгейм, почта и магазин, их хроника не показывает.') +
+      '</div>' : '') +
+    '</div>';
+}
+
 function drawPulls() {
   const box = $('pullBox');
   if (!box) return;
@@ -8704,6 +8826,8 @@ function drawPulls() {
       : 'Запусти <b>get-signal-link.ps1</b> при открытых «Записях сигналов» — ' +
         'он положит ссылку в буфер.') + '</span>' +
     '</div>';
+
+  h += drawPlan();
 
   if (!PULLS.list.length) {
     h += pullHowto();
