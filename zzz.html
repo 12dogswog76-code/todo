@@ -139,7 +139,15 @@
      при каждом изменении заряда. */
   .logo .bat{font-size:11px;color:var(--tx2);background:#ffffff0d;
     border:1px solid var(--line);border-radius:20px;padding:4px 11px;
-    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:default}
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;
+    font-family:inherit}
+  /* Правило display:inline-flex сильнее браузерного [hidden]{display:none}, и
+     пока данные не приехали, в шапке висел пустой овал. */
+  .logo .bat[hidden]{display:none}
+  .logo .bat:hover{border-color:var(--ok);background:#4ade801a}
+  .logo .bat.err{color:var(--tx3)}
+  .logo .bat.err svg{color:var(--tx3);opacity:.6}
+  .logo .bat.err:hover{border-color:var(--warn);background:#fbbf2414}
   .logo .bat svg{flex:none;color:var(--ok)}
   .logo .bat b{font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
   .logo .bat i{font-style:normal;color:var(--tx3);font-size:10px}
@@ -2198,7 +2206,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v200';
+const APP_VER = 'v201';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8818,18 +8826,31 @@ function batIcon(pct, warn) {
 function drawBat() {
   const el = $('batBox');
   if (!el) return;
-  if (!NOTE || NOTE.err || !NOTE.energy) { el.hidden = true; return; }
+  el.onclick = () => { NOTE = null; drawBat(); noteLoad(); };
+  // Пока ничего не запрашивали — плашки нет вовсе. А вот про ошибку молчать
+  // нельзя: пропавшая батарея выглядит как «сайт сломался», и понять, что
+  // протухли cookie, неоткуда. Поэтому прочерк, причина в подсказке и клик
+  // для повтора.
+  if (!NOTE) { el.hidden = true; return; }
+  if (NOTE.err || !NOTE.energy) {
+    el.hidden = false;
+    el.className = 'bat err';
+    el.innerHTML = batIcon(0) + '<b>—</b>';
+    el.title = 'Батарея не пришла: ' + (NOTE.err || 'хроника ответила без данных') +
+               '\nНажми, чтобы попробовать ещё раз';
+    return;
+  }
   const e = NOTE.energy, max = e.max || BAT_MAX;
   const cur = e.cur || 0, pct = max ? cur / max * 100 : 0;
   const full = cur >= max;
   el.hidden = false;
   el.className = 'bat' + (full ? ' full' : (pct >= 85 ? ' near' : ''));
   el.innerHTML = batIcon(pct, full) + '<b>' + cur + '</b><i>/' + max + '</i>';
-  el.title = full
+  el.title = (full
     ? 'Батарея полная — восстановление идёт впустую'
-    : 'Полная через ' + noteDur(e.restore) + ', в ' + noteWhen(e.restore) +
-      '\nОбновлено в ' + new Date(NOTE.at).toLocaleTimeString('ru-RU',
-        { hour: '2-digit', minute: '2-digit' });
+    : 'Полная через ' + noteDur(e.restore) + ', в ' + noteWhen(e.restore)) +
+    '\nОбновлено в ' + new Date(NOTE.at).toLocaleTimeString('ru-RU',
+      { hour: '2-digit', minute: '2-digit' }) + ', нажми чтобы обновить';
 }
 // «2 ч 15 мин» — в игре время до восстановления показано так же
 function noteDur(sec) {
