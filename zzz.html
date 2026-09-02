@@ -134,6 +134,19 @@
   .logo .who:hover{border-color:var(--ok);color:var(--tx);background:#4ade801a;
     box-shadow:0 0 14px #4ade8033}
   .logo .who:hover .sy{transform:rotate(180deg);transition:transform .3s}
+  /* Батарея — рядом с ником и того же роста. Не кнопка: нажимать тут нечего,
+     обновляется сама. Цифра моноширинная, чтобы плашка не дёргалась по ширине
+     при каждом изменении заряда. */
+  .logo .bat{font-size:11px;color:var(--tx2);background:#ffffff0d;
+    border:1px solid var(--line);border-radius:20px;padding:4px 11px;
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:default}
+  .logo .bat svg{flex:none;color:var(--ok)}
+  .logo .bat b{font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+  .logo .bat i{font-style:normal;color:var(--tx3);font-size:10px}
+  .logo .bat.near{border-color:#ffd54a40}
+  .logo .bat.near svg,.logo .bat.near b{color:var(--gold)}
+  .logo .bat.full{border-color:#fbbf2459;background:#fbbf2414}
+  .logo .bat.full svg,.logo .bat.full b{color:var(--warn)}
   .logo .who.busy{opacity:.7;pointer-events:none}
   .logo .who.busy .sy{animation:whospin 1s linear infinite}
   @keyframes whospin{to{transform:rotate(360deg)}}
@@ -1073,31 +1086,6 @@
     color:#3b2c00;background:linear-gradient(135deg,#ffe066,var(--gold) 55%,#e0a800);
     box-shadow:0 0 12px #ffd54a33}
   /* полоса пити: желтеет на мягком пити, когда шанс резко растёт */
-  /* сегодня: батарея и дела */
-  .dy-en{border:1px solid var(--line);border-radius:14px;background:var(--pan2);
-    padding:12px 13px;margin-bottom:12px}
-  .dy-en.full{border-color:#fbbf2440;background:#fbbf240a}
-  .dy-eh{display:flex;align-items:baseline;gap:6px;margin-bottom:9px}
-  .dy-eh b{font-size:26px;font-weight:800;color:var(--gold);line-height:1}
-  .dy-eh span{font-size:12px;color:var(--tx3)}
-  .dy-eh i{font-style:normal;font-size:10.5px;color:var(--tx3);margin-left:auto;text-align:right}
-  .dy-en.full .dy-eh i{color:var(--warn)}
-  .dy-bar{height:7px;border-radius:5px;background:#0b0d11;border:1px solid var(--line);
-    overflow:hidden}
-  .dy-bar i{display:block;height:100%;background:linear-gradient(90deg,#63e694,var(--acc))}
-  .dy-bar.warn i{background:linear-gradient(90deg,#ffd54a,#fbbf24)}
-  .dy-list{display:flex;flex-direction:column}
-  .dy-row{display:flex;align-items:baseline;gap:8px;padding:7px 0;font-size:11.5px}
-  .dy-row+.dy-row{border-top:1px solid #ffffff0a}
-  .dy-row u{text-decoration:none;flex:none;width:14px;color:var(--tx3);font-size:12px}
-  .dy-row.ok u{color:var(--acc)}
-  .dy-row b{font-weight:600;color:var(--tx2);flex:none}
-  .dy-row.ok b{color:var(--tx3);font-weight:500}
-  .dy-row s{text-decoration:none;font-size:11px;color:var(--tx3);margin-left:auto;flex:none}
-  .dy-row i{font-style:normal;font-size:10px;color:var(--tx3);opacity:.75;flex:none;
-    min-width:96px;text-align:right}
-  @media (max-width:560px){ .dy-row i{display:none} }
-
   /* прогноз круток до конца патча */
   .pl-plan{border:1px solid var(--line);border-radius:14px;background:var(--pan2);
     padding:12px 13px;margin:0 0 12px}
@@ -1944,6 +1932,7 @@
         <span>ZZZ Трекер<small id="stats"></small></span>
       </button>
       <button class="who" id="whoAmI" hidden></button>
+      <span class="bat" id="batBox" hidden></span>
       <span class="ver" id="appVer" title="версия трекера"></span>
       <span id="cloudDot" title="облако не подключено"></span>
     </div>
@@ -2136,7 +2125,6 @@
   <div class="panel" id="booPanel"><div id="booBox"></div></div>
   <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
   <div class="panel" id="endPanel"><div id="endBox"></div></div>
-  <div class="panel" id="dayPanel"><div id="dayBox"></div></div>
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
   <div class="panel" id="cmpPanel"><div id="cmpBox"></div></div>
   <div class="panel" id="gearPanel"><div id="gearBox"></div></div>
@@ -2210,7 +2198,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v199';
+const APP_VER = 'v200';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3399,6 +3387,9 @@ function boot() {
   if ($('appVer')) $('appVer').textContent = APP_VER;
   showWorkerVer();
   setNick();
+  // Батарея — единственное, что тянем при загрузке без спроса: запрос лёгкий,
+  // а смысл плашки в том, чтобы цифра была на виду сразу.
+  noteAuto();
   ownerUI();
   renderFilters();
   render();
@@ -7274,7 +7265,6 @@ $('rebuildDb').onclick = async () => {
 // Пока раздел не выбран, окно узкое — только колонка с пунктами. Выбрал —
 // раскрывается вправо, колонка остаётся на месте.
 const MENU = [
-  { k: 'day',    p: 'dayPanel',    i: '⚡', n: 'Сегодня',         d: 'Батарея и дела на день' },
   { k: 'enka',   p: 'enkaPanel',   i: '⟳',  n: 'Импорт из игры',  d: 'Забрать аккаунт из игры' },
   { k: 'cloud',  p: 'cloudPanel',  i: '☁',  n: 'Облако и данные', d: 'Синхронизация, бэкап, обслуживание' },
   { k: 'todo',   p: 'todoPanel',   i: '🎯', n: 'Кого качать',     d: 'Сильные, но недоделанные' },
@@ -7322,7 +7312,6 @@ function menuGo(k) {
   if (k === 'pull')   { drawPulls(); planAuto(); }
   if (k === 'banner') drawBanners();
   if (k === 'end')    { drawEndgame(); runsAuto(); }
-  if (k === 'day')    { drawDay(); noteAuto(); }
   if (k === 'hist')   drawHist();
   if (k === 'cmp')    drawCmp();
   if (k === 'todo')   drawTodo();
@@ -8780,18 +8769,20 @@ function pullHowto(open) {
     'только историю круток: ни аккаунта, ни почты, ни платежей он не касается. ' +
     'Историю читает <b>твой</b> воркер, больше она никуда не уходит.</p></details>';
 }
-// ─────────────── сегодня: батарея и дела ───────────────
-// Хроника отдаёт текущее состояние аккаунта одним лёгким запросом: батарея,
-// ежедневная и недельная активность, охота, видеомагазин, кафе, авторабота.
-// Держим это в памяти, а не в localStorage: данные протухают за минуты, и
-// показывать вчерашнюю батарею хуже, чем не показывать ничего.
+// ─────────────── батарея в шапке ───────────────
+// Из всей сводки хроники (`/note`) в трекере нужна одна цифра — батарея, и
+// нужна она на виду, а не разделом в меню: смотрят её мельком, чтобы понять,
+// не переполнилась ли. Поэтому маленькая плашка рядом с ником.
+//
+// Держим в памяти, а не в localStorage: число протухает за минуты, и показать
+// вчерашнюю батарею хуже, чем не показать ничего.
 let NOTE = null;
 const NOTE_FRESH = 3 * 60 * 1000;
+const BAT_MAX = 240;
 
-async function noteLoad(btn) {
+async function noteLoad() {
   const uid = localStorage.getItem(LS + '_uid') || '';
   if (!uid) return null;
-  if (btn) { btn.disabled = true; btn.textContent = 'Гружу…'; }
   const res = await apiFetch('/hoyo/' + uid + '/note',
     { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 30000);
   const d = res.ok ? res.data : null;
@@ -8804,13 +8795,41 @@ async function noteLoad(btn) {
     const from = new Date(NOTE.pass.exp * 1000 - 30 * 86400000);
     passSave({ on: 1, from: ymd(from), months: 1 });
   }
-  if (menuCur === 'day') drawDay();
+  drawBat();
   return NOTE;
 }
 function noteAuto() {
   if (!localStorage.getItem(LS + '_uid')) return;
-  if (NOTE && Date.now() - NOTE.at < NOTE_FRESH) return;
-  noteLoad(null);
+  if (NOTE && !NOTE.err && Date.now() - NOTE.at < NOTE_FRESH) return;
+  noteLoad();
+}
+
+// Батарейка рисуется на месте, а не картинкой: заливка внутри показывает
+// заряд, и на любом экране остаётся резкой.
+function batIcon(pct, warn) {
+  const w = Math.max(0, Math.min(13, Math.round(13 * pct / 100)));
+  return '<svg viewBox="0 0 22 12" width="19" height="11" aria-hidden="true">' +
+    '<rect x="1" y="1" width="17" height="10" rx="3" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.4" opacity=".55"/>' +
+    '<rect x="19" y="4" width="2.4" height="4" rx="1" fill="currentColor" opacity=".55"/>' +
+    (w ? '<rect x="3.4" y="3.4" width="' + w + '" height="5.2" rx="1.6" fill="currentColor"' +
+      (warn ? ' opacity="1"' : '') + '/>' : '') + '</svg>';
+}
+function drawBat() {
+  const el = $('batBox');
+  if (!el) return;
+  if (!NOTE || NOTE.err || !NOTE.energy) { el.hidden = true; return; }
+  const e = NOTE.energy, max = e.max || BAT_MAX;
+  const cur = e.cur || 0, pct = max ? cur / max * 100 : 0;
+  const full = cur >= max;
+  el.hidden = false;
+  el.className = 'bat' + (full ? ' full' : (pct >= 85 ? ' near' : ''));
+  el.innerHTML = batIcon(pct, full) + '<b>' + cur + '</b><i>/' + max + '</i>';
+  el.title = full
+    ? 'Батарея полная — восстановление идёт впустую'
+    : 'Полная через ' + noteDur(e.restore) + ', в ' + noteWhen(e.restore) +
+      '\nОбновлено в ' + new Date(NOTE.at).toLocaleTimeString('ru-RU',
+        { hour: '2-digit', minute: '2-digit' });
 }
 // «2 ч 15 мин» — в игре время до восстановления показано так же
 function noteDur(sec) {
@@ -8824,81 +8843,6 @@ function noteWhen(sec) {
   return new Date(Date.now() + Math.max(0, +sec || 0) * 1000)
     .toLocaleString('ru-RU', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 }
-function dayBar(cur, max, cls) {
-  const pct = max ? Math.min(100, cur / max * 100) : 0;
-  return '<div class="dy-bar' + (cls ? ' ' + cls : '') + '"><i style="width:' + pct + '%"></i></div>';
-}
-// Строка дела: либо сделано, либо сколько осталось.
-function dayRow(n, ok, val, note) {
-  return '<div class="dy-row' + (ok ? ' ok' : '') + '">' +
-    '<u>' + (ok ? '✓' : '•') + '</u>' +
-    '<b>' + esc(n) + '</b>' +
-    '<s>' + esc(val || '') + '</s>' +
-    (note ? '<i>' + esc(note) + '</i>' : '') + '</div>';
-}
-
-function drawDay() {
-  const box = $('dayBox');
-  if (!box) return;
-  if (!localStorage.getItem(LS + '_uid')) {
-    box.innerHTML = '<div class="hint" style="margin-top:0">Сначала впиши UID в разделе ' +
-      '«⟳ Импорт из игры» — данные берутся из боевой хроники HoYoLab по нему.</div>';
-    return;
-  }
-  const head = '<div class="ban-rem"><button id="dayBtn">⟳ Обновить</button>' +
-    '<span>' + (NOTE && !NOTE.err
-      ? 'на ' + new Date(NOTE.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-      : (NOTE && NOTE.err ? esc(NOTE.err) : 'Гружу…')) + '</span></div>';
-  if (!NOTE || NOTE.err) { box.innerHTML = head; bindDay(); return; }
-
-  const e = NOTE.energy || {}, full = (e.cur || 0) >= (e.max || 240);
-  const d = NOTE.daily || {}, w = NOTE.week || {}, b = NOTE.bounty || {};
-  const t = NOTE.temple || {};
-
-  box.innerHTML = head +
-    // батарея
-    '<div class="dy-en' + (full ? ' full' : '') + '">' +
-      '<div class="dy-eh"><b>' + (e.cur || 0) + '</b><span>/ ' + (e.max || 240) + '</span>' +
-        '<i>' + (full ? 'полная — тратится впустую'
-                      : 'полная через ' + noteDur(e.restore) + ', в ' + esc(noteWhen(e.restore))) + '</i>' +
-      '</div>' +
-      dayBar(e.cur, e.max, full ? 'warn' : '') +
-    '</div>' +
-    // дела
-    '<div class="dy-list">' +
-      dayRow('Ежедневная активность', (d.cur || 0) >= (d.max || 400),
-             (d.cur || 0) + ' / ' + (d.max || 400)) +
-      dayRow('Отметка в приложении', NOTE.sign === 'CardSignDone', '') +
-      // SaleStateDoing — продажа идёт, то есть магазин уже запущен: это
-      // сделанное дело, а не повод для точки в списке.
-      dayRow('Видеомагазин', NOTE.vhs === 'SaleStateDoing' || NOTE.vhs === 'SaleStateDone',
-             NOTE.vhs === 'SaleStateDoing' ? 'идёт продажа'
-               : (NOTE.vhs === 'SaleStateDone' ? 'закрыт' : 'не запущен')) +
-      dayRow('Кафе', NOTE.cafe === 'CafeStateDone', '') +
-      (t.lvl ? dayRow('Авторабота', !t.done, t.done ? 'закончена — забрать'
-                      : (t.left ? 'ещё ' + noteDur(t.left) : 'идёт')) : '') +
-    '</div>' +
-    '<div class="cap2" style="margin:12px 0 6px">ЗА НЕДЕЛЮ</div>' +
-    '<div class="dy-list">' +
-      (w.on ? dayRow('Задания периода', (w.cur || 0) >= (w.max || 0),
-             (w.cur || 0) + ' / ' + (w.max || 0), 'сброс через ' + noteDur(w.refresh)) : '') +
-      (b.on ? dayRow('Задания охоты', (b.cur || 0) >= (b.max || 0),
-             (b.cur || 0) + ' / ' + (b.max || 0), 'сброс через ' + noteDur(b.refresh)) : '') +
-      (NOTE.abyss ? dayRow('Смена периода эндгейма', false, noteDur(NOTE.abyss),
-             esc(noteWhen(NOTE.abyss))) : '') +
-    '</div>' +
-    (NOTE.pass && NOTE.pass.on
-      ? '<div class="hint">Месячный пропуск активен до ' +
-        esc(new Date(NOTE.pass.exp * 1000).toLocaleDateString('ru-RU')) +
-        ' — в прогнозе круток он учтён.</div>'
-      : '<div class="hint">Данные боевой хроники HoYoLab, обновляются при открытии раздела ' +
-        'и не чаще раза в три минуты.</div>');
-  bindDay();
-}
-function bindDay() {
-  if ($('dayBtn')) $('dayBtn').onclick = () => noteLoad($('dayBtn'));
-}
-
 // ─────────────── сколько круток будет до конца патча ───────────────
 // Вопрос «хватит ли мне до баннера» упирается в то, что за патч дают разное
 // количество полихромов. Гадать не нужно: хроника отдаёт список событий с
@@ -10629,7 +10573,11 @@ function drawBanners() {
 
 
 // периодическая подтяжка облака
-document.addEventListener('visibilitychange', () => { if (!document.hidden && sync) cloudSync(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (sync) cloudSync();
+  noteAuto();          // вернулись на вкладку — батарея уже другая
+});
 setInterval(() => { if (sync && !document.hidden && !$('modal').classList.contains('open')) cloudSync(); }, 180000);
 
 // service worker
