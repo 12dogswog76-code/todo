@@ -2168,7 +2168,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v195';
+const APP_VER = 'v196';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8481,7 +8481,7 @@ function drawBoo() {
 // «в среднем до S» и «круток подряд без S-ранга».
 // Игра не отдаёт историю круток наружу. Но когда открываешь в ней «Записи
 // сигналов», клиент ходит на сервер по адресу с временным ключом authkey, и
-// этот адрес оседает в локальном кеше игры. Скрипт get-signal-link.ps1
+// этот адрес оседает в локальном кеше игры. Скрипт zzz-signal.ps1
 // достаёт его и кладёт в буфер, а трекер по этой ссылке читает историю через
 // свой воркер — напрямую из браузера нельзя, у серверов игры нет CORS.
 //
@@ -8549,7 +8549,7 @@ function pullStat(kind) {
 async function pullsImport() {
   const inp = $('pullUrl'), msg = t => { const e = $('pullMsg'); if (e) e.innerHTML = t; };
   const url = (inp && inp.value || '').trim();
-  if (!url) { msg('<b>Вставь ссылку</b>, её даёт скрипт get-signal-link.ps1.'); return; }
+  if (!url) { msg('<b>Вставь ссылку</b>, её даёт скрипт zzz-signal.ps1.'); return; }
   if (url.indexOf('authkey') < 0) { msg('<b>В ссылке нет authkey</b> — это не та ссылка.'); return; }
   const btn = $('pullGo');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ гружу…'; }
@@ -8823,7 +8823,7 @@ function drawPulls() {
     '<span id="pullMsg">' + (PULLS.list.length
       ? 'В истории ' + PULLS.list.length + ' ' + plural(PULLS.list.length, 'крутка', 'крутки', 'круток') +
         (PULLS.at ? ' · обновлено ' + new Date(PULLS.at).toLocaleDateString('ru-RU') : '')
-      : 'Запусти <b>get-signal-link.ps1</b> при открытых «Записях сигналов» — ' +
+      : 'Запусти <b>zzz-signal.ps1</b> при открытых «Записях сигналов» — ' +
         'он положит ссылку в буфер.') + '</span>' +
     '</div>';
 
@@ -10094,7 +10094,11 @@ function runStars(n, max) {
   n = +n || 0; max = +max || 3;
   return '<span class="rn-st">' + '★'.repeat(n) + '<i>' + '★'.repeat(Math.max(0, max - n)) + '</i></span>';
 }
-function runDate(s) { return String(s || '').slice(5, 10).replace('-', '.'); }
+// «2026-08-21 13:55» → «21.08»: хроника даёт год-месяц-день, а читаем мы иначе
+function runDate(s) {
+  const m = /^\d{4}-(\d{2})-(\d{2})/.exec(String(s || ''));
+  return m ? m[2] + '.' + m[1] : '';
+}
 function runPeriod(p) {
   return runDate(p.from) + ' – ' + runDate(p.to);
 }
@@ -10130,12 +10134,21 @@ function runsMem(p) {
     : '';
   return '<div class="rn-p">' +
     '<div class="rn-ph"><b>' + esc(runPeriod(p)) + '</b>' +
-      '<span>' + nfmt(p.score || total) + ' очков</span>' +
+      '<span>' + nfmt(p.score || total) + ' ' +
+        plural(p.score || total, 'очко', 'очка', 'очков') + '</span>' +
       runStars(p.star, ((p.runs || []).length || 3) * 3) + runRank(p.rank) + '</div>' +
     (p.runs || []).map(runsMemRow).join('') + hard +
     '</div>';
 }
 function runsShiyu(p) {
+  // Этажи без счёта в итог не идут: сумма периода складывается только из
+  // критических узлов (109 887 = ровно три верхних этажа). Хроника всё равно
+  // присылает и обычные — с нулём, без баффа и картинки босса. Показывать их
+  // нечем, поэтому прячем; если вдруг со счётом нет ни одного, оставляем как
+  // есть, чтобы период не превратился в пустую карточку.
+  const all = p.layers || [];
+  const lay = all.filter(l => (+l.score || 0) > 0);
+  p = Object.assign({}, p, { layers: lay.length ? lay : all });
   return '<div class="rn-p">' +
     '<div class="rn-ph"><b>' + esc(runPeriod(p)) + '</b>' +
       '<span>' + nfmt(p.score || 0) + (p.max ? ' из ' + nfmt(p.max) : '') + '</span>' +
