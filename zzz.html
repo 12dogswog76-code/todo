@@ -1081,11 +1081,24 @@
   .pl-ph span{font-size:11px;color:var(--tx3)}
   .pl-big{margin-left:auto;font-style:normal;font-size:15px;font-weight:800;color:var(--gold);
     border:1px solid #ffd54a4d;background:#ffd54a14;border-radius:9px;padding:3px 11px}
-  .pl-src{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
-  .pl-src span{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:10px;
-    background:#0b0d11;border:1px solid var(--line)}
-  .pl-src b{font-size:14px;font-weight:700}
-  .pl-src i{font-style:normal;font-size:9.5px;color:var(--tx3);letter-spacing:.3px}
+  .pl-pass{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px;
+    padding:8px 10px;border-radius:10px;background:#0b0d11;border:1px solid var(--line)}
+  .pl-pass label{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px}
+  .pl-pass input[type=checkbox]{width:15px;height:15px;accent-color:var(--acc);cursor:pointer}
+  .pl-pf{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--tx3)}
+  .pl-pf input,.pl-pf select{background:var(--pan2);border:1px solid var(--line);color:var(--tx2);
+    border-radius:7px;padding:3px 6px;font-size:10.5px;font-family:inherit}
+  .pl-pass i{font-style:normal;font-size:10.5px;color:var(--tx3);margin-left:auto}
+  .pl-rows{display:flex;flex-direction:column;margin-bottom:10px}
+  .pl-row{display:flex;align-items:baseline;gap:8px;padding:5px 0;font-size:11.5px}
+  .pl-row+.pl-row{border-top:1px solid #ffffff08}
+  .pl-row b{font-weight:600;color:var(--tx2);flex:none}
+  .pl-row s{text-decoration:none;font-size:10px;color:var(--tx3);min-width:0;overflow:hidden;
+    white-space:nowrap;text-overflow:ellipsis}
+  .pl-row u{text-decoration:none;margin-left:auto;font-weight:700;flex:none}
+  .pl-sum{border-top:1px solid var(--line)!important;margin-top:3px;padding-top:7px}
+  .pl-sum u{color:var(--gold);font-size:13px}
+  .pl-note{font-size:10.5px;line-height:1.55;color:var(--tx3);margin-top:8px}
   .pl-acts{display:flex;flex-direction:column;gap:4px}
   .pl-act{display:flex;align-items:baseline;gap:8px;font-size:11.5px}
   .pl-act b{font-weight:600;color:var(--tx2);min-width:0;overflow:hidden;
@@ -1095,7 +1108,10 @@
   .pl-verdict{margin-top:10px;font-size:11.5px;line-height:1.55;color:var(--warn);
     background:#fbbf240f;border:1px solid #fbbf2426;border-radius:10px;padding:8px 10px}
   .pl-verdict.ok{color:#a7f3c0;background:#4ade800f;border-color:#4ade8026}
-  @media (max-width:560px){ .pl-src{grid-template-columns:1fr 1fr} }
+  @media (max-width:560px){
+    .pl-pass i{margin-left:0;flex-basis:100%}
+    .pl-row s{display:none}
+  }
   .pl-pity{display:flex;align-items:center;gap:10px}
   .pl-bar{flex:1;height:8px;border-radius:20px;background:#ffffff10;overflow:hidden}
   .pl-bar i{display:block;height:100%;border-radius:20px;background:var(--acc);
@@ -2168,7 +2184,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v196';
+const APP_VER = 'v197';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6700,6 +6716,7 @@ function payload() {
            hist: hist, boo: (ui && ui.boo) || {}, booT: (ui && ui.booT) || 0,
            booInfo: (ui && ui.booInfo) || {},
            cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
+           pass: (ui && ui.pass) || null,
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            pullsFull: !!(PULLS && PULLS.full),
            chron: (CHRON && CHRON.log) || [], chronT: (CHRON && CHRON.at) || 0,
@@ -6895,6 +6912,20 @@ function mergeProg(remote) {
       runsSave();
       changed = true;
       if (menuCur === 'end') drawEndgame();
+    }
+  }
+  // Пропуск: покупают его на одном устройстве, а прогноз смотрят на любом.
+  // Побеждает тот, у кого срок кончается позже — снявший галочку по ошибке
+  // ничего не ломает, а купивший продление доедет.
+  if (remote.pass && remote.pass.on) {
+    const mine = (ui.pass && ui.pass.on) ? ui.pass : null;
+    const endOf = p => p && p.from ? (dayOf(p.from) || { getTime: () => 0 }).getTime() +
+                                     (p.months || 1) * 30 * 86400000 : 0;
+    if (!mine || endOf(remote.pass) > endOf(mine)) {
+      ui.pass = remote.pass;
+      try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+      changed = true;
+      if (menuCur === 'pull') drawPulls();
     }
   }
   if (Array.isArray(remote.cmpList) && (remote.cmpT || 0) > (ui.cmpT || 0)) {
@@ -8758,6 +8789,64 @@ function planPatchEnd() {
   });
   return end;
 }
+// ── месячный пропуск ──
+// Даёт 90 полихромов в день сверх ежедневок. Покупается на месяц, но берут его
+// и на несколько сразу, поэтому храним дату покупки и число месяцев, а не
+// «включён/выключен»: иначе прогноз врал бы после того, как пропуск кончился,
+// а галочку снять забыли.
+const PASS_POLY = 90;
+function passOf() {
+  const p = (ui && ui.pass) || null;
+  return { on: !!(p && p.on), from: (p && p.from) || '', months: (p && p.months) || 1 };
+}
+// Месяц у пропуска — 30 дней, как в игре, а не календарный.
+function passEnd() {
+  const p = passOf();
+  const d = p.on && p.from ? dayOf(p.from) : null;
+  return d ? d.getTime() + p.months * 30 * 86400000 : 0;
+}
+function passSave(patch) {
+  ui.pass = Object.assign(passOf(), patch);
+  try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+  scheduleSync();
+}
+
+// ── что даёт игра за неделю и за период ──
+// Числа из игры: недельные задания «Энигма лабиринта» и задания периода
+// сбрасываются в понедельник, эндгейм — со сменой периода, раз в две недели.
+const WEEK_SRC = [
+  { k: 'enigma', n: 'Энигма лабиринта', v: 160 },
+  { k: 'task',   n: 'Задания периода',  v: 60  }
+];
+const END_SRC = { mem: 300, shiyu: 780 };
+
+// Сброс недели в понедельник. Считаем, сколько раз он случится до конца патча,
+// плюс текущая неделя: её награды ещё можно взять, если не взял.
+function weeksLeft(now, end) {
+  let n = 1;                       // текущая неделя
+  const d = new Date(now * 1000);
+  d.setHours(4, 0, 0, 0);
+  // ближайший понедельник после сегодняшнего дня
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+  while (d.getTime() / 1000 <= end) { n++; d.setDate(d.getDate() + 7); }
+  return n;
+}
+// Сколько раз до конца патча сменится период эндгейма. Даты берём из архива
+// боёв — там лежат настоящие сроки, а не «примерно раз в две недели». Если
+// архив пуст, считаем по две недели от сегодня.
+function endLeft(kind, now, end) {
+  const last = runsList(kind)[0];
+  let to = last && last.to ? dayOf(String(last.to).slice(0, 10)) : null;
+  if (!to) return end ? Math.max(1, Math.round((end - now) / 86400 / 14)) : 1;
+  // Текущий период считаем только если он ещё не закрыт полностью: за
+  // пройденный награда уже забрана, и складывать её в прогноз — вранье.
+  // Штурм закрыт на девяти звёздах (три боя по три), Шиюй — на пятом этаже.
+  const done = kind === 'mem' ? (last.star || 0) >= 9 : !!last.pass5;
+  let t = Math.floor(to.getTime() / 1000), n = done ? 0 : 1;
+  while (t < end) { t += 14 * 86400; n++; }
+  return n;
+}
+
 function planCalc() {
   if (!PLAN || !PLAN.acts) return null;
   const now = Math.floor(Date.now() / 1000);
@@ -8766,9 +8855,30 @@ function planCalc() {
   const evt = live.reduce((s, a) => s + ((a.all || 0) - (a.got || 0)), 0);
   const end = planPatchEnd();
   const days = end ? Math.max(0, Math.ceil((end - now) / 86400)) : 0;
-  const daily = days * DAILY_POLY;
-  return { live: live, evt: evt, days: days, end: end, daily: daily,
-           poly: evt + daily, pulls: Math.floor((evt + daily) / PULL_COST) };
+
+  // дни, которые попадают и в остаток патча, и в срок пропуска
+  const pe = passEnd();
+  const passDays = pe ? Math.max(0, Math.min(days, Math.ceil((pe - Date.now()) / 86400000))) : 0;
+
+  const weeks = end ? weeksLeft(now, end) : 0;
+  const memN = end ? endLeft('mem', now, end) : 0;
+  const shN = end ? endLeft('shiyu', now, end) : 0;
+
+  const rows = [
+    { n: 'Ежедневные задания', d: DAILY_POLY + ' × ' + days + ' дн.', v: days * DAILY_POLY },
+    { n: 'Энигма лабиринта', d: '160 × ' + weeks + ' нед.', v: weeks * WEEK_SRC[0].v },
+    { n: 'Задания периода', d: '60 × ' + weeks + ' нед.', v: weeks * WEEK_SRC[1].v },
+    { n: 'Оборона Шиюй', d: '780 × ' + shN, v: shN * END_SRC.shiyu },
+    { n: 'Опасный штурм', d: '300 × ' + memN, v: memN * END_SRC.mem },
+    { n: 'События', d: 'точно из хроники', v: evt, exact: true }
+  ];
+  if (passDays) rows.splice(1, 0,
+    { n: 'Месячный пропуск', d: PASS_POLY + ' × ' + passDays + ' дн.', v: passDays * PASS_POLY });
+
+  const poly = rows.reduce((s, r) => s + r.v, 0);
+  return { live: live, evt: evt, days: days, end: end, weeks: weeks,
+           rows: rows, poly: poly, pulls: Math.floor(poly / PULL_COST),
+           passDays: passDays, passEnd: pe };
 }
 function planDate(ts) {
   return ts ? new Date(ts * 1000).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) : '';
@@ -8786,22 +8896,44 @@ function drawPlan() {
   const need = st ? Math.max(0, ex.pity - st.pity) : 0;
   const enough = st ? c.pulls >= need : null;
 
+  const p = passOf();
+  const pe = passEnd();
+  const passRow = '<div class="pl-pass">' +
+    '<label><input type="checkbox" id="passOn"' + (p.on ? ' checked' : '') + '>' +
+      '<span>Месячный пропуск</span></label>' +
+    (p.on
+      ? '<span class="pl-pf">куплен <input type="date" id="passFrom" value="' + esc(p.from) + '">' +
+        'на <select id="passM">' + [1, 2, 3, 6, 12].map(m =>
+          '<option value="' + m + '"' + (p.months === m ? ' selected' : '') + '>' + m + ' мес.</option>').join('') +
+        '</select></span>' +
+        (pe ? '<i>' + (pe > Date.now()
+          ? 'действует до ' + esc(new Date(pe).toLocaleDateString('ru-RU'))
+          : 'истёк ' + esc(new Date(pe).toLocaleDateString('ru-RU'))) + '</i>' : '')
+      : '<i>+' + PASS_POLY + ' полихромов в день</i>') +
+    '</div>';
+
   return '<div class="pl-plan">' +
     '<div class="pl-ph"><b>До конца патча</b>' +
       '<span>' + (c.days ? 'осталось ' + c.days + ' ' + plural(c.days, 'день', 'дня', 'дней') +
         ', до ' + esc(planDate(c.end)) : 'срок патча неизвестен') + '</span>' +
       '<u class="pl-big">+' + c.pulls + ' ' + plural(c.pulls, 'крутка', 'крутки', 'круток') + '</u>' +
     '</div>' +
-    '<div class="pl-src">' +
-      '<span><b>' + nfmt(c.evt) + '</b><i>из событий, точно</i></span>' +
-      '<span><b>' + nfmt(c.daily) + '</b><i>ежедневки, ' + DAILY_POLY + '/день</i></span>' +
-      '<span><b>' + nfmt(c.poly) + '</b><i>полихромов всего</i></span>' +
+    passRow +
+    '<div class="pl-rows">' + c.rows.filter(r => r.v).map(r =>
+      '<div class="pl-row"><b>' + esc(r.n) + '</b><s>' + esc(r.d) + '</s>' +
+        '<u>' + nfmt(r.v) + '</u></div>').join('') +
+      '<div class="pl-row pl-sum"><b>Полихромов всего</b><s></s><u>' + nfmt(c.poly) + '</u></div>' +
     '</div>' +
     (c.live.length ? '<div class="pl-acts">' + c.live.map(a =>
       '<div class="pl-act"><b>' + esc(a.n) + '</b>' +
         '<i>' + nfmt((a.all || 0) - (a.got || 0)) + ' из ' + nfmt(a.all || 0) +
         (a.to ? ' · до ' + esc(planDate(a.to)) : '') + '</i></div>').join('') + '</div>'
       : '<div class="pl-act" style="opacity:.7"><b>Все награды за события забраны</b></div>') +
+    '<div class="pl-note">События — точно из хроники. Остальное по нормам игры: ' +
+      'ежедневки и пропуск за день, энигма и задания периода за неделю (сброс в ' +
+      'понедельник), эндгейм — за период. Пройденный эндгейм не считается: награда ' +
+      'уже забрана. Не учтены почта, магазин и компенсации, поэтому итог — ' +
+      'нижняя граница.</div>' +
     (st ? '<div class="pl-verdict' + (enough ? ' ok' : '') + '">' +
       (enough
         ? 'На эксклюзивном канале до гаранта ' + need + ' — этого хватит с запасом в ' +
@@ -8893,6 +9025,15 @@ function drawPulls() {
   pullBind();
 }
 function pullBind() {
+  // Поля пропуска. При включении подставляем сегодняшний день: чаще всего его
+  // и покупают в день, когда вспомнили про галочку.
+  if ($('passOn')) $('passOn').onchange = e => {
+    passSave({ on: e.target.checked ? 1 : 0,
+               from: passOf().from || ymd(new Date()) });
+    drawPulls();
+  };
+  if ($('passFrom')) $('passFrom').onchange = e => { passSave({ from: e.target.value }); drawPulls(); };
+  if ($('passM')) $('passM').onchange = e => { passSave({ months: +e.target.value || 1 }); drawPulls(); };
   if ($('pullGo')) $('pullGo').onclick = pullsImport;
   const wipe = $('pullWipe');
   if (wipe) wipe.onclick = () => {
