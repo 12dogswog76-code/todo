@@ -985,12 +985,21 @@
   .pl-how summary h5{margin:0}
   .pl-how summary::after{content:'▾';margin-left:6px;color:var(--tx3);font-size:11px}
   .pl-how[open] summary::after{content:'▴'}
-  .pl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
-  .pl-card{padding:12px 14px 13px;border-radius:14px;border:1px solid var(--line);
-    background:linear-gradient(120deg,var(--pan2),var(--pan))}
-  .pl-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  /* align-items:stretch, чтобы соседние карточки были одной высоты, а внутри
+     карточки блоки шли колонкой — тогда ряды значков внизу встают на одной
+     линии в обеих колонках. */
+  .pl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));
+    gap:10px;align-items:stretch}
+  .pl-card{display:flex;flex-direction:column;padding:12px 14px 13px;border-radius:14px;
+    border:1px solid var(--line);background:linear-gradient(120deg,var(--pan2),var(--pan))}
+  .pl-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
   .pl-head b{font-size:13px;color:var(--tx)}
   .pl-head i{font-style:normal;font-size:10.5px;color:var(--tx3)}
+  /* гарант: золотом, а не тревожным красным — это же хорошая новость */
+  .pl-guar{margin-left:auto;text-decoration:none;font-size:10px;font-weight:800;
+    letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:20px;
+    color:#3b2c00;background:linear-gradient(135deg,#ffe066,var(--gold) 55%,#e0a800);
+    box-shadow:0 0 12px #ffd54a33}
   /* полоса пити: желтеет на мягком пити, когда шанс резко растёт */
   .pl-pity{display:flex;align-items:center;gap:10px}
   .pl-bar{flex:1;height:8px;border-radius:20px;background:#ffffff10;overflow:hidden}
@@ -999,16 +1008,21 @@
   .pl-num{flex:none;font-variant-numeric:tabular-nums}
   .pl-num b{font-size:18px;color:var(--tx)}
   .pl-num span{font-size:11px;color:var(--tx3)}
-  .pl-facts{display:flex;gap:14px;flex-wrap:wrap;margin-top:11px}
-  .pl-facts span{display:flex;flex-direction:column;line-height:1.25}
-  .pl-facts b{font-size:14px;color:var(--tx2);font-variant-numeric:tabular-nums}
-  .pl-facts i{font-style:normal;font-size:9.5px;color:var(--tx3)}
-  .pl-facts .warn b{color:var(--gold)}
-  .pl-facts .pl-of{font-size:10px;color:var(--tx3);font-weight:500}
+  /* Сетка, а не flex: подписи разной длины иначе съезжают по вертикали, и
+     строка выглядит рваной. Четыре равные колонки, подписи в одну строку. */
+  .pl-facts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .pl-facts span{display:flex;flex-direction:column;gap:2px;line-height:1.15;min-width:0}
+  .pl-facts b{font-size:15px;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .pl-facts b u{text-decoration:none;font-size:10.5px;color:var(--tx3);font-weight:600}
+  .pl-facts i{font-style:normal;font-size:9.5px;color:var(--tx3);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
   /* Последние S-ранги значками, как в игре: обводка показывает исход 50/50,
      число в углу — на каком пити выпало. */
-  .pl-s{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:11px;
+  /* margin-top:auto прижимает ряд значков к низу карточки — так он совпадает
+     по высоте с соседней карточкой, даже если выше текста меньше */
+  .pl-s{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:13px;
     border-top:1px solid var(--line)}
+  .pl-s:not(:empty){margin-top:14px}
   .pl-si{position:relative;width:44px;height:44px;flex:none;border-radius:50%;
     background:#ffffff08;border:2px solid var(--line);transition:.14s}
   .pl-si:hover{transform:translateY(-2px)}
@@ -1024,7 +1038,10 @@
     font-variant-numeric:tabular-nums}
   .pl-si.won{border-color:var(--acc)} .pl-si.won b{color:var(--acc);border-color:#4ade8055}
   .pl-si.lost{border-color:#e5484d88} .pl-si.lost b{color:#f0787c;border-color:#e5484d55}
-  @media(max-width:760px){ .pl-list{grid-template-columns:1fr} }
+  @media(max-width:760px){
+    .pl-list{grid-template-columns:1fr}
+    .pl-facts{grid-template-columns:repeat(2,1fr);gap:10px}
+  }
 
   /* ── снаряжение: движки и комплекты ── */
   .gr-list{display:flex;flex-direction:column;gap:3px}
@@ -2056,7 +2073,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v189';
+const APP_VER = 'v190';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8362,23 +8379,27 @@ function drawPulls() {
     if (!st.total) return '';
     const left = Math.max(0, k.pity - st.pity);
     const soft = st.pity >= k.soft;
+    // Гарант — в шапку, а не в строку фактов: там он ломал сетку, из-за чего
+    // подписи и ряды значков в соседних карточках вставали на разной высоте.
     return '<div class="pl-card">' +
       '<div class="pl-head"><b>' + esc(k.n) + '</b>' +
         '<i>' + st.total + ' ' + plural(st.total, 'крутка', 'крутки', 'круток') +
-        (st.first ? ' · с ' + pullDate(st.first) : '') + '</i></div>' +
+        (st.first ? ' · с ' + pullDate(st.first) : '') + '</i>' +
+        (st.guar ? '<u class="pl-guar" title="Следующий S-ранг гарантированно ' +
+          'лимитированный — половинка уже проиграна">гарант</u>' : '') + '</div>' +
       '<div class="pl-pity">' +
         '<div class="pl-bar"><i style="width:' + Math.min(100, st.pity / k.pity * 100) + '%' +
           (soft ? ';background:var(--gold)' : '') + '"></i></div>' +
         '<div class="pl-num"><b>' + st.pity + '</b><span>/ ' + k.pity + '</span></div>' +
       '</div>' +
+      // Ровно четыре колонки во всех карточках: иначе сетка разъезжается и
+      // ряды значков внизу встают на разной высоте.
       '<div class="pl-facts">' +
         '<span><b>' + left + '</b><i>до гаранта</i></span>' +
-        '<span><b>' + st.aPity + '<span class="pl-of">/10</span></b><i>A-ранг</i></span>' +
+        '<span><b>' + st.aPity + '<u>/10</u></b><i>A-ранг</i></span>' +
         '<span><b>' + (st.avg || '—') + '</b><i>средний пити</i></span>' +
-        '<span><b>' + st.s.length + '</b><i>S-рангов</i></span>' +
-        (k.half ? '<span class="' + (st.guar ? 'warn' : '') + '"><b>' +
-          (st.guar ? 'да' : st.won + '/' + (st.won + st.lost)) + '</b><i>' +
-          (st.guar ? 'гарант' : 'выиграно 50/50') + '</i></span>' : '') +
+        '<span><b>' + (k.half ? st.won + '<u>/' + (st.won + st.lost) + '</u>' : st.s.length) +
+          '</b><i>' + (k.half ? 'выиграно 50/50' : 'S-рангов') + '</i></span>' +
       '</div>' +
       (st.s.length ? '<div class="pl-s">' + st.s.slice(-10).reverse().map(z => {
         const pic = pullPic(z.n, z.iid);
