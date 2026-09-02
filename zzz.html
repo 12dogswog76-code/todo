@@ -961,6 +961,8 @@
   .boo.on .boo-t b{color:var(--tx)}
   .boo-t i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:1px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .boo-lv{flex:none;font-size:9.5px;color:var(--tx3);white-space:nowrap}
+  .boo-lv b{color:var(--gold);margin-left:3px}
   .boo-r{flex:none;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:20px;
     border:1px solid var(--line)}
   .boo-r.rs{color:var(--gold);border-color:#ffd54a44;background:#ffd54a12}
@@ -2101,7 +2103,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v192';
+const APP_VER = 'v193';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6019,6 +6021,25 @@ function hoyoNorm(a) {
   };
 }
 
+// Банбу из хроники: имена приходят английские — те же ключи, что в
+// справочнике, поэтому отметки «есть у меня» проставляются сами. Уровень и
+// ранг храним отдельно от отметок: отметку игрок может снять руками, а
+// уровень — это факт из игры.
+function applyBuddy(list) {
+  if (!Array.isArray(list) || !list.length) return 0;
+  if (!ui.boo) ui.boo = {};
+  if (!ui.booInfo) ui.booInfo = {};
+  let n = 0;
+  list.forEach(b => {
+    const nm = String((b && b.n) || '').trim();
+    if (!nm) return;
+    if (!ui.boo[nm]) { ui.boo[nm] = 1; n++; }
+    ui.booInfo[nm] = { l: +b.lvl || 0, s: +b.star || 0, r: b.r || '' };
+  });
+  ui.booT = Date.now();
+  save();
+  return n;
+}
 function applyHoyo(raw) {
   const av = hoyoNorm(raw);
   const a = DB.byId[av.id];
@@ -6488,6 +6509,7 @@ $('hoyoGo').onclick = async () => {
     const a = applyHoyo(av);
     if (a) done.push(a.ru); else skip.push(av.id);
   });
+  const buddyN = applyBuddy(data.buddy);
   // чужой аккаунт HoYoLab отдаёт без характеристик дисков — предупреждаем честно
   const thin = data.avatars.length && !data.avatars.some(av =>
     (av.discs || []).some(d => d && d.main));
@@ -6532,6 +6554,7 @@ $('hoyoGo').onclick = async () => {
 
   const still = thin && !fromEnka;
   msg.innerHTML = '<b>Готово.</b> Загружено агентов: <b>' + done.length + '</b>' +
+    (buddyN ? ', отмечено банбу: <b>' + buddyN + '</b>' : '') +
     (fromEnka ? ', из них с характеристиками дисков: <b>' + fromEnka + '</b>' : '') +
     ' <span style="color:var(--ok)">· хроника HoYoLab' + (fromEnka ? ' + витрина Enka' : '') + '</span>' +
     (thin && fromEnka ? '<br><span style="color:var(--tx3)">У остальных видны уровень, ядро, навыки, ' +
@@ -6610,6 +6633,7 @@ function payload() {
   // это данные аккаунта, их терять нельзя.
   return { v: 1, prog: prog, uid: localStorage.getItem(LS + '_uid') || '',
            hist: hist, boo: (ui && ui.boo) || {}, booT: (ui && ui.booT) || 0,
+           booInfo: (ui && ui.booInfo) || {},
            cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            pullsFull: !!(PULLS && PULLS.full),
@@ -6746,6 +6770,7 @@ function mergeProg(remote) {
   if (remote.boo && (remote.booT || 0) > (ui.booT || 0)) {
     ui.boo = remote.boo;
     ui.booT = remote.booT || 0;
+    if (remote.booInfo) ui.booInfo = remote.booInfo;
     try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
     changed = true;
   }
@@ -8311,6 +8336,13 @@ function drawBoo() {
               '<b>' + esc(booRu(r.b.n)) + '</b>' +
               '<i>' + (r.cond.t || 'без условия') + '</i>' +
             '</div>' +
+            // уровень и ранг приходят из хроники — показываем их у своих
+            ((ui.booInfo && ui.booInfo[r.b.n] && r.have)
+              ? '<span class="boo-lv" title="Уровень и ранг из игры">ур.' +
+                  (ui.booInfo[r.b.n].l || 0) +
+                  (ui.booInfo[r.b.n].s > 1 ? '<b>★' + ui.booInfo[r.b.n].s + '</b>' : '') +
+                '</span>'
+              : '') +
             '<span class="boo-r ' + (r.b.r === 'S' ? 'rs' : 'ra') + '">' + esc(r.b.r) + '</span>' +
             (r.fit ? '<span class="boo-fit" title="Столько твоих составов включают его пассивку">' +
               r.fit + '</span>' : '') +
@@ -8324,7 +8356,9 @@ function drawBoo() {
         '</div>';
       }).join('') + '</div>';
 
-  h += '<div class="hint">Клик по карточке раскрывает пассивку, галочка справа отмечает, ' +
+  h += '<div class="hint">Отметки проставляются сами при импорте из хроники — там есть ' +
+    'список банбу аккаунта с уровнем и рангом. ' +
+    'Клик по карточке раскрывает пассивку, галочка справа отмечает, ' +
     'что банбу у тебя есть — эти отметки едут в облако. ' +
     'Число рядом: сколько твоих собираемых составов включают его пассивку. ' +
     'Условия и список — с <a href="https://www.prydwen.gg/zenless/bangboo" target="_blank" ' +
