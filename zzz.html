@@ -144,6 +144,10 @@
   /* Правило display:inline-flex сильнее браузерного [hidden]{display:none}, и
      пока данные не приехали, в шапке висел пустой овал. */
   .logo .bat[hidden]{display:none}
+  .autoimp{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;
+    color:var(--tx2);cursor:pointer}
+  .autoimp input{width:15px;height:15px;accent-color:var(--acc);cursor:pointer;flex:none}
+  .autoimp i{font-style:normal;font-size:10.5px;color:var(--tx3);margin-left:auto}
   .logo .bat:hover{border-color:var(--ok);background:#4ade801a}
   .logo .bat.err{color:var(--tx3)}
   .logo .bat.err svg{color:var(--tx3);opacity:.6}
@@ -2006,6 +2010,9 @@
     <div class="hint" id="enkaMsg">
       Заберутся все агенты аккаунта, а характеристики — прямо из игры, без пересчёта.
     </div>
+    <label class="autoimp"><input type="checkbox" id="autoImp">
+      <span>Обновлять самому раз в сутки</span>
+      <i id="autoImpWhen"></i></label>
 
     <details class="more" id="ownBox">
       <summary>Свой доступ HoYoLab — если хочешь статы всех дисков, а не только витрины</summary>
@@ -2206,7 +2213,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v201';
+const APP_VER = 'v202';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3395,9 +3402,10 @@ function boot() {
   if ($('appVer')) $('appVer').textContent = APP_VER;
   showWorkerVer();
   setNick();
-  // Батарея — единственное, что тянем при загрузке без спроса: запрос лёгкий,
-  // а смысл плашки в том, чтобы цифра была на виду сразу.
+  // Батарея — сразу: запрос лёгкий, а смысл плашки в том, чтобы цифра была на
+  // виду. Сверку аккаунта откладываем: пусть страница сперва отрисуется.
   noteAuto();
+  setTimeout(autoCheck, AUTOIMP_WAIT);
   ownerUI();
   renderFilters();
   render();
@@ -6561,6 +6569,13 @@ if ($('hoyoCkClear')) {
 }
 hoyoCkShow();
 
+if ($('autoImp')) $('autoImp').onchange = e => {
+  ui.autoImp = e.target.checked ? 1 : 0;
+  save();
+  refreshAutoImp();
+  if (e.target.checked) autoCheck();
+};
+
 $('hoyoGo').onclick = async () => {
   const uid = $('uidInput').value.trim().replace(/\D/g, '');
   const msg = $('enkaMsg');
@@ -6653,6 +6668,9 @@ $('hoyoGo').onclick = async () => {
   save();
   writeProg();
   chronScan();            // записать, что изменилось с прошлого импорта
+  // Ручной импорт считается за автоматический: незачем повторять то же самое
+  // через минуту фоном.
+  localStorage.setItem(LS_AUTOIMP, String(Date.now()));
   scheduleSync();
   render();
   refreshEnkaLinks();
@@ -7313,7 +7331,7 @@ function menuGo(k) {
   }
   $('menuBox').classList.add('open');
   menuDraw();
-  if (k === 'enka')   { refreshEnkaLinks(); drawMaint(); }
+  if (k === 'enka')   { refreshEnkaLinks(); drawMaint(); refreshAutoImp(); }
   if (k === 'cloud')  cloudUI();
   if (k === 'mod')    drawModTable();
   if (k === 'gear')   drawGear();
@@ -8777,6 +8795,103 @@ function pullHowto(open) {
     'только историю круток: ни аккаунта, ни почты, ни платежей он не касается. ' +
     'Историю читает <b>твой</b> воркер, больше она никуда не уходит.</p></details>';
 }
+// ─────────────── автоимпорт ───────────────
+// Журнал изменений и график истории живут ровно от импорта до импорта: не
+// нажал кнопку — событий нет, хотя в игре ты уже собрал новый диск.
+//
+// Хочется проверять часто, но полный импорт для этого не годится: он
+// опрашивает агентов поимённо, полсотни подзапросов за раз. Раз в пять минут
+// это тринадцать тысяч обращений к HoYoLab в сутки — гарантированный упор в
+// суточный лимит, а то и блокировка аккаунта за автоматизацию.
+//
+// Поэтому в два уровня:
+//   лёгкая сверка  раз в 10 минут — ОДИН запрос (/hoyo/<uid> без режима, это
+//                  список агентов с уровнем и М-рангом). Дёшево, можно часто.
+//   полный импорт  когда сверка заметила разницу, либо раз в три часа — он
+//                  один видит диски, навыки и характеристики.
+// Итого при постоянно открытой вкладке около 150 лёгких запросов и 8 полных в
+// сутки вместо тринадцати тысяч.
+const LS_AUTOIMP = LS + '_autoimp';
+const LS_AUTOCHK = LS + '_autochk';
+const AUTOIMP_EVERY = 3 * 3600 * 1000;    // полный импорт
+const AUTOCHK_EVERY = 10 * 60 * 1000;     // лёгкая сверка
+const AUTOIMP_WAIT = 4000;
+function autoImpOn() { return !ui || ui.autoImp !== 0; }   // по умолчанию включён
+function autoImpAt() { return +localStorage.getItem(LS_AUTOIMP) || 0; }
+
+// Слепок того, что видно в лёгком ответе: уровень и М-ранг каждого агента.
+// Сравниваем строку со строкой — этого хватает, чтобы поймать и прокачку, и
+// нового агента, и мыслительную картину.
+function autoSig(list) {
+  return (list || []).map(a => a.id + ':' + (a.level || 0) + ':' + (a.rank || 0))
+    .sort().join(',');
+}
+function autoSigLocal() {
+  return Object.keys(prog).filter(id => prog[id] && prog[id].have)
+    .map(id => id + ':' + (prog[id].lvl || 0) + ':' + (prog[id].mind || 0))
+    .sort().join(',');
+}
+async function autoCheck() {
+  const uid = localStorage.getItem(LS + '_uid') || '';
+  if (!uid || !autoImpOn()) return;
+  const last = +localStorage.getItem(LS_AUTOCHK) || 0;
+  if (Date.now() - last < AUTOCHK_EVERY) return;
+  localStorage.setItem(LS_AUTOCHK, String(Date.now()));
+
+  // пора и без того — не тратим лишний запрос на сверку
+  if (Date.now() - autoImpAt() >= AUTOIMP_EVERY) { autoImport(); return; }
+
+  const res = await apiFetch('/hoyo/' + uid,
+    { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 30000);
+  const d = res.ok ? res.data : null;
+  if (!d || d.error || !(d.avatars || []).length) return;
+  if (autoSig(d.avatars) !== autoSigLocal()) autoImport(true);
+}
+
+async function autoImport(force) {
+  const uid = localStorage.getItem(LS + '_uid') || '';
+  if (!uid || !autoImpOn()) return;
+  if (!force && Date.now() - autoImpAt() < AUTOIMP_EVERY) return;
+  localStorage.setItem(LS_AUTOIMP, String(Date.now()));
+
+  const who = $('whoAmI');
+  if (who) who.classList.add('busy');
+  try {
+    const res = await apiFetch('/hoyo/' + uid + '/full',
+      { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 120000);
+    const d = res.ok ? res.data : null;
+    // Молчим при любой беде: человек не просил этот запрос, и ругаться на него
+    // за протухшие cookie посреди просмотра сетки — грубо. Ручной импорт всё
+    // объяснит, если он понадобится.
+    if (!d || d.error || !(d.avatars || []).length) return;
+    let n = 0;
+    d.avatars.forEach(av => { if (applyHoyo(av)) n++; });
+    applyBuddy(d.buddy);
+    if (!n) return;
+    save();
+    writeProg();
+    chronScan(true);        // тихо: события в журнал, всплывашек не надо
+    scheduleSync();
+    render();
+    setNick(d.nick || '', uid);
+    if (menuCur === 'enka') refreshAutoImp();
+  } catch (e) {
+  } finally {
+    if (who) who.classList.remove('busy');
+  }
+}
+function refreshAutoImp() {
+  const box = $('autoImp');
+  if (box) box.checked = autoImpOn();
+  const w = $('autoImpWhen');
+  if (!w) return;
+  const at = autoImpAt();
+  w.textContent = !autoImpOn() ? '' :
+    (at ? 'последний раз ' + new Date(at).toLocaleString('ru-RU',
+            { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+        : 'ещё не запускался');
+}
+
 // ─────────────── батарея в шапке ───────────────
 // Из всей сводки хроники (`/note`) в трекере нужна одна цифра — батарея, и
 // нужна она на виду, а не разделом в меню: смотрят её мельком, чтобы понять,
@@ -10598,7 +10713,11 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
   if (sync) cloudSync();
   noteAuto();          // вернулись на вкладку — батарея уже другая
+  autoCheck();         // и в игре с прошлого раза могло что-то поменяться
 });
+// Вкладку держат открытой часами — проверяем и без переключений. Сам autoCheck
+// следит за частотой, поэтому будильник можно ставить хоть поминутно.
+setInterval(autoCheck, 60000);
 setInterval(() => { if (sync && !document.hidden && !$('modal').classList.contains('open')) cloudSync(); }, 180000);
 
 // service worker
