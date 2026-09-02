@@ -2045,7 +2045,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v186';
+const APP_VER = 'v187';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8180,38 +8180,54 @@ async function pullsImport() {
   msg(PULLS.list.length ? 'Догружаю новые крутки…'
                         : 'Читаю историю с серверов игры — в первый раз это до пары минут…');
   try {
-    const res = await apiFetch('/gacha', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url, since: since })
-    }, 180000);
-    if (!res.ok || !res.data || !res.data.list) {
-      const e = (res.data && res.data.error) || res.err || 'сервер не ответил';
-      msg('<b>Не вышло:</b> ' + esc(e) +
-        (String(e).indexOf('authkey') >= 0 || (res.data && res.data.retcode === -101)
-          ? '<br>Ключ протух — открой в игре «Записи сигналов» и прогони скрипт заново.'
-          : '<br>Если воркер старой версии, нужен маршрут <b>/api/zzz/gacha</b>.'));
-      return;
+    // Cloudflare не даёт одному вызову воркера больше полусотни исходящих
+    // запросов, а история в сотни круток по 5 записей на страницу столько и
+    // требует. Поэтому сервер отдаёт порцию и «продолжение», а мы зовём его
+    // снова, пока продолжение не кончится.
+    const got = [];
+    let cursor = null, by = {}, rounds = 0, capped = false;
+    for (; rounds < 40; rounds++) {
+      const res = await apiFetch('/gacha', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url, since: since, cursor: cursor })
+      }, 120000);
+      if (!res.ok || !res.data || !res.data.list) {
+        const e = (res.data && res.data.error) || res.err || 'сервер не ответил';
+        msg('<b>Не вышло:</b> ' + esc(e) +
+          (String(e).indexOf('authkey') >= 0 || (res.data && res.data.retcode === -101)
+            ? '<br>Ключ протух — открой в игре «Записи сигналов» и прогони скрипт заново.'
+            : (String(e).indexOf('subrequest') >= 0
+              ? '<br>Воркер старой версии — нужна 12-я, она разбивает работу на порции.'
+              : '<br>Если воркер старой версии, нужен маршрут <b>/api/zzz/gacha</b>.')));
+        return;
+      }
+      res.data.list.forEach(x => got.push(x));
+      Object.keys(res.data.by || {}).forEach(k => { by[k] = (by[k] || 0) + res.data.by[k]; });
+      cursor = res.data.next || null;
+      if (!cursor) break;
+      msg('Читаю историю… уже ' + got.length + ' ' +
+          plural(got.length, 'крутка', 'крутки', 'круток'));
     }
+    if (cursor) capped = true;      // не уложились даже за сорок заходов
+
     // Склейка по id: повторный импорт добавляет только новое, старое не трогает
     const have = {};
     PULLS.list.forEach(x => { have[x.id] = 1; });
     let add = 0;
-    res.data.list.forEach(x => { if (!have[x.id]) { PULLS.list.push(x); add++; } });
+    got.forEach(x => { if (!have[x.id]) { PULLS.list.push(x); add++; } });
     PULLS.list.sort((a, b) => String(b.id).localeCompare(String(a.id)));
     // История считается полной, когда прогон дошёл до конца: не упёрся в предел
     // страниц. С этого момента следующие импорты можно обрывать по since.
-    if (!res.data.capped) PULLS.full = true;
+    if (!capped) PULLS.full = true;
     pullsSave();
     drawPulls();
-    const by = res.data.by || {};
     const m = $('pullMsg');
     if (m) m.innerHTML = (add
       ? 'Добавлено круток: <b>' + add + '</b> · всего в истории ' + PULLS.list.length
       : 'Новых круток нет, всего в истории ' + PULLS.list.length) +
       (Object.keys(by).length ? ' · с сервера: ' +
         PULL_KINDS.map(k => (by[k.k] || 0)).join(' / ') + ' по каналам' : '') +
-      (res.data.capped ? '<br>Упёрлись в предел за один заход — нажми «Загрузить» ещё раз, ' +
-                         'догрузится остальное.' : '');
+      (capped ? '<br>История длинная, за раз не осилили — нажми «Загрузить» ещё раз.' : '');
   } catch (e) {
     msg('<b>Не вышло:</b> ' + esc((e && e.message) || e));
   } finally {
