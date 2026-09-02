@@ -2184,7 +2184,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v197';
+const APP_VER = 'v198';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6716,7 +6716,7 @@ function payload() {
            hist: hist, boo: (ui && ui.boo) || {}, booT: (ui && ui.booT) || 0,
            booInfo: (ui && ui.booInfo) || {},
            cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
-           pass: (ui && ui.pass) || null,
+           pass: (ui && ui.pass) || null, shop: (ui && ui.shop) || null,
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            pullsFull: !!(PULLS && PULLS.full),
            chron: (CHRON && CHRON.log) || [], chronT: (CHRON && CHRON.at) || 0,
@@ -6927,6 +6927,14 @@ function mergeProg(remote) {
       changed = true;
       if (menuCur === 'pull') drawPulls();
     }
+  }
+  // Магазин: отметка «куплено» за более поздний месяц — более свежая правда.
+  if (remote.shop && (!ui.shop || String(remote.shop.last || '') > String(ui.shop.last || '') ||
+      (!!remote.shop.on !== !!ui.shop.on && remote.shop.on))) {
+    ui.shop = Object.assign({}, ui.shop, remote.shop);
+    try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+    changed = true;
+    if (menuCur === 'pull') drawPulls();
   }
   if (Array.isArray(remote.cmpList) && (remote.cmpT || 0) > (ui.cmpT || 0)) {
     ui.cmpList = remote.cmpList;
@@ -8811,6 +8819,34 @@ function passSave(patch) {
   scheduleSync();
 }
 
+// ── магазин ──
+// Раз в месяц, со сбросом 1-го числа, в магазине берут пять круток на
+// эксклюзивный канал. Хроника про это не знает, поэтому отмечаем руками. Храним
+// месяц последней покупки, а не «куплено/нет»: 1-го числа отметка должна
+// сброситься сама, иначе о ней придётся помнить.
+const SHOP_PULLS = 5;
+function shopOf() {
+  const s = (ui && ui.shop) || null;
+  return { on: !!(s && s.on), last: (s && s.last) || '' };
+}
+function shopSave(patch) {
+  ui.shop = Object.assign(shopOf(), patch);
+  try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+  scheduleSync();
+}
+function monthKey(d) { return ymd(d || new Date()).slice(0, 7); }
+// Сколько раз ещё можно закупиться до конца патча: этот месяц, если не куплено,
+// плюс каждое первое число, которое успевает пройти.
+function shopLeft(end) {
+  const s = shopOf();
+  if (!s.on) return 0;
+  let n = s.last === monthKey() ? 0 : 1;
+  const d = new Date();
+  d.setDate(1); d.setHours(4, 0, 0, 0); d.setMonth(d.getMonth() + 1);
+  while (d.getTime() / 1000 <= end) { n++; d.setMonth(d.getMonth() + 1); }
+  return n;
+}
+
 // ── что даёт игра за неделю и за период ──
 // Числа из игры: недельные задания «Энигма лабиринта» и задания периода
 // сбрасываются в понедельник, эндгейм — со сменой периода, раз в две недели.
@@ -8872,6 +8908,11 @@ function planCalc() {
     { n: 'Опасный штурм', d: '300 × ' + memN, v: memN * END_SRC.mem },
     { n: 'События', d: 'точно из хроники', v: evt, exact: true }
   ];
+  // Магазинные крутки считаем в полихромах по их цене — иначе они не сложатся
+  // с остальным в одну сумму.
+  const shopN = end ? shopLeft(end) : 0;
+  if (shopN) rows.push({ n: 'Магазин', d: SHOP_PULLS + ' круток × ' + shopN,
+                         v: shopN * SHOP_PULLS * PULL_COST, shop: true });
   if (passDays) rows.splice(1, 0,
     { n: 'Месячный пропуск', d: PASS_POLY + ' × ' + passDays + ' дн.', v: passDays * PASS_POLY });
 
@@ -8912,13 +8953,25 @@ function drawPlan() {
       : '<i>+' + PASS_POLY + ' полихромов в день</i>') +
     '</div>';
 
+  const sh = shopOf();
+  const bought = sh.last === monthKey();
+  const shopRow = '<div class="pl-pass">' +
+    '<label><input type="checkbox" id="shopOn"' + (sh.on ? ' checked' : '') + '>' +
+      '<span>Крутки в магазине</span></label>' +
+    (sh.on
+      ? '<label class="pl-pf"><input type="checkbox" id="shopGot"' + (bought ? ' checked' : '') + '>' +
+        '<span>в этом месяце уже куплены</span></label>' +
+        '<i>' + SHOP_PULLS + ' круток, сброс 1-го числа</i>'
+      : '<i>' + SHOP_PULLS + ' круток раз в месяц, 1-го числа</i>') +
+    '</div>';
+
   return '<div class="pl-plan">' +
     '<div class="pl-ph"><b>До конца патча</b>' +
       '<span>' + (c.days ? 'осталось ' + c.days + ' ' + plural(c.days, 'день', 'дня', 'дней') +
         ', до ' + esc(planDate(c.end)) : 'срок патча неизвестен') + '</span>' +
       '<u class="pl-big">+' + c.pulls + ' ' + plural(c.pulls, 'крутка', 'крутки', 'круток') + '</u>' +
     '</div>' +
-    passRow +
+    passRow + shopRow +
     '<div class="pl-rows">' + c.rows.filter(r => r.v).map(r =>
       '<div class="pl-row"><b>' + esc(r.n) + '</b><s>' + esc(r.d) + '</s>' +
         '<u>' + nfmt(r.v) + '</u></div>').join('') +
@@ -8931,15 +8984,13 @@ function drawPlan() {
       : '<div class="pl-act" style="opacity:.7"><b>Все награды за события забраны</b></div>') +
     '<div class="pl-note">События — точно из хроники. Остальное по нормам игры: ' +
       'ежедневки и пропуск за день, энигма и задания периода за неделю (сброс в ' +
-      'понедельник), эндгейм — за период. Пройденный эндгейм не считается: награда ' +
-      'уже забрана. Не учтены почта, магазин и компенсации, поэтому итог — ' +
-      'нижняя граница.</div>' +
+      'понедельник), эндгейм — за период, магазин — за месяц. Пройденный эндгейм ' +
+      'не считается: награда уже забрана. Почта и компенсации не учтены.</div>' +
     (st ? '<div class="pl-verdict' + (enough ? ' ok' : '') + '">' +
       (enough
-        ? 'На эксклюзивном канале до гаранта ' + need + ' — этого хватит с запасом в ' +
+        ? 'На эксклюзивном канале до гаранта ' + need + ' — хватит с запасом в ' +
           (c.pulls - need) + '.'
-        : 'На эксклюзивном канале до гаранта ' + need + ' — не хватает ' + (need - c.pulls) +
-          '. Разницу добирают эндгейм, почта и магазин, их хроника не показывает.') +
+        : 'На эксклюзивном канале до гаранта ' + need + ' — не хватает ' + (need - c.pulls) + '.') +
       '</div>' : '') +
     '</div>';
 }
@@ -9034,6 +9085,12 @@ function pullBind() {
   };
   if ($('passFrom')) $('passFrom').onchange = e => { passSave({ from: e.target.value }); drawPulls(); };
   if ($('passM')) $('passM').onchange = e => { passSave({ months: +e.target.value || 1 }); drawPulls(); };
+  if ($('shopOn')) $('shopOn').onchange = e => { shopSave({ on: e.target.checked ? 1 : 0 }); drawPulls(); };
+  // Снятая галочка = «ещё не куплено», поэтому месяц просто стираем.
+  if ($('shopGot')) $('shopGot').onchange = e => {
+    shopSave({ last: e.target.checked ? monthKey() : '' });
+    drawPulls();
+  };
   if ($('pullGo')) $('pullGo').onclick = pullsImport;
   const wipe = $('pullWipe');
   if (wipe) wipe.onclick = () => {
