@@ -2045,7 +2045,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v185';
+const APP_VER = 'v186';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6544,6 +6544,7 @@ function payload() {
            hist: hist, boo: (ui && ui.boo) || {}, booT: (ui && ui.booT) || 0,
            cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
+           pullsFull: !!(PULLS && PULLS.full),
            t: Date.now() };
 }
 
@@ -6692,6 +6693,7 @@ function mergeProg(remote) {
     if (add) {
       PULLS.list.sort((a, b) => String(b.id).localeCompare(String(a.id)));
       PULLS.at = Math.max(PULLS.at || 0, remote.pullsT || 0);
+      if (remote.pullsFull) PULLS.full = true;
       try { localStorage.setItem(LS_PULLS, JSON.stringify(PULLS)); } catch (e) {}
       changed = true;
       if (menuCur === 'pull') drawPulls();
@@ -8162,11 +8164,19 @@ async function pullsImport() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ гружу…'; }
   // Самая свежая крутка по каждому каналу: сервер дойдёт до неё и остановится,
   // поэтому повторный импорт занимает секунды, а не минуты.
+  //
+  // Но слать это можно ТОЛЬКО если история заведомо полная. Иначе выходит так:
+  // в первый раз загрузилось пять верхних круток, дальше сервер видит их на
+  // первой же странице, честно останавливается — и дыра под ними никогда не
+  // заполнится. Поэтому флаг full ставится лишь после прогона, который дошёл
+  // до конца истории.
   const since = {};
-  PULLS.list.forEach(x => {
-    if (!x || !x.g) return;
-    if (!since[x.g] || String(x.id) > String(since[x.g])) since[x.g] = String(x.id);
-  });
+  if (PULLS.full) {
+    PULLS.list.forEach(x => {
+      if (!x || !x.g) return;
+      if (!since[x.g] || String(x.id) > String(since[x.g])) since[x.g] = String(x.id);
+    });
+  }
   msg(PULLS.list.length ? 'Догружаю новые крутки…'
                         : 'Читаю историю с серверов игры — в первый раз это до пары минут…');
   try {
@@ -8188,12 +8198,18 @@ async function pullsImport() {
     let add = 0;
     res.data.list.forEach(x => { if (!have[x.id]) { PULLS.list.push(x); add++; } });
     PULLS.list.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+    // История считается полной, когда прогон дошёл до конца: не упёрся в предел
+    // страниц. С этого момента следующие импорты можно обрывать по since.
+    if (!res.data.capped) PULLS.full = true;
     pullsSave();
     drawPulls();
+    const by = res.data.by || {};
     const m = $('pullMsg');
     if (m) m.innerHTML = (add
       ? 'Добавлено круток: <b>' + add + '</b> · всего в истории ' + PULLS.list.length
       : 'Новых круток нет, всего в истории ' + PULLS.list.length) +
+      (Object.keys(by).length ? ' · с сервера: ' +
+        PULL_KINDS.map(k => (by[k.k] || 0)).join(' / ') + ' по каналам' : '') +
       (res.data.capped ? '<br>Упёрлись в предел за один заход — нажми «Загрузить» ещё раз, ' +
                          'догрузится остальное.' : '');
   } catch (e) {
@@ -8235,6 +8251,8 @@ function drawPulls() {
   let h = '<div class="cmp-top">' +
     '<input type="text" id="pullUrl" placeholder="Ссылка из игры (её даёт zzz-signal.ps1)">' +
     '<button id="pullGo">Загрузить</button>' +
+    (PULLS.list.length ? '<button id="pullWipe" class="ghost2" title="Забыть всё и ' +
+      'загрузить историю заново">сбросить</button>' : '') +
     '<span id="pullMsg">' + (PULLS.list.length
       ? 'В истории ' + PULLS.list.length + ' ' + plural(PULLS.list.length, 'крутка', 'крутки', 'круток') +
         (PULLS.at ? ' · обновлено ' + new Date(PULLS.at).toLocaleDateString('ru-RU') : '')
@@ -8292,6 +8310,13 @@ function drawPulls() {
 }
 function pullBind() {
   if ($('pullGo')) $('pullGo').onclick = pullsImport;
+  const wipe = $('pullWipe');
+  if (wipe) wipe.onclick = () => {
+    if (!confirm('Забыть всю историю круток и загрузить её заново?')) return;
+    PULLS = { v: 1, list: [], at: 0, uid: '', full: false };
+    pullsSave();
+    drawPulls();
+  };
   if ($('pullUrl')) $('pullUrl').onkeydown = e => { if (e.key === 'Enter') pullsImport(); };
   const cp = $('pullCopy');
   if (cp) cp.onclick = () => {
