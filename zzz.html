@@ -2045,7 +2045,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v184';
+const APP_VER = 'v185';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8160,12 +8160,20 @@ async function pullsImport() {
   if (url.indexOf('authkey') < 0) { msg('<b>В ссылке нет authkey</b> — это не та ссылка.'); return; }
   const btn = $('pullGo');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ гружу…'; }
-  msg('Читаю историю с серверов игры, это до минуты…');
+  // Самая свежая крутка по каждому каналу: сервер дойдёт до неё и остановится,
+  // поэтому повторный импорт занимает секунды, а не минуты.
+  const since = {};
+  PULLS.list.forEach(x => {
+    if (!x || !x.g) return;
+    if (!since[x.g] || String(x.id) > String(since[x.g])) since[x.g] = String(x.id);
+  });
+  msg(PULLS.list.length ? 'Догружаю новые крутки…'
+                        : 'Читаю историю с серверов игры — в первый раз это до пары минут…');
   try {
     const res = await apiFetch('/gacha', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url })
-    }, 120000);
+      body: JSON.stringify({ url: url, since: since })
+    }, 180000);
     if (!res.ok || !res.data || !res.data.list) {
       const e = (res.data && res.data.error) || res.err || 'сервер не ответил';
       msg('<b>Не вышло:</b> ' + esc(e) +
@@ -8183,9 +8191,11 @@ async function pullsImport() {
     pullsSave();
     drawPulls();
     const m = $('pullMsg');
-    if (m) m.innerHTML = add
+    if (m) m.innerHTML = (add
       ? 'Добавлено круток: <b>' + add + '</b> · всего в истории ' + PULLS.list.length
-      : 'Новых круток нет, всего в истории ' + PULLS.list.length;
+      : 'Новых круток нет, всего в истории ' + PULLS.list.length) +
+      (res.data.capped ? '<br>Упёрлись в предел за один заход — нажми «Загрузить» ещё раз, ' +
+                         'догрузится остальное.' : '');
   } catch (e) {
     msg('<b>Не вышло:</b> ' + esc((e && e.message) || e));
   } finally {
@@ -8223,7 +8233,7 @@ function drawPulls() {
   const box = $('pullBox');
   if (!box) return;
   let h = '<div class="cmp-top">' +
-    '<input type="text" id="pullUrl" placeholder="Ссылка из игры (её даёт get-signal-link.ps1)">' +
+    '<input type="text" id="pullUrl" placeholder="Ссылка из игры (её даёт zzz-signal.ps1)">' +
     '<button id="pullGo">Загрузить</button>' +
     '<span id="pullMsg">' + (PULLS.list.length
       ? 'В истории ' + PULLS.list.length + ' ' + plural(PULLS.list.length, 'крутка', 'крутки', 'круток') +
