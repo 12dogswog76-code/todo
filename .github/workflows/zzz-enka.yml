@@ -1,0 +1,52 @@
+# Забирает данные с enka.network и кладёт их рядом с сайтом.
+#
+# Зачем: enka.network не отвечает на запросы из браузера с чужого домена, а публичные
+# прокси в части сетей закрыты. Здесь запрос делает сервер GitHub, у него ограничений нет.
+# Трекер потом читает готовый файл со своего домена — без CORS и без прокси.
+#
+# Настраивать ничего не нужно: профиль по умолчанию прописан в .github/scripts/zzz-enka.py.
+#
+# Добавить друга — Settings → Secrets and variables → Actions → вкладка Variables,
+# перечислить через запятую, позиции должны совпадать:
+#   ZZZ_UID   = 1502024259, 1300123456
+#   ZZZ_USER  = 12dogswog76, drug
+#   ZZZ_HASH  = 2gGW9D,
+# Заданные переменные важнее значений по умолчанию.
+#
+# Запускается сам каждые 6 часов и вручную кнопкой Run workflow.
+
+name: ZZZ · данные с Enka
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zzz-enka
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Забрать витрины и сборки
+        env:
+          ZZZ_UID:  ${{ vars.ZZZ_UID }}
+          ZZZ_USER: ${{ vars.ZZZ_USER }}
+          ZZZ_HASH: ${{ vars.ZZZ_HASH }}
+        run: python3 .github/scripts/zzz-enka.py
+
+      - name: Закоммитить, если поменялось
+        run: |
+          git config user.name  'zzz-enka-bot'
+          git config user.email 'actions@github.com'
+          git add zzz-enka.json
+          git diff --cached --quiet && { echo 'без изменений'; exit 0; }
+          git commit -m "ZZZ: данные с Enka $(date -u '+%Y-%m-%d %H:%M')"
+          git push

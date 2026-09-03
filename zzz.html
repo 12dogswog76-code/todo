@@ -2236,7 +2236,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v206';
+const APP_VER = 'v208';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6337,12 +6337,18 @@ function refreshEnkaLinks() {
 // на прежние запасные зеркала.
 // Адреса своего прокси по порядку предпочтения:
 //   1. маршрут на текущем домене — самый быстрый путь, без CORS;
-//   2. те же маршруты, но явно на alextask.ru и www.alextask.ru: маршрут воркера
+//   2. поддомен воркера api.alextask.ru. Маршрут на самом alextask.ru завести
+//      нельзя, не включив прокси Cloudflare для всего сайта, а сайт живёт на
+//      GitHub Pages, и при проксировании у него ломается продление
+//      сертификата. Поддомен эту связку не трогает вовсе: он ведёт прямо в
+//      воркер, а сайт остаётся на своих DNS.
+//   3. те же маршруты, но явно на alextask.ru и www.alextask.ru: маршрут воркера
 //      в Cloudflare заводится отдельно для каждого имени, и когда настроен только
 //      один из них, соседний молча отваливается;
-//   3. прямой адрес воркера — последний, потому что *.workers.dev у части
+//   4. прямой адрес воркера — последний, потому что *.workers.dev у части
 //      провайдеров просто не открывается (ERR_CONNECTION_RESET).
 const MYAPI = ['/api/zzz',
+               'https://api.alextask.ru/api/zzz',
                'https://alextask.ru/api/zzz',
                'https://www.alextask.ru/api/zzz',
                'https://alextask-push.12dogswog76.workers.dev/api/zzz']
@@ -6352,8 +6358,13 @@ const myApiUrls = tail => MYAPI.map(b => b + tail);
 
 // Какой из адресов ответил в прошлый раз. Мёртвый адрес иначе опрашивается снова
 // и снова, и каждый запрос ждёт таймаут — со стороны это выглядит как «сайт висит».
+// Ключ привязан к версии сайта: когда список адресов меняется (появился новый
+// поддомен, отвалился старый маршрут), запомненный выбор должен обнулиться.
+// Иначе вкладка так и будет ходить на прежний адрес — он ведь живой, просто уже
+// не лучший.
+const LS_API = LS + '_api_' + APP_VER;
 let API_OK = null;
-try { API_OK = sessionStorage.getItem(LS + '_api') || null; } catch (e) {}
+try { API_OK = sessionStorage.getItem(LS_API) || null; } catch (e) {}
 
 // Понятная причина вместо «Failed to fetch»: это сообщение браузер выдаёт и когда
 // сервер лежит, и когда адрес режет провайдер, — человеку оно ничего не говорит.
@@ -6391,12 +6402,12 @@ async function apiOne(base, tail, opt, ms) {
 async function apiFetch(tail, opt, ms) {
   if (API_OK) {
     try { return await apiOne(API_OK, tail, opt, ms); }
-    catch (e) { API_OK = null; try { sessionStorage.removeItem(LS + '_api'); } catch (e2) {} }
+    catch (e) { API_OK = null; try { sessionStorage.removeItem(LS_API); } catch (e2) {} }
   }
   try {
     const res = await Promise.any(MYAPI.map(b => apiOne(b, tail, opt, ms)));
     API_OK = res.base;
-    try { sessionStorage.setItem(LS + '_api', res.base); } catch (e) {}
+    try { sessionStorage.setItem(LS_API, res.base); } catch (e) {}
     return res;
   } catch (e) {
     const list = (e && e.errors) || [];
