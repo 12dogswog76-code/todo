@@ -1,0 +1,58 @@
+# Выкладка сайта на GitHub Pages — вместо встроенного pages-build-deployment.
+#
+# Зачем свой, если GitHub и так умеет публиковать ветку. Встроенная выкладка
+# запускается на каждый пуш и никак не согласована сама с собой: если сделать
+# два деплоя подряд (а так бывает всегда, когда после выкладки сразу правишь
+# мелочь), два прогона одновременно готовят артефакт с одним и тем же именем
+# github-pages, и второй падает с «Multiple artifacts named github-pages».
+# Сайт при этом остаётся на предыдущей версии, а понять это можно только зайдя
+# в Actions.
+#
+# Здесь то же самое, но с concurrency: новый прогон отменяет предыдущий, и
+# гонки нет по определению. Отменять безопасно — публикуется всегда состояние
+# ветки целиком, а не разница, так что «недовыложенного» не бывает.
+#
+# ВКЛЮЧИТЬ ОДИН РАЗ: Settings → Pages → Build and deployment → Source →
+# GitHub Actions. Пока источник «Deploy from a branch», работает встроенная
+# выкладка, а этот файл просто лежит без дела.
+#
+# Токену, которым заливает deploy-zzz.ps1, нужно право Workflows
+# (github.com/settings/tokens → токен → Repository permissions → Workflows:
+# Read and write) — иначе GitHub отклонит коммит с этим файлом. Скрипт в таком
+# случае молча выложит всё остальное.
+
+name: Сайт · выкладка на Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      # Репозиторий и есть сайт: в корне лежат index.html, zzz.html, CNAME и
+      # .nojekyll. Поэтому кладём его целиком, без сборки.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
