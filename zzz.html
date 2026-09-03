@@ -1121,6 +1121,100 @@
     color:#3b2c00;background:linear-gradient(135deg,#ffe066,var(--gold) 55%,#e0a800);
     box-shadow:0 0 12px #ffd54a33}
   /* полоса пити: желтеет на мягком пити, когда шанс резко растёт */
+  /* ── приветствие ─────────────────────────────────────────────────────────── */
+  #welcome{position:fixed;inset:0;z-index:130;display:none;align-items:center;
+    justify-content:center;padding:16px;background:#05060999;
+    backdrop-filter:blur(4px)}
+  #welcome.open{display:flex}
+  .wcard{width:100%;max-width:470px;max-height:calc(100vh - 32px);overflow-y:auto;
+    background:linear-gradient(180deg,var(--pan2),var(--pan));
+    border:1px solid #4ade8047;border-radius:18px;padding:20px 22px;
+    box-shadow:0 0 26px -6px #4ade8059, 0 18px 50px #000000cc, var(--glass)}
+  .wtop{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+  .wtop b{font-size:16px;font-weight:800;letter-spacing:.2px}
+  .wlogo{flex:none;width:34px;height:34px;border-radius:10px;display:flex;
+    align-items:center;justify-content:center;font-size:12px;font-weight:800;
+    color:var(--acc);background:#4ade801f;border:1px solid #4ade8047;
+    box-shadow:0 0 12px -3px var(--acc)}
+  .wlogo.gold{color:var(--gold);background:#ffd54a1f;border-color:#ffd54a4d;
+    box-shadow:0 0 12px -3px var(--gold);font-size:15px}
+  .wcard p{font-size:12.5px;line-height:1.62;color:var(--tx2);margin:0 0 9px}
+  .wcard p b,.wcard li b{color:var(--tx)}
+  .wnote{font-size:11.5px!important;color:var(--tx3)!important;
+    border-left:2px solid var(--line);padding-left:10px}
+  .wsteps{margin:0 0 10px;padding-left:0;list-style:none;counter-reset:w}
+  .wsteps li{position:relative;counter-increment:w;padding:0 0 9px 30px;
+    font-size:12.5px;line-height:1.55;color:var(--tx2)}
+  .wsteps li::before{content:counter(w);position:absolute;left:0;top:0;
+    width:20px;height:20px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:10.5px;font-weight:800;color:var(--gold);
+    background:#ffd54a17;border:1px solid #ffd54a3d}
+  .wsteps code{font-family:var(--mono);font-size:11.5px;color:var(--gold);
+    background:#0b0d11;border:1px solid var(--line);border-radius:6px;padding:1px 5px}
+  .wlist{margin:0 0 10px;padding-left:0;list-style:none}
+  .wlist li{position:relative;padding:0 0 7px 15px;font-size:12.5px;
+    line-height:1.55;color:var(--tx2)}
+  .wlist li::before{content:'';position:absolute;left:0;top:8px;width:5px;height:5px;
+    border-radius:50%;background:var(--acc);box-shadow:0 0 7px var(--acc)}
+  .wbar{display:flex;align-items:center;gap:8px;margin-top:14px;
+    padding-top:13px;border-top:1px solid var(--line)}
+  .wbar button{flex:none}
+  .wbar .pri{margin-left:auto}
+  .wdots{display:flex;gap:5px;align-items:center;margin-right:4px}
+  /* Неактивные точки на var(--line) сливались с карточкой — берём светлее. */
+  .wdots i{width:6px;height:6px;border-radius:50%;background:#39404f;
+    transition:.15s}
+  .wdots i.on{background:var(--acc);box-shadow:0 0 8px var(--acc);width:16px;
+    border-radius:3px}
+  @media (max-width:560px){
+    .wcard{padding:16px 15px}
+    .wbar{flex-wrap:wrap}
+    .wbar .pri{margin-left:0;flex:1}
+  }
+
+  /* ── уведомления ───────────────────────────────────────────────────────────
+     Раньше импорт из игры выглядел так: нажал — и сидишь смотришь на кнопку.
+     Сообщение о ходе дела было только внутри панели «Импорт из игры», а её к
+     тому моменту обычно уже закрыли. Теперь всё говорится плашкой в углу.
+     Цвет рамки — по смыслу: зелёный успех, красный ошибка, золотой работа. */
+  #toasts{position:fixed;right:16px;bottom:16px;z-index:120;display:flex;
+    flex-direction:column;gap:9px;align-items:flex-end;pointer-events:none;
+    max-width:min(370px,calc(100vw - 32px))}
+  .tst{position:relative;overflow:hidden;pointer-events:auto;
+    display:flex;align-items:flex-start;gap:10px;
+    background:linear-gradient(180deg,#171a21f2,#111318f2);
+    border:1px solid var(--c);border-radius:13px;padding:11px 13px;
+    color:var(--tx);font-size:12px;line-height:1.5;
+    box-shadow:0 0 0 1px #00000059, 0 0 18px -2px var(--c),
+               0 10px 28px #000000a6, var(--glass);
+    backdrop-filter:blur(7px);
+    animation:tstIn .22s cubic-bezier(.2,.9,.3,1.4);
+    transition:opacity .2s, transform .2s}
+  .tst.out{opacity:0;transform:translateX(14px)}
+  .tst>u{flex:none;width:20px;height:20px;border-radius:50%;display:flex;
+    align-items:center;justify-content:center;text-decoration:none;font-size:11px;
+    background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--c);
+    box-shadow:0 0 10px -2px var(--c)}
+  .tst .tbody{min-width:0;flex:1}
+  .tst b{display:block;font-size:12.5px;font-weight:700;margin-bottom:1px}
+  .tst i{font-style:normal;color:var(--tx2);font-size:11px;
+    display:block;word-break:break-word}
+  .tst>s{flex:none;text-decoration:none;color:var(--tx3);cursor:pointer;
+    font-size:13px;line-height:1;padding:2px 1px}
+  .tst>s:hover{color:var(--tx)}
+  .tst.work>u{animation:tstSpin 1s linear infinite}
+  /* Полоска снизу — сколько плашке осталось висеть: без неё непонятно,
+     исчезнет она сама или ждёт нажатия. */
+  .tst .tbar{position:absolute;left:0;bottom:0;height:2px;background:var(--c);
+    opacity:.55}
+  @keyframes tstIn{from{opacity:0;transform:translateX(22px) scale(.97)}}
+  @keyframes tstSpin{to{transform:rotate(360deg)}}
+  @keyframes tstBar{from{width:100%}to{width:0}}
+  @media (max-width:560px){
+    #toasts{left:10px;right:10px;bottom:10px;max-width:none}
+    .tst{width:100%}
+  }
+
   /* прогноз круток до конца патча */
   .pl-plan{border:1px solid var(--line);border-radius:14px;background:var(--pan2);
     padding:12px 13px;margin:0 0 12px}
@@ -2169,6 +2263,10 @@
   <div class="panel" id="pullPanel"><div id="pullBox"></div></div>
 
   <div class="panel" id="helpPanel">
+    <div class="prow" style="margin-bottom:12px">
+      <button id="helpWelcome" class="ghost2">👋 Показать приветствие</button>
+      <span class="hint" style="margin:0;align-self:center">короткая инструкция для новичка</span>
+    </div>
     <div class="hint hlp" style="margin-top:0">
       <b>Трекер прокачки агентов Zenless Zone Zero.</b> Данные лежат в браузере,
       между устройствами едут через облако. Ничего не устанавливать, работает и без сети.
@@ -2233,10 +2331,71 @@
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
 <input type="file" id="fileInput" accept="application/json" style="display:none">
 
+<!-- Приветствие. Показывается один раз, пока не загружен аккаунт: без своих
+     агентов трекер выглядит пустой сеткой из шестидесяти чужих карточек, и
+     главный вопрос новичка — «а где мои-то». Поэтому середина инструкции —
+     ровно про перенос аккаунта. -->
+<div id="welcome"><div class="wcard">
+  <div class="wstep" data-step="1">
+    <div class="wtop"><span class="wlogo">ZZZ</span><b>Это трекер прогресса</b></div>
+    <p>Все твои агенты, их уровни, ядра, навыки, движки и диски — в одном месте.
+       Трекер показывает, кто уже собран, а кого стоит доделать, считает материалы
+       на прокачку, ведёт историю круток и прохождений эндгейма.</p>
+    <p class="wnote">Регистрации нет. Данные лежат у тебя в браузере, а если
+       подключить облако — ездят между компьютером и телефоном.</p>
+    <div class="wbar">
+      <span class="wdots"><i class="on"></i><i></i><i></i></span>
+      <button class="ghost2" data-w="skip">Пропустить</button>
+      <button class="pri" data-w="next">Дальше →</button>
+    </div>
+  </div>
+
+  <div class="wstep" data-step="2" hidden>
+    <div class="wtop"><span class="wlogo gold">1</span><b>Перенеси свой аккаунт</b></div>
+    <p>Это главное и делается один раз. Нужен только <b>UID</b> — номер из игры.</p>
+    <ol class="wsteps">
+      <li>В игре нажми на свой профиль слева вверху — UID написан внизу окна.
+          Девять цифр, например <code>1502024259</code>.</li>
+      <li>Здесь нажми <b>☰ Меню</b> в правом верхнем углу.</li>
+      <li>Первый пункт — <b>⟳ Импорт из игры</b>.</li>
+      <li>Впиши UID в поле и нажми <b>⚡ Загрузить весь аккаунт</b>.</li>
+    </ol>
+    <p class="wnote">Данные берутся из боевой хроники HoYoLab — той самой, что в
+       приложении. Ничего вводить, кроме UID, не нужно: ни пароля, ни входа.
+       Если хроника закрыта настройками приватности, трекер подскажет, что включить.</p>
+    <div class="wbar">
+      <span class="wdots"><i></i><i class="on"></i><i></i></span>
+      <button class="ghost2" data-w="back">← Назад</button>
+      <button class="pri" data-w="next">Дальше →</button>
+    </div>
+  </div>
+
+  <div class="wstep" data-step="3" hidden>
+    <div class="wtop"><span class="wlogo">☰</span><b>Что внутри</b></div>
+    <ul class="wlist">
+      <li><b>Кого качать</b> — сильные по тир-листу, но недоделанные у тебя.
+          Есть вкладка «Выбери сам».</li>
+      <li><b>Что фармить</b> — сколько материалов нужно до твоих целей.</li>
+      <li><b>Снаряжение</b> — у кого не тот движок или не собран комплект.</li>
+      <li><b>Крутки</b> — пити, гарант и сколько круток придёт до конца патча.</li>
+      <li><b>Эндгейм</b> — мета с prydwen и твои прохождения Шиюй и Штурма.</li>
+      <li><b>Облако и данные</b> — синхронизация между устройствами.</li>
+    </ul>
+    <p class="wnote">Клик по карточке агента открывает подробности: цели, гайд,
+       команды, сверку сборки с гайдом. Инструкцию можно вызвать снова —
+       в меню, раздел «Справка».</p>
+    <div class="wbar">
+      <span class="wdots"><i></i><i></i><i class="on"></i></span>
+      <button class="ghost2" data-w="back">← Назад</button>
+      <button class="pri" data-w="done">Понятно, начнём</button>
+    </div>
+  </div>
+</div></div>
+
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v208';
+const APP_VER = 'v209';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3469,6 +3628,7 @@ function boot() {
   // виду. Сверку аккаунта откладываем: пусть страница сперва отрисуется.
   noteAuto();
   setTimeout(autoCheck, AUTOIMP_WAIT);
+  welcomeShow();
   ownerUI();
   renderFilters();
   render();
@@ -6643,6 +6803,8 @@ if ($('hoyoCkClear')) {
 }
 hoyoCkShow();
 
+if ($('helpWelcome')) $('helpWelcome').onclick = () => welcomeShow(true);
+
 if ($('autoImp')) $('autoImp').onchange = e => {
   ui.autoImp = e.target.checked ? 1 : 0;
   save();
@@ -6657,6 +6819,9 @@ $('hoyoGo').onclick = async () => {
   localStorage.setItem(LS + '_uid', uid);
   ownerUI();   // UID мог появиться только что — показываем личные блоки сразу
   msg.textContent = 'Гружу весь аккаунт из хроники…';
+  // Панель импорта к этому моменту обычно уже закрыта, поэтому о ходе дела
+  // говорит плашка в углу — она видна с любого экрана.
+  const tst = toast('Гружу аккаунт из игры', 'UID ' + uid + ' · это занимает до минуты', 'work');
 
   let data = null, lastErr = '';
   {
@@ -6692,6 +6857,7 @@ $('hoyoGo').onclick = async () => {
 
   if (!data) {
     const noNet = /нет связи|не ответил|отвечает не прокси/.test(lastErr);
+    tst.set('Не вышло загрузить', lastErr, 'err', 9000);
     msg.innerHTML = '<b>Не вышло:</b> ' + esc(lastErr) +
       (noNet ? '<br>Проверь связь кнопкой «Проверить связь» в панели «☁ Облако и данные» — ' +
                'она покажет, какой адрес не отвечает.' : '') +
@@ -6709,6 +6875,7 @@ $('hoyoGo').onclick = async () => {
   const thin = data.avatars.length && !data.avatars.some(av =>
     (av.discs || []).some(d => d && d.main));
   if (!done.length) {
+    tst.set('Агенты не совпали с базой', 'Нажми «⟳ Обновить список агентов»', 'err', 9000);
     msg.innerHTML = '<b>Ни один агент не совпал с базой.</b> Нажми «⟳ Обновить список агентов» ' +
                     'в панели «↕ Импорт / экспорт».';
     return;
@@ -6718,6 +6885,7 @@ $('hoyoGo').onclick = async () => {
   // Пользователь при этом ничего лишнего не делает — всё в одно нажатие.
   let fromEnka = 0;
   if (thin) {
+    tst.set('Догружаю характеристики дисков', 'хроника отдала аккаунт без них', 'work');
     msg.textContent = 'Догружаю характеристики дисков…';
     const api = enkaApiUrl(uid);
     const tries = myApiUrls('/uid/' + uid).concat([
@@ -6751,6 +6919,12 @@ $('hoyoGo').onclick = async () => {
   setNick(data.nick || '', uid);
 
   const still = thin && !fromEnka;
+  tst.set('Аккаунт загружен',
+    done.length + ' ' + plural(done.length, 'агент', 'агента', 'агентов') +
+      (buddyN ? ', банбу ' + buddyN : '') +
+      (fromEnka ? ', с дисками ' + fromEnka : '') +
+      (still ? ' · характеристики дисков не пришли' : ''),
+    still ? 'info' : 'ok', 6000);
   msg.innerHTML = '<b>Готово.</b> Загружено агентов: <b>' + done.length + '</b>' +
     (buddyN ? ', отмечено банбу: <b>' + buddyN + '</b>' : '') +
     (fromEnka ? ', из них с характеристиками дисков: <b>' + fromEnka + '</b>' : '') +
@@ -9001,6 +9175,102 @@ function pullHowto(open) {
     'только историю круток: ни аккаунта, ни почты, ни платежей он не касается. ' +
     'Историю читает <b>твой</b> воркер, больше она никуда не уходит.</p></details>';
 }
+// ─────────────── приветствие ───────────────
+// Показывается один раз. Условие не «первый заход», а «аккаунта ещё нет»: если
+// человек пришёл с другого устройства и данные приехали из облака, объяснять
+// ему, как переносить аккаунт, уже поздно и незачем.
+const LS_WELCOME = LS + '_welcome';
+let wStep = 1;
+
+function welcomeShow(force) {
+  const el = $('welcome');
+  if (!el) return;
+  if (!force) {
+    if (localStorage.getItem(LS_WELCOME)) return;
+    if (localStorage.getItem(LS + '_uid')) return;
+    if (progCount(prog)) return;
+  }
+  wStep = 1;
+  welcomeStep();
+  el.classList.add('open');
+}
+function welcomeStep() {
+  const el = $('welcome');
+  if (!el) return;
+  el.querySelectorAll('.wstep').forEach(s => { s.hidden = +s.dataset.step !== wStep; });
+  el.scrollTop = 0;
+  const card = el.querySelector('.wcard');
+  if (card) card.scrollTop = 0;
+}
+function welcomeClose() {
+  const el = $('welcome');
+  if (el) el.classList.remove('open');
+  try { localStorage.setItem(LS_WELCOME, '1'); } catch (e) {}
+}
+if ($('welcome')) {
+  $('welcome').addEventListener('click', e => {
+    const b = e.target.closest('[data-w]');
+    // Клик мимо карточки закрывает — как в остальных окнах трекера.
+    if (!b) { if (e.target === $('welcome')) welcomeClose(); return; }
+    const w = b.dataset.w;
+    if (w === 'next') { wStep = Math.min(3, wStep + 1); welcomeStep(); }
+    else if (w === 'back') { wStep = Math.max(1, wStep - 1); welcomeStep(); }
+    else welcomeClose();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && $('welcome').classList.contains('open')) welcomeClose();
+  });
+}
+
+// ─────────────── уведомления ───────────────
+// Плашка в углу вместо молчания. Возвращает объект с методами: долгую операцию
+// показываем сразу («гружу…»), а по итогу ту же плашку переписываем в успех или
+// ошибку — так на экране не копятся три сообщения об одном и том же.
+const TOAST_C = { ok: 'var(--acc)', err: '#f87171', work: 'var(--gold)', info: 'var(--info)' };
+const TOAST_ICON = { ok: '✓', err: '!', work: '⟳', info: 'i' };
+const TOAST_LIFE = 5000;
+
+function toast(title, text, kind, life) {
+  let box = $('toasts');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'toasts';
+    document.body.appendChild(box);
+  }
+  const el = document.createElement('div');
+  const api = {};
+  let timer = null;
+
+  api.set = (title2, text2, kind2, life2) => {
+    const k = kind2 || 'info';
+    el.className = 'tst' + (k === 'work' ? ' work' : '');
+    el.style.setProperty('--c', TOAST_C[k] || TOAST_C.info);
+    el.innerHTML = '<u>' + TOAST_ICON[k] + '</u><div class="tbody"><b>' + esc(title2) + '</b>' +
+      (text2 ? '<i>' + esc(text2) + '</i>' : '') + '</div><s title="Закрыть">✕</s>';
+    el.querySelector('s').onclick = api.close;
+    if (timer) { clearTimeout(timer); timer = null; }
+    // «work» висит, пока не позовут снова: сколько продлится загрузка, заранее
+    // неизвестно, а исчезнувшая на середине плашка хуже, чем никакой.
+    const ms = life2 === undefined ? (k === 'work' ? 0 : TOAST_LIFE) : life2;
+    if (ms) {
+      const bar = document.createElement('div');
+      bar.className = 'tbar';
+      bar.style.animation = 'tstBar ' + ms + 'ms linear forwards';
+      el.appendChild(bar);
+      timer = setTimeout(api.close, ms);
+    }
+    return api;
+  };
+  api.close = () => {
+    if (timer) clearTimeout(timer);
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 220);
+  };
+  api.set(title, text, kind, life);
+  box.appendChild(el);
+  return api;
+}
+
 // ─────────────── автоимпорт ───────────────
 // Журнал изменений и график истории живут ровно от импорта до импорта: не
 // нажал кнопку — событий нет, хотя в игре ты уже собрал новый диск.
@@ -9062,26 +9332,36 @@ async function autoImport(force) {
 
   const who = $('whoAmI');
   if (who) who.classList.add('busy');
+  const tst = toast('Обновляю аккаунт', 'сам, из боевой хроники', 'work');
   try {
     const res = await apiFetch('/hoyo/' + uid + '/full',
       { headers: Object.assign({ 'Accept': 'application/json' }, hoyoCkHead()) }, 120000);
     const d = res.ok ? res.data : null;
-    // Молчим при любой беде: человек не просил этот запрос, и ругаться на него
-    // за протухшие cookie посреди просмотра сетки — грубо. Ручной импорт всё
-    // объяснит, если он понадобится.
-    if (!d || d.error || !(d.avatars || []).length) return;
+    // Про ошибку говорим коротко и без советов: человек этот запрос не просил,
+    // читать нотацию посреди просмотра сетки незачем. Подробности он увидит,
+    // когда сам нажмёт импорт.
+    if (!d || d.error || !(d.avatars || []).length) {
+      tst.set('Обновить не вышло', (d && d.error) || res.err || 'хроника не ответила', 'err', 6000);
+      return;
+    }
     let n = 0;
     d.avatars.forEach(av => { if (applyHoyo(av)) n++; });
     applyBuddy(d.buddy);
-    if (!n) return;
+    if (!n) { tst.close(); return; }
     save();
     writeProg();
-    chronScan(true);        // тихо: события в журнал, всплывашек не надо
+    // Считаем, что изменилось, до render(): число событий пойдёт в плашку.
+    const ev = chronScan(true) || 0;
     scheduleSync();
     render();
     setNick(d.nick || '', uid);
     if (menuCur === 'enka') refreshAutoImp();
+    tst.set('Аккаунт обновлён',
+      n + ' ' + plural(n, 'агент', 'агента', 'агентов') +
+        (ev ? ' · изменений: ' + ev : ' · без изменений'),
+      'ok', 4500);
   } catch (e) {
+    tst.set('Обновить не вышло', netMsg(e), 'err', 6000);
   } finally {
     if (who) who.classList.remove('busy');
   }
