@@ -159,7 +159,9 @@
   .pk-grid .pk-a.nohave{opacity:.4;filter:grayscale(.7)}
   .pk-grid .pk-a:hover{border-color:var(--tx3);opacity:1}
   .pk-grid .pk-a.on{border-color:var(--acc);box-shadow:0 0 12px #4ade8047;opacity:1;filter:none}
-  .pk-grid .pk-a u{position:absolute;right:-1px;bottom:-1px;width:17px;height:17px;border-radius:50%;
+  /* Галочка сидит на круглом краю: правее она вылезает за окружность и
+     кажется отклеившейся от значка. */
+  .pk-grid .pk-a u{position:absolute;right:3px;bottom:0;width:17px;height:17px;border-radius:50%;
     background:var(--acc);color:#06240f;font-size:10px;font-weight:800;text-decoration:none;
     display:none;align-items:center;justify-content:center;line-height:1}
   .pk-grid .pk-a.on u{display:flex}
@@ -2234,7 +2236,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v204';
+const APP_VER = 'v205';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -7746,7 +7748,10 @@ function pickEditing() { return pickEdit || !pickList().length; }
 // Круглые значки всех агентов. Не только своих: копить материалы на того, кого
 // ещё не выбил, — обычное дело. Чужих приглушаем, чтобы не путались со своими.
 function pickGrid() {
-  const list = DB.agents.slice().sort(byRank());
+  // Свои — первыми, чужие — в конец. Вперемешку приглушённые рвали ряд, и
+  // взгляд всё время спотыкался о тех, кого выбрать нельзя.
+  const mine = a => !!(prog[a.id] && prog[a.id].have);
+  const list = DB.agents.slice().sort((x, y) => (mine(y) - mine(x)) || byRank()(x, y));
   const n = pickList().length;
   return '<div class="pk-wrap">' +
     '<div class="pk-grid">' + list.map(a => {
