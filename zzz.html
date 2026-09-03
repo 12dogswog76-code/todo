@@ -144,6 +144,27 @@
   /* Правило display:inline-flex сильнее браузерного [hidden]{display:none}, и
      пока данные не приехали, в шапке висел пустой овал. */
   .logo .bat[hidden]{display:none}
+  /* свой выбор агентов: круглые значки с галочкой */
+  .pk-wrap{display:flex;flex-direction:column;gap:12px}
+  .pk-grid{display:flex;flex-wrap:wrap;gap:7px}
+  /* Селектор с .pk-grid не для красоты: общее правило .panel button задаёт свой
+     border-radius, и одного класса .pk-a не хватает по специфичности —
+     кружки выходили скруглёнными квадратами. */
+  .pk-grid .pk-a{position:relative;width:46px;height:46px;border-radius:50%;padding:0;flex:none;
+    background:var(--pan2);border:2px solid var(--line);cursor:pointer;overflow:hidden;
+    transition:.12s;font-family:inherit}
+  .pk-grid .pk-a .pk-img{display:block;width:100%;height:100%;object-fit:cover;
+    /* Арты кадрированы по пояс — при круглой обрезке лицо уезжает вниз. */
+    object-position:50% 12%}
+  .pk-grid .pk-a.nohave{opacity:.4;filter:grayscale(.7)}
+  .pk-grid .pk-a:hover{border-color:var(--tx3);opacity:1}
+  .pk-grid .pk-a.on{border-color:var(--acc);box-shadow:0 0 12px #4ade8047;opacity:1;filter:none}
+  .pk-grid .pk-a u{position:absolute;right:-1px;bottom:-1px;width:17px;height:17px;border-radius:50%;
+    background:var(--acc);color:#06240f;font-size:10px;font-weight:800;text-decoration:none;
+    display:none;align-items:center;justify-content:center;line-height:1}
+  .pk-grid .pk-a.on u{display:flex}
+  .pk-bar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .pk-bar button{flex:none}
   .autoimp{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;
     color:var(--tx2);cursor:pointer}
   .autoimp input{width:15px;height:15px;accent-color:var(--acc);cursor:pointer;flex:none}
@@ -2010,8 +2031,8 @@
     <div class="hint" id="enkaMsg">
       Заберутся все агенты аккаунта, а характеристики — прямо из игры, без пересчёта.
     </div>
-    <label class="autoimp"><input type="checkbox" id="autoImp">
-      <span>Обновлять самому раз в сутки</span>
+    <label class="autoimp" title="Каждые 10 минут трекер одним лёгким запросом сверяет уровни и М-ранги. Заметил разницу — тянет всё целиком; в любом случае полное обновление раз в 3 часа."><input type="checkbox" id="autoImp">
+      <span>Обновлять самому, пока страница открыта</span>
       <i id="autoImpWhen"></i></label>
 
     <details class="more" id="ownBox">
@@ -2213,7 +2234,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v202';
+const APP_VER = 'v204';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2787,6 +2808,15 @@ function elSvg(el, size) {
   const c = (ELEM[k] && ELEM[k].c) || '#8b92a3';
   return svgW(EL_PATH[k] || '<circle cx="12" cy="12" r="7"/>', c, size || 14);
 }
+// Родной значок стихии, но с поддержкой массива: у Мияби element приходит как
+// ["firefrost","ice"]. Ключ картинки берём от ИСХОДНОЙ стихии через EL_ALIAS
+// (файл называется el-frost.png), а запасной рисунок — от elKey.
+function elPic(el, size) {
+  const raw = Array.isArray(el) ? el[0] : el;
+  const k = elKey(el);
+  const nm = (ELEM[k] && ELEM[k].ru) || k;
+  return iconImg(uiIcon('el-' + (EL_ALIAS[raw] || raw)), elSvg(el, size), size, nm);
+}
 function profIcon(pr, size, col) {
   return iconImg(uiIcon('pr-' + pr),
     svgW(PROF_PATH[pr] || '<circle cx="12" cy="12" r="7"/>', col || '#c8ccd6', size), size, PROF[pr] || pr);
@@ -3134,6 +3164,30 @@ function tierOf(id) {
   return null;
 }
 const TIER_RANK = { 'S+': 0, 'S': 1, 'A': 2, 'B': 3, 'C': 4, 'D': 5 };
+
+// ── общий порядок списков ───────────────────────────────────────────────────
+// Везде, где показываем ростер, порядок один: сперва S-ранги, внутри — от
+// более важного к менее (по тир-листу), при равенстве — кто хуже собран.
+// Иначе в списках вперёд лезли A-ранги просто потому, что стоят раньше в базе.
+function rarW(a) { return a && a.rarity === 'S' ? 0 : (a && a.rarity === 'A' ? 1 : 2); }
+function tierW(a) {
+  const t = a ? tierOf(a.id) : null;
+  return t ? (TIER_RANK[t.tier] != null ? TIER_RANK[t.tier] : 9) : 9;
+}
+// crit — необязательная мера «насколько горит» у конкретного списка: чем
+// больше, тем выше в списке. Ранг всё равно главнее: собранный S важнее
+// разваленного A.
+function byRank(crit) {
+  return (x, y) => {
+    const ax = x.a || x, ay = y.a || y;
+    const r = rarW(ax) - rarW(ay);
+    if (r) return r;
+    if (crit) { const c = crit(y) - crit(x); if (c) return c; }
+    const t = tierW(ax) - tierW(ay);
+    if (t) return t;
+    return pctOf(ax.id) - pctOf(ay.id);
+  };
+}
 
 function loadExtra() {
   return fetch('zzz-extra.json', { cache: 'no-cache' })
@@ -6760,6 +6814,7 @@ function payload() {
            booInfo: (ui && ui.booInfo) || {},
            cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
            pass: (ui && ui.pass) || null, shop: (ui && ui.shop) || null,
+           pick: (ui && ui.pick) || null, pickT: (ui && ui.pickT) || 0,
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            pullsFull: !!(PULLS && PULLS.full),
            chron: (CHRON && CHRON.log) || [], chronT: (CHRON && CHRON.at) || 0,
@@ -6970,6 +7025,16 @@ function mergeProg(remote) {
       changed = true;
       if (menuCur === 'pull') drawPulls();
     }
+  }
+  // Свой выбор агентов: здесь именно «побеждает свежее», а не объединение.
+  // Объединять нельзя — снятая на телефоне галочка вернулась бы с компьютера.
+  if (Array.isArray(remote.pick) && (remote.pickT || 0) > (ui.pickT || 0)) {
+    ui.pick = remote.pick;
+    ui.pickT = remote.pickT || 0;
+    try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+    changed = true;
+    if (menuCur === 'todo') drawTodo();
+    if (menuCur === 'mats') drawMats();
   }
   // Магазин: отметка «куплено» за более поздний месяц — более свежая правда.
   if (remote.shop && (!ui.shop || String(remote.shop.last || '') > String(ui.shop.last || '') ||
@@ -7618,6 +7683,18 @@ function todoList(mode) {
   const out = [];
   DB.agents.forEach(a => {
     const p = prog[a.id];
+    // В своём выборе доделанных не прячем: человек сам решил за ними следить,
+    // и пропадать из списка они не должны. Агенты, которых ещё нет, тоже
+    // остаются — на них копят материалы заранее.
+    if (mode === 'pick') {
+      if (!pickHas(a.id)) return;
+      const t0 = src ? tierOf(a.id) : null;
+      out.push({ a: a, pc: p && p.have ? pctOf(a.id) : 0, tier: (t0 && t0.tier) || '',
+                 iss: p && p.have ? buildIssues(a, p).length : 0,
+                 gaps: p && p.have ? pctGaps(a.id) : ['агента ещё нет'],
+                 hard: 0, mine: !!(p && p.have) });
+      return;
+    }
     if (!p || !p.have) return;
     const t = src ? tierOf(a.id) : null;
     if (mode === 'tier' && (!t || TIER_RANK[t.tier] > TIER_RANK['A'])) return;
@@ -7629,6 +7706,9 @@ function todoList(mode) {
     out.push({ a: a, pc: pc, tier: (t && t.tier) || '', iss: iss.length, gaps: pctGaps(a.id),
                hard: iss.filter(x => x.lvl === 'hard').length });
   });
+  // Свой выбор строим общим порядком (S-ранги выше, внутри — по тир-листу),
+  // остальные режимы — как раньше, от тира и готовности.
+  if (mode === 'pick') { out.sort(byRank()); return out; }
   const rank = x => x.tier ? TIER_RANK[x.tier] : 99;
   out.sort((x, y) => mode === 'clean'
     ? ((rank(x) - rank(y)) || (y.pc - x.pc))
@@ -7638,14 +7718,75 @@ function todoList(mode) {
 const TODO_MODES = [
   ['tier',  'По тир-листу'],
   ['all',   'Все, кто не доделан'],
-  ['clean', 'Собраны по гайду']
+  ['clean', 'Собраны по гайду'],
+  ['pick',  'Выбери сам']
 ];
+
+// ── свой выбор ──────────────────────────────────────────────────────────────
+// Тир-лист говорит, кто сильный вообще, а не кем ты собрался заниматься на
+// этой неделе. Поэтому четвёртый режим: сам отмечаешь агентов, и дальше и
+// «Кого качать», и «Что фармить» считают по ним.
+//
+// Список едет в облако: выбор — это решение, а не кеш, терять его при переходе
+// на другое устройство нельзя.
+function pickList() { return (ui && Array.isArray(ui.pick)) ? ui.pick : []; }
+function pickHas(id) { return pickList().indexOf(+id) >= 0; }
+function pickToggle(id) {
+  const l = pickList().slice(), i = l.indexOf(+id);
+  if (i >= 0) l.splice(i, 1); else l.push(+id);
+  ui.pick = l;
+  ui.pickT = Date.now();
+  save();
+}
+// Пока выбор пуст, сразу открываем сетку: иначе вкладка встречает пустотой и
+// непонятно, что делать.
+let pickEdit = false;
+function pickEditing() { return pickEdit || !pickList().length; }
+
+// Круглые значки всех агентов. Не только своих: копить материалы на того, кого
+// ещё не выбил, — обычное дело. Чужих приглушаем, чтобы не путались со своими.
+function pickGrid() {
+  const list = DB.agents.slice().sort(byRank());
+  const n = pickList().length;
+  return '<div class="pk-wrap">' +
+    '<div class="pk-grid">' + list.map(a => {
+      const have = !!(prog[a.id] && prog[a.id].have);
+      const t = tierOf(a.id);
+      return '<button class="pk-a' + (pickHas(a.id) ? ' on' : '') + (have ? '' : ' nohave') +
+        '" data-pick="' + a.id + '" title="' + esc(a.ru + (t ? ' · тир ' + t.tier : '') +
+          (have ? '' : ' · этого агента у тебя нет')) + '">' +
+        (a.icon ? img(imgUrl('agents', a.icon), 'pk-img', a.ru, true)
+                : '<span class="pk-img"></span>') +
+        '<u>✓</u></button>';
+    }).join('') + '</div>' +
+    '<div class="pk-bar">' +
+      '<button id="pickDone" class="pri">Готово' + (n ? ' · ' + n : '') + '</button>' +
+      (n ? '<button id="pickClear" class="ghost2">снять всё</button>' : '') +
+      '<span class="hint" style="margin:0">Отметь тех, кем занимаешься. ' +
+        'Приглушённые — те, кого у тебя ещё нет.</span>' +
+    '</div></div>';
+}
+function pickBind(box, redraw) {
+  box.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    pickToggle(b.dataset.pick);
+    // Перерисовываем только саму кнопку и счётчик: сетка из шестидесяти
+    // картинок при каждом клике мигала бы целиком.
+    b.classList.toggle('on', pickHas(b.dataset.pick));
+    const done = $('pickDone');
+    if (done) done.textContent = 'Готово' + (pickList().length ? ' · ' + pickList().length : '');
+  });
+  if ($('pickDone')) $('pickDone').onclick = () => { pickEdit = false; redraw(); };
+  if ($('pickClear')) $('pickClear').onclick = () => {
+    ui.pick = []; ui.pickT = Date.now(); save(); redraw();
+  };
+}
 function cleanShow() { ui.todoMode = 'clean'; save(); drawTodo(); }
 // ─────────────── что фармить ───────────────
 // Складываем стоимость прокачки по выбранным агентам. Три режима: только
 // избранные (ты сам отметил, кем занимаешься), все из «Кого качать» и вообще
 // все, у кого что-то не доделано.
 const MATS_MODES = [
+  ['pick', 'Мой выбор'],
   ['fav',  'Избранные'],
   ['todo', 'Кого качать'],
   ['all',  'Все мои']
@@ -7653,6 +7794,10 @@ const MATS_MODES = [
 function matsAgents(mode) {
   return (DB.agents || []).filter(a => {
     const p = prog[a.id];
+    // Свой выбор — тот же список, что во вкладке «Кого качать»: отметил там,
+    // считается здесь. Агентов, которых ещё нет, тут отсеиваем: считать
+    // материалы не от чего, уровни и навыки неизвестны.
+    if (mode === 'pick') return pickHas(a.id) && !!(p && p.have);
     if (!p || !p.have) return false;
     if (mode === 'fav') return !!p.fav;
     if (mode === 'todo') {
@@ -7660,7 +7805,7 @@ function matsAgents(mode) {
       return t && TIER_RANK[t.tier] <= TIER_RANK['A'];
     }
     return true;
-  });
+  }).sort(byRank());
 }
 function drawMats() {
   const box = $('matsBox');
@@ -7721,6 +7866,21 @@ function drawMats() {
       '" data-m="' + m[0] + '">' + m[1] + '</button>').join('') +
     '</div>';
 
+  // Тот же выбор, что и в «Кого качать» — правится и отсюда, список общий.
+  if (mode === 'pick' && pickEditing()) {
+    box.innerHTML = h + pickGrid();
+    pickBind(box, drawMats);
+    box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+      ui.matsMode = b.dataset.m; save(); drawMats();
+    });
+    return;
+  }
+  if (mode === 'pick') {
+    h += '<div class="pk-bar" style="margin-bottom:10px">' +
+      '<button id="pickEdit" class="ghost2">Изменить выбор</button>' +
+      '<span class="hint" style="margin:0">Список общий с разделом «Кого качать».</span></div>';
+  }
+
   if (!rows.length) {
     h += '<div class="hint" style="margin-top:0">' +
       (mode === 'fav' ? 'Ни один избранный агент не требует прокачки — или избранных нет.'
@@ -7729,6 +7889,7 @@ function drawMats() {
     box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
       ui.matsMode = b.dataset.m; save(); drawMats();
     });
+    if ($('pickEdit')) $('pickEdit').onclick = () => { pickEdit = true; drawMats(); };
     return;
   }
 
@@ -7765,6 +7926,7 @@ function drawMats() {
   box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
     ui.matsMode = b.dataset.m; save(); drawMats();
   });
+  if ($('pickEdit')) $('pickEdit').onclick = () => { pickEdit = true; drawMats(); };
 }
 
 function drawTodo() {
@@ -7806,25 +7968,46 @@ function drawTodo() {
   const empty = {
     tier:  'Из сильных по тир-листу всё доделано — переключись на «Все».',
     all:   'Все агенты доведены до целей. ',
-    clean: 'Пока ни одна сборка не сходится с гайдом полностью.'
+    clean: 'Пока ни одна сборка не сходится с гайдом полностью.',
+    pick:  'Ты пока никого не выбрал.'
   }[mode];
-  box.innerHTML =
-    '<div class="td-head">' +
-      '<span class="td-cnt">' + list.length + ' ' +
-        plural(list.length, 'агент', 'агента', 'агентов') + '</span>' +
-      TODO_MODES.map(m => '<button class="td-sw' + (mode === m[0] ? ' on' : '') +
-        '" data-m="' + m[0] + '">' + m[1] + '</button>').join('') +
-    '</div>' +
+  const head = '<div class="td-head">' +
+    '<span class="td-cnt">' + list.length + ' ' +
+      plural(list.length, 'агент', 'агента', 'агентов') + '</span>' +
+    TODO_MODES.map(m => '<button class="td-sw' + (mode === m[0] ? ' on' : '') +
+      '" data-m="' + m[0] + '">' + m[1] + '</button>').join('') +
+    '</div>';
+
+  // Свой выбор: либо сетка с галочками, либо готовый список и кнопка «Изменить».
+  if (mode === 'pick' && pickEditing()) {
+    box.innerHTML = head + pickGrid();
+    pickBind(box, drawTodo);
+    box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+      ui.todoMode = b.dataset.m; save(); drawTodo();
+    });
+    return;
+  }
+
+  box.innerHTML = head +
+    (mode === 'pick'
+      ? '<div class="pk-bar" style="margin-bottom:10px">' +
+        '<button id="pickEdit" class="ghost2">Изменить выбор</button>' +
+        '<span class="hint" style="margin:0">Считается по этим агентам ' +
+          'и в разделе «Что фармить».</span></div>'
+      : '') +
     (list.length ? '<div class="td-list">' + rows + '</div>'
                  : '<div class="hint" style="margin-top:0">' + empty + '</div>') +
     '<div class="hint">' + (mode === 'clean'
       ? 'Здесь те, у кого диски, комплекты и цели сходятся с гайдом prydwen. Готовность может быть и меньше 100%: она считается по прокачке, а замечания — по сборке.'
-      : 'Слева тир по prydwen, справа — чего не хватает до твоих целей.') +
+      : (mode === 'pick'
+        ? 'Твой выбор. Доделанные отсюда не пропадают, в отличие от остальных режимов.'
+        : 'Слева тир по prydwen, справа — чего не хватает до твоих целей.')) +
     ' Строка кликается и открывает карточку.</div>';
   box.querySelectorAll('.td-r').forEach(r => r.onclick = () => openAgent(+r.dataset.id));
   box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
     ui.todoMode = b.dataset.m; save(); drawTodo();
   });
+  if ($('pickEdit')) $('pickEdit').onclick = () => { pickEdit = true; drawTodo(); };
 }
 
 // ─────────────── сверка сборки с гайдом ───────────────
@@ -9729,14 +9912,18 @@ function drawGear() {
   const list = DB.agents.filter(a => prog[a.id] && prog[a.id].have)
     .map(a => ({ a: a, p: prog[a.id] }));
 
-  // «есть что менять»: движок не из гайда или нет вовсе, либо четвёрка не та
-  const flawed = list.filter(x => {
+  // «есть что менять»: движок не из гайда или нет вовсе, либо четвёрка не та.
+  // Заодно считаем, насколько всё плохо: пустой слот хуже неподходящего.
+  const gearCrit = x => {
     const er = engRank(x.a.id, x.p.w && x.p.w.id);
     const fit = suitFit(x.a.id, suitsOn(x.p));
-    const engBad = !(x.p.w && x.p.w.id) || (er.best && er.place == null);
-    const setBad = fit && (!fit.has4 || !fit.ok4);
-    return engBad || setBad;
-  });
+    let n = 0;
+    if (!(x.p.w && x.p.w.id)) n += 3; else if (er.best && er.place == null) n += 2;
+    if (fit && !fit.has4) n += 2; else if (fit && !fit.ok4) n += 1;
+    return n;
+  };
+  list.sort(byRank(gearCrit));
+  const flawed = list.filter(x => gearCrit(x) > 0);
 
   let h = '<div class="td-head">' +
     '<span class="td-cnt">' + list.length + ' ' +
@@ -9914,13 +10101,9 @@ function cmpFull(r, eng) {
     const d = (a == null || !b) ? null : Math.round((a - b) / b * 100);
     const cls = a == null ? '' : (a > b ? ' up' : (a < b ? ' down' : ''));
     // У бонуса стихии своего значка нет и быть не может: он зависит от стихии
-    // агента, поэтому рисуем её.
-    //
-    // Именно svgW, а не elIcon: тот заворачивает картинку в <span class="ic">
-    // с абсолютным позиционированием внутри, и в узкой flex-строке обёртка
-    // расползалась — значок оказывался посреди слова. Остальные значки в этом
-    // списке тоже голые inline-SVG, так что вид получается единый.
-    const ic = o.k === 'dmg' ? elSvg(r.a.element, 12) : statIcon(o.k, 12);
+    // агента, поэтому рисуем её — родную, как везде. Обёртку .ic тут держит
+    // правило .cmp-st-n>.ic{flex:none}, иначе в узкой строке она схлопывалась.
+    const ic = o.k === 'dmg' ? elPic(r.a.element, 12) : statIcon(o.k, 12);
     return '<div class="cmp-st' + cls + '">' +
       '<span class="cmp-st-n" data-mrun>' + ic + esc(o.n) + '</span>' +
       '<b>' + (a == null ? '—' : num(a, o.pct, o.k)) + '</b>' +
@@ -10622,10 +10805,10 @@ function drawEndgame() {
   if (!box) return;
   // Вкладки: свои прохождения и метовая аналитика — разные вопросы к одному
   // разделу, поэтому не мешаем их в одну простыню.
-  if (ui.egTab !== 'meta') ui.egTab = 'runs';
+  if (ui.egTab !== 'runs') ui.egTab = 'meta';
   const tabs = '<div style="display:flex;gap:6px;margin:0 0 12px">' +
-    '<button class="htab' + (ui.egTab === 'runs' ? ' on' : '') + '" data-t="runs">Мои бои</button>' +
-    '<button class="htab' + (ui.egTab === 'meta' ? ' on' : '') + '" data-t="meta">Мета</button></div>';
+    '<button class="htab' + (ui.egTab === 'meta' ? ' on' : '') + '" data-t="meta">Мета</button>' +
+    '<button class="htab' + (ui.egTab === 'runs' ? ' on' : '') + '" data-t="runs">Мои бои</button></div>';
   box.innerHTML = tabs + '<div id="endTabBox">' +
     (ui.egTab === 'runs' ? drawRuns() : drawEgMeta()) + '</div>';
   box.querySelectorAll('.htab[data-t]').forEach(b => b.onclick = () => {
