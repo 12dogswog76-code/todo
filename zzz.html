@@ -167,6 +167,9 @@
   .sw-n em{font-style:normal;color:var(--acc);font-weight:700}
   .sw-s.down .sw-n em{color:var(--warn)}
   .sw-n s{text-decoration:none;color:var(--warn);font-size:10px}
+  /* чем именно диск полезен — под именем, мелко */
+  .sw-why{display:block;text-decoration:none;font-size:9.5px;color:var(--tx3);
+    margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sw-arr{flex:none;color:var(--tx3);font-size:15px}
   @media (max-width:560px){
     .sw-pair{flex-wrap:wrap}
@@ -2490,7 +2493,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v221';
+const APP_VER = 'v222';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10410,8 +10413,9 @@ const GEAR_MODES = [['bad', 'Есть что менять'], ['swap', 'Пере�
 // характеристику, которой там быть не должно. При таком ограничении обмен
 // всегда безопасен — комплекты у обоих остаются те же.
 const SWAP_MIN = 4;        // мельче — вкусовщина, не стоит возни в игре
+const SWAP_SORTS = [['tier', 'Сначала сильные'], ['gain', 'По прибавке']];
 
-function swapList() {
+function swapList(sort) {
   const mine = DB.agents.filter(a => prog[a.id] && prog[a.id].have)
     .map(a => ({ a: a, p: prog[a.id],
                  w: statWeights(a, prog[a.id]),
@@ -10454,18 +10458,37 @@ function swapList() {
       }
     }
   });
-  // Один диск нельзя отдать дважды: оставляем самые выгодные обмены, а те, что
-  // трогают уже занятый диск, отбрасываем — иначе список советует
-  // взаимоисключающие вещи.
+  // Один диск нельзя отдать дважды: отбор идёт жадно по выигрышу, а обмены,
+  // трогающие уже занятый диск, отбрасываются — иначе список советует
+  // взаимоисключающие вещи. Отбираем всегда по прибавке, независимо от того,
+  // как потом покажем: так в наборе остаются объективно лучшие обмены.
   out.sort((x, y) => y.gain - x.gain);
   const used = {};
   const key = z => z.x.a.id + ':' + (z.d.id || (z.d.slot + ':' + z.d.suit + ':' + z.d.mainP));
-  return out.filter(s => {
+  const fin = out.filter(s => {
     const ka = key(s.a), kb = key(s.b);
     if (used[ka] || used[kb]) return false;
     used[ka] = used[kb] = 1;
     return true;
   });
+
+  // «Сначала сильные» — по лучшему из двух агентов пары: сперва S-ранги, потом
+  // по тир-листу. Смысл в том, что прибавка условной Николь и прибавка Мияби
+  // стоят разного, даже если цифра одинаковая.
+  if (sort !== 'gain') {
+    const best = s => Math.min(rarW(s.a.x.a), rarW(s.b.x.a));
+    const tier = s => Math.min(tierW(s.a.x.a), tierW(s.b.x.a));
+    fin.sort((x, y) => (best(x) - best(y)) || (tier(x) - tier(y)) || (y.gain - x.gain));
+  }
+  return fin;
+}
+
+// Чем именно диск полезен новому владельцу: две самые весомые характеристики.
+// Без этого «+20%» висит в воздухе — непонятно, за счёт чего прибавка.
+function swapWhy(x, d) {
+  const sc = discScore(d, x.keys, x.pri, x.w);
+  if (!sc || !sc.by || !sc.by.length) return '';
+  return sc.by.slice(0, 2).map(t => t.replace(/\s*\(\d+%\)$/, '')).join(', ');
 }
 
 function swapRow(s) {
@@ -10475,22 +10498,29 @@ function swapRow(s) {
   // Обмен нередко тянет одного вверх за счёт другого. Молчать об этом нельзя:
   // если проседает тот, кем ты играешь, обмен не нужен, каким бы ни был
   // суммарный выигрыш. Поэтому у проигравшей стороны число красное.
-  const side = (x, from, to) => '<div class="sw-s' + (to < from ? ' down' : '') + '">' +
+  const side = (x, from, to, why) => '<div class="sw-s' + (to < from ? ' down' : '') + '">' +
     face(x) +
     '<div class="sw-n"><b>' + esc(x.a.ru) + '</b>' +
-      '<i>' + from + '% → <em>' + to + '%</em>' +
-      (to < from ? ' <s>−' + (from - to) + '</s>' : '') + '</i></div></div>';
+      '<i title="Насколько прокрутки диска попадают в нужные этому агенту ' +
+        'характеристики. 100% — все четыре ушли в самое ценное">' +
+        from + '% → <em>' + to + '%</em>' +
+        (to < from ? ' <s>−' + (from - to) + '</s>' : '') + '</i>' +
+      (why ? '<u class="sw-why">' + esc(why) + '</u>' : '') +
+    '</div></div>';
+  const t = tierOf(s.a.x.a.id), t2 = tierOf(s.b.x.a.id);
   return '<div class="sw-row">' +
     '<div class="sw-h">' +
       (su && su.icon ? img(imgUrl('discs', su.icon), 'sw-su', su.ru || su.en, true) : '') +
       '<b>слот ' + s.slot + '</b>' +
       '<span>' + esc(su ? (su.ru || su.en) : '') + '</span>' +
-      '<u class="sw-gain">+' + s.gain + '</u>' +
+      (t ? rankBadge(t.tier, 'sm') : '') + (t2 ? rankBadge(t2.tier, 'sm') : '') +
+      '<u class="sw-gain" title="Суммарный прирост пользы у обоих агентов, ' +
+        'в процентных пунктах">+' + s.gain + '</u>' +
     '</div>' +
     '<div class="sw-pair">' +
-      side(s.a.x, s.aFrom, s.aTo) +
+      side(s.a.x, s.aFrom, s.aTo, swapWhy(s.a.x, s.b.d)) +
       '<span class="sw-arr">⇄</span>' +
-      side(s.b.x, s.bFrom, s.bTo) +
+      side(s.b.x, s.bFrom, s.bTo, swapWhy(s.b.x, s.a.d)) +
     '</div></div>';
 }
 
@@ -10600,22 +10630,33 @@ function drawGear() {
   }
 
   if (mode === 'swap') {
-    const sw = swapList();
+    const sort = SWAP_SORTS.some(x => x[0] === ui.swapSort) ? ui.swapSort : 'tier';
+    const sw = swapList(sort);
+    h += '<div class="prow" style="margin:0 0 10px">' +
+      SWAP_SORTS.map(x => '<button class="td-sw' + (sort === x[0] ? ' on' : '') +
+        '" data-s="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
     h += sw.length
       ? '<div class="sw-list">' + sw.map(swapRow).join('') + '</div>'
       : '<div class="hint" style="margin-top:0">Выгодных перестановок нет — ' +
         'диски и так стоят там, где приносят больше всего.</div>';
-    h += '<div class="hint">Что это. У каждой роли свои веса характеристик, ' +
-      'поэтому диск, лежащий у одного агента мёртвым грузом, другому может ' +
-      'дать заметный прирост. Числа — оценка диска у нынешнего владельца и у ' +
-      'нового; справа общий выигрыш пары.<br>' +
+    h += '<div class="hint"><b>Что означают проценты.</b> Это не атака и не ' +
+      'криты, а насколько диск подходит агенту: какая доля его прокруток ' +
+      'попала в характеристики, нужные именно этой роли (веса берутся из ' +
+      'гайда prydwen). 100% — все четыре прокрутки ушли в самое ценное, 0% — ' +
+      'ни одна. Неподходящая главная характеристика снижает оценку почти ' +
+      'вдвое. Число справа — насколько вырастет сумма пользы у обоих агентов, ' +
+      'в процентных пунктах. Под именем написано, чем именно новый диск ' +
+      'полезен.<br>' +
       'Меняются только диски одного слота и одного комплекта, так что ' +
       'собранные четвёрки не разваливаются, а главные характеристики остаются ' +
       'на своих местах. Менять надо руками в игре — трекер только показывает, ' +
       'что имеет смысл. После обмена нажми импорт, чтобы данные сошлись.</div>';
     box.innerHTML = h;
-    box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+    box.querySelectorAll('.td-sw[data-m]').forEach(b => b.onclick = () => {
       ui.gearMode = b.dataset.m; save(); drawGear();
+    });
+    box.querySelectorAll('.td-sw[data-s]').forEach(b => b.onclick = () => {
+      ui.swapSort = b.dataset.s; save(); drawGear();
     });
     return;
   }
