@@ -2457,7 +2457,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v218';
+const APP_VER = 'v219';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6869,11 +6869,8 @@ if ($('helpWelcome')) $('helpWelcome').onclick = () => welcomeShow(true);
 if ($('helpCoach')) $('helpCoach').onclick = () => {
   // Меню открыто прямо сейчас, а дорожка начинается с кнопки меню — закрываем,
   // иначе первый же шаг покажет на то, что и так открыто.
-  if ($('menuBox')) $('menuBox').classList.remove('open');
-  if ($('modal')) $('modal').classList.remove('open');
-  const btn = $('menuBtn');
-  if (btn && btn.getAttribute('aria-expanded') === 'true') btn.click();
-  setTimeout(() => coachStart(true), 220);
+  if (typeof menuClose === 'function') menuClose();
+  setTimeout(() => coachStart(true), 260);
 };
 
 if ($('autoImp')) $('autoImp').onchange = e => {
@@ -9361,6 +9358,10 @@ async function coachRun(steps) {
 async function coachWalk(el, steps) {
   for (let i = 0; i < steps.length; i++) {
     const st = steps[i];
+    // Человек мог сделать шаг раньше, чем мы успели о нём попросить: открыть
+    // меню, пока читал приветствие. Тогда подсказка «нажми меню» над уже
+    // открытым меню выглядит глупо — пропускаем.
+    if (st.skip && st.skip()) continue;
     const target = await coachWait(st.sel);
     if (!target) return;                      // очистит coachRun
     if (st.before) st.before(target);
@@ -9401,15 +9402,18 @@ async function coachWalk(el, steps) {
         coachStop = null;
       }
       coachStop = cleanup;
-      // Подписываемся с задержкой: клик, которым человек попал на этот шаг,
-      // ещё догорает, а поле могло получить фокус от прокрутки. Без паузы шаг
-      // засчитывался сам себе и мелькал, не дав прочитать текст.
+      // Клик слушаем сразу: человек жмёт кнопку быстрее, чем за полсекунды, и
+      // с отложенной подпиской нажатие терялось — меню уже открыто, а
+      // подсказка всё ещё зовёт его открыть.
+      target.addEventListener('click', go);
+      // А вот фокус и ввод — с паузой: поле может получить фокус от прокрутки
+      // или от клика, которым человек попал на этот шаг, и тогда шаг
+      // засчитывал сам себя и мелькал, не дав прочитать текст.
       setTimeout(() => {
         if (!coachStop) return;             // шаг уже закрыт
-        target.addEventListener('click', go);
         target.addEventListener('focus', go);
         target.addEventListener('input', go);
-      }, 500);
+      }, 600);
       document.addEventListener('keydown', onKey);
     });
     if (!done) return;
@@ -9422,9 +9426,13 @@ function coachStart(force) {
   if (!force && localStorage.getItem(LS + '_uid')) return;
   coachRun([
     { sel: '#menuBtn', title: 'Начни отсюда',
-      text: 'Все разделы трекера живут в этом меню. Нажми — откроется список.' },
+      text: 'Все разделы трекера живут в этом меню. Нажми — откроется список.',
+      // Открыто именно окно меню — это menuWrap; menuBox с классом open
+      // означает другое: что внутри уже раскрыт какой-то раздел.
+      skip: () => !!($('menuWrap') && $('menuWrap').classList.contains('open')) },
     { sel: '.mmi[data-k="enka"]', title: 'Импорт из игры',
-      text: 'Первый пункт. Отсюда переносится аккаунт.' },
+      text: 'Первый пункт. Отсюда переносится аккаунт.',
+      skip: () => !!document.querySelector('#menuSlot #enkaPanel') },
     { sel: '#uidInput', title: 'Впиши UID и жми «Загрузить весь аккаунт»',
       text: 'Девять цифр из игры. Этого уже хватит: приедут все агенты, ' +
             'уровни, ядра, навыки, движки и комплекты дисков.',
