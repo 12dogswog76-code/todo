@@ -1190,13 +1190,15 @@
      иначе затемнение видно, а кольца под чужим слоем — нет. */
   #coach{position:fixed;inset:0;z-index:150;pointer-events:none}
   #coach.on{pointer-events:auto}
-  /* Затемнение — тенью наружу, но БЕЗ анимации этой тени: радиус 9999px в
-     ключевых кадрах заставляет браузер перерисовывать её отдельным слоем, и на
-     части видеокарт она ложится поверх подписи. Пульсирует только рамка. */
+  /* Затемнение — четырьмя отдельными шторками вокруг цели, а НЕ тенью
+     box-shadow радиусом 9999px, как было сначала. Такая тень выносится
+     браузером в отдельный слой композитинга и на части видеокарт ложится
+     поверх соседей: координаты у кольца и подписи верные, visibility visible,
+     а на экране пусто. Шторки же физически не занимают место цели, перекрыть
+     её нечем. */
+  .co-mask{position:absolute;background:#05060ad1}
   .co-hole{position:absolute;z-index:1;border-radius:12px;border:2px solid var(--acc);
-    box-shadow:0 0 0 9999px #05060ad1, 0 0 22px -2px var(--acc),
-               0 0 22px -2px var(--acc) inset;
-    transition:top .22s, left .22s, width .22s, height .22s;
+    box-shadow:0 0 22px -2px var(--acc), 0 0 22px -2px var(--acc) inset;
     animation:coPulse 1.8s ease-in-out infinite}
   /* Подпись и стрелка — слоем выше кольца, чтобы тень их не накрыла ни при
      каком порядке отрисовки. */
@@ -2452,7 +2454,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v213';
+const APP_VER = 'v214';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -9329,7 +9331,15 @@ function coachDraw(el, target, step, total, title, text) {
   const pad = 7;
   const top = Math.max(4, r.top - pad), left = Math.max(4, r.left - pad);
   const w = r.width + pad * 2, h = r.height + pad * 2;
+  // Четыре шторки вокруг цели: сверху, снизу и два бока вровень с ней.
+  const px = n => Math.max(0, Math.round(n)) + 'px';
+  const mask = (t, l, ww, hh) => '<div class="co-mask" style="top:' + px(t) +
+    ';left:' + px(l) + ';width:' + px(ww) + ';height:' + px(hh) + '"></div>';
   el.innerHTML =
+    mask(0, 0, innerWidth, top) +
+    mask(top + h, 0, innerWidth, innerHeight - top - h) +
+    mask(top, 0, left, h) +
+    mask(top, left + w, innerWidth - left - w, h) +
     '<div class="co-hole" style="top:' + top + 'px;left:' + left + 'px;' +
       'width:' + w + 'px;height:' + h + 'px"></div>' +
     '<div class="co-arr"></div>' +
