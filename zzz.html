@@ -2501,7 +2501,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v236';
+const APP_VER = 'v237';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10208,7 +10208,8 @@ function patchStats() {
   // не числом. Первый вариант сравнивал её с миллисекундами через +x.t — это
   // NaN, и за патч не находилось ни одной крутки при полутора сотнях сделанных.
   const pulls = ((PULLS && PULLS.list) || []).filter(x => x && x.t && inRange(pullMs(x.t)));
-  const gotS = pulls.filter(x => x.r === 4).map(x => x.n);
+  // Храним и item_id: по нему картинка находится точно, без сверки названий.
+  const gotS = pulls.filter(x => x.r === 4).map(x => ({ n: x.n, iid: x.iid || '' }));
   const gotA = pulls.filter(x => x.r === 3).length;
 
   // История: берём первый и последний снимок внутри патча. Если снимок один,
@@ -10595,24 +10596,36 @@ async function patchPng() {
   c.fillText('КОГО ВЫБИЛ', 40, y);
   y += 14;
   if (st.gotS.length) {
+    // Среди выбитых S-рангов не только агенты, но и движки: «Ода о
+    // возвращении», «Ткач времени» — это оружие, и в DB.agents их нет.
+    // pullPic ищет по всем каталогам сразу и умеет мириться с расхождениями
+    // в переводах — тот же поиск, что в разделе круток.
     const uniq = [];
-    st.gotS.forEach(n => { if (uniq.indexOf(n) < 0) uniq.push(n); });
+    st.gotS.forEach(z => { if (!uniq.some(u => u.n === z.n)) uniq.push(z); });
     const SZ = 78, GAP = 10;
     for (let i = 0; i < uniq.length && i < 10; i++) {
-      const a = (DB.agents || []).filter(x => x.en === uniq[i] || x.ru === uniq[i])[0];
+      const pic = pullPic(uniq[i].n, uniq[i].iid);
       const x = 40 + i * (SZ + GAP);
       c.fillStyle = CARD_PAN; cardRound(c, x, y, SZ, SZ, 14); c.fill();
       c.strokeStyle = CARD_LINE; c.stroke();
-      const im = a ? await loadImg(agentPic(a, 'card')) : null;
+      const im = pic ? await loadImg(pic.src) : null;
       if (im) {
         c.save(); cardRound(c, x, y, SZ, SZ, 14); c.clip();
-        const k = Math.max(SZ / im.width, SZ / im.height);
-        c.drawImage(im, x + (SZ - im.width * k) / 2, y, im.width * k, im.height * k);
+        // Портреты агентов кадрируем по верху, значки движков вписываем
+        // целиком: они квадратные и обрезать их нечем.
+        if (pic.sq) {
+          const k = Math.min(SZ / im.width, SZ / im.height) * 0.82;
+          c.drawImage(im, x + (SZ - im.width * k) / 2, y + (SZ - im.height * k) / 2,
+                      im.width * k, im.height * k);
+        } else {
+          const k = Math.max(SZ / im.width, SZ / im.height);
+          c.drawImage(im, x + (SZ - im.width * k) / 2, y, im.width * k, im.height * k);
+        }
         c.restore();
       }
       c.fillStyle = CARD_TX2; c.font = cardFont(10, 600);
       c.textAlign = 'center';
-      cardText(c, a ? a.ru : uniq[i], x + SZ / 2, y + SZ + 14, SZ + GAP);
+      cardText(c, (pic && pic.n) || uniq[i].n, x + SZ / 2, y + SZ + 14, SZ + GAP);
       c.textAlign = 'left';
     }
     y += SZ + 30;
