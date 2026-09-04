@@ -1158,8 +1158,17 @@
     border-radius:50%;background:var(--acc);box-shadow:0 0 7px var(--acc)}
   .wbar{display:flex;align-items:center;gap:8px;margin-top:14px;
     padding-top:13px;border-top:1px solid var(--line)}
-  .wbar button{flex:none}
-  .wbar .pri{margin-left:auto}
+  /* Свои стили, а не общие .pri/.ghost2: те объявлены внутри .foot2 и сюда не
+     достают, из-за чего кнопки выглядели системными серыми прямоугольниками. */
+  .wbar button{flex:none;font-family:inherit;font-size:12px;cursor:pointer;
+    border-radius:9px;padding:8px 16px;transition:.14s;
+    background:var(--pan2);border:1px solid var(--line);color:var(--tx2)}
+  .wbar button:hover{color:var(--tx);border-color:var(--tx3)}
+  .wbar .wgo{margin-left:auto;font-weight:700;color:#06240f;
+    background:linear-gradient(180deg,#63e694,var(--acc));border-color:var(--acc);
+    box-shadow:0 3px 14px -2px #4ade8066, 0 1px 0 #ffffff33 inset}
+  .wbar .wgo:hover{background:#6ee79a;color:#06240f;border-color:var(--acc);
+    box-shadow:0 4px 18px -2px #4ade8080, 0 1px 0 #ffffff33 inset}
   .wdots{display:flex;gap:5px;align-items:center;margin-right:4px}
   /* Неактивные точки на var(--line) сливались с карточкой — берём светлее. */
   .wdots i{width:6px;height:6px;border-radius:50%;background:#39404f;
@@ -1171,6 +1180,38 @@
     .wbar{flex-wrap:wrap}
     .wbar .pri{margin-left:0;flex:1}
   }
+
+  /* ── подсказка с указателем ────────────────────────────────────────────────
+     После приветствия человек знает, что нажать, но не знает где. Поэтому
+     дальше его ведём по экрану: кольцо вокруг нужной кнопки и подпись рядом.
+     Кольцо рисуется огромной тенью наружу — так затемняется всё, кроме цели,
+     и не нужен ни клон элемента, ни вырезание масками. */
+  #coach{position:fixed;inset:0;z-index:125;pointer-events:none}
+  #coach.on{pointer-events:auto}
+  .co-hole{position:absolute;border-radius:12px;border:2px solid var(--acc);
+    box-shadow:0 0 0 9999px #05060ad1, 0 0 22px -2px var(--acc),
+               0 0 22px -2px var(--acc) inset;
+    transition:top .22s, left .22s, width .22s, height .22s;
+    animation:coPulse 1.8s ease-in-out infinite}
+  .co-tip{position:absolute;max-width:270px;
+    background:linear-gradient(180deg,var(--pan2),var(--pan));
+    border:1px solid #4ade8047;border-radius:13px;padding:11px 13px;
+    box-shadow:0 0 20px -4px #4ade8066, 0 12px 34px #000000b3, var(--glass)}
+  .co-tip b{display:block;font-size:12.5px;font-weight:700;margin-bottom:3px}
+  .co-tip i{font-style:normal;display:block;font-size:11.5px;line-height:1.55;
+    color:var(--tx2)}
+  .co-tip .co-bar{display:flex;align-items:center;gap:8px;margin-top:9px}
+  .co-tip .co-bar span{font-size:10.5px;color:var(--tx3);margin-right:auto}
+  .co-tip button{font-family:inherit;font-size:11px;cursor:pointer;border-radius:8px;
+    padding:5px 11px;background:var(--pan2);border:1px solid var(--line);
+    color:var(--tx2);transition:.14s}
+  .co-tip button:hover{color:var(--tx);border-color:var(--tx3)}
+  /* стрелка от подписи к цели */
+  .co-arr{position:absolute;color:var(--acc);font-size:19px;line-height:1;
+    text-shadow:0 0 10px var(--acc);animation:coBob 1.4s ease-in-out infinite}
+  @keyframes coPulse{50%{box-shadow:0 0 0 9999px #05060ad1, 0 0 30px 1px var(--acc),
+    0 0 26px -2px var(--acc) inset}}
+  @keyframes coBob{50%{transform:translateY(-4px)}}
 
   /* ── уведомления ───────────────────────────────────────────────────────────
      Раньше импорт из игры выглядел так: нажал — и сидишь смотришь на кнопку.
@@ -2265,7 +2306,8 @@
   <div class="panel" id="helpPanel">
     <div class="prow" style="margin-bottom:12px">
       <button id="helpWelcome" class="ghost2">👋 Показать приветствие</button>
-      <span class="hint" style="margin:0;align-self:center">короткая инструкция для новичка</span>
+      <button id="helpCoach" class="ghost2">👆 Показать, куда нажимать</button>
+      <span class="hint" style="margin:0;align-self:center">инструкция для новичка</span>
     </div>
     <div class="hint hlp" style="margin-top:0">
       <b>Трекер прокачки агентов Zenless Zone Zero.</b> Данные лежат в браузере,
@@ -2345,28 +2387,32 @@
        подключить облако — ездят между компьютером и телефоном.</p>
     <div class="wbar">
       <span class="wdots"><i class="on"></i><i></i><i></i></span>
-      <button class="ghost2" data-w="skip">Пропустить</button>
-      <button class="pri" data-w="next">Дальше →</button>
+      <button class="wsub" data-w="skip">Пропустить</button>
+      <button class="wgo" data-w="next">Дальше →</button>
     </div>
   </div>
 
   <div class="wstep" data-step="2" hidden>
     <div class="wtop"><span class="wlogo gold">1</span><b>Перенеси свой аккаунт</b></div>
-    <p>Это главное и делается один раз. Нужен только <b>UID</b> — номер из игры.</p>
+    <p>Делается один раз. Данные берутся из боевой хроники HoYoLab — той самой,
+       что в приложении.</p>
     <ol class="wsteps">
-      <li>В игре нажми на свой профиль слева вверху — UID написан внизу окна.
-          Девять цифр, например <code>1502024259</code>.</li>
-      <li>Здесь нажми <b>☰ Меню</b> в правом верхнем углу.</li>
-      <li>Первый пункт — <b>⟳ Импорт из игры</b>.</li>
-      <li>Впиши UID в поле и нажми <b>⚡ Загрузить весь аккаунт</b>.</li>
+      <li>В игре нажми на свой профиль слева вверху — <b>UID</b> написан внизу
+          окна. Девять цифр, например <code>1502024259</code>.</li>
+      <li>Здесь: <b>☰ Меню</b> → <b>⟳ Импорт из игры</b> → впиши UID →
+          <b>⚡ Загрузить весь аккаунт</b>.</li>
+      <li>Приедут все агенты: уровни, ядра, навыки, движки и комплекты дисков.</li>
     </ol>
-    <p class="wnote">Данные берутся из боевой хроники HoYoLab — той самой, что в
-       приложении. Ничего вводить, кроме UID, не нужно: ни пароля, ни входа.
-       Если хроника закрыта настройками приватности, трекер подскажет, что включить.</p>
+    <p class="wnote"><b>Про доступ.</b> По одному UID хроника отдаёт чужой
+       аккаунт урезанным: диски приходят без характеристик. Характеристики
+       витринных агентов трекер сам добирает с Enka — тех шестерых, что стоят
+       у тебя в профиле в игре. Хочешь характеристики <b>всех</b> дисков —
+       в том же разделе раскрой «Свой доступ HoYoLab» и вставь туда две
+       cookie, там расписано, где их взять. Пароль нигде не вводится.</p>
     <div class="wbar">
       <span class="wdots"><i></i><i class="on"></i><i></i></span>
-      <button class="ghost2" data-w="back">← Назад</button>
-      <button class="pri" data-w="next">Дальше →</button>
+      <button class="wsub" data-w="back">← Назад</button>
+      <button class="wgo" data-w="next">Дальше →</button>
     </div>
   </div>
 
@@ -2386,8 +2432,8 @@
        в меню, раздел «Справка».</p>
     <div class="wbar">
       <span class="wdots"><i></i><i></i><i class="on"></i></span>
-      <button class="ghost2" data-w="back">← Назад</button>
-      <button class="pri" data-w="done">Понятно, начнём</button>
+      <button class="wsub" data-w="back">← Назад</button>
+      <button class="wgo" data-w="done">Понятно, начнём</button>
     </div>
   </div>
 </div></div>
@@ -2395,7 +2441,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v209';
+const APP_VER = 'v210';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -6804,6 +6850,15 @@ if ($('hoyoCkClear')) {
 hoyoCkShow();
 
 if ($('helpWelcome')) $('helpWelcome').onclick = () => welcomeShow(true);
+if ($('helpCoach')) $('helpCoach').onclick = () => {
+  // Меню открыто прямо сейчас, а дорожка начинается с кнопки меню — закрываем,
+  // иначе первый же шаг покажет на то, что и так открыто.
+  if ($('menuBox')) $('menuBox').classList.remove('open');
+  if ($('modal')) $('modal').classList.remove('open');
+  const btn = $('menuBtn');
+  if (btn && btn.getAttribute('aria-expanded') === 'true') btn.click();
+  setTimeout(() => coachStart(true), 220);
+};
 
 if ($('autoImp')) $('autoImp').onchange = e => {
   ui.autoImp = e.target.checked ? 1 : 0;
@@ -9202,10 +9257,13 @@ function welcomeStep() {
   const card = el.querySelector('.wcard');
   if (card) card.scrollTop = 0;
 }
-function welcomeClose() {
+function welcomeClose(guide) {
   const el = $('welcome');
   if (el) el.classList.remove('open');
   try { localStorage.setItem(LS_WELCOME, '1'); } catch (e) {}
+  // Прочитал инструкцию — сразу показываем, куда нажимать. Тем, кто нажал
+  // «Пропустить», не навязываемся.
+  if (guide) setTimeout(() => coachStart(), 260);
 }
 if ($('welcome')) {
   $('welcome').addEventListener('click', e => {
@@ -9215,11 +9273,133 @@ if ($('welcome')) {
     const w = b.dataset.w;
     if (w === 'next') { wStep = Math.min(3, wStep + 1); welcomeStep(); }
     else if (w === 'back') { wStep = Math.max(1, wStep - 1); welcomeStep(); }
-    else welcomeClose();
+    else welcomeClose(w === 'done');
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && $('welcome').classList.contains('open')) welcomeClose();
   });
+}
+
+// ─────────────── подсказка с указателем ───────────────
+// Ведём новичка по экрану: кольцо вокруг нужной кнопки, подпись рядом, дальше
+// по его же клику. Не автопилот — трекер ничего не нажимает сам, только
+// показывает куда.
+//
+// Цель следующего шага появляется не сразу (меню открывается с анимацией,
+// панель подставляется в слот), поэтому ждём её появления, а не хватаем сразу.
+const LS_COACH = LS + '_coach';
+let coachStop = null;
+
+function coachEnd() {
+  const el = $('coach');
+  if (el) { el.className = ''; el.innerHTML = ''; }
+  if (coachStop) { coachStop(); coachStop = null; }
+  try { localStorage.setItem(LS_COACH, '1'); } catch (e) {}
+}
+// Ждём элемент до 4 секунд: если за это время не появился — тихо сдаёмся,
+// приставать к человеку дальше не за чем.
+function coachWait(sel, ms) {
+  return new Promise(res => {
+    const t0 = Date.now();
+    const tick = () => {
+      const el = document.querySelector(sel);
+      if (el && el.getBoundingClientRect().width) return res(el);
+      if (Date.now() - t0 > (ms || 4000)) return res(null);
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
+}
+function coachDraw(el, target, step, total, title, text) {
+  const r = target.getBoundingClientRect();
+  const pad = 7;
+  const top = Math.max(4, r.top - pad), left = Math.max(4, r.left - pad);
+  const w = r.width + pad * 2, h = r.height + pad * 2;
+  el.innerHTML =
+    '<div class="co-hole" style="top:' + top + 'px;left:' + left + 'px;' +
+      'width:' + w + 'px;height:' + h + 'px"></div>' +
+    '<div class="co-arr"></div>' +
+    '<div class="co-tip"><b>' + esc(title) + '</b><i>' + esc(text) + '</i>' +
+      '<div class="co-bar"><span>шаг ' + step + ' из ' + total + '</span>' +
+      '<button data-co="stop">Не надо, разберусь</button></div></div>';
+  const tip = el.querySelector('.co-tip'), arr = el.querySelector('.co-arr');
+  const tr = tip.getBoundingClientRect();
+  // Подпись под целью, если внизу есть место, иначе над ней; по горизонтали
+  // прижимаем к экрану, чтобы не уезжала за край на узких окнах.
+  const below = top + h + 14 + tr.height < innerHeight;
+  tip.style.top = (below ? top + h + 14 : top - tr.height - 14) + 'px';
+  tip.style.left = Math.max(8, Math.min(innerWidth - tr.width - 8,
+                                        left + w / 2 - tr.width / 2)) + 'px';
+  arr.textContent = below ? '▲' : '▼';
+  arr.style.top = (below ? top + h + 1 : top - h * 0 - 20) + 'px';
+  arr.style.left = (left + w / 2 - 6) + 'px';
+  el.querySelector('[data-co="stop"]').onclick = coachEnd;
+}
+
+async function coachRun(steps) {
+  let el = $('coach');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'coach';
+    document.body.appendChild(el);
+  }
+  el.className = 'on';
+  for (let i = 0; i < steps.length; i++) {
+    const st = steps[i];
+    const target = await coachWait(st.sel);
+    if (!target) { coachEnd(); return; }
+    if (st.before) st.before(target);
+    coachDraw(el, target, i + 1, steps.length, st.title, st.text);
+    // Ждём либо клика по цели (идём дальше), либо мимо неё (закрываем).
+    const done = await new Promise(res => {
+      const onHit = () => { cleanup(); setTimeout(() => res(true), 320); };
+      const onMiss = e => {
+        if (target.contains(e.target) || e.target.closest('.co-tip')) return;
+        cleanup(); res(false);
+      };
+      const onKey = e => { if (e.key === 'Escape') { cleanup(); res(false); } };
+      const reflow = () => coachDraw(el, target, i + 1, steps.length, st.title, st.text);
+      function cleanup() {
+        target.removeEventListener('click', onHit);
+        document.removeEventListener('click', onMiss, true);
+        document.removeEventListener('keydown', onKey);
+        removeEventListener('resize', reflow);
+        removeEventListener('scroll', reflow, true);
+        coachStop = null;
+      }
+      coachStop = cleanup;
+      target.addEventListener('click', onHit);
+      document.addEventListener('click', onMiss, true);
+      document.addEventListener('keydown', onKey);
+      addEventListener('resize', reflow);
+      addEventListener('scroll', reflow, true);
+    });
+    if (!done) { coachEnd(); return; }
+  }
+  coachEnd();
+}
+
+// Дорожка от «Меню» до поля UID. Запускается один раз, после приветствия.
+function coachStart(force) {
+  if (!force && localStorage.getItem(LS_COACH)) return;
+  if (!force && localStorage.getItem(LS + '_uid')) return;
+  coachRun([
+    { sel: '#menuBtn', title: 'Начни отсюда',
+      text: 'Все разделы трекера живут в этом меню. Нажми — откроется список.' },
+    { sel: '.mmi[data-k="enka"]', title: 'Импорт из игры',
+      text: 'Первый пункт. Отсюда переносится аккаунт.' },
+    { sel: '#uidInput', title: 'Впиши UID и жми «Загрузить весь аккаунт»',
+      text: 'Ниже раскрыт «Свой доступ HoYoLab»: он нужен, только если хочешь ' +
+            'характеристики всех дисков, а не шести витринных. Без него тоже работает.',
+      // Раскрываем блок с cookie заранее: свёрнутым его попросту не замечают,
+      // и человек не понимает, почему у дисков пустые характеристики.
+      before: () => {
+        const own = $('ownBox');
+        if (own) own.open = true;
+        const uid = $('uidInput');
+        if (uid) setTimeout(() => uid.focus(), 350);
+      } }
+  ]);
 }
 
 // ─────────────── уведомления ───────────────
