@@ -169,6 +169,8 @@
   .sw-n s{text-decoration:none;color:var(--warn);font-size:10px}
   .sw-n s.sw-same{color:var(--tx3)}
   /* чем именно диск полезен — под именем, мелко */
+  .sw-gr{display:inline-flex;align-items:center;gap:3px;flex:none}
+  .sw-gr i{font-style:normal;color:var(--tx3);font-size:9px}
   .sw-why{display:block;text-decoration:none;font-size:9.5px;color:var(--tx3);
     margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sw-arr{flex:none;color:var(--tx3);font-size:15px}
@@ -2494,7 +2496,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v229';
+const APP_VER = 'v231';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10605,13 +10607,25 @@ function swapRow(s) {
   // Обмен нередко тянет одного вверх за счёт другого. Молчать об этом нельзя:
   // если проседает тот, кем ты играешь, обмен не нужен, каким бы ни был
   // суммарный выигрыш. Поэтому у проигравшей стороны число красное.
-  // Тир ставим рядом с именем, а не в шапку строки: там две буквы стояли
-  // подряд, и понять, какая к кому относится, было нельзя.
-  const side = (x, from, to, why) => '<div class="sw-s' + (to < from ? ' down' : '') + '">' +
+  // Рядом с именем — буквенная оценка ДИСКА: какой он для этого агента сейчас
+  // и каким станет после обмена. Раньше здесь стоял тир самого агента, но он к
+  // обмену отношения не имеет и только путал.
+  // Буква считается от той же абсолютной пользы, что и числа рядом, а не от
+  // доли: иначе они противоречат друг другу. У Гашетки чужой диск давал 3.6
+  // против её 2.1, но по доле выходило S- → B — стрелка вверх, буква вниз.
+  // Здесь польза делится на потолок в девять прокруток.
+  const grade = (x, d) => {
+    const sc = discScore(d, x.keys, x.pri, x.w);
+    if (!sc) return null;
+    const v = sc.good * (sc.mainOk ? 1 : 0.55);
+    return discGrade(Math.round(v / DISC_MAX_ROLLS * 100)).g;
+  };
+  const side = (x, from, to, why, gOld, gNew) => '<div class="sw-s' + (to < from ? ' down' : '') + '">' +
     face(x) +
     '<div class="sw-n"><b>' + esc(x.a.ru) +
-      (tierOf(x.a.id) ? ' ' + rankBadge(tierOf(x.a.id).tier, 'sm',
-        'Место в тир-листе prydwen') : '') + '</b>' +
+      (gOld ? '<span class="sw-gr">' + rankBadge(gOld, 'sm', 'Ранг диска сейчас') +
+        (gNew && gNew !== gOld ? '<i>→</i>' + rankBadge(gNew, 'sm', 'Ранг диска после обмена') : '') +
+        '</span>' : '') + '</b>' +
       '<i title="Полезные прокрутки: сумма прокруток, умноженных на вес ' +
         'характеристики для этой роли. Считается по абсолютной пользе, а не ' +
         'по доле — иначе пустой диск сравнялся бы с докачанным">' +
@@ -10632,9 +10646,11 @@ function swapRow(s) {
         'у обоих агентов">+' + s.gain + '</u>' +
     '</div>' +
     '<div class="sw-pair">' +
-      side(s.a.x, s.aFrom, s.aTo, swapWhy(s.a.x, s.b.d)) +
+      side(s.a.x, s.aFrom, s.aTo, swapWhy(s.a.x, s.b.d),
+           grade(s.a.x, s.a.d), grade(s.a.x, s.b.d)) +
       '<span class="sw-arr">⇄</span>' +
-      side(s.b.x, s.bFrom, s.bTo, swapWhy(s.b.x, s.a.d)) +
+      side(s.b.x, s.bFrom, s.bTo, swapWhy(s.b.x, s.a.d),
+           grade(s.b.x, s.b.d), grade(s.b.x, s.a.d)) +
     '</div></div>';
 }
 
@@ -10770,6 +10786,10 @@ function drawGear() {
       'единицы. Неподходящая главная характеристика режет результат почти ' +
       'вдвое. Число справа — прирост суммы у обоих агентов. Под именем ' +
       'написано, чем именно полезен новый диск.<br>' +
+      'Буква рядом с именем — ранг диска для этого агента: слева какой сейчас, ' +
+      'справа каким станет после обмена. Считается от той же пользы, что и ' +
+      'числа, поделённой на потолок в девять прокруток, поэтому буква и ' +
+      'стрелка всегда смотрят в одну сторону.<br>' +
       'Считается по абсолютной пользе, а не по процентам. Проценты — это доля ' +
       'полезного от всех прокруток, и по ним недокачанный диск сравнивается с ' +
       'докачанным: три прокрутки с одной полезной и девять с тремя полезными ' +
