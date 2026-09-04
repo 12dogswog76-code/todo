@@ -2501,7 +2501,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v235';
+const APP_VER = 'v236';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10188,13 +10188,26 @@ function patchRange() {
            to:   Math.max.apply(null, list.map(b => d(b.to))), ver: '' };
 }
 
+// «2026-08-15 13:22:07» → миллисекунды. Разбираем руками, а не через
+// Date.parse: строку с пробелом вместо T часть браузеров не понимает, и
+// получается NaN.
+function pullMs(t) {
+  if (typeof t === 'number') return t;
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(t || ''));
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)).getTime();
+  const d = Date.parse(String(t || ''));
+  return isNaN(d) ? 0 : d;
+}
+
 function patchStats() {
   const r = patchRange();
   if (!r) return null;
   const inRange = t => t >= r.from && t <= r.to + 86400000;
 
-  // Крутки: список хранит время каждой, поэтому просто отбираем по отрезку.
-  const pulls = ((PULLS && PULLS.list) || []).filter(x => x && x.t && inRange(+x.t));
+  // Крутки: время у них приходит от HoYoverse строкой «2026-08-15 13:22:07», а
+  // не числом. Первый вариант сравнивал её с миллисекундами через +x.t — это
+  // NaN, и за патч не находилось ни одной крутки при полутора сотнях сделанных.
+  const pulls = ((PULLS && PULLS.list) || []).filter(x => x && x.t && inRange(pullMs(x.t)));
   const gotS = pulls.filter(x => x.r === 4).map(x => x.n);
   const gotA = pulls.filter(x => x.r === 3).length;
 
@@ -10226,10 +10239,19 @@ function patchStats() {
   const shiyu = best('shiyu', l => l.reduce((a, b) => (b.score || 0) > (a.score || 0) ? b : a));
   const mem = best('mem', l => l.reduce((a, b) => (b.star || 0) > (a.star || 0) ? b : a));
 
+  // С какого дня вообще есть записи. Журнал изменений появился в трекере
+  // недавно, история чуть раньше: если они начались позже старта патча, нули в
+  // прокачке означают «данных нет», а не «ничего не делал». Про это честнее
+  // написать прямо на картинке.
+  const firstLog = ((CHRON && CHRON.log) || []).reduce((m, e) => Math.min(m, +e.t || Infinity), Infinity);
+  const firstDay = ((hist && hist.days) || []).reduce((m, d) => Math.min(m, +d.t || Infinity), Infinity);
+  const since = Math.min(firstLog, firstDay);
+
   return { range: r, pulls: pulls.length, gotS: gotS, gotA: gotA,
            days: days.length, d0: d0, d1: d1,
            discs: discs, lvls: lvls, minds: minds,
            shiyu: shiyu, mem: mem,
+           since: isFinite(since) && since > r.from ? since : null,
            agents: Object.keys(prog).filter(k => prog[k] && prog[k].have).length };
 }
 
@@ -10633,6 +10655,12 @@ async function patchPng() {
 
   c.fillStyle = CARD_TX3; c.font = cardFont(12, 500);
   c.fillText('alextask.ru · ' + new Date().toLocaleDateString('ru-RU'), 40, SUM_H - 24);
+  if (st.since) {
+    c.textAlign = 'right';
+    cardText(c, 'прокачка считается с ' + dt(st.since) + ', раньше трекер её не вёл',
+             SUM_W - 40, SUM_H - 24, SUM_W / 2);
+    c.textAlign = 'left';
+  }
   return new Promise(res => cv.toBlob(res, 'image/png'));
 }
 
