@@ -144,6 +144,35 @@
   /* Правило display:inline-flex сильнее браузерного [hidden]{display:none}, и
      пока данные не приехали, в шапке висел пустой овал. */
   .logo .bat[hidden]{display:none}
+  /* перестановки дисков */
+  .sw-list{display:flex;flex-direction:column;gap:8px}
+  .sw-row{border:1px solid var(--line);border-radius:13px;background:var(--pan2);
+    padding:9px 11px}
+  .sw-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .sw-h b{font-size:11px;font-weight:700;color:var(--tx2)}
+  .sw-h span{font-size:10.5px;color:var(--tx3);min-width:0;overflow:hidden;
+    white-space:nowrap;text-overflow:ellipsis}
+  .sw-su{width:20px;height:20px;flex:none;object-fit:contain}
+  .sw-gain{margin-left:auto;flex:none;text-decoration:none;font-size:12px;font-weight:800;
+    color:var(--acc);background:#4ade801a;border:1px solid #4ade8040;
+    border-radius:7px;padding:2px 8px}
+  .sw-pair{display:flex;align-items:center;gap:10px}
+  .sw-s{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+  .sw-ic{width:34px;height:34px;flex:none;border-radius:9px;object-fit:cover;
+    object-position:50% 12%;background:#0b0d11;border:1px solid var(--line)}
+  .sw-n{min-width:0}
+  .sw-n b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .sw-n i{font-style:normal;font-size:10.5px;color:var(--tx3)}
+  .sw-n em{font-style:normal;color:var(--acc);font-weight:700}
+  .sw-s.down .sw-n em{color:var(--warn)}
+  .sw-n s{text-decoration:none;color:var(--warn);font-size:10px}
+  .sw-arr{flex:none;color:var(--tx3);font-size:15px}
+  @media (max-width:560px){
+    .sw-pair{flex-wrap:wrap}
+    .sw-arr{display:none}
+  }
+
   /* свой выбор агентов: круглые значки с галочкой */
   .pk-wrap{display:flex;flex-direction:column;gap:12px}
   .pk-grid{display:flex;flex-wrap:wrap;gap:7px}
@@ -2461,7 +2490,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v220';
+const APP_VER = 'v221';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10367,7 +10396,103 @@ function translit(s) {
 // Чего трекер знать не может: что лежит в инвентаре. Enka и хроника отдают
 // только надетое, поэтому «свободных движков» тут нет — есть «этому агенту
 // гайд советует другой».
-const GEAR_MODES = [['bad', 'Есть что менять'], ['all', 'Все'], ['sets', 'По комплектам']];
+const GEAR_MODES = [['bad', 'Есть что менять'], ['swap', 'Перестановки'],
+                    ['all', 'Все'], ['sets', 'По комплектам']];
+
+// ─────────────── выгодные перестановки дисков ───────────────
+// Диск, который у одного агента лежит мёртвым грузом, другому может дать
+// заметный прирост: веса характеристик у ролей разные. Трекер знает диски всех
+// агентов и веса каждого, так что пары считаются перебором — без единого
+// похода за материалами.
+//
+// Меняем только диски ОДНОГО слота и ОДНОГО комплекта. Это принципиально:
+// иначе совет развалит собранную четвёрку или подсунет в шестой слот главную
+// характеристику, которой там быть не должно. При таком ограничении обмен
+// всегда безопасен — комплекты у обоих остаются те же.
+const SWAP_MIN = 4;        // мельче — вкусовщина, не стоит возни в игре
+
+function swapList() {
+  const mine = DB.agents.filter(a => prog[a.id] && prog[a.id].have)
+    .map(a => ({ a: a, p: prog[a.id],
+                 w: statWeights(a, prog[a.id]),
+                 keys: modKeys(a.id, prog[a.id]),
+                 pri: priOf(a.id, prog[a.id]) }));
+  // Оценка диска у конкретного агента. Главная характеристика в pct не входит,
+  // а она половина смысла: диск с чужим главным статом даёт меньше, даже если
+  // подстаты идеальные. Поэтому неподходящий главный стат режет оценку.
+  const val = (x, d) => {
+    const sc = discScore(d, x.keys, x.pri, x.w);
+    if (!sc) return null;
+    return sc.pct * (sc.mainOk ? 1 : 0.55);
+  };
+
+  const cells = {};          // слот+комплект → у кого что надето
+  mine.forEach(x => {
+    (x.p.discs || []).forEach(d => {
+      if (!d || !d.slot || !d.suit) return;
+      const key = d.slot + ':' + d.suit;
+      (cells[key] || (cells[key] = [])).push({ x: x, d: d });
+    });
+  });
+
+  const out = [];
+  Object.keys(cells).forEach(key => {
+    const list = cells[key];
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const A = list[i], B = list[j];
+        if (A.x.a.id === B.x.a.id) continue;
+        const aNow = val(A.x, A.d), bNow = val(B.x, B.d);
+        const aNew = val(A.x, B.d), bNew = val(B.x, A.d);
+        if (aNow == null || bNow == null || aNew == null || bNew == null) continue;
+        const gain = (aNew + bNew) - (aNow + bNow);
+        if (gain < SWAP_MIN) continue;
+        out.push({ slot: +key.split(':')[0], suit: key.split(':')[1],
+                   a: A, b: B, gain: Math.round(gain),
+                   aFrom: Math.round(aNow), aTo: Math.round(aNew),
+                   bFrom: Math.round(bNow), bTo: Math.round(bNew) });
+      }
+    }
+  });
+  // Один диск нельзя отдать дважды: оставляем самые выгодные обмены, а те, что
+  // трогают уже занятый диск, отбрасываем — иначе список советует
+  // взаимоисключающие вещи.
+  out.sort((x, y) => y.gain - x.gain);
+  const used = {};
+  const key = z => z.x.a.id + ':' + (z.d.id || (z.d.slot + ':' + z.d.suit + ':' + z.d.mainP));
+  return out.filter(s => {
+    const ka = key(s.a), kb = key(s.b);
+    if (used[ka] || used[kb]) return false;
+    used[ka] = used[kb] = 1;
+    return true;
+  });
+}
+
+function swapRow(s) {
+  const su = DB.suitById ? DB.suitById[s.suit] : null;
+  const face = x => (x.a.icon ? img(imgUrl('agents', x.a.icon), 'sw-ic', x.a.ru, true)
+                              : '<span class="sw-ic"></span>');
+  // Обмен нередко тянет одного вверх за счёт другого. Молчать об этом нельзя:
+  // если проседает тот, кем ты играешь, обмен не нужен, каким бы ни был
+  // суммарный выигрыш. Поэтому у проигравшей стороны число красное.
+  const side = (x, from, to) => '<div class="sw-s' + (to < from ? ' down' : '') + '">' +
+    face(x) +
+    '<div class="sw-n"><b>' + esc(x.a.ru) + '</b>' +
+      '<i>' + from + '% → <em>' + to + '%</em>' +
+      (to < from ? ' <s>−' + (from - to) + '</s>' : '') + '</i></div></div>';
+  return '<div class="sw-row">' +
+    '<div class="sw-h">' +
+      (su && su.icon ? img(imgUrl('discs', su.icon), 'sw-su', su.ru || su.en, true) : '') +
+      '<b>слот ' + s.slot + '</b>' +
+      '<span>' + esc(su ? (su.ru || su.en) : '') + '</span>' +
+      '<u class="sw-gain">+' + s.gain + '</u>' +
+    '</div>' +
+    '<div class="sw-pair">' +
+      side(s.a.x, s.aFrom, s.aTo) +
+      '<span class="sw-arr">⇄</span>' +
+      side(s.b.x, s.bFrom, s.bTo) +
+    '</div></div>';
+}
 
 // Место надетого движка в списке гайда: 0 — лучший, null — его там нет вовсе.
 function engRank(id, wid) {
@@ -10471,6 +10596,27 @@ function drawGear() {
   if (!list.length) {
     box.innerHTML = h + '<div class="hint" style="margin-top:0">' +
       'Сначала загрузи своих агентов на вкладке «Импорт из игры».</div>';
+    return;
+  }
+
+  if (mode === 'swap') {
+    const sw = swapList();
+    h += sw.length
+      ? '<div class="sw-list">' + sw.map(swapRow).join('') + '</div>'
+      : '<div class="hint" style="margin-top:0">Выгодных перестановок нет — ' +
+        'диски и так стоят там, где приносят больше всего.</div>';
+    h += '<div class="hint">Что это. У каждой роли свои веса характеристик, ' +
+      'поэтому диск, лежащий у одного агента мёртвым грузом, другому может ' +
+      'дать заметный прирост. Числа — оценка диска у нынешнего владельца и у ' +
+      'нового; справа общий выигрыш пары.<br>' +
+      'Меняются только диски одного слота и одного комплекта, так что ' +
+      'собранные четвёрки не разваливаются, а главные характеристики остаются ' +
+      'на своих местах. Менять надо руками в игре — трекер только показывает, ' +
+      'что имеет смысл. После обмена нажми импорт, чтобы данные сошлись.</div>';
+    box.innerHTML = h;
+    box.querySelectorAll('.td-sw').forEach(b => b.onclick = () => {
+      ui.gearMode = b.dataset.m; save(); drawGear();
+    });
     return;
   }
 
