@@ -161,8 +161,8 @@
   .sw-ic{width:34px;height:34px;flex:none;border-radius:9px;object-fit:cover;
     object-position:50% 12%;background:#0b0d11;border:1px solid var(--line)}
   .sw-n{min-width:0}
-  .sw-n b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;
-    text-overflow:ellipsis}
+  .sw-n b{display:flex;align-items:center;gap:5px;font-size:12px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sw-n i{font-style:normal;font-size:10.5px;color:var(--tx3)}
   .sw-n em{font-style:normal;color:var(--acc);font-weight:700}
   .sw-s.down .sw-n em{color:var(--warn)}
@@ -2494,7 +2494,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v228';
+const APP_VER = 'v229';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10605,9 +10605,13 @@ function swapRow(s) {
   // Обмен нередко тянет одного вверх за счёт другого. Молчать об этом нельзя:
   // если проседает тот, кем ты играешь, обмен не нужен, каким бы ни был
   // суммарный выигрыш. Поэтому у проигравшей стороны число красное.
+  // Тир ставим рядом с именем, а не в шапку строки: там две буквы стояли
+  // подряд, и понять, какая к кому относится, было нельзя.
   const side = (x, from, to, why) => '<div class="sw-s' + (to < from ? ' down' : '') + '">' +
     face(x) +
-    '<div class="sw-n"><b>' + esc(x.a.ru) + '</b>' +
+    '<div class="sw-n"><b>' + esc(x.a.ru) +
+      (tierOf(x.a.id) ? ' ' + rankBadge(tierOf(x.a.id).tier, 'sm',
+        'Место в тир-листе prydwen') : '') + '</b>' +
       '<i title="Полезные прокрутки: сумма прокруток, умноженных на вес ' +
         'характеристики для этой роли. Считается по абсолютной пользе, а не ' +
         'по доле — иначе пустой диск сравнялся бы с докачанным">' +
@@ -10619,13 +10623,11 @@ function swapRow(s) {
         '</i>' +
       (why ? '<u class="sw-why">' + esc(why) + '</u>' : '') +
     '</div></div>';
-  const t = tierOf(s.a.x.a.id), t2 = tierOf(s.b.x.a.id);
   return '<div class="sw-row">' +
     '<div class="sw-h">' +
       (su && su.icon ? img(imgUrl('discs', su.icon), 'sw-su', su.ru || su.en, true) : '') +
       '<b>слот ' + s.slot + '</b>' +
       '<span>' + esc(su ? (su.ru || su.en) : '') + '</span>' +
-      (t ? rankBadge(t.tier, 'sm') : '') + (t2 ? rankBadge(t2.tier, 'sm') : '') +
       '<u class="sw-gain" title="Суммарный прирост полезных прокруток ' +
         'у обоих агентов">+' + s.gain + '</u>' +
     '</div>' +
