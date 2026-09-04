@@ -2501,7 +2501,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v234';
+const APP_VER = 'v235';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8873,7 +8873,11 @@ function drawHist() {
   const last = days[days.length - 1], first = days[0];
   const dPct = last.pct - first.pct, dN = last.n - first.n;
   const sign = v => (v > 0 ? '+' : '') + v;
-  let h = '<div class="hs-now">' +
+  let h = '<div class="ban-rem" style="margin-bottom:12px">' +
+    '<button id="sumBtn">🖼 Итоги патча картинкой</button>' +
+    '<span class="hint" style="margin:0">крутки, рост готовности и эндгейм за текущий патч</span>' +
+    '</div>' +
+    '<div class="hs-now">' +
     '<span><b>' + last.pct + '%</b><i>средняя готовность' +
       (days.length > 1 ? ', ' + sign(dPct) + ' за период' : '') + '</i></span>' +
     '<span><b>' + last.n + '</b><i>' + plural(last.n, 'агент', 'агента', 'агентов') +
@@ -8916,6 +8920,29 @@ function drawHist() {
     'карточку агента.</div>';
   box.innerHTML = h;
   box.querySelectorAll('.ch-row').forEach(el => el.onclick = () => openAgent(+el.dataset.id));
+  if ($('sumBtn')) $('sumBtn').onclick = savePatchPng;
+}
+
+// Рисуем и сразу отдаём файлом — как карточку агента.
+async function savePatchPng() {
+  const btn = $('sumBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ рисую…'; }
+  const tst = toast('Собираю итоги патча', 'крутки, история, эндгейм', 'work');
+  try {
+    const blob = await patchPng();
+    if (!blob) throw new Error('не удалось определить границы патча — нужен список баннеров');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'zzz-itogi-patcha.png';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    tst.set('Готово', 'картинка сохранена', 'ok', 4000);
+  } catch (e) {
+    tst.set('Не вышло', (e && e.message) || String(e), 'err', 7000);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🖼 Итоги патча картинкой'; }
+  }
 }
 
 // ─────────────── банбу ───────────────
@@ -10135,6 +10162,77 @@ const CARD_BG = '#0b0d11', CARD_PAN = '#141821', CARD_LINE = '#232936';
 const CARD_TX = '#e8ecf5', CARD_TX2 = '#c8ccd6', CARD_TX3 = '#8b92a3';
 const CARD_GOLD = '#ffd54a', CARD_OK = '#4ade80';
 
+// ─────────────── итоги патча ───────────────
+// Всё, что трекер собрал за патч, в одной картинке: сколько круток ушло и кого
+// выбил, насколько выросла готовность, что закрыл в эндгейме. Данные уже есть —
+// крутки, история, журнал изменений, архив боёв, — надо только сложить их за
+// нужный отрезок времени.
+//
+// Границы патча берём из расписания баннеров: начало — самый ранний старт среди
+// идущих сейчас, конец — самый поздний. Расписание приходит либо из хроники
+// (точные даты), либо с prydwen.
+function patchRange() {
+  const now = Math.floor(Date.now() / 1000);
+  const live = ((PLAN && PLAN.banners) || [])
+    .filter(b => b.from && b.to && b.from <= now && now <= b.to);
+  if (live.length) {
+    return { from: Math.min.apply(null, live.map(b => b.from)) * 1000,
+             to:   Math.max.apply(null, live.map(b => b.to)) * 1000,
+             ver:  (live.filter(b => b.ver)[0] || {}).ver || '' };
+  }
+  // Запасной путь: даты с prydwen, там строки вида «2026-08-28».
+  const list = ((GUIDE && GUIDE.banners && GUIDE.banners.list) || []).filter(b => b.cur && b.from && b.to);
+  if (!list.length) return null;
+  const d = s => { const x = dayOf(s); return x ? x.getTime() : 0; };
+  return { from: Math.min.apply(null, list.map(b => d(b.from))),
+           to:   Math.max.apply(null, list.map(b => d(b.to))), ver: '' };
+}
+
+function patchStats() {
+  const r = patchRange();
+  if (!r) return null;
+  const inRange = t => t >= r.from && t <= r.to + 86400000;
+
+  // Крутки: список хранит время каждой, поэтому просто отбираем по отрезку.
+  const pulls = ((PULLS && PULLS.list) || []).filter(x => x && x.t && inRange(+x.t));
+  const gotS = pulls.filter(x => x.r === 4).map(x => x.n);
+  const gotA = pulls.filter(x => x.r === 3).length;
+
+  // История: берём первый и последний снимок внутри патча. Если снимок один,
+  // сравнивать не с чем — показываем только текущее состояние.
+  const days = ((hist && hist.days) || []).filter(x => x.t && inRange(+x.t));
+  const d0 = days[0] || null, d1 = days[days.length - 1] || null;
+
+  // Журнал: сколько дисков поменял и сколько агентов вырастил.
+  const log = ((CHRON && CHRON.log) || []).filter(x => x && inRange(+x.t));
+  let discs = 0, lvls = 0, minds = 0;
+  log.forEach(e => {
+    (e.ev || []).forEach(v => {
+      if (v.k === 'disc' || v.k === 'discLvl' || v.k === 'discOff') discs++;
+      if (v.k === 'lvl') lvls++;
+      if (v.k === 'mind') minds++;
+    });
+    if (e.k === 'new') lvls += 0;
+  });
+
+  // Эндгейм: лучшее, что закрыто за патч.
+  const best = (kind, pick) => {
+    const list = runsList(kind).filter(p => {
+      const t = dayOf(String(p.from || '').slice(0, 10));
+      return t && inRange(t.getTime());
+    });
+    return list.length ? pick(list) : null;
+  };
+  const shiyu = best('shiyu', l => l.reduce((a, b) => (b.score || 0) > (a.score || 0) ? b : a));
+  const mem = best('mem', l => l.reduce((a, b) => (b.star || 0) > (a.star || 0) ? b : a));
+
+  return { range: r, pulls: pulls.length, gotS: gotS, gotA: gotA,
+           days: days.length, d0: d0, d1: d1,
+           discs: discs, lvls: lvls, minds: minds,
+           shiyu: shiyu, mem: mem,
+           agents: Object.keys(prog).filter(k => prog[k] && prog[k].have).length };
+}
+
 function cardFont(px, w) { return (w || 600) + ' ' + px + 'px "Segoe UI", Roboto, sans-serif'; }
 // Картинка может не загрузиться (нет файла, оборвалась сеть) — тогда рисуем
 // без неё, а не роняем всю генерацию.
@@ -10425,6 +10523,119 @@ async function cardSave(id) {
 const TRL = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',
   л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',
   ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',' ':'-' };
+// Картинка с итогами патча. Размер поуже карточки агента: сюда идут только
+// цифры, арт не нужен, а узкое изображение удобнее кидать в чат.
+const SUM_W = 1000, SUM_H = 620;
+async function patchPng() {
+  const st = patchStats();
+  if (!st) return null;
+  const cv = document.createElement('canvas');
+  cv.width = SUM_W; cv.height = SUM_H;
+  const c = cv.getContext('2d');
+  c.textBaseline = 'alphabetic';
+
+  c.fillStyle = CARD_BG; c.fillRect(0, 0, SUM_W, SUM_H);
+  const gl = c.createRadialGradient(SUM_W / 2, 0, 40, SUM_W / 2, 0, SUM_W);
+  gl.addColorStop(0, '#4ade8024'); gl.addColorStop(1, '#00000000');
+  c.fillStyle = gl; c.fillRect(0, 0, SUM_W, SUM_H);
+
+  const dt = ms => new Date(ms).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+  // шапка
+  c.fillStyle = CARD_TX; c.font = cardFont(30, 800);
+  c.fillText('Итоги патча' + (st.range.ver ? ' ' + st.range.ver : ''), 40, 60);
+  c.fillStyle = CARD_TX3; c.font = cardFont(15, 500);
+  c.fillText(dt(st.range.from) + ' — ' + dt(st.range.to) +
+             ' · агентов ' + st.agents, 40, 86);
+
+  // плитки с главными числами
+  const tile = (x, y, w, h, big, small, col) => {
+    c.fillStyle = CARD_PAN; cardRound(c, x, y, w, h, 16); c.fill();
+    c.strokeStyle = CARD_LINE; c.lineWidth = 1; c.stroke();
+    c.fillStyle = col || CARD_TX; c.font = cardFont(34, 800);
+    cardText(c, big, x + 18, y + 52, w - 36);
+    c.fillStyle = CARD_TX3; c.font = cardFont(12, 600);
+    cardText(c, small, x + 18, y + 76, w - 36);
+  };
+  const pctWas = st.d0 ? st.d0.pct : null, pctNow = st.d1 ? st.d1.pct : null;
+  const grow = (pctWas != null && pctNow != null) ? pctNow - pctWas : null;
+  const TW = (SUM_W - 80 - 3 * 12) / 4, TY = 110, TH = 92;
+  tile(40, TY, TW, TH, String(st.pulls), 'КРУТОК СДЕЛАНО', CARD_GOLD);
+  tile(40 + (TW + 12), TY, TW, TH, String(st.gotS.length), 'S-РАНГОВ ВЫБИТО', CARD_OK);
+  tile(40 + (TW + 12) * 2, TY, TW, TH,
+       pctNow != null ? pctNow + '%' : '—',
+       grow != null ? 'ГОТОВНОСТЬ, БЫЛО ' + pctWas + '%' : 'ГОТОВНОСТЬ',
+       grow > 0 ? CARD_OK : CARD_TX);
+  tile(40 + (TW + 12) * 3, TY, TW, TH, String(st.discs), 'ДИСКОВ СМЕНИЛ', CARD_TX);
+
+  // кого выбил — портретами, это самое интересное в сводке
+  let y = TY + TH + 26;
+  c.fillStyle = CARD_TX3; c.font = cardFont(12, 700);
+  c.fillText('КОГО ВЫБИЛ', 40, y);
+  y += 14;
+  if (st.gotS.length) {
+    const uniq = [];
+    st.gotS.forEach(n => { if (uniq.indexOf(n) < 0) uniq.push(n); });
+    const SZ = 78, GAP = 10;
+    for (let i = 0; i < uniq.length && i < 10; i++) {
+      const a = (DB.agents || []).filter(x => x.en === uniq[i] || x.ru === uniq[i])[0];
+      const x = 40 + i * (SZ + GAP);
+      c.fillStyle = CARD_PAN; cardRound(c, x, y, SZ, SZ, 14); c.fill();
+      c.strokeStyle = CARD_LINE; c.stroke();
+      const im = a ? await loadImg(agentPic(a, 'card')) : null;
+      if (im) {
+        c.save(); cardRound(c, x, y, SZ, SZ, 14); c.clip();
+        const k = Math.max(SZ / im.width, SZ / im.height);
+        c.drawImage(im, x + (SZ - im.width * k) / 2, y, im.width * k, im.height * k);
+        c.restore();
+      }
+      c.fillStyle = CARD_TX2; c.font = cardFont(10, 600);
+      c.textAlign = 'center';
+      cardText(c, a ? a.ru : uniq[i], x + SZ / 2, y + SZ + 14, SZ + GAP);
+      c.textAlign = 'left';
+    }
+    y += SZ + 30;
+  } else {
+    c.fillStyle = CARD_TX3; c.font = cardFont(14, 500);
+    c.fillText('за патч ни одного S-ранга', 40, y + 20);
+    y += 44;
+  }
+
+  // эндгейм и прочее — двумя колонками
+  const col = (x, w, title, rows) => {
+    c.fillStyle = CARD_PAN; cardRound(c, x, y, w, 150, 16); c.fill();
+    c.strokeStyle = CARD_LINE; c.stroke();
+    c.fillStyle = CARD_TX3; c.font = cardFont(11, 700);
+    c.fillText(title, x + 18, y + 26);
+    rows.forEach((r, i) => {
+      const ry = y + 54 + i * 28;
+      c.fillStyle = CARD_TX3; c.font = cardFont(13, 500);
+      cardText(c, r[0], x + 18, ry, w - 150);
+      c.fillStyle = r[2] || CARD_TX; c.font = cardFont(15, 700);
+      c.textAlign = 'right';
+      cardText(c, r[1], x + w - 18, ry, 130);
+      c.textAlign = 'left';
+    });
+  };
+  const CW = (SUM_W - 80 - 12) / 2;
+  col(40, CW, 'ЭНДГЕЙМ', [
+    ['Оборона Шиюй', st.shiyu ? (st.shiyu.rating || '—') + ' · ' + nfmt(st.shiyu.score || 0) : 'нет данных',
+      st.shiyu ? CARD_GOLD : CARD_TX3],
+    ['Опасный штурм', st.mem ? (st.mem.star || 0) + '★ · ' + nfmt(st.mem.score || 0) : 'нет данных',
+      st.mem ? CARD_GOLD : CARD_TX3],
+    ['Место в рейтинге', st.shiyu && st.shiyu.rank
+      ? 'топ ' + (Math.round(st.shiyu.rank * 10) / 10) + '%' : '—']
+  ]);
+  col(40 + CW + 12, CW, 'ПРОКАЧКА', [
+    ['Поднял уровней', String(st.lvls)],
+    ['Мыслительных картин', String(st.minds)],
+    ['A-рангов из круток', String(st.gotA)]
+  ]);
+
+  c.fillStyle = CARD_TX3; c.font = cardFont(12, 500);
+  c.fillText('alextask.ru · ' + new Date().toLocaleDateString('ru-RU'), 40, SUM_H - 24);
+  return new Promise(res => cv.toBlob(res, 'image/png'));
+}
+
 function translit(s) {
   return String(s || '').toLowerCase().split('').map(ch => TRL[ch] != null ? TRL[ch] :
     (/[a-z0-9-]/.test(ch) ? ch : '')).join('') || 'agent';
