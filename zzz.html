@@ -1190,11 +1190,17 @@
      иначе затемнение видно, а кольца под чужим слоем — нет. */
   #coach{position:fixed;inset:0;z-index:150;pointer-events:none}
   #coach.on{pointer-events:auto}
-  .co-hole{position:absolute;border-radius:12px;border:2px solid var(--acc);
+  /* Затемнение — тенью наружу, но БЕЗ анимации этой тени: радиус 9999px в
+     ключевых кадрах заставляет браузер перерисовывать её отдельным слоем, и на
+     части видеокарт она ложится поверх подписи. Пульсирует только рамка. */
+  .co-hole{position:absolute;z-index:1;border-radius:12px;border:2px solid var(--acc);
     box-shadow:0 0 0 9999px #05060ad1, 0 0 22px -2px var(--acc),
                0 0 22px -2px var(--acc) inset;
     transition:top .22s, left .22s, width .22s, height .22s;
     animation:coPulse 1.8s ease-in-out infinite}
+  /* Подпись и стрелка — слоем выше кольца, чтобы тень их не накрыла ни при
+     каком порядке отрисовки. */
+  .co-tip,.co-arr{z-index:2}
   .co-tip{position:absolute;max-width:270px;
     background:linear-gradient(180deg,var(--pan2),var(--pan));
     border:1px solid #4ade8047;border-radius:13px;padding:11px 13px;
@@ -1211,8 +1217,8 @@
   /* стрелка от подписи к цели */
   .co-arr{position:absolute;color:var(--acc);font-size:19px;line-height:1;
     text-shadow:0 0 10px var(--acc);animation:coBob 1.4s ease-in-out infinite}
-  @keyframes coPulse{50%{box-shadow:0 0 0 9999px #05060ad1, 0 0 30px 1px var(--acc),
-    0 0 26px -2px var(--acc) inset}}
+  /* Пульсирует только цвет рамки: box-shadow в кадрах трогать нельзя, см. выше. */
+  @keyframes coPulse{50%{border-color:#a7f3c0}}
   @keyframes coBob{50%{transform:translateY(-4px)}}
 
   /* ── уведомления ───────────────────────────────────────────────────────────
@@ -2446,7 +2452,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v212';
+const APP_VER = 'v213';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
