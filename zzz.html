@@ -2457,7 +2457,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v217';
+const APP_VER = 'v218';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -9401,9 +9401,15 @@ async function coachWalk(el, steps) {
         coachStop = null;
       }
       coachStop = cleanup;
-      target.addEventListener('click', go);
-      target.addEventListener('focus', go);
-      target.addEventListener('input', go);
+      // Подписываемся с задержкой: клик, которым человек попал на этот шаг,
+      // ещё догорает, а поле могло получить фокус от прокрутки. Без паузы шаг
+      // засчитывался сам себе и мелькал, не дав прочитать текст.
+      setTimeout(() => {
+        if (!coachStop) return;             // шаг уже закрыт
+        target.addEventListener('click', go);
+        target.addEventListener('focus', go);
+        target.addEventListener('input', go);
+      }, 500);
       document.addEventListener('keydown', onKey);
     });
     if (!done) return;
@@ -9424,12 +9430,10 @@ function coachStart(force) {
             'уровни, ядра, навыки, движки и комплекты дисков.',
       // Раскрываем блок с cookie заранее: свёрнутым его попросту не замечают,
       // и человек не понимает, почему у дисков пустые характеристики.
-      before: () => {
-        const own = $('ownBox');
-        if (own) own.open = true;
-        const uid = $('uidInput');
-        if (uid) setTimeout(() => uid.focus(), 350);
-      } },
+      // Фокус в поле раньше ставился здесь программно — и сам же засчитывался
+      // за «сделано»: шаг успевал мелькнуть и перескочить на следующий. Фокус
+      // теперь ставит только человек.
+      before: () => { const own = $('ownBox'); if (own) own.open = true; } },
     { sel: '#hoyoCkUid', title: 'А это — если нужны характеристики дисков',
       text: 'Две cookie из HoYoLab: ltuid_v2 и ltoken_v2. Как их достать — ' +
             'расписано выше по шагам. Без них тоже работает, просто ' +
