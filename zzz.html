@@ -1188,8 +1188,15 @@
      и не нужен ни клон элемента, ни вырезание масками. */
   /* Выше модалки (140) и приветствия (130): проводник обязан быть поверх всего,
      иначе затемнение видно, а кольца под чужим слоем — нет. */
+  /* Слой растянут на весь экран, поэтому кликов он ловить не должен НИКОГДА.
+     Пока здесь жил оверлей с затемнением, у него стоял pointer-events:auto —
+     и после того, как оверлей убрали, этот слой продолжал перехватывать всё
+     подряд. Клик по пункту меню не доходил до самого пункта: menuGo не
+     вызывался, панель не открывалась, а проводник считал клик промахом и
+     закрывался. Снаружи это выглядело как «обрывается после второго шага».
+     Клики нужны только самой подсказке. */
   #coach{position:fixed;inset:0;z-index:150;pointer-events:none}
-  #coach.on{pointer-events:auto}
+  #coach .co-tip{pointer-events:auto}
   /* Затемнения и кольца-оверлея здесь больше нет.
      Сначала подсветка делалась тенью box-shadow радиусом 9999px, потом
      четырьмя шторками с отдельным кольцом поверх. Оба раза замеры показывали
@@ -2450,7 +2457,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v215';
+const APP_VER = 'v217';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -9369,38 +9376,35 @@ async function coachWalk(el, steps) {
       catch (e) { target.scrollIntoView(); }
       await new Promise(r => setTimeout(r, 420));
     }
-    // Ждём либо клика по цели (идём дальше), либо мимо неё (закрываем).
+    // Ждём, когда человек сделает то, что просили. Клик мимо цели проводник
+    // НЕ закрывает: промахнуться по узкому полю легко, а исчезающая на ровном
+    // месте подсказка выглядит как поломка. Выход — только кнопкой или Esc.
+    //
+    // Для полей ввода одного клика мало: попасть точно в них тяжело, поэтому
+    // засчитываем и фокус, и первый введённый символ.
     const done = await new Promise(res => {
-      const onHit = () => { cleanup(); setTimeout(() => res(true), 320); };
-      const onMiss = e => {
-        if (target.contains(e.target) || e.target.closest('.co-tip')) return;
-        cleanup(); res(false);
-      };
+      const go = () => { cleanup(); setTimeout(() => res(true), 320); };
       const onKey = e => { if (e.key === 'Escape') { cleanup(); res(false); } };
-      const reflow = () => {};   // панель внизу экрана, двигать нечего
       // Цель может исчезнуть у нас под руками: человек закрыл меню, свернул
-      // раздел, ушёл в карточку агента. Тогда кольцо оказывается в пустоте, а
-      // затемнение остаётся висеть — ровно то, что выглядит как «сайт завис».
-      // Поэтому следим и уходим сами.
+      // раздел, ушёл в карточку агента. Тогда подсказка висела бы над пустым
+      // местом, поэтому следим и уходим сами.
       const watch = setInterval(() => {
         const r = target.getBoundingClientRect();
         if (!target.isConnected || !r.width || !r.height) { cleanup(); res(false); }
       }, 400);
       function cleanup() {
         clearInterval(watch);
-        target.removeEventListener('click', onHit);
-        document.removeEventListener('click', onMiss, true);
+        target.removeEventListener('click', go);
+        target.removeEventListener('focus', go);
+        target.removeEventListener('input', go);
         document.removeEventListener('keydown', onKey);
-        removeEventListener('resize', reflow);
-        removeEventListener('scroll', reflow, true);
         coachStop = null;
       }
       coachStop = cleanup;
-      target.addEventListener('click', onHit);
-      document.addEventListener('click', onMiss, true);
+      target.addEventListener('click', go);
+      target.addEventListener('focus', go);
+      target.addEventListener('input', go);
       document.addEventListener('keydown', onKey);
-      addEventListener('resize', reflow);
-      addEventListener('scroll', reflow, true);
     });
     if (!done) return;
   }
