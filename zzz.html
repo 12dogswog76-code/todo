@@ -1186,7 +1186,9 @@
      дальше его ведём по экрану: кольцо вокруг нужной кнопки и подпись рядом.
      Кольцо рисуется огромной тенью наружу — так затемняется всё, кроме цели,
      и не нужен ни клон элемента, ни вырезание масками. */
-  #coach{position:fixed;inset:0;z-index:125;pointer-events:none}
+  /* Выше модалки (140) и приветствия (130): проводник обязан быть поверх всего,
+     иначе затемнение видно, а кольца под чужим слоем — нет. */
+  #coach{position:fixed;inset:0;z-index:150;pointer-events:none}
   #coach.on{pointer-events:auto}
   .co-hole{position:absolute;border-radius:12px;border:2px solid var(--acc);
     box-shadow:0 0 0 9999px #05060ad1, 0 0 22px -2px var(--acc),
@@ -2400,15 +2402,18 @@
       <li>В игре нажми на свой профиль слева вверху — <b>UID</b> написан внизу
           окна. Девять цифр, например <code>1502024259</code>.</li>
       <li>Здесь: <b>☰ Меню</b> → <b>⟳ Импорт из игры</b> → впиши UID →
-          <b>⚡ Загрузить весь аккаунт</b>.</li>
-      <li>Приедут все агенты: уровни, ядра, навыки, движки и комплекты дисков.</li>
+          <b>⚡ Загрузить весь аккаунт</b>. Приедут все агенты: уровни, ядра,
+          навыки, движки и комплекты дисков.</li>
+      <li><b>Нужны характеристики всех дисков?</b> Тогда в том же разделе
+          раскрой <b>«Свой доступ HoYoLab»</b> и вставь две cookie:
+          <code>ltuid_v2</code> и <code>ltoken_v2</code>. Где их взять —
+          расписано прямо там, по шагам: F12 → Application → Cookies →
+          hoyolab.com. Пароль нигде не вводится.</li>
     </ol>
-    <p class="wnote"><b>Про доступ.</b> По одному UID хроника отдаёт чужой
-       аккаунт урезанным: диски приходят без характеристик. Характеристики
-       витринных агентов трекер сам добирает с Enka — тех шестерых, что стоят
-       у тебя в профиле в игре. Хочешь характеристики <b>всех</b> дисков —
-       в том же разделе раскрой «Свой доступ HoYoLab» и вставь туда две
-       cookie, там расписано, где их взять. Пароль нигде не вводится.</p>
+    <p class="wnote">Без cookie тоже работает, просто диски придут без
+       характеристик — кроме шести витринных агентов, тех трекер добирает с
+       Enka сам. Всё остальное (уровни, ядра, навыки, движки, комплекты)
+       приезжает и так.</p>
     <div class="wbar">
       <span class="wdots"><i></i><i class="on"></i><i></i></span>
       <button class="wsub" data-w="back">← Назад</button>
@@ -2441,7 +2446,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v210';
+const APP_VER = 'v211';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -9344,11 +9349,25 @@ async function coachRun(steps) {
     document.body.appendChild(el);
   }
   el.className = 'on';
+  // Любая неожиданность внутри — и затемнение осталось бы на экране навсегда.
+  // Поэтому вся дорожка обёрнута, а очистка идёт в любом случае.
+  try { await coachWalk(el, steps); } catch (e) {}
+  coachEnd();
+}
+async function coachWalk(el, steps) {
   for (let i = 0; i < steps.length; i++) {
     const st = steps[i];
     const target = await coachWait(st.sel);
-    if (!target) { coachEnd(); return; }
+    if (!target) return;                      // очистит coachRun
     if (st.before) st.before(target);
+    // Цель может оказаться ниже экрана — поля доступа HoYoLab на ноутбуке
+    // как раз уезжают вниз. Подводим её к середине и ждём прокрутку.
+    const r0 = target.getBoundingClientRect();
+    if (r0.top < 60 || r0.bottom > innerHeight - 60) {
+      try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      catch (e) { target.scrollIntoView(); }
+      await new Promise(r => setTimeout(r, 420));
+    }
     coachDraw(el, target, i + 1, steps.length, st.title, st.text);
     // Ждём либо клика по цели (идём дальше), либо мимо неё (закрываем).
     const done = await new Promise(res => {
@@ -9359,7 +9378,17 @@ async function coachRun(steps) {
       };
       const onKey = e => { if (e.key === 'Escape') { cleanup(); res(false); } };
       const reflow = () => coachDraw(el, target, i + 1, steps.length, st.title, st.text);
+      // Цель может исчезнуть у нас под руками: человек закрыл меню, свернул
+      // раздел, ушёл в карточку агента. Тогда кольцо оказывается в пустоте, а
+      // затемнение остаётся висеть — ровно то, что выглядит как «сайт завис».
+      // Поэтому следим и уходим сами.
+      const watch = setInterval(() => {
+        const r = target.getBoundingClientRect();
+        if (!target.isConnected || !r.width || !r.height) { cleanup(); res(false); }
+        else reflow();
+      }, 400);
       function cleanup() {
+        clearInterval(watch);
         target.removeEventListener('click', onHit);
         document.removeEventListener('click', onMiss, true);
         document.removeEventListener('keydown', onKey);
@@ -9374,9 +9403,8 @@ async function coachRun(steps) {
       addEventListener('resize', reflow);
       addEventListener('scroll', reflow, true);
     });
-    if (!done) { coachEnd(); return; }
+    if (!done) return;
   }
-  coachEnd();
 }
 
 // Дорожка от «Меню» до поля UID. Запускается один раз, после приветствия.
@@ -9389,8 +9417,8 @@ function coachStart(force) {
     { sel: '.mmi[data-k="enka"]', title: 'Импорт из игры',
       text: 'Первый пункт. Отсюда переносится аккаунт.' },
     { sel: '#uidInput', title: 'Впиши UID и жми «Загрузить весь аккаунт»',
-      text: 'Ниже раскрыт «Свой доступ HoYoLab»: он нужен, только если хочешь ' +
-            'характеристики всех дисков, а не шести витринных. Без него тоже работает.',
+      text: 'Девять цифр из игры. Этого уже хватит: приедут все агенты, ' +
+            'уровни, ядра, навыки, движки и комплекты дисков.',
       // Раскрываем блок с cookie заранее: свёрнутым его попросту не замечают,
       // и человек не понимает, почему у дисков пустые характеристики.
       before: () => {
@@ -9398,7 +9426,12 @@ function coachStart(force) {
         if (own) own.open = true;
         const uid = $('uidInput');
         if (uid) setTimeout(() => uid.focus(), 350);
-      } }
+      } },
+    { sel: '#hoyoCkUid', title: 'А это — если нужны характеристики дисков',
+      text: 'Две cookie из HoYoLab: ltuid_v2 и ltoken_v2. Как их достать — ' +
+            'расписано выше по шагам. Без них тоже работает, просто ' +
+            'характеристики будут только у шести витринных агентов.',
+      before: () => { const own = $('ownBox'); if (own) own.open = true; } }
   ]);
 }
 
