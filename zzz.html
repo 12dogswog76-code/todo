@@ -155,7 +155,12 @@
   .sw-su{width:20px;height:20px;flex:none;object-fit:contain}
   .sw-gain{margin-left:auto;flex:none;text-decoration:none;font-size:12px;font-weight:800;
     color:var(--acc);background:#4ade801a;border:1px solid #4ade8040;
-    border-radius:7px;padding:2px 8px}
+    border-radius:7px;padding:2px 8px;display:inline-flex;align-items:baseline;gap:4px}
+  .sw-gain s{text-decoration:none;font-size:9px;font-weight:600;opacity:.75}
+  /* Селектор с .sw-n не для красоты: правило .sw-n s красит потери в красный,
+     и подпись «польза» без этого выглядела бы как предупреждение. */
+  .sw-n s.sw-unit{text-decoration:none;color:var(--tx3);font-size:9.5px;
+    text-transform:uppercase;letter-spacing:.4px}
   .sw-pair{display:flex;align-items:center;gap:10px}
   .sw-s{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
   .sw-ic{width:34px;height:34px;flex:none;border-radius:9px;object-fit:cover;
@@ -2496,7 +2501,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v233';
+const APP_VER = 'v234';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10634,6 +10639,9 @@ function swapRow(s) {
       '<i title="Полезные прокрутки: сумма прокруток, умноженных на вес ' +
         'характеристики для этой роли. Считается по абсолютной пользе, а не ' +
         'по доле — иначе пустой диск сравнялся бы с докачанным">' +
+        // Без подписи число выглядит как проценты или модификаторы: глазами
+        // читаешь «3 → 5» и гадаешь, чего именно.
+        '<s class="sw-unit">польза</s> ' +
         (to === from
           ? from + ' <s class="sw-same">без изменений</s>'
           : from + ' → <em>' + to + '</em>' +
@@ -10648,7 +10656,7 @@ function swapRow(s) {
       '<b>слот ' + s.slot + '</b>' +
       '<span>' + esc(su ? (su.ru || su.en) : '') + '</span>' +
       '<u class="sw-gain" title="Суммарный прирост полезных прокруток ' +
-        'у обоих агентов">+' + s.gain + '</u>' +
+        'у обоих агентов">+' + s.gain + '<s>пользы</s></u>' +
     '</div>' +
     '<div class="sw-pair">' +
       side(s.a.x, s.aFrom, s.aTo, swapWhy(s.a.x, s.b.d),
