@@ -2446,7 +2446,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v211';
+const APP_VER = 'v212';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -9305,14 +9305,17 @@ function coachEnd() {
 // приставать к человеку дальше не за чем.
 function coachWait(sel, ms) {
   return new Promise(res => {
+    const el0 = document.querySelector(sel);
+    if (el0 && el0.getBoundingClientRect().width) return res(el0);
     const t0 = Date.now();
-    const tick = () => {
+    // Именно setInterval, а не requestAnimationFrame: rAF замирает, когда
+    // вкладка неактивна или окно свёрнуто, и ожидание зависало вместе с ним —
+    // на экране оставалось голое затемнение без кольца и подписи.
+    const t = setInterval(() => {
       const el = document.querySelector(sel);
-      if (el && el.getBoundingClientRect().width) return res(el);
-      if (Date.now() - t0 > (ms || 4000)) return res(null);
-      requestAnimationFrame(tick);
-    };
-    tick();
+      if (el && el.getBoundingClientRect().width) { clearInterval(t); return res(el); }
+      if (Date.now() - t0 > (ms || 4000)) { clearInterval(t); return res(null); }
+    }, 60);
   });
 }
 function coachDraw(el, target, step, total, title, text) {
@@ -9350,8 +9353,11 @@ async function coachRun(steps) {
   }
   el.className = 'on';
   // Любая неожиданность внутри — и затемнение осталось бы на экране навсегда.
-  // Поэтому вся дорожка обёрнута, а очистка идёт в любом случае.
+  // Поэтому вся дорожка обёрнута, очистка идёт в любом случае, а сверху ещё и
+  // минутный предохранитель: что бы ни случилось, экран разблокируется сам.
+  const fuse = setTimeout(coachEnd, 60000);
   try { await coachWalk(el, steps); } catch (e) {}
+  clearTimeout(fuse);
   coachEnd();
 }
 async function coachWalk(el, steps) {
@@ -9360,15 +9366,19 @@ async function coachWalk(el, steps) {
     const target = await coachWait(st.sel);
     if (!target) return;                      // очистит coachRun
     if (st.before) st.before(target);
+    // Рисуем сразу, до всякой прокрутки: иначе между появлением затемнения и
+    // появлением кольца остаётся пауза, в которой экран выглядит просто
+    // погасшим. Прокрутили — перерисовали.
+    coachDraw(el, target, i + 1, steps.length, st.title, st.text);
     // Цель может оказаться ниже экрана — поля доступа HoYoLab на ноутбуке
-    // как раз уезжают вниз. Подводим её к середине и ждём прокрутку.
+    // как раз уезжают вниз. Подводим её к середине.
     const r0 = target.getBoundingClientRect();
     if (r0.top < 60 || r0.bottom > innerHeight - 60) {
       try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
       catch (e) { target.scrollIntoView(); }
       await new Promise(r => setTimeout(r, 420));
+      coachDraw(el, target, i + 1, steps.length, st.title, st.text);
     }
-    coachDraw(el, target, i + 1, steps.length, st.title, st.text);
     // Ждём либо клика по цели (идём дальше), либо мимо неё (закрываем).
     const done = await new Promise(res => {
       const onHit = () => { cleanup(); setTimeout(() => res(true), 320); };
