@@ -2496,7 +2496,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v232';
+const APP_VER = 'v233';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10551,8 +10551,8 @@ function swapList(sort) {
         // 2. И не должен упасть ниже того, что советует гайд: диск может дать
         //    больше пользы в сумме и при этом сбить крит под порог. Сверяем
         //    опять же только S-рангов — у донора порогов не бывает.
-        if ((drop(A.x) && !swapKeepsGoals(A.x, A.d, B.d)) ||
-            (drop(B.x) && !swapKeepsGoals(B.x, B.d, A.d))) { stat.goals++; continue; }
+        if ((isS(A.x) && !swapKeepsGoals(A.x, A.d, B.d)) ||
+            (isS(B.x) && !swapKeepsGoals(B.x, B.d, A.d))) { stat.goals++; continue; }
 
         // 3. Обмен ради одного лишь A-ранга не нужен: ими не играют, а возня
         //    в игре одинаковая. Прибавку должен получить хотя бы один S.
