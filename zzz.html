@@ -1190,20 +1190,21 @@
      иначе затемнение видно, а кольца под чужим слоем — нет. */
   #coach{position:fixed;inset:0;z-index:150;pointer-events:none}
   #coach.on{pointer-events:auto}
-  /* Затемнение — четырьмя отдельными шторками вокруг цели, а НЕ тенью
-     box-shadow радиусом 9999px, как было сначала. Такая тень выносится
-     браузером в отдельный слой композитинга и на части видеокарт ложится
-     поверх соседей: координаты у кольца и подписи верные, visibility visible,
-     а на экране пусто. Шторки же физически не занимают место цели, перекрыть
-     её нечем. */
-  .co-mask{position:absolute;background:#05060ad1}
-  .co-hole{position:absolute;z-index:1;border-radius:12px;border:2px solid var(--acc);
-    box-shadow:0 0 22px -2px var(--acc), 0 0 22px -2px var(--acc) inset;
-    animation:coPulse 1.8s ease-in-out infinite}
-  /* Подпись и стрелка — слоем выше кольца, чтобы тень их не накрыла ни при
-     каком порядке отрисовки. */
-  .co-tip,.co-arr{z-index:2}
-  .co-tip{position:absolute;max-width:270px;
+  /* Затемнения и кольца-оверлея здесь больше нет.
+     Сначала подсветка делалась тенью box-shadow радиусом 9999px, потом
+     четырьмя шторками с отдельным кольцом поверх. Оба раза замеры показывали
+     ровно то, что нужно — кольцо на кнопке, подпись в кадре, зелёная рамка,
+     opacity 1, никаких фильтров и Dark Reader, — а на экране человек видел
+     только затемнение. Спорить с этим бесполезно, поэтому:
+       · подсвечиваем саму кнопку рамкой прямо на ней (класс на элементе, а не
+         слой поверх) — рисовать поверх нечего, значит и потеряться нечему;
+       · подсказка — обычная панель внизу экрана, всегда на одном месте.
+     Заодно ушла главная жалоба: экран больше не гаснет. */
+  .co-target{position:relative;z-index:151;
+    outline:2px solid var(--acc)!important;outline-offset:3px;
+    border-radius:10px;animation:coPulse 1.6s ease-in-out infinite}
+  .co-tip{position:fixed;left:50%;transform:translateX(-50%);
+    bottom:22px;width:min(440px,calc(100vw - 24px));
     background:linear-gradient(180deg,var(--pan2),var(--pan));
     border:1px solid #4ade8047;border-radius:13px;padding:11px 13px;
     box-shadow:0 0 20px -4px #4ade8066, 0 12px 34px #000000b3, var(--glass)}
@@ -1216,12 +1217,7 @@
     padding:5px 11px;background:var(--pan2);border:1px solid var(--line);
     color:var(--tx2);transition:.14s}
   .co-tip button:hover{color:var(--tx);border-color:var(--tx3)}
-  /* стрелка от подписи к цели */
-  .co-arr{position:absolute;color:var(--acc);font-size:19px;line-height:1;
-    text-shadow:0 0 10px var(--acc);animation:coBob 1.4s ease-in-out infinite}
-  /* Пульсирует только цвет рамки: box-shadow в кадрах трогать нельзя, см. выше. */
-  @keyframes coPulse{50%{border-color:#a7f3c0}}
-  @keyframes coBob{50%{transform:translateY(-4px)}}
+  @keyframes coPulse{50%{outline-color:#a7f3c0}}
 
   /* ── уведомления ───────────────────────────────────────────────────────────
      Раньше импорт из игры выглядел так: нажал — и сидишь смотришь на кнопку.
@@ -2454,7 +2450,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v214';
+const APP_VER = 'v215';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -9306,6 +9302,7 @@ let coachStop = null;
 function coachEnd() {
   const el = $('coach');
   if (el) { el.className = ''; el.innerHTML = ''; }
+  document.querySelectorAll('.co-target').forEach(n => n.classList.remove('co-target'));
   if (coachStop) { coachStop(); coachStop = null; }
   try { localStorage.setItem(LS_COACH, '1'); } catch (e) {}
 }
@@ -9327,36 +9324,14 @@ function coachWait(sel, ms) {
   });
 }
 function coachDraw(el, target, step, total, title, text) {
-  const r = target.getBoundingClientRect();
-  const pad = 7;
-  const top = Math.max(4, r.top - pad), left = Math.max(4, r.left - pad);
-  const w = r.width + pad * 2, h = r.height + pad * 2;
-  // Четыре шторки вокруг цели: сверху, снизу и два бока вровень с ней.
-  const px = n => Math.max(0, Math.round(n)) + 'px';
-  const mask = (t, l, ww, hh) => '<div class="co-mask" style="top:' + px(t) +
-    ';left:' + px(l) + ';width:' + px(ww) + ';height:' + px(hh) + '"></div>';
+  // Подсвечиваем саму кнопку — рамкой на ней, а не слоем поверх. Класс
+  // снимается с прошлой цели, иначе подсветка копилась бы по всей странице.
+  document.querySelectorAll('.co-target').forEach(n => n.classList.remove('co-target'));
+  if (target) target.classList.add('co-target');
   el.innerHTML =
-    mask(0, 0, innerWidth, top) +
-    mask(top + h, 0, innerWidth, innerHeight - top - h) +
-    mask(top, 0, left, h) +
-    mask(top, left + w, innerWidth - left - w, h) +
-    '<div class="co-hole" style="top:' + top + 'px;left:' + left + 'px;' +
-      'width:' + w + 'px;height:' + h + 'px"></div>' +
-    '<div class="co-arr"></div>' +
     '<div class="co-tip"><b>' + esc(title) + '</b><i>' + esc(text) + '</i>' +
       '<div class="co-bar"><span>шаг ' + step + ' из ' + total + '</span>' +
       '<button data-co="stop">Не надо, разберусь</button></div></div>';
-  const tip = el.querySelector('.co-tip'), arr = el.querySelector('.co-arr');
-  const tr = tip.getBoundingClientRect();
-  // Подпись под целью, если внизу есть место, иначе над ней; по горизонтали
-  // прижимаем к экрану, чтобы не уезжала за край на узких окнах.
-  const below = top + h + 14 + tr.height < innerHeight;
-  tip.style.top = (below ? top + h + 14 : top - tr.height - 14) + 'px';
-  tip.style.left = Math.max(8, Math.min(innerWidth - tr.width - 8,
-                                        left + w / 2 - tr.width / 2)) + 'px';
-  arr.textContent = below ? '▲' : '▼';
-  arr.style.top = (below ? top + h + 1 : top - h * 0 - 20) + 'px';
-  arr.style.left = (left + w / 2 - 6) + 'px';
   el.querySelector('[data-co="stop"]').onclick = coachEnd;
 }
 
@@ -9393,7 +9368,6 @@ async function coachWalk(el, steps) {
       try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
       catch (e) { target.scrollIntoView(); }
       await new Promise(r => setTimeout(r, 420));
-      coachDraw(el, target, i + 1, steps.length, st.title, st.text);
     }
     // Ждём либо клика по цели (идём дальше), либо мимо неё (закрываем).
     const done = await new Promise(res => {
@@ -9403,7 +9377,7 @@ async function coachWalk(el, steps) {
         cleanup(); res(false);
       };
       const onKey = e => { if (e.key === 'Escape') { cleanup(); res(false); } };
-      const reflow = () => coachDraw(el, target, i + 1, steps.length, st.title, st.text);
+      const reflow = () => {};   // панель внизу экрана, двигать нечего
       // Цель может исчезнуть у нас под руками: человек закрыл меню, свернул
       // раздел, ушёл в карточку агента. Тогда кольцо оказывается в пустоте, а
       // затемнение остаётся висеть — ровно то, что выглядит как «сайт завис».
@@ -9411,7 +9385,6 @@ async function coachWalk(el, steps) {
       const watch = setInterval(() => {
         const r = target.getBoundingClientRect();
         if (!target.isConnected || !r.width || !r.height) { cleanup(); res(false); }
-        else reflow();
       }, 400);
       function cleanup() {
         clearInterval(watch);
