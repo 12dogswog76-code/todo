@@ -1053,6 +1053,44 @@
     .hs-date{width:44px;font-size:10.5px}
   }
 
+  /* ── состав картинкой ── */
+  .sq-prev{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+  .sq-c{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--pan2);
+    cursor:pointer;transition:.12s}
+  .sq-c:hover{border-color:#f8717166}
+  .sq-art{position:relative;height:150px;background:#0f131b;overflow:hidden}
+  .sq-ai{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .sq-art:after{content:'';position:absolute;inset:auto 0 0 0;height:80px;
+    background:linear-gradient(180deg,#0b0d1100,#0b0d11f2)}
+  .sq-nm{position:absolute;left:10px;right:10px;bottom:8px;z-index:1}
+  .sq-nm b{display:block;font-size:15px;color:var(--tx);line-height:1.2}
+  .sq-nm i{font-style:normal;font-size:10.5px;color:var(--tx3)}
+  .sq-pc{position:absolute;top:8px;right:8px;z-index:1;background:#000000b3;border-radius:8px;
+    padding:3px 8px;font-size:12px;font-weight:800;color:var(--gold)}
+  .sq-pc.ok{color:var(--acc)}
+  .sq-st{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;padding:8px 10px}
+  .sq-s{display:flex;justify-content:space-between;gap:6px;font-size:10.5px;padding:2px 0}
+  .sq-s span{color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sq-s b{color:var(--tx2);font-variant-numeric:tabular-nums}
+  .sq-s.pri span,.sq-s.pri b{color:var(--gold)}
+  .sq-w{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}
+  .sq-wi{width:34px;height:34px;border-radius:8px;object-fit:contain;background:#0f131b;flex:0 0 auto}
+  .sq-wt{min-width:0}
+  .sq-wt b{display:block;font-size:11.5px;color:var(--tx2);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .sq-wt i{font-style:normal;font-size:10px;color:var(--tx3)}
+  .sq-su{display:flex;gap:10px;padding:8px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .sq-su1{display:flex;align-items:center;gap:5px;min-width:0}
+  .sq-si{width:22px;height:22px;flex:0 0 auto}
+  .sq-su1 b{font-size:12px;color:var(--gold)}
+  .sq-su1 i{font-style:normal;font-size:10px;color:var(--tx3);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  /* кнопка «в состав» у прохождения: маленькая, чтобы не спорила с аватарами */
+  .rn-pic{background:transparent;border:1px solid var(--line);color:var(--tx3);cursor:pointer;
+    border-radius:9px;padding:4px 8px;font-size:13px;line-height:1;margin-left:4px;
+    align-self:center;transition:.12s;font-family:inherit}
+  .rn-pic:hover{border-color:var(--acc);color:var(--tx)}
+
   /* ── итоги патча ── */
   /* .htab объявлен выше глобально, но .panel button перебивает его по
      специфичности — поэтому размеры дублируем внутри панели. */
@@ -2394,6 +2432,7 @@
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
   <div class="panel" id="cmpPanel"><div id="cmpBox"></div></div>
   <div class="panel" id="gearPanel"><div id="gearBox"></div></div>
+  <div class="panel" id="squadPanel"><div id="squadBox"></div></div>
   <div class="panel" id="pullPanel"><div id="pullBox"></div></div>
 
   <div class="panel" id="helpPanel">
@@ -2539,7 +2578,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v238';
+const APP_VER = 'v239';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5449,10 +5488,9 @@ function renderSheet() {
         ? '<button class="htab' + (curTab === 'team' ? ' on' : '') + '" data-tab="team" ' +
           'title="С кем ходят в эндгейме — по статистике прохождений">Команды</button>'
         : '') +
-      ((CHRON.log || []).some(e => e.id === curId)
-        ? '<button class="htab' + (curTab === 'chron' ? ' on' : '') + '" data-tab="chron" ' +
-          'title="Что менялось у этого агента: диски, движок, навыки">Журнал</button>'
-        : '') +
+      // Вкладки «Журнал» тут больше нет: те же записи целиком лежат в разделе
+      // «📈 История» → «Подробно по агентам», а в карточке они только съедали
+      // место среди вкладок, которыми пользуешься каждый день.
       // Сброс плана: убирает только задуманное, а надетое остаётся. После него
       // вкладка «План» показывает ровно то же, что «Сейчас», — можно набирать заново.
       (curTab === 'plan' && planCount(p)
@@ -5473,10 +5511,7 @@ function renderSheet() {
     if (curTab === 'guide') { h += guideHtml(a, p, nowT); }
     else if (curTab === 'mats') { h += matsHtml(a); }
     else if (curTab === 'team') { h += teamHtml(a); }
-    else if (curTab === 'chron') {
-      h += '<div class="sect"><h4><span class="tt">Что менялось<i>CHANGELOG</i></span></h4>' +
-        chronHtml(curId, 40) + '</div>';
-    } else {
+    else {
 
     // ── сверка с гайдом ──
     // Список замечаний сразу под вкладками: раньше это же было размазано по
@@ -7740,6 +7775,7 @@ const MENU = [
   { k: 'pull',   p: 'pullPanel',   i: '🎲', n: 'Крутки',          d: 'Сколько до гаранта и вся история' },
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
   { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Твои прохождения и мета' },
+  { k: 'squad',  p: 'squadPanel',  i: '🖼', n: 'Состав картинкой', d: 'Трое и банбу одним PNG' },
   { k: 'hist',   p: 'histPanel',   i: '📈', n: 'История',         d: 'График и журнал изменений' },
   { k: 'cmp',    p: 'cmpPanel',    i: '⚖',  n: 'Сравнение',       d: 'Свой профиль против чужого' },
   { k: 'help',   p: 'helpPanel',   i: '?',  n: 'Справка',         d: 'Как всё устроено' }
@@ -7777,6 +7813,7 @@ function menuGo(k) {
   if (k === 'pull')   { drawPulls(); planAuto(); }
   if (k === 'banner') drawBanners();
   if (k === 'end')    { drawEndgame(); runsAuto(); }
+  if (k === 'squad')  drawSquad();
   if (k === 'hist')   drawHist();
   if (k === 'cmp')    drawCmp();
   if (k === 'todo')   drawTodo();
@@ -10661,6 +10698,437 @@ async function cardSave(id) {
 const TRL = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',
   л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',
   ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',' ':'-' };
+// ─────────────── состав картинкой ───────────────
+// Карточка агента отвечает на вопрос «как собран вот этот». А в чат обычно
+// кидают команду целиком: трое и банбу, чтобы было видно, кто с кем ходит и на
+// чём. Собирать три отдельные картинки и склеивать вручную — лишняя работа.
+//
+// Состав живёт в ui.squad и синхронизируется с облаком вместе с остальным ui:
+// набрал на ПК — открыл с телефона и отправил.
+const SQ_MAX = 3;
+function squadUi() {
+  if (!ui.squad || typeof ui.squad !== 'object') ui.squad = { ids: [], boo: '' };
+  if (!Array.isArray(ui.squad.ids)) ui.squad.ids = [];
+  return ui.squad;
+}
+// Битые id отсеиваем на чтении, а не на записи: агент мог уехать из базы при
+// её пересборке, и тогда раздел падал бы на пустом DB.byId[id].
+function squadIds() {
+  return squadUi().ids.filter(id => DB.byId && DB.byId[id] && prog[id] && prog[id].have)
+    .slice(0, SQ_MAX);
+}
+function squadToggle(id) {
+  const s = squadUi(), i = s.ids.indexOf(id);
+  if (i >= 0) s.ids.splice(i, 1);
+  else {
+    if (s.ids.length >= SQ_MAX) s.ids.shift();   // четвёртый вытесняет первого
+    s.ids.push(id);
+  }
+  s.t = Date.now();
+  save();
+}
+function squadBoo(n) {
+  const s = squadUi();
+  s.boo = (s.boo === n) ? '' : n;
+  s.t = Date.now();
+  save();
+}
+function squadBooObj() {
+  const n = squadUi().boo;
+  if (!n) return null;
+  return ((GUIDE && GUIDE.bangboo && GUIDE.bangboo.list) || []).filter(b => b.n === n)[0] || null;
+}
+// Восемь характеристик, которые реально смотрят при обмене составами. HP,
+// защита и импульс в этот список не входят: на них не играют, а место на
+// картинке они съедают наравне с критом.
+const SQ_STATS = ['atk', 'cr', 'cd', 'ap', 'am', 'pen', 'er', 'dmg'];
+function sqStatText(o, v) {
+  return o.pct ? (Math.round(v * 10) / 10) + '%'
+       : (o.k === 'er' ? (Math.round(v * 100) / 100).toFixed(2) : nfmt(Math.round(v)));
+}
+
+function squadCardHtml(id) {
+  const a = DB.byId[id], p = prog[id];
+  if (!a || !p) return '';
+  const pri = priOf(id, p) || [];
+  const w = p.w && p.w.id ? DB.engById[p.w.id] : null;
+  const on = suitsOn(p).filter(z => z.n >= 2);
+  const pc = pctOf(id);
+  const stats = SQ_STATS.map(k => {
+    const o = STATS.filter(s => s.k === k)[0];
+    if (!o) return '';
+    const v = (p.cur && p.cur[k]) || 0;
+    return '<div class="sq-s' + (pri.indexOf(k) >= 0 ? ' pri' : '') + '">' +
+      '<span>' + esc(o.n) + '</span><b>' + esc(sqStatText(o, v)) + '</b></div>';
+  }).join('');
+  return '<div class="sq-c" data-drop="' + id + '" title="Клик — убрать из состава">' +
+    '<div class="sq-art">' +
+      (agentPic(a, 'card') ? img(agentPic(a, 'card'), 'sq-ai', a.ru, true) : '') +
+      '<div class="sq-nm"><b>' + esc(a.ru) + '</b>' +
+        '<i>Ур. ' + (p.lvl || 0) + ' · M' + (p.mind || 0) +
+        ' · ядро ' + (['—','A','B','C','D','E','F'][p.core || 0] || '—') + '</i></div>' +
+      '<span class="sq-pc' + (pc >= 100 ? ' ok' : '') + '">' + pc + '%</span>' +
+    '</div>' +
+    '<div class="sq-st">' + stats + '</div>' +
+    '<div class="sq-w">' +
+      (w && w.icon ? img(imgUrl('engines', w.icon), 'sq-wi', w.ru || w.en, true) : '<span class="sq-wi"></span>') +
+      '<div class="sq-wt"><b>' + esc(w ? (w.ru || w.en) : 'движок не надет') + '</b>' +
+        (w ? '<i>Ур. ' + ((p.w && p.w.lvl) || 0) + ' · P' + ((p.w && p.w.phase) || 1) + '</i>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="sq-su">' + (on.length
+      ? on.slice(0, 2).map(z =>
+          '<span class="sq-su1">' +
+            (z.su && z.su.icon ? img(imgUrl('discs', z.su.icon), 'sq-si', z.su.ru || z.su.en, true) : '') +
+            '<b>' + z.n + '×</b><i>' + esc(z.su ? (z.su.ru || z.su.en) : '?') + '</i></span>').join('')
+      : '<span class="hint" style="margin:0">ни одного набора</span>') +
+    '</div></div>';
+}
+
+function drawSquad() {
+  const box = $('squadBox');
+  if (!box) return;
+  const ids = squadIds(), boo = squadBooObj();
+  const mine = (DB.agents || []).filter(a => prog[a.id] && prog[a.id].have);
+
+  // Предпросмотр: то же самое, что уедет в PNG. Раньше по задумке была только
+  // кнопка «скачать», но тогда проверять состав приходится в просмотрщике
+  // картинок, а поправить его можно лишь вернувшись сюда.
+  const prev = ids.length
+    ? '<div class="sq-prev">' + ids.map(squadCardHtml).join('') + '</div>'
+    : '<div class="hint" style="margin-top:0">Состав пуст. Отметь до трёх агентов ниже — ' +
+      'здесь появится предпросмотр того, что уедет в картинку.</div>';
+
+  const booList = ((GUIDE && GUIDE.bangboo && GUIDE.bangboo.list) || []).filter(b => booHave(b.n));
+
+  box.innerHTML =
+    '<div class="pt-head" style="margin-bottom:10px">' +
+      '<b>Состав картинкой</b>' +
+      '<span>' + ids.length + ' из ' + SQ_MAX +
+        (boo ? ' · банбу: ' + esc(booRu(boo.n)) : '') + '</span>' +
+      '<button id="sqBtn" class="pri"' + (ids.length ? '' : ' disabled') + '>🖼 Скачать PNG</button>' +
+      (ids.length ? '<button id="sqClear" class="ghost2">очистить</button>' : '') +
+    '</div>' +
+    prev +
+    '<div class="cap2" style="margin:16px 0 6px">КОГО ПОСТАВИТЬ' +
+      ' <span class="eg-st">только твои, ' + mine.length + '</span></div>' +
+    (mine.length
+      // На галочке — порядковый номер: в составе важно, кто первый (по нему
+      // красится картинка), а три одинаковые галочки этого не показывают.
+      ? '<div class="pk-grid">' + mine.slice().sort(byRank()).map(a => {
+          const i = ids.indexOf(a.id);
+          return '<button class="pk-a' + (i >= 0 ? ' on' : '') + '" data-sq="' + a.id +
+            '" title="' + esc(a.ru + ' · готовность ' + pctOf(a.id) + '%') + '">' +
+            (a.icon ? img(imgUrl('agents', a.icon), 'pk-img', a.ru, true) : '<span class="pk-img"></span>') +
+            '<u>' + (i >= 0 ? (i + 1) : '✓') + '</u></button>';
+        }).join('') + '</div>'
+      : '<div class="hint" style="margin-top:0">В трекере пока нет ни одного твоего агента — ' +
+        'загрузи аккаунт в разделе «⟳ Импорт из игры».</div>') +
+    '<div class="cap2" style="margin:16px 0 6px">БАНБУ' +
+      ' <span class="eg-st">' + (booList.length ? 'твои, ' + booList.length : 'ни одного не отмечено') +
+      '</span></div>' +
+    (booList.length
+      ? '<div class="pk-grid">' + booList.map(b =>
+          '<button class="pk-a' + (boo && boo.n === b.n ? ' on' : '') + '" data-sqb="' + esc(b.n) +
+            '" title="' + esc(booRu(b.n)) + '">' +
+            (b.icon ? img(imgUrl('bangboo', b.icon), 'pk-img', booRu(b.n), true) : '<span class="pk-img"></span>') +
+            '<u>✓</u></button>').join('') + '</div>'
+      : '<div class="hint" style="margin-top:0">Банбу отмечаются в разделе «🤖 Банбу» — ' +
+        'отметь своих, и они появятся здесь.</div>') +
+    '<div class="hint">Готовый состав можно подставить из раздела «⚔ Эндгейм»: у каждого ' +
+      'прохождения есть кнопка <b>🖼</b> — она кладёт сюда ровно ту команду, которой ты ' +
+      'этот бой закрыл. Характеристики, движок и комплекты берутся из твоего текущего ' +
+      'состояния, а не из момента боя.</div>';
+
+  box.querySelectorAll('[data-sq]').forEach(b => b.onclick = () => {
+    squadToggle(+b.dataset.sq); drawSquad();
+  });
+  box.querySelectorAll('[data-sqb]').forEach(b => b.onclick = () => {
+    squadBoo(b.dataset.sqb); drawSquad();
+  });
+  box.querySelectorAll('[data-drop]').forEach(b => b.onclick = () => {
+    squadToggle(+b.dataset.drop); drawSquad();
+  });
+  if ($('sqBtn')) $('sqBtn').onclick = squadSave;
+  if ($('sqClear')) $('sqClear').onclick = () => {
+    const s = squadUi(); s.ids = []; s.boo = ''; s.t = Date.now(); save(); drawSquad();
+  };
+}
+
+// Ширина под три колонки, высота — под самый насыщенный вариант: арт, восемь
+// характеристик, движок, комплекты и шесть дисков.
+const SQ_W = 1500, SQ_H = 1190;
+// Одна колонка состава. Вынесено из общей функции: три почти одинаковых блока
+// подряд в одном теле читать невозможно, а так видно, что колонка ничего не
+// знает про соседей и рисуется от своего x.
+async function squadCol(c, id, x, y, W, H) {
+  const a = DB.byId[id], p = prog[id];
+  const elC = (ELEM[elKey(a.element)] && ELEM[elKey(a.element)].c) || '#8b92a3';
+  c.fillStyle = CARD_PAN; cardRound(c, x, y, W, H, 18); c.fill();
+  c.strokeStyle = CARD_LINE; c.lineWidth = 1; c.stroke();
+
+  // ── арт с затемнением снизу и подписями поверх ──
+  const AH = 300;
+  const art = await loadImg(agentPic(a, 'card')) || await loadImg(agentPic(a, 'hero'));
+  c.save();
+  cardRound(c, x, y, W, H, 18); c.clip();
+  c.fillStyle = '#0f131b'; c.fillRect(x, y, W, AH);
+  if (art) {
+    const k = Math.max(W / art.width, AH / art.height);
+    const aw = art.width * k, ah = art.height * k;
+    c.drawImage(art, x + (W - aw) / 2, y + (AH - ah) / 2, aw, ah);
+  }
+  const sh = c.createLinearGradient(0, y + AH - 150, 0, y + AH);
+  sh.addColorStop(0, '#00000000'); sh.addColorStop(1, '#0b0d11f2');
+  c.fillStyle = sh; c.fillRect(x, y + AH - 150, W, 150);
+  c.restore();
+
+  const pc = pctOf(id);
+  // готовность — правым верхним углом, как в трекере
+  c.fillStyle = '#000000b3'; cardRound(c, x + W - 106, y + 16, 90, 34, 11); c.fill();
+  c.fillStyle = pc >= 100 ? CARD_OK : CARD_GOLD; c.font = cardFont(19, 800);
+  c.textAlign = 'center'; c.fillText(pc + '%', x + W - 61, y + 40); c.textAlign = 'left';
+
+  // стихия и специальность — родными значками
+  const elPng = await loadImg(elIconSrc(a.element));
+  const prPng = await loadImg(uiIcon('pr-' + a.prof));
+  c.fillStyle = '#000000b3'; cardRound(c, x + 16, y + 16, 78, 34, 11); c.fill();
+  if (elPng) c.drawImage(elPng, x + 24, y + 21, 24, 24);
+  else cardIcon(c, EL_PATH[elKey(a.element)] || '', x + 24, y + 21, 24, elC);
+  if (prPng) c.drawImage(prPng, x + 56, y + 21, 24, 24);
+
+  c.fillStyle = CARD_TX; c.font = cardFont(30, 800);
+  cardText(c, a.ru, x + 18, y + AH - 46, W - 36);
+  c.fillStyle = CARD_TX3; c.font = cardFont(15, 600);
+  c.fillText('Ур. ' + (p.lvl || 0) + '  ·  M' + (p.mind || 0) +
+             '  ·  ядро ' + (['—','A','B','C','D','E','F'][p.core || 0] || '—'), x + 18, y + AH - 20);
+
+  let cy = y + AH + 14;
+
+  // ── характеристики ──
+  const pri = priOf(id, p) || [];
+  const SH2 = 30, cw = (W - 36) / 2;
+  const stH = 4 * SH2 + 16;
+  c.fillStyle = '#0f131b'; cardRound(c, x + 12, cy, W - 24, stH, 13); c.fill();
+  SQ_STATS.forEach((k, i) => {
+    const o = STATS.filter(s => s.k === k)[0];
+    if (!o) return;
+    const col = i % 2, row = (i - col) / 2;
+    const rx = x + 20 + col * cw, ry = cy + 30 + row * SH2;
+    const hot = pri.indexOf(k) >= 0;
+    if (k === 'dmg' && elPng) c.drawImage(elPng, rx, ry - 13, 15, 15);
+    else cardIcon(c, ST_PATH[k] || '', rx, ry - 13, 15, hot ? CARD_GOLD : CARD_TX3);
+    c.fillStyle = hot ? CARD_GOLD : CARD_TX3; c.font = cardFont(13, hot ? 700 : 500);
+    cardText(c, o.n, rx + 21, ry, cw - 100);
+    c.fillStyle = hot ? CARD_GOLD : CARD_TX; c.font = cardFont(15, 700);
+    c.textAlign = 'right';
+    c.fillText(sqStatText(o, (p.cur && p.cur[k]) || 0), rx + cw - 22, ry);
+    c.textAlign = 'left';
+  });
+  cy += stH + 12;
+
+  // ── движок ──
+  const w = p.w && p.w.id ? DB.engById[p.w.id] : null;
+  c.fillStyle = '#0f131b'; cardRound(c, x + 12, cy, W - 24, 76, 13); c.fill();
+  const wi = w && w.icon ? await loadImg(imgUrl('engines', w.icon)) : null;
+  if (wi) { c.save(); cardRound(c, x + 22, cy + 10, 56, 56, 11); c.clip();
+            c.drawImage(wi, x + 22, cy + 10, 56, 56); c.restore(); }
+  c.fillStyle = CARD_TX3; c.font = cardFont(10, 700);
+  c.fillText('W-ENGINE', x + 90, cy + 26);
+  c.fillStyle = w ? CARD_TX : CARD_TX3; c.font = cardFont(17, 700);
+  cardText(c, w ? (w.ru || w.en) : 'движок не надет', x + 90, cy + 48, W - 112);
+  if (w) {
+    c.fillStyle = CARD_TX3; c.font = cardFont(13, 500);
+    c.fillText('Ур. ' + ((p.w && p.w.lvl) || 0) + ' · P' + ((p.w && p.w.phase) || 1), x + 90, cy + 66);
+  }
+  cy += 76 + 12;
+
+  // ── комплекты ──
+  const on = suitsOn(p).filter(z => z.n >= 2);
+  c.fillStyle = '#0f131b'; cardRound(c, x + 12, cy, W - 24, 62, 13); c.fill();
+  if (!on.length) {
+    c.fillStyle = CARD_TX3; c.font = cardFont(14, 500);
+    c.fillText('ни одного набора', x + 22, cy + 36);
+  } else {
+    let sx = x + 20;
+    const slot = (W - 40) / Math.min(2, on.length);
+    for (let i = 0; i < on.length && i < 2; i++) {
+      const z = on[i];
+      const si = z.su && z.su.icon ? await loadImg(imgUrl('discs', z.su.icon)) : null;
+      if (si) c.drawImage(si, sx, cy + 15, 32, 32);
+      c.fillStyle = CARD_GOLD; c.font = cardFont(15, 800);
+      c.fillText(z.n + '×', sx + 38, cy + 30);
+      c.fillStyle = CARD_TX2; c.font = cardFont(12, 600);
+      cardText(c, z.su ? (z.su.ru || z.su.en) : '?', sx + 38, cy + 46, slot - 46);
+      sx += slot;
+    }
+  }
+  cy += 62 + 12;
+
+  // ── диски: два ряда по три ──
+  // В одну строку из шести они дают колонку шириной под 70 пикселей, и
+  // дополнительные характеристики туда просто не влезают — а именно по ним и
+  // видно, насколько диск хорош. Два ряда дают ту же ширину, что в карточке
+  // одного агента.
+  const mk = modKeys(id, p), pr = priOf(id, p), wts = statWeights(a, p);
+  const dw = (W - 24 - 2 * 6) / 3, dh = (y + H - 14 - cy - 8) / 2;
+  for (let sl = 1; sl <= 6; sl++) {
+    const d = (p.discs || []).filter(z => z && z.slot === sl)[0] || null;
+    const sc = d ? discScore(d, mk, pr, wts) : null;
+    const su = d && DB.suitById ? DB.suitById[d.suit] : null;
+    const col = (sl - 1) % 3, row = sl <= 3 ? 0 : 1;
+    const dx = x + 12 + col * (dw + 6), dy = cy + row * (dh + 8);
+    c.fillStyle = '#0f131b'; cardRound(c, dx, dy, dw, dh, 11); c.fill();
+    c.fillStyle = CARD_TX3; c.font = cardFont(10, 700);
+    c.fillText(String(sl), dx + 8, dy + 16);
+    if (sc) {
+      c.textAlign = 'right';
+      c.fillStyle = sc.pct >= 44 ? CARD_OK : (sc.pct >= 33 ? CARD_GOLD : CARD_TX3);
+      c.font = cardFont(12, 800);
+      c.fillText(sc.grade, dx + dw - 8, dy + 16);
+      c.textAlign = 'left';
+    }
+    const si = su && su.icon ? await loadImg(imgUrl('discs', su.icon)) : null;
+    if (si) c.drawImage(si, dx + dw / 2 - 17, dy + 22, 34, 34);
+    c.textAlign = 'center';
+    c.fillStyle = CARD_GOLD; c.font = cardFont(11, 700);
+    cardText(c, d ? (shortName(d.mainP) + (pctProp(d.mainP) ? ' %' : '')) : 'пусто',
+             dx + dw / 2, dy + 74, dw - 10);
+    c.fillStyle = CARD_TX; c.font = cardFont(14, 700);
+    cardText(c, d ? mainText(d.mainP, d.mainV, d.lvl) : '—', dx + dw / 2, dy + 93, dw - 10);
+    c.textAlign = 'left';
+    // Доп. характеристики: имя слева, значение справа на той же строке.
+    // Полезные — зелёным, как в трекере; по ним и видно, стоит диск чего-то
+    // или это шестёрка с мусором.
+    ((d && d.subs) || []).slice(0, 4).forEach((sp, i2) => {
+      const good = isModSub(sp, mk);
+      const ry = dy + 116 + i2 * 19;
+      const val = subVal(sp), r = subRolls(sp);
+      c.font = cardFont(11, 600);
+      const vw = c.measureText(val).width;
+      c.fillStyle = good ? CARD_TX : CARD_TX3;
+      c.textAlign = 'right';
+      c.fillText(val, dx + dw - 8, ry);
+      c.textAlign = 'left';
+      c.fillStyle = good ? CARD_OK : CARD_TX3;
+      c.font = cardFont(11, good ? 700 : 500);
+      cardText(c, shortName(sp.p) + (r ? ' +' + r : ''), dx + 8, ry, dw - 22 - vw);
+    });
+  }
+}
+
+async function squadPng() {
+  const ids = squadIds();
+  if (!ids.length) return null;
+  const boo = squadBooObj();
+  // Колонка всегда одной ширины, а холст ужимается под количество: если делить
+  // полторы тысячи пикселей на одного агента, колонка растягивается и картинка
+  // выглядит сломанной.
+  const PAD = 32, gap = 16;
+  const COLW = (SQ_W - PAD * 2 - gap * 2) / 3;
+  const W_ALL = PAD * 2 + ids.length * COLW + gap * (ids.length - 1);
+  const cv = document.createElement('canvas');
+  cv.width = W_ALL; cv.height = SQ_H;
+  const c = cv.getContext('2d');
+  c.textBaseline = 'alphabetic';
+
+  c.fillStyle = CARD_BG; c.fillRect(0, 0, W_ALL, SQ_H);
+  // Подсветка от стихии первого агента: обычно первым ставят основного ДД, и
+  // картинка сразу читается по цвету.
+  const a0 = DB.byId[ids[0]];
+  const g0 = (ELEM[elKey(a0.element)] && ELEM[elKey(a0.element)].c) || '#8b92a3';
+  const gl = c.createRadialGradient(W_ALL / 2, 120, 60, W_ALL / 2, 120, 1100);
+  gl.addColorStop(0, g0 + '1f'); gl.addColorStop(1, '#00000000');
+  c.fillStyle = gl; c.fillRect(0, 0, W_ALL, SQ_H);
+
+  // ── шапка ──
+  c.fillStyle = CARD_TX; c.font = cardFont(34, 800);
+  c.fillText('СОСТАВ', PAD, 60);
+  const namesX = PAD + c.measureText('СОСТАВ').width + 18;
+  c.fillStyle = CARD_TX3; c.font = cardFont(15, 500);
+  c.fillText(ids.map(id => DB.byId[id].ru).join('  ·  '), PAD, 86);
+
+  // банбу — справа в шапке: он в команде четвёртый, но не агент, и мешать его
+  // с тремя колонками неправильно. На узком холсте (один-два агента) справа
+  // места нет, и плашка уезжает вниз, к подписи.
+  const bi = boo && boo.icon ? await loadImg(imgUrl('bangboo', boo.icon)) : null;
+  const bw = 300, wide = W_ALL - PAD - bw > namesX;
+  if (boo && wide) {
+    const bx = W_ALL - PAD - bw;
+    c.fillStyle = CARD_PAN; cardRound(c, bx, 26, bw, 64, 14); c.fill();
+    c.strokeStyle = CARD_LINE; c.lineWidth = 1; c.stroke();
+    if (bi) c.drawImage(bi, bx + 10, 32, 52, 52);
+    c.fillStyle = CARD_TX3; c.font = cardFont(10, 700);
+    c.fillText('БАНБУ', bx + 72, 50);
+    c.fillStyle = CARD_TX; c.font = cardFont(19, 700);
+    cardText(c, booRu(boo.n), bx + 72, 74, bw - 84);
+  }
+
+  // ── колонки ──
+  const top = 108;
+  const H = SQ_H - top - 56;
+  for (let i = 0; i < ids.length; i++) {
+    await squadCol(c, ids[i], PAD + i * (COLW + gap), top, COLW, H);
+  }
+
+  // ── подвал ──
+  let fx = PAD;
+  if (boo && !wide) {
+    if (bi) c.drawImage(bi, fx, SQ_H - 44, 28, 28);
+    c.fillStyle = CARD_TX2; c.font = cardFont(13, 600);
+    fx += (bi ? 34 : 0);
+    const nm = cardText(c, booRu(boo.n), fx, SQ_H - 22, 200);
+    fx += c.measureText(nm).width + 16;
+  }
+  c.fillStyle = CARD_TX3; c.font = cardFont(13, 500);
+  c.fillText('alextask.ru · ' + new Date().toLocaleDateString('ru-RU'), fx, SQ_H - 22);
+  return new Promise(res => cv.toBlob(res, 'image/png'));
+}
+
+async function squadSave() {
+  const btn = $('sqBtn');
+  const t = toast('Рисую состав', 'собираю арты и характеристики', 'work');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ рисую…'; }
+  try {
+    const blob = await squadPng();
+    if (!blob) throw new Error('состав пуст');
+    const ids = squadIds();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'zzz-squad-' + ids.map(id => translit(DB.byId[id].ru)).join('-') + '.png';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    t.set('Готово', 'картинка ушла в загрузки', 'ok', 3500);
+  } catch (e) {
+    t.set('Не вышло', (e && e.message) || String(e), 'err', 6000);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🖼 Скачать PNG'; }
+  }
+}
+
+// Подстановка состава из прохождения. Из боя приезжают только id агентов и
+// картинка банбу — всё остальное (диски, движок, характеристики) берём из
+// текущего состояния трекера, потому что снимка на момент боя у нас нет.
+function squadFromRun(ids, booPic) {
+  const s = squadUi();
+  s.ids = (ids || []).filter(id => DB.byId && DB.byId[id] && prog[id] && prog[id].have).slice(0, SQ_MAX);
+  // Банбу из хроники приходит без имени, только картинкой. Сопоставляем по
+  // имени файла: и у нас, и у HoYoLab оно от одного игрового ассета.
+  if (booPic) {
+    const key = String(booPic).split('/').pop().split('.')[0].toLowerCase();
+    const hit = ((GUIDE && GUIDE.bangboo && GUIDE.bangboo.list) || [])
+      .filter(b => b.icon && String(b.icon).toLowerCase().indexOf(key) >= 0)[0];
+    if (hit) s.boo = hit.n;
+  }
+  s.t = Date.now();
+  save();
+  const lost = (ids || []).length - s.ids.length;
+  menuGo('squad');
+  toast('Состав подставлен', s.ids.length + ' из ' + ((ids || []).length) + ' агентов' +
+    (lost ? ' — остальных нет в трекере' : ''), lost ? 'info' : 'ok', 4000);
+}
+
 // Картинка с итогами патча. Размер поуже карточки агента: сюда идут только
 // цифры, арт не нужен, а узкое изображение удобнее кидать в чат.
 const SUM_W = 1000, SUM_H = 620;
@@ -11945,10 +12413,23 @@ function runFace(x) {
     (src ? '<img src="' + esc(src) + '" alt="" loading="lazy">' : '<u>?</u>') +
     (x.m ? '<b>M' + x.m + '</b>' : '') + '</div>';
 }
+// Реестр составов текущей отрисовки: в data-атрибут кнопки кладём номер, а сам
+// состав — сюда. Пихать массив id в атрибут строкой можно, но тогда любая
+// правка формата ломает разбор, а тут это просто ссылка на объект.
+let RUN_TEAMS = [];
 function runTeam(list, boo) {
+  const ids = (list || []).map(x => +x.id).filter(Boolean);
+  // Кнопка только там, где есть кого подставлять: у пустых составов (хроника
+  // иногда отдаёт бой без команды) она бы вела в пустой раздел.
+  let btn = '';
+  if (ids.length) {
+    RUN_TEAMS.push({ ids: ids, boo: (boo && boo.pic) || '' });
+    btn = '<button class="rn-pic" data-rt="' + (RUN_TEAMS.length - 1) + '" ' +
+      'title="Открыть этот состав в разделе «Состав картинкой»">🖼</button>';
+  }
   return '<div class="rn-team">' + (list || []).map(runFace).join('') +
     (boo && boo.pic ? '<div class="rn-f rn-boo"><img src="' + esc(boo.pic) + '" alt="" loading="lazy"></div>' : '') +
-    '</div>';
+    btn + '</div>';
 }
 // «топ 19,5 %» — так это подписано в самой хронике
 function runRank(v) {
@@ -12033,6 +12514,7 @@ function runsShiyu(p) {
 }
 
 function drawRuns() {
+  RUN_TEAMS = [];                       // сбрасываем перед сборкой разметки
   const mem = runsList('mem'), sh = runsList('shiyu');
   const head =
     '<div class="ban-rem">' +
@@ -12075,6 +12557,10 @@ function drawEndgame() {
   });
   if ($('runsBtn')) $('runsBtn').onclick = () => runsLoad($('runsBtn'), $('runsMsg'));
   if ($('egRemBtn')) $('egRemBtn').onclick = egRemToggle;
+  box.querySelectorAll('[data-rt]').forEach(b => b.onclick = () => {
+    const t = RUN_TEAMS[+b.dataset.rt];
+    if (t) squadFromRun(t.ids, t.boo);
+  });
 }
 
 function drawEgMeta() {
