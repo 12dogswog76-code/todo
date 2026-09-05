@@ -1053,6 +1053,44 @@
     .hs-date{width:44px;font-size:10.5px}
   }
 
+  /* ── итоги патча ── */
+  /* .htab объявлен выше глобально, но .panel button перебивает его по
+     специфичности — поэтому размеры дублируем внутри панели. */
+  .panel .htab{font-size:12px;padding:6px 15px}
+  .pt-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+  .pt-head b{font-size:15px;color:var(--tx)}
+  .pt-head span{font-size:11.5px;color:var(--tx3);font-variant-numeric:tabular-nums}
+  .pt-head button{margin-left:auto}
+  .pt-tiles{display:flex;flex-wrap:wrap;gap:8px}
+  .pt-t{flex:1 1 130px;padding:11px 13px;border-radius:12px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan));border:1px solid var(--line)}
+  .pt-t b{display:block;font-size:22px;color:var(--tx);font-variant-numeric:tabular-nums;line-height:1.15}
+  .pt-t i{font-style:normal;font-size:10.5px;color:var(--tx3);line-height:1.4}
+  .pt-t.gold b{color:var(--gold)}
+  .pt-t.gold{border-color:#ffd54a3d;box-shadow:0 0 16px #ffd54a12 inset}
+  .pt-t.ok b{color:#a7f3c0}
+  .pt-t.ok{border-color:#4ade8040;box-shadow:0 0 16px #4ade8014 inset}
+  .pt-got{display:flex;flex-wrap:wrap;gap:8px}
+  .pt-g{width:74px;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .pt-gi{width:66px;height:66px;border-radius:12px;object-fit:cover;object-position:top center;
+    border:1px solid #ffd54a4d;background:var(--pan2);box-shadow:0 0 14px #ffd54a1a}
+  .pt-gi.sq{object-fit:contain;object-position:center}
+  .pt-g i{font-style:normal;font-size:10px;color:var(--tx3);text-align:center;line-height:1.25;
+    max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pt-cols{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .pt-col{flex:1 1 240px;padding:10px 13px;border-radius:12px;
+    background:var(--pan2);border:1px solid var(--line)}
+  .pt-r{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:12px;
+    border-top:1px solid var(--line)}
+  .pt-r:first-of-type{border-top:0}
+  .pt-r span{color:var(--tx3)}
+  .pt-r b{color:var(--tx2);font-variant-numeric:tabular-nums;text-align:right}
+  @media(max-width:760px){
+    .pt-t{flex:1 1 45%;padding:9px 11px}
+    .pt-t b{font-size:19px}
+    .pt-head button{margin-left:0}
+  }
+
   /* ── банбу ── */
   .boo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:6px}
   .boo{border-radius:12px;background:linear-gradient(120deg,var(--pan2),var(--pan));
@@ -2501,7 +2539,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v237';
+const APP_VER = 'v238';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -8864,19 +8902,36 @@ function drawHist() {
   if (!box) return;
   histTick();
   chronScan(true);
+  // Вкладки: график с журналом и отдельно сводка за патч. Раньше итоги были
+  // только картинкой по кнопке — посмотреть, что там, можно было лишь скачав
+  // файл.
+  if (ui.histTab !== 'patch') ui.histTab = 'prog';
+  const tabs = '<div style="display:flex;gap:6px;margin:0 0 12px">' +
+    '<button class="htab' + (ui.histTab === 'prog' ? ' on' : '') + '" data-h="prog">Прогресс</button>' +
+    '<button class="htab' + (ui.histTab === 'patch' ? ' on' : '') + '" data-h="patch">Итоги патча</button>' +
+    '</div>';
+  const bindTabs = () => box.querySelectorAll('.htab[data-h]').forEach(b => b.onclick = () => {
+    ui.histTab = b.dataset.h;
+    try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+    drawHist();
+  });
+  if (ui.histTab === 'patch') {
+    box.innerHTML = tabs + drawPatch();
+    bindTabs();
+    if ($('sumBtn')) $('sumBtn').onclick = savePatchPng;
+    return;
+  }
   const days = hist.days || [];
   if (!days.length) {
-    box.innerHTML = '<div class="hint" style="margin-top:0">Истории пока нет. ' +
+    box.innerHTML = tabs + '<div class="hint" style="margin-top:0">Истории пока нет. ' +
       'Первый снимок появится, когда в трекере будет хоть один агент с отметкой «есть».</div>';
+    bindTabs();
     return;
   }
   const last = days[days.length - 1], first = days[0];
   const dPct = last.pct - first.pct, dN = last.n - first.n;
   const sign = v => (v > 0 ? '+' : '') + v;
-  let h = '<div class="ban-rem" style="margin-bottom:12px">' +
-    '<button id="sumBtn">🖼 Итоги патча картинкой</button>' +
-    '<span class="hint" style="margin:0">крутки, рост готовности и эндгейм за текущий патч</span>' +
-    '</div>' +
+  let h = tabs +
     '<div class="hs-now">' +
     '<span><b>' + last.pct + '%</b><i>средняя готовность' +
       (days.length > 1 ? ', ' + sign(dPct) + ' за период' : '') + '</i></span>' +
@@ -8920,7 +8975,67 @@ function drawHist() {
     'карточку агента.</div>';
   box.innerHTML = h;
   box.querySelectorAll('.ch-row').forEach(el => el.onclick = () => openAgent(+el.dataset.id));
-  if ($('sumBtn')) $('sumBtn').onclick = savePatchPng;
+  bindTabs();
+}
+
+// Те же итоги, что и на картинке, но прямо на странице: посмотреть, не скачивая.
+function drawPatch() {
+  const st = patchStats();
+  if (!st) {
+    return '<div class="hint" style="margin-top:0">Не удалось определить границы патча: ' +
+      'нужен список баннеров. Он приезжает из хроники при обновлении данных ' +
+      'или вместе со сборками с prydwen.</div>';
+  }
+  const dt = ms => new Date(ms).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+  const pctWas = st.d0 ? st.d0.pct : null, pctNow = st.d1 ? st.d1.pct : null;
+  const tile = (big, small, cls) =>
+    '<span class="pt-t' + (cls ? ' ' + cls : '') + '"><b>' + esc(big) + '</b><i>' + esc(small) + '</i></span>';
+
+  const uniq = [];
+  (st.gotS || []).forEach(z => { if (!uniq.some(u => u.n === z.n)) uniq.push(z); });
+
+  return '<div class="pt-head"><b>Патч' + (st.range.ver ? ' ' + esc(st.range.ver) : '') + '</b>' +
+      '<span>' + dt(st.range.from) + ' — ' + dt(st.range.to) + '</span>' +
+      '<button id="sumBtn" class="ghost2">🖼 Картинкой</button></div>' +
+    '<div class="pt-tiles">' +
+      tile(st.pulls, 'круток сделано', 'gold') +
+      tile(uniq.length, 'S-рангов выбито', 'ok') +
+      tile(pctNow != null ? pctNow + '%' : '—',
+           pctWas != null && pctNow != null ? 'готовность, было ' + pctWas + '%' : 'готовность',
+           pctWas != null && pctNow > pctWas ? 'ok' : '') +
+      tile(st.discs, 'дисков сменил') +
+    '</div>' +
+    (uniq.length
+      ? '<div class="cap2" style="margin:14px 0 6px">КОГО ВЫБИЛ</div><div class="pt-got">' +
+        uniq.map(z => {
+          const pic = pullPic(z.n, z.iid);
+          return '<span class="pt-g" title="' + esc((pic && pic.n) || z.n) + '">' +
+            (pic ? img(pic.src, 'pt-gi' + (pic.sq ? ' sq' : ''), (pic.n || z.n), true)
+                 : '<span class="pt-gi"></span>') +
+            '<i>' + esc((pic && pic.n) || z.n) + '</i></span>';
+        }).join('') + '</div>'
+      : '<div class="hint">За патч ни одного S-ранга.</div>') +
+    '<div class="pt-cols">' +
+      '<div class="pt-col"><div class="cap2">ЭНДГЕЙМ</div>' +
+        ptRow('Оборона Шиюй', st.shiyu ? (st.shiyu.rating || '—') + ' · ' + nfmt(st.shiyu.score || 0) : 'нет данных') +
+        ptRow('Опасный штурм', st.mem ? (st.mem.star || 0) + '★ · ' + nfmt(st.mem.score || 0) : 'нет данных') +
+        ptRow('Место в рейтинге', st.shiyu && st.shiyu.rank
+          ? 'топ ' + (Math.round(st.shiyu.rank * 10) / 10) + '%' : '—') +
+      '</div>' +
+      '<div class="pt-col"><div class="cap2">ПРОКАЧКА</div>' +
+        ptRow('Поднял уровней', st.lvls) +
+        ptRow('Мыслительных картин', st.minds) +
+        ptRow('A-рангов из круток', st.gotA) +
+      '</div>' +
+    '</div>' +
+    '<div class="hint">Крутки считаются по истории сигналов, прокачка — по журналу ' +
+      'изменений, эндгейм — по архиву боёв.' +
+      (st.since ? ' Журнал ведётся с <b>' + dt(st.since) + '</b>: за более ранние дни ' +
+        'этого патча данных нет, поэтому нули в прокачке означают «не записано», ' +
+        'а не «ничего не делал».' : '') + '</div>';
+}
+function ptRow(n, v) {
+  return '<div class="pt-r"><span>' + esc(n) + '</span><b>' + esc(String(v)) + '</b></div>';
 }
 
 // Рисуем и сразу отдаём файлом — как карточку агента.
