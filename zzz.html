@@ -2578,7 +2578,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v239';
+const APP_VER = 'v240';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10706,6 +10706,18 @@ const TRL = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и
 // Состав живёт в ui.squad и синхронизируется с облаком вместе с остальным ui:
 // набрал на ПК — открыл с телефона и отправил.
 const SQ_MAX = 3;
+// Прямоугольник со скруглением только сверху: нижняя граница прямая, потому что
+// под ней сразу идёт следующий блок карточки.
+function cardRoundTop(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.lineTo(x + w, y + h);
+  c.lineTo(x, y + h);
+  c.lineTo(x, y + r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
 function squadUi() {
   if (!ui.squad || typeof ui.squad !== 'object') ui.squad = { ids: [], boo: '' };
   if (!Array.isArray(ui.squad.ids)) ui.squad.ids = [];
@@ -10868,10 +10880,14 @@ async function squadCol(c, id, x, y, W, H) {
   c.strokeStyle = CARD_LINE; c.lineWidth = 1; c.stroke();
 
   // ── арт с затемнением снизу и подписями поверх ──
+  // Клип строго по области арта, а не по всей карточке: арт вписывается по
+  // ширине и в высоту не помещается — при клипе по карточке его нижняя часть
+  // уезжала под характеристики, и затемнение обрывалось выше, чем сама
+  // картинка. Углы скругляем только верхние, нижние тут прямые.
   const AH = 300;
   const art = await loadImg(agentPic(a, 'card')) || await loadImg(agentPic(a, 'hero'));
   c.save();
-  cardRound(c, x, y, W, H, 18); c.clip();
+  cardRoundTop(c, x, y, W, AH, 18); c.clip();
   c.fillStyle = '#0f131b'; c.fillRect(x, y, W, AH);
   if (art) {
     const k = Math.max(W / art.width, AH / art.height);
