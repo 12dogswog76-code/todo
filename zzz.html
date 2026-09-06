@@ -1691,6 +1691,12 @@
   .gg.miss{border-color:#ffd54a33}
   .gg-lab{display:flex;align-items:center;gap:6px;color:var(--tx2);flex:1;min-width:0}
   .gg-tgt{color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* цель с пояснением из гайда: вопросик, текст в подсказке */
+  .gg.note{cursor:help}
+  .gg-q{display:inline-flex;align-items:center;justify-content:center;flex:none;
+    width:13px;height:13px;border-radius:50%;border:1px solid var(--tx3);color:var(--tx3);
+    font-size:9px;font-style:normal;font-weight:700;line-height:1}
+  .gg.note:hover .gg-q{border-color:var(--gold);color:var(--gold)}
   .gg-now{font-size:10.5px;color:var(--tx3);text-align:right;flex:none;min-width:64px;
     font-variant-numeric:tabular-nums}
   .gg.hit .gg-now{color:var(--acc)}
@@ -2578,7 +2584,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v240';
+const APP_VER = 'v241';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -4816,6 +4822,11 @@ const GUIDE_STAT_RU = {
   cr: 'Шанс крита', cd: 'Крит. урон', ap: 'Знание аномалии',
   am: 'Контроль аномалии', im: 'Импульс', pen: 'Пробивание',
   penp: 'Процент пробивания', er: 'Восст. энергии', dmg: 'Бонус стихии',
+  // Восстановление энергии в гайде идёт двумя несовместимыми видами: у Велины
+  // «2.88» — итоговое значение из игры, у Астры «0 – 130%» и у Орфеи «80%+» —
+  // суммарный процентный бонус с дисков и движка. Трекер считает только первое,
+  // поэтому процентный вид приезжает отдельным ключом и показывается справочно.
+  erp: 'Восст. энергии, бонус',
   hpp: 'HP %', atkp: 'Сила атаки %', defp: 'Защита %'
 };
 const GUIDE_SKILL_RU = {
@@ -4823,7 +4834,15 @@ const GUIDE_SKILL_RU = {
   'special attack': 'Особая атака', 'assist': 'Помощь', 'dodge': 'Уклонение',
   'core skill': 'Ядро', 'core passive': 'Ядро'
 };
-const GOAL_PCT = { cr: 1, cd: 1, penp: 1, er: 1, dmg: 1 };
+const GOAL_PCT = { cr: 1, cd: 1, penp: 1, erp: 1, dmg: 1 };
+// Цели, которые трекер не пересчитывает и показывает справочно: сквозная сила
+// выводится из HP и своя у каждого агента, а процентный бонус восстановления
+// энергии в игре нигде не показан — виден только итоговый абсолют.
+const GOAL_NOCALC = { sheer: 1, erp: 1 };
+// Восстановление энергии — единственная цель с дробью («2.88»), остальные целые.
+function goalNum(k, v) {
+  return (k === 'er' && v % 1) ? String(Math.round(v * 100) / 100).replace('.', ',') : nfmt(v);
+}
 function nfmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 
 // Короткие подписи для строк с дисками: там их по три-четыре в ряд,
@@ -4930,23 +4949,29 @@ function guideHtml(a, p, T) {
       '<span class="modbadge" title="Диапазон, а не точное число: итог зависит от ' +
       'пятого диска, движка и того, чего не хватает в остальной сборке. ' +
       'Источник: ' + esc(src) + '">' + esc(src) + '</span></h4><div class="ggoals">';
+    const notes = g.goalNotes || {};
     gk.forEach(k => {
       const lo = goals[k][0], hi = goals[k][1], isPct = !!GOAL_PCT[k];
-      const range = (lo === hi ? nfmt(lo) : nfmt(lo) + ' – ' + nfmt(hi)) + (isPct ? '%' : '');
-      // сквозную силу трекер не считает: она выводится из HP и своя у каждого агента
-      const cur = (k === 'sheer' || !T || T[k] == null) ? null : +T[k];
+      const range = (lo === hi ? goalNum(k, lo) : goalNum(k, lo) + ' – ' + goalNum(k, hi)) +
+        (isPct ? '%' : '');
+      const cur = (GOAL_NOCALC[k] || !T || T[k] == null) ? null : +T[k];
       let cls = '', now = '<span class="gg-now none">нет расчёта</span>';
       if (cur != null) {
         const hit = cur >= lo;
         cls = hit ? ' hit' : ' miss';
-        const disp = isPct ? cur.toFixed(1) + '%' : nfmt(cur);
+        const disp = isPct ? cur.toFixed(1) + '%' : goalNum(k, cur);
         now = '<span class="gg-now">' + esc(disp) +
-          (hit ? '' : '<em>ещё ' + esc(isPct ? (lo - cur).toFixed(1) + '%' : nfmt(lo - cur)) + '</em>') +
+          (hit ? '' : '<em>ещё ' + esc(isPct ? (lo - cur).toFixed(1) + '%' : goalNum(k, lo - cur)) + '</em>') +
           '</span>';
       }
-      h += '<div class="gg' + cls + '"><span class="gg-lab">' +
-        statIcon(k, 13) + esc(GUIDE_STAT_RU[k] || k) + '</span>' +
-        '<b class="gg-tgt">' + esc(range) + '</b>' + now + '</div>';
+      // Примечание из гайда: «(72% Grants full 30% team buff at Core Passive 6)»
+      // объясняет, зачем верхняя граница вообще нужна. Раньше эта приписка
+      // отбрасывалась вместе со скобками, и диапазон выглядел взятым с потолка.
+      const note = notes[k] || '';
+      h += '<div class="gg' + cls + (note ? ' note' : '') + '"' +
+        (note ? ' title="' + esc(note) + '"' : '') + '><span class="gg-lab">' +
+        statIcon(k, 13) + esc(GUIDE_STAT_RU[k] || k) + (note ? '<u class="gg-q">?</u>' : '') +
+        '</span><b class="gg-tgt">' + esc(range) + '</b>' + now + '</div>';
     });
     h += '</div></div>';
   }
@@ -8470,7 +8495,7 @@ function buildIssues(a, p) {
   // 3. целевые значения: смотрим только заметный недобор
   const T = calcTotals(a, p, p.discs);
   Object.keys(g.goals || {}).forEach(k => {
-    if (k === 'sheer') return;               // сквозную силу трекер не считает
+    if (GOAL_NOCALC[k]) return;              // эти величины трекер не пересчитывает
     const lo = g.goals[k][0];
     const cur = T[k];
     if (cur == null || !(lo > 0)) return;
@@ -8481,9 +8506,9 @@ function buildIssues(a, p) {
     const isPct = !!GOAL_PCT[k];
     out.push({ lvl: part >= 0.2 ? 'hard' : 'soft',
       t: statRu(k) + ': ' +
-         (isPct ? cur.toFixed(1) + '%' : nfmt(cur)) + ' из ' +
-         (isPct ? lo.toFixed(0) + '%' : nfmt(lo)) +
-         ' — не хватает ' + (isPct ? miss.toFixed(1) + '%' : nfmt(miss)) });
+         (isPct ? cur.toFixed(1) + '%' : goalNum(k, cur)) + ' из ' +
+         (isPct ? lo.toFixed(0) + '%' : goalNum(k, lo)) +
+         ' — не хватает ' + (isPct ? miss.toFixed(1) + '%' : goalNum(k, miss)) });
   });
 
   // серьёзные наверх: глазами список читается сверху вниз, и важное должно
