@@ -2,6 +2,14 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<!-- Политика безопасности содержимого. Своих внешних скриптов на сайте нет —
+     весь код лежит прямо в файле, поэтому чужие подключить нельзя вообще.
+     connect-src оставлен широким: трекер ходит к Enka, HoYoLab через воркер,
+     хранилищу и запасным зеркалам, и перечислять их поимённо значит ломать
+     сайт при каждой смене зеркала. object-src и base-uri закрыты наглухо:
+     это классические лазейки для подмены. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; object-src 'none'; base-uri 'none'; frame-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0b0b0d">
 <title>Мои деньги</title>
@@ -1115,8 +1123,19 @@ $('impFile').onchange = e => {
 let mpushOn = localStorage.getItem(LSM + '_mpush') === '1';
 let lastRemM = {}; try { lastRemM = JSON.parse(localStorage.getItem(LSM + '_rem')) || {}; } catch (e) {}
 function urlB64ToU8(b64) { const pad = '='.repeat((4 - b64.length % 4) % 4); const b = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/'); const raw = atob(b); const u = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u[i] = raw.charCodeAt(i); return u; }
+// Ключ уведомлений: кто его знает, тот может слать сюда push. Math.random
+// предсказуем по нескольким выданным значениям, поэтому берём системный
+// генератор.
+function randKey(n) {
+  const abc = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const b = new Uint8Array(n);
+  if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(b);
+  else for (let i = 0; i < n; i++) b[i] = Math.floor(Math.random() * 256);
+  let out = ''; for (let i = 0; i < n; i++) out += abc[b[i] % abc.length];
+  return out;
+}
 function ensureNKey() {
-  if (!data.nKey) { data.nKey = 'mk' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8); save(); }
+  if (!data.nKey) { data.nKey = 'mk' + randKey(14); save(); }
   return data.nKey;
 }
 function payDate(day) {

@@ -2,6 +2,14 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<!-- Политика безопасности содержимого. Своих внешних скриптов на сайте нет —
+     весь код лежит прямо в файле, поэтому чужие подключить нельзя вообще.
+     connect-src оставлен широким: трекер ходит к Enka, HoYoLab через воркер,
+     хранилищу и запасным зеркалам, и перечислять их поимённо значит ломать
+     сайт при каждой смене зеркала. object-src и base-uri закрыты наглухо:
+     это классические лазейки для подмены. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; object-src 'none'; base-uri 'none'; frame-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0b0b0d">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2584,7 +2592,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v241';
+const APP_VER = 'v242';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -7269,14 +7277,35 @@ function progCount(o) {
 // В части сетей (мобильный оператор, рабочий вайфай, VPN) прямой запрос к
 // api.jsonbin.io не проходит вовсе — браузер отдаёт «Failed to fetch».
 // Тогда пробуем те же прокси, что и для импорта из игры.
-const CLOUD_PROXY = [
-  u => 'https://corsproxy.io/?' + encodeURIComponent(u),
-  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
-  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-  u => 'https://cors.eu.org/' + u,
-  u => 'https://test.cors.workers.dev/?' + u,
-  u => 'https://api.cors.lol/?url=' + encodeURIComponent(u)
-];
+// Запасной путь к хранилищу — только через свой воркер.
+//
+// Раньше здесь стояли шесть чужих публичных CORS-прокси (corsproxy.io,
+// allorigins, codetabs и другие). Через них уходил не только весь прогресс, но
+// и адрес хранилища npoint — а он же и ключ доступа: кто знает адрес, тот может
+// и читать, и перезаписывать. У старого jsonbin в заголовке ездил вдобавок
+// X-Master-Key, то есть доступ ко всему аккаунту. Проще говоря, при каждом
+// сетевом сбое ключи от облака показывались стороннему сервису, который их
+// спокойно логирует.
+//
+// Свой воркер делает ровно то же самое, но посредников нет.
+const CLOUD_PROXY = MYAPI.map(base => (u => {
+  const m = String(u).match(/api\.npoint\.io\/([A-Za-z0-9]+)/);
+  // Запасной путь есть только у npoint. У старого jsonbin его не будет
+  // намеренно: там в заголовке идёт мастер-ключ аккаунта, и гонять его через
+  // что-либо, кроме прямого запроса, нельзя.
+  return m ? base.replace(/\/api\/zzz$/, '') + '/api/cloud/' + m[1] : null;
+}));
+// Случайная строка от системного генератора. Math.random для ключей не годится:
+// её поток восстанавливается по нескольким выданным значениям.
+function randKey(n) {
+  const abc = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const b = new Uint8Array(n);
+  (crypto && crypto.getRandomValues) ? crypto.getRandomValues(b)
+                                     : b.forEach((_, i) => b[i] = Math.floor(Math.random() * 256));
+  let out = '';
+  for (let i = 0; i < n; i++) out += abc[b[i] % abc.length];
+  return out;
+}
 function isNetErr(e) {
   if (e && e.name === 'AbortError') return true;
   return /Failed to fetch|NetworkError|Load failed|ERR_|timeout/i.test(String((e && e.message) || e));
@@ -7293,12 +7322,14 @@ async function cloudFetch(url, opt) {
   } catch (e) {
     if (!isNetErr(e) && !(e && e.name === 'AbortError')) throw e;
     for (let i = 0; i < CLOUD_PROXY.length; i++) {
+      const via = CLOUD_PROXY[i](url);
+      if (!via) continue;                  // для этого хранилища обхода нет
       try {
-        const r = await fetch(CLOUD_PROXY[i](url), withTimeout(opt));
+        const r = await fetch(via, withTimeout(opt));
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        cloudLog('прямой запрос не прошёл, работаю через прокси');
+        cloudLog('прямой запрос не прошёл, работаю через свой прокси');
         return r;
-      } catch (e2) { if (i === CLOUD_PROXY.length - 1) throw e; }
+      } catch (e2) { /* пробуем следующий адрес воркера */ }
     }
     throw e;
   }
@@ -8551,7 +8582,10 @@ function u8FromB64(s) {
 function pushKeyGet(make) {
   let k = localStorage.getItem(LS_TODO + '_pushKey') || '';
   if (!k && make) {
-    k = 'pk' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8);
+    // Ключ — единственное, что отделяет твои уведомления от чужих: кто его
+    // знает, тот может слать тебе push. Math.random для такого не годится, его
+    // последовательность предсказуема; берём системный генератор.
+    k = 'pk' + randKey(14);
     localStorage.setItem(LS_TODO + '_pushKey', k);
   }
   return k;
