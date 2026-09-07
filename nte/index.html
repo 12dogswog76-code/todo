@@ -66,8 +66,8 @@
     border-radius:14px;overflow:hidden;cursor:pointer;transition:.14s;position:relative;
     box-shadow:var(--glass)}
   .card:hover{transform:translateY(-2px);border-color:var(--el,var(--tx3))}
-  .card-p{position:relative;aspect-ratio:3/4;overflow:hidden;background:#0d0f14}
-  .card-p img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .card-p{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0d0f14}
+  .card-p img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
   .card-p:after{content:'';position:absolute;inset:auto 0 0 0;height:60%;
     background:linear-gradient(180deg,#0b0d1100,#111318f5)}
   .card-t{position:absolute;top:7px;left:7px;z-index:2;font-size:11px;font-weight:800;
@@ -186,7 +186,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
 
-let DB = null, GUIDE = null;
+let DB = null, GUIDE = null, RU = null;
 const state = { q: '', el: '', role: '', tier: '' };
 
 // Стихии и роли по-русски. В базе они лежат по-английски — так их отдаёт
@@ -207,20 +207,37 @@ const STAT_RU = {
 };
 const STAT_PCT = { cr:1, cd:1, dmg:1, elem:1, brk:1, cyc:0 };
 
-const elIcon = el => 'img/ui/el-' + String(el).toLowerCase() + '.webp';
+// Английское название → русское из локализации игры. Не нашлось — оставляем
+// как есть: лучше «Solifugae Vita», чем пустая строка.
+function ruName(kind, s) {
+  if (!RU || !s) return s;
+  const d = RU[kind];
+  return (d && d[s]) || s;
+}
+// Подпись характеристики: сначала пробуем словарь игры, потом свой запасной.
+const STAT_EN = { hp:'HP', atk:'ATK', def:'DEF', cr:'CRIT Rate', cd:'CRIT DMG',
+                  cyc:'Cycle Intensity', brk:'Break Intensity', er:'Energy Regen' };
+function statName(k, a) {
+  if (k === 'elem') return 'Урон: ' + ((a && EL_RU[a.el]) || 'стихии');
+  const fromGame = RU && RU.stats && STAT_EN[k] ? RU.stats[STAT_EN[k]] : null;
+  return fromGame || STAT_RU[k] || k;
+}
+const elIcon = el => 'img/ui/el-' + String(el).toLowerCase() + '.png';
 const roleIcon = r => 'img/ui/role-' + String(r).toLowerCase() + '.webp';
-const portrait = a => 'img/espers/' + a.slug + '.webp';
-// Полный арт есть не у всех: игровых картинок в открытом доступе всего
-// одиннадцать. У остальных в карточке остаётся портрет — он тоже вертикальный,
-// разница только в кадрировании.
-const artOf = a => (a.art && a.art.endsWith('.png')) ? 'img/art/' + a.art : portrait(a);
+const portrait = a => 'img/espers/' + a.slug + '.png';
+// Арт в полный рост есть на всех: официальные портреты с вики, ужатые до 760
+// пикселей по ширине. Иконка в списке — игровая, 256x256.
+const artOf = a => 'img/art/' + a.slug + '.png';
 
 async function load() {
-  const [db, guide] = await Promise.all([
+  const [db, guide, dict] = await Promise.all([
     fetch('nte-db.json').then(r => r.json()),
-    fetch('nte-guide.json').then(r => r.json())
+    fetch('nte-guide.json').then(r => r.json()),
+    // Словарь необязателен: без него страница просто останется на английских
+    // названиях, а не сломается.
+    fetch('nte-ru.json').then(r => r.json()).catch(() => null)
   ]);
-  DB = db; GUIDE = guide;
+  DB = db; GUIDE = guide; RU = dict;
   $('ver').textContent = APP_VER;
   drawFilters();
   draw();
@@ -303,8 +320,7 @@ function goalsHtml(g, a) {
     const val = (lo === hi ? lo : lo + ' – ' + hi) + pct;
     // «Урон стихии» подписываем родной стихией эспера: у Минт это урон Анимы,
     // и «elem» в интерфейсе ничего бы не сказал.
-    let name = STAT_RU[k] || k;
-    if (k === 'elem' && a.el) name = 'Урон: ' + (EL_RU[a.el] || a.el);
+    const name = statName(k, a);
     const note = N[k] || '';
     return '<div class="goal' + (note ? ' note' : '') + '"' +
       (note ? ' title="' + esc(note) + '"' : '') + '>' +
@@ -317,7 +333,8 @@ function picksHtml(list, kind) {
   return '<div class="rows">' + list.map((x, i) =>
     '<div class="row' + (i === 0 ? ' best' : '') + '">' +
       '<u>' + (i + 1) + '</u>' +
-      '<b class="' + (x.r ? 'r-' + esc(x.r) : '') + '">' + esc(x.n) + '</b>' +
+      '<b class="' + (x.r ? 'r-' + esc(x.r) : '') + '" title="' + esc(x.n) + '">' +
+        esc(ruName(kind === 'arc' ? 'arcs' : 'carts', x.n)) + '</b>' +
       (x.m ? '<span class="m">' + esc(x.m) + '</span>' : '') +
       (x.pct != null ? '<span class="pct">' + x.pct + '%</span>' : '') +
     '</div>').join('') + '</div>';
@@ -370,7 +387,8 @@ function open(slug) {
         (g.set && g.set.n ?
           cap('Набор модулей') +
           '<div class="set">' +
-            '<div class="set-n">' + esc(g.set.n) + '</div>' +
+            '<div class="set-n" title="' + esc(g.set.n) + '">' +
+              esc(ruName('carts', g.set.n)) + '</div>' +
             (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(g.set.b2) + '</div>' : '') +
             (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(g.set.b4) + '</div>' : '') +
             (g.pieces && g.pieces.length ?
