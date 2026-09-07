@@ -1,5 +1,5 @@
 /**
- * nte-pryd.js v1.2 — забирает с prydwen.gg данные по Neverness to Everness:
+ * nte-pryd.js v1.5 — забирает с prydwen.gg данные по Neverness to Everness:
  *                    список эсперов, тир-лист, сборки, Arc'и и картриджи.
  *
  * Зачем через браузер: сайт закрыт проверкой Cloudflare, скрипту снаружи он
@@ -39,7 +39,7 @@
  */
 
 (async () => {
-  const VER = 'v1.2';
+  const VER = 'v1.5';
   const PAUSE = 4000;                 // пауза между страницами
   const BASE = '/neverness-to-everness';
 
@@ -295,6 +295,72 @@
     return out;
   }
 
+  // ── баннеры ───────────────────────────────────────────────────────────────
+  // Особый случай: разметку баннеров нельзя разобрать через DOM. Она приезжает
+  // строкой внутри потока данных Next.js — с экранированными кавычками, — и
+  // DOMParser видит на странице ноль карточек, хотя в исходнике их восемь
+  // десятков. Снять экранирование и распарсить целиком тоже не выходит: куски
+  // сидят внутри <script>, парсер считает их текстом скрипта. Поэтому здесь,
+  // единственный раз во всём файле, разбор идёт регулярками по строке.
+  //
+  // Заголовки подборок не нужны: у каждой сетки есть data-banner-grid со своим
+  // ключом, а у карточек — точные даты в ISO.
+  const GRID_RU = {
+    'current-character':  'Идут сейчас',
+    'current-weapon':     'Arc — идут сейчас',
+    'upcoming-character': 'Следующие эсперы',
+    'upcoming-weapon':    'Следующие Arc',
+    'next-character':     'Следующие эсперы',
+    'next-weapon':        'Следующие Arc'
+  };
+  function unescapeNext(s) {
+    return String(s).replace(/\\u003c/gi, '<').replace(/\\u003e/gi, '>')
+                    .replace(/\\u0026/gi, '&').replace(/\\"/g, '"');
+  }
+  const stripTags = s => (s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  async function readBanners() {
+    const r = await fetch(BASE + '/banners', { credentials: 'include' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const src = unescapeNext(await r.text());
+    const out = [], seen = new Set();
+    // делим на сетки, каждую — на карточки
+    const grids = src.split(/<div class="banner-grid[^"]*" data-banner-grid="/).slice(1);
+    for (const g of grids) {
+      const key = (g.match(/^([a-z-]+)"/) || [])[1] || '';
+      const body = g.split('<div class="banner-grid')[0];
+      for (const c of body.split('<article class="banner-card').slice(1)) {
+        const cls = (c.match(/^([^"]*)"/) || [])[1] || '';
+        const name = stripTags((c.match(/class="banner-name"[^>]*>([^<]+)</) || [])[1] || '');
+        if (!name) continue;
+        // слаг эспера лежит соседним классом с banner-art, порядок бывает любой
+        const art = (c.match(/class="([^"]*\bbanner-art\b[^"]*)"/) || [])[1] || '';
+        // «default» — заглушка у карточек будущих баннеров, где арта ещё нет
+        const slug = art.split(/\s+/).filter(x =>
+          x && x !== 'banner-art' && x !== 'lightcone-art' && x !== 'default' &&
+          !/^arc-\d+$/.test(x))[0] || '';
+        const meta = stripTags((c.match(/class="banner-phase-meta"[\s\S]{0,400}?<\/div>/) || [])[0] || '');
+        const b = {
+          group: GRID_RU[key] || key,
+          key:   key,
+          name:  name,
+          slug:  slug,
+          kind:  /weapon|lightcone/.test(key + ' ' + cls) ? 'arc' : 'esper',
+          top:   cls.indexOf('featured') >= 0,
+          patch: (meta.match(/Patch\s+[\d.]+(?:\s+Phase\s+\d+)?/) || [''])[0],
+          dates: (c.match(/data-range-eu="([^"]+)"/) || [])[1] || '',
+          from:  ((c.match(/data-start-eu="([^"]+)"/) || [])[1] || '').slice(0, 10),
+          to:    ((c.match(/data-end-eu="([^"]+)"/) || [])[1] || '').slice(0, 10)
+        };
+        const k = b.key + '|' + b.name + '|' + b.from;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        out.push(b);
+      }
+    }
+    return out;
+  }
+
   // ── поехали ───────────────────────────────────────────────────────────────
   console.log('%cnte-pryd.js ' + VER + ' — собираю данные NTE с prydwen',
     'color:#4ade80;font-size:14px;font-weight:700');
@@ -312,6 +378,13 @@
   let tiers = {};
   try { tiers = readTiers(await getDoc(BASE + '/tier-list')); console.log('тир-лист: ' + Object.keys(tiers).length); }
   catch (e) { console.warn('тир-лист не забрался: ' + e.message); }
+
+  let banners = [];
+  try {
+    banners = await readBanners();
+    console.log('баннеров: ' + banners.length + ' (' +
+      [...new Set(banners.map(b => b.group))].filter(Boolean).length + ' подборок)');
+  } catch (e) { console.warn('баннеры не забрались: ' + e.message); }
 
   const agents = {};
   const thin = [];
@@ -349,6 +422,7 @@
     elements: [...new Set(list.map(x => x.el).filter(Boolean))],
     roles: [...new Set(list.map(x => x.role).filter(Boolean))],
     tiers: tiers,
+    banners: banners,
     agents: agents
   };
 
