@@ -831,6 +831,15 @@ const CODES_API = ['/api/nte/codes',
   .filter((b, i) => i === 0 || b.indexOf('//' + location.host + '/') < 0);
 let codesLive = null;
 
+// Пометка приходит по-английски и коротким набором — переводим знакомые.
+const CODE_NOTE = { 'Launch code':'код запуска', 'Stream code':'со стрима',
+                    'VTuber code':'VTuber-акция', 'Anniversary code':'к годовщине' };
+function codeNote(s) { return CODE_NOTE[s] || s; }
+// Даты в кодах приходят в ISO, а на странице «18/May/2026» — трогаем только ISO.
+function ruDate(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
+  return m ? m[3] + '.' + m[2] + '.' + m[1] : s;
+}
 function codeRedeemHint() {
   return 'Где вводить: в игре нажми <b>Esc</b> (на геймпаде — Start), открой телефон, ' +
          'значок с тремя нотами рядом с профилем, дальше кнопка <b>Redeem Code</b>.';
@@ -852,7 +861,10 @@ function drawCodes() {
       ? '<div class="list">' + list.map(c =>
           '<div class="code">' +
             '<b>' + esc(c.code) + '</b>' +
-            '<i>' + esc(c.rew || '') + (c.date ? ' <em>· ' + esc(c.date) + '</em>' : '') + '</i>' +
+            '<i>' + esc(c.rew || '') +
+              (c.note ? ' <em>· ' + esc(codeNote(c.note)) + '</em>' : '') +
+              (c.date ? ' <em>· с ' + esc(ruDate(c.date)) + '</em>' : '') +
+              (c.until ? ' <em>· до ' + esc(ruDate(c.until)) + '</em>' : '') + '</i>' +
             '<button data-c="' + esc(c.code) + '">копировать</button>' +
           '</div>').join('') + '</div>'
       : '<div class="empty">Кодов нет.</div>') +
