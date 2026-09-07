@@ -226,6 +226,76 @@
   .st b{display:block;font-size:18px;color:var(--tx);font-variant-numeric:tabular-nums}
   .st.ok b{color:var(--acc)}
 
+  /* ── команды ── */
+  .team{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--pan2);
+    border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:9px;
+    box-shadow:var(--glass)}
+  .team-l{flex:0 0 46px;font-size:17px;font-weight:800;text-align:center;color:var(--gold)}
+  .team-l.t0{color:#fca5a5} .team-l.t3{color:var(--tx3)}
+  .team-n{flex:0 0 170px;font-size:13px;font-weight:600;line-height:1.3}
+  .team-n i{display:block;font-style:normal;font-size:10.5px;color:var(--tx3);font-weight:400}
+  .team-s{flex:1;display:flex;gap:7px;flex-wrap:wrap;min-width:240px}
+  .slot{display:flex;gap:3px;background:var(--pan);border:1px solid var(--line);
+    border-radius:11px;padding:4px}
+  .slot .alt{width:56px;text-align:center;cursor:pointer;transition:.12s}
+  .slot .alt:hover{transform:translateY(-2px)}
+  .slot img{width:46px;height:46px;border-radius:9px;object-fit:cover;background:#0d0f14;
+    border:1px solid var(--line);display:block;margin:0 auto}
+  .slot span{display:block;font-size:9.5px;color:var(--tx3);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .syn{background:var(--pan2);border:1px solid var(--line);border-radius:12px;
+    padding:9px 12px;margin-bottom:7px}
+  .syn-h{display:flex;align-items:center;gap:8px;margin-bottom:5px;cursor:pointer}
+  .syn-h img{width:32px;height:32px;border-radius:8px;object-fit:cover;background:#0d0f14}
+  .syn-h b{font-size:13px}
+  .syn ul{margin:0;padding-left:18px;color:var(--tx2);font-size:12px;line-height:1.6}
+
+  /* ── коды ── */
+  .code{display:flex;align-items:center;gap:11px;background:var(--pan2);border:1px solid var(--line);
+    border-radius:12px;padding:9px 12px;box-shadow:var(--glass)}
+  .code b{font-family:var(--mono);font-size:14px;color:var(--gold);letter-spacing:.5px;
+    flex:0 0 auto;user-select:all}
+  .code i{font-style:normal;font-size:11.5px;color:var(--tx2);flex:1;min-width:90px}
+  .code em{font-style:normal;font-size:10.5px;color:var(--tx3)}
+  .code button{background:var(--pan);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
+    border-radius:8px;padding:4px 10px;font-size:11.5px;font-family:inherit}
+  .code button:hover{border-color:var(--acc);color:var(--acc)}
+  .code button.done{border-color:var(--acc);color:var(--acc)}
+
+  /* ── механики и калькулятор ── */
+  .doc{max-width:940px}
+  .doc h2{font-size:16px;margin:22px 0 9px;color:var(--tx)}
+  .doc h2:first-child{margin-top:0}
+  .doc p{font-size:13px;line-height:1.7;color:var(--tx2);margin:0 0 9px}
+  .doc ul{font-size:13px;line-height:1.7;color:var(--tx2);margin:0 0 9px;padding-left:20px}
+  .doc b{color:var(--tx)}
+  .doc code{font-family:var(--mono);font-size:12px;background:var(--pan2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 5px;color:var(--acc)}
+  .box{background:var(--pan2);border:1px solid var(--line);border-radius:13px;padding:12px 14px;
+    margin-bottom:10px;box-shadow:var(--glass)}
+  .box>b{display:block;font-size:13.5px;color:var(--gold);margin-bottom:5px}
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:10px}
+  .tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;
+    color:var(--tx3);font-weight:600;padding:6px 9px;border-bottom:1px solid var(--line)}
+  .tbl td{padding:7px 9px;border-bottom:1px solid var(--line);color:var(--tx2);vertical-align:top}
+  .tbl tr:last-child td{border-bottom:0}
+  .tbl td b{color:var(--tx)}
+  .tbl .num{font-family:var(--mono);color:var(--gold);text-align:right;white-space:nowrap}
+  .tbl tr.top td{background:linear-gradient(90deg,#4ade800f,transparent)}
+  .els{display:flex;gap:4px;align-items:center}
+  .els img{width:20px;height:20px}
+  .inp{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px;margin-bottom:12px}
+  .inp label{display:block;font-size:11px;color:var(--tx3);margin-bottom:3px}
+  .inp input{width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:9px;
+    color:var(--tx);padding:7px 11px;font-size:13px;font-family:var(--mono)}
+  .inp input:focus{outline:none;border-color:var(--acc)}
+  .verdict{border:1px solid #4ade8047;background:linear-gradient(120deg,#4ade800f,var(--pan2));
+    border-radius:13px;padding:11px 14px;font-size:13px;line-height:1.6;margin-bottom:12px}
+  .verdict b{color:var(--acc)}
+  .bar{height:7px;border-radius:6px;background:#0d0f14;border:1px solid var(--line);
+    overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#4ade80,#fbbf24)}
+
   .hint{color:var(--tx3);font-size:11.5px;line-height:1.55;margin-top:9px}
   .empty{color:var(--tx3);font-size:12.5px;padding:26px 0;text-align:center}
 
@@ -256,7 +326,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v2';
+const APP_VER = 'v3';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -266,7 +336,8 @@ const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan:
 
 const TABS = [
   ['espers', 'Эсперы'], ['arcs', 'Arc\'и'], ['carts', 'Картриджи'],
-  ['tier', 'Тир-лист'], ['ban', 'Баннеры'], ['plan', 'Console']
+  ['teams', 'Команды'], ['tier', 'Тир-лист'], ['ban', 'Баннеры'],
+  ['codes', 'Коды'], ['mech', 'Механики'], ['calc', 'Статы'], ['plan', 'Console']
 ];
 
 const EL_RU = { Anima:'Анима', Chaos:'Хаос', Cosmos:'Космос',
@@ -325,19 +396,26 @@ function drawTabs() {
     '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' +
     esc(t[1]) + '</button>').join('');
   $('tabs').querySelectorAll('.tb').forEach(b => b.onclick = () => {
+    // фильтры сбрасываем: стихия, выбранная в списке эсперов, иначе сразу
+    // прячет половину составов на соседней вкладке
     state.tab = b.dataset.t; state.q = ''; $('q').value = '';
+    state.el = state.role = state.tier = state.rar = '';
     drawTabs(); draw();
   });
 }
 
 function draw() {
   const t = state.tab;
-  $('q').style.display = (t === 'plan') ? 'none' : '';
+  $('q').style.display = (t === 'plan' || t === 'mech' || t === 'calc') ? 'none' : '';
   if (t === 'espers') return drawEspers();
   if (t === 'arcs')   return drawArcs();
   if (t === 'carts')  return drawCarts();
+  if (t === 'teams')  return drawTeams();
   if (t === 'tier')   return drawTier();
   if (t === 'ban')    return drawBanners();
+  if (t === 'codes')  return drawCodes();
+  if (t === 'mech')   return drawMech();
+  if (t === 'calc')   return drawCalc();
   if (t === 'plan')   return drawPlan();
 }
 
@@ -688,6 +766,374 @@ function ruGroup(s) {
   return map[s] || s || 'Баннеры';
 }
 
+// ── команды ────────────────────────────────────────────────────────────────
+// Состав — это четыре слота, и в слоте может стоять несколько взаимозаменяемых
+// эсперов: у prydwen так и нарисовано. Поэтому слот — всегда массив.
+function agentBy(slug) { return DB.agents.filter(x => x.slug === slug)[0] || null; }
+function slotHtml(slugs) {
+  return '<div class="slot">' + slugs.map(s => {
+    const a = agentBy(s);
+    return '<div class="alt" data-slug="' + esc(s) + '">' +
+      '<img src="' + (a ? portrait(a) : '') + '" alt="" loading="lazy">' +
+      '<span>' + esc(a ? a.ru : s) + '</span></div>';
+  }).join('') + '</div>';
+}
+function teamMatches(t, q) {
+  if (!q) return true;
+  const names = t.slots.flat().map(s => { const a = agentBy(s); return a ? a.ru + ' ' + a.en : s; });
+  return (t.name + ' ' + names.join(' ')).toLowerCase().indexOf(q) >= 0;
+}
+function teamsHtml(list, withTier) {
+  return list.map(t =>
+    '<div class="team">' +
+      (withTier ? '<div class="team-l ' + (t.tier === 'S+' ? 't0' : /C|D/.test(t.tier) ? 't3' : '') + '">' +
+        esc(t.tier || '') + '</div>' : '') +
+      '<div class="team-n">' + esc(t.name || 'состав') +
+        (t.note ? '<i>' + esc(t.note) + '</i>' : '') + '</div>' +
+      '<div class="team-s">' + t.slots.map(slotHtml).join('') + '</div>' +
+    '</div>').join('');
+}
+function bindTeamClicks() {
+  $('body').querySelectorAll('.alt').forEach(c => c.onclick = () => open(c.dataset.slug));
+}
+function drawTeams() {
+  const all = GUIDE.teams || [];
+  const q = state.q.trim().toLowerCase();
+  const list = all.filter(t => teamMatches(t, q));
+  const els = [...new Set(DB.agents.map(a => a.el).filter(Boolean))].sort();
+  $('filters').innerHTML = fgroup('стихия ядра', 'el', els, elIcon, EL_RU) +
+    '<span class="fcnt">' + list.length + ' из ' + all.length + '</span>';
+  bindFilters();
+  // фильтр по стихии смотрит на первого в составе — он и есть основной урон
+  const byEl = list.filter(t => {
+    if (!state.el) return true;
+    const a = agentBy(t.slots[0] && t.slots[0][0]);
+    return a && a.el === state.el;
+  });
+  $('body').innerHTML = byEl.length
+    ? teamsHtml(byEl, true) +
+      '<div class="hint">Первый в составе — основной урон, дальше поддержка. ' +
+      'Несколько портретов в одной рамке — взаимозаменяемые эсперы. ' +
+      'Щёлкни по портрету, чтобы открыть карточку.</div>'
+    : '<div class="empty">Ничего не нашлось — сними фильтр.</div>';
+  bindTeamClicks();
+  foot((GUIDE.teamsNote || 'Тир-лист команд prydwen.') + ' ');
+}
+
+// ── коды активации ─────────────────────────────────────────────────────────
+// Список лежит в nte-guide.json как запасной, а свежий приезжает от воркера:
+// он раз в 12 часов сам ходит на страницу кодов. Если воркер молчит — просто
+// показываем запасной и честно пишем дату.
+const CODES_API = ['/api/nte/codes',
+                   'https://api.alextask.ru/api/nte/codes',
+                   'https://alextask.ru/api/nte/codes',
+                   'https://alextask-push.12dogswog76.workers.dev/api/nte/codes']
+  .filter((b, i) => i === 0 || b.indexOf('//' + location.host + '/') < 0);
+let codesLive = null;
+
+function codeRedeemHint() {
+  return 'Где вводить: в игре нажми <b>Esc</b> (на геймпаде — Start), открой телефон, ' +
+         'значок с тремя нотами рядом с профилем, дальше кнопка <b>Redeem Code</b>.';
+}
+function drawCodes() {
+  const fallback = GUIDE.codes || { list: [] };
+  const src = (codesLive && codesLive.list && codesLive.list.length) ? codesLive : fallback;
+  const q = state.q.trim().toLowerCase();
+  const list = (src.list || []).filter(c => !q ||
+    (c.code + ' ' + (c.rew || '')).toLowerCase().indexOf(q) >= 0);
+  const when = src.updated || '';
+  $('filters').innerHTML = '<span class="fcnt">' + list.length + ' кодов' +
+    (codesLive ? ' · обновлено с сервера' : '') + '</span>';
+  $('body').innerHTML =
+    '<div class="box">' + codeRedeemHint() +
+      (when ? '<div class="hint">Список актуален на ' + esc(when) + '.</div>' : '') +
+    '</div>' +
+    (list.length
+      ? '<div class="list">' + list.map(c =>
+          '<div class="code">' +
+            '<b>' + esc(c.code) + '</b>' +
+            '<i>' + esc(c.rew || '') + (c.date ? ' <em>· ' + esc(c.date) + '</em>' : '') + '</i>' +
+            '<button data-c="' + esc(c.code) + '">копировать</button>' +
+          '</div>').join('') + '</div>'
+      : '<div class="empty">Кодов нет.</div>') +
+    '<div class="hint">Коды не бессрочные: часть из них рано или поздно закроют. ' +
+    'Если игра пишет, что код недействителен — значит, срок вышел.</div>';
+  $('body').querySelectorAll('.code button').forEach(b => b.onclick = () => {
+    const t = b.dataset.c;
+    const done = () => { b.textContent = 'скопировано'; b.classList.add('done');
+      setTimeout(() => { b.textContent = 'копировать'; b.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, () => {});
+    else {
+      const el = document.createElement('textarea');
+      el.value = t; document.body.appendChild(el); el.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      document.body.removeChild(el);
+    }
+  });
+  foot('Коды с prydwen, обновление тянет воркер alextask.');
+  if (!codesLive) refreshCodes();
+}
+async function refreshCodes() {
+  const one = u => fetch(u, { cache: 'no-store' }).then(r => r.json())
+    .then(j => (j && j.list && j.list.length) ? j : Promise.reject(new Error('пусто')));
+  try {
+    codesLive = await Promise.any(CODES_API.map(one));
+    if (state.tab === 'codes') drawCodes();
+  } catch (e) { codesLive = null; }
+}
+
+// ── механики ───────────────────────────────────────────────────────────────
+// Реакции циклов — из игры и с гайда prydwen. Русские имена ставлю только там,
+// где они подтверждены локализацией игры (в статах есть «урон цветения»,
+// «урон ожога», «урон новы»); у остальных оставляю оригинал, чтобы не выдумать
+// перевода, которого в игре нет.
+const CYCLES = [
+  { els:['Cosmos','Lakshana'], en:'Remora', ru:'',
+    t:'Цель на 5 с замедляется — и движение, и скорость атаки. Эффект слабеет со временем, ' +
+      'а если вешать его подряд, длительность будет короче.' },
+  { els:['Anima','Cosmos'], en:'Blossom', ru:'Цветение',
+    t:'Рядом с целью вырастает бутон и раскрывается 5 пестиками. Пестики летят по целям ' +
+      'в радиусе и взрываются каждые 2 с, урон по площади. Одновременно на поле до 3 бутонов.' },
+  { els:['Anima','Incantation'], en:'Hexed', ru:'',
+    t:'12 с цель получает добавочный удар в размере 20% от всего урона Анимы и Заклинания, ' +
+      'который она за это время съела.' },
+  { els:['Chaos','Psyche'], en:'Nova', ru:'Нова',
+    t:'Метка на 5 с. Когда она гаснет, цель получает крупный ментальный урон.' },
+  { els:['Chaos','Incantation'], en:'Scorch', ru:'Ожог',
+    t:'Поджиг на 15 с: урон тикает всё это время.' },
+  { els:['Lakshana','Psyche'], en:'Stain', ru:'',
+    t:'12 с цель получает на 20% больше урона Психики и Лакшаны. Чистое усиление под ДД.' },
+  { els:['Anima','Cosmos','Lakshana'], en:'Charge', ru:'',
+    t:'Тройной. Пока Lebenblume бьёт по цели под Remora, активный эспер получает +10 энергии ульты. ' +
+      'Ради этого и собирают «зарядные» команды: ульта откатывается заметно быстрее.' },
+  { els:['Chaos','Incantation','Psyche'], en:'Discord', ru:'',
+    t:'Тройной. Если на цели одновременно висят Nova и Scorch, у неё срезается часть шкалы разрушения.' }
+];
+
+function drawMech() {
+  $('filters').innerHTML = '';
+  const cyc = CYCLES.map(c =>
+    '<tr><td><div class="els">' + c.els.map(e =>
+        '<img src="' + elIcon(e) + '" title="' + esc(EL_RU[e] || e) + '" alt="">').join('') +
+      '</div></td>' +
+    '<td><b>' + esc(c.en) + '</b>' + (c.ru ? '<br><span style="font-size:11px;color:var(--tx3)">' +
+      esc(c.ru) + '</span>' : '') + '</td>' +
+    '<td>' + esc(c.els.map(e => EL_RU[e] || e).join(' + ')) + '</td>' +
+    '<td>' + esc(c.t) + '</td></tr>').join('');
+
+  $('body').innerHTML = '<div class="doc">' +
+    '<h2>Что такое цикл эспера</h2>' +
+    '<p>Цикл — это реакция стихий, ровно как в других играх, только запускается она ' +
+    '<b>сменой персонажа</b>, а не самим ударом. Схема такая:</p>' +
+    '<ul>' +
+      '<li>Бьёшь врага — копится шкала цикла (быстрее всего от парирований и удачных уклонений).</li>' +
+      '<li>Когда шкала полная, у тех, кем можно продолжить цикл, <b>подсвечивается портрет</b>.</li>' +
+      '<li>Переключаешься на такого эспера — он входит через intro-удар, и вместе с ним ' +
+      'срабатывает цикл.</li>' +
+      '<li>Реакция получается только у <b>соседних стихий</b> на колесе. Переключился на того, ' +
+      'с кем реакции нет — обычная смена, без intro и без цикла.</li>' +
+    '</ul>' +
+    '<div class="box"><b>Тройные циклы</b>' +
+      'Сначала запускаешь двойной, потом переключаешься на третью стихию. В один заход ' +
+      'тройной не собрать. Именно поэтому <b>Charge</b> и <b>Discord</b> требуют ' +
+      'выстроенной ротации, а не просто трёх нужных эсперов в составе.</div>' +
+    '<div class="box"><b>Что качать под цикл</b>' +
+      'Урон цикла считается от <b>Интенсивности цикла</b> тех, кто в нём участвовал. ' +
+      'Стоять на поле при этом должен не обязательно тот, у кого её больше — вклад ' +
+      'засчитывается всем участникам. Поэтому Интенсивность цикла обычно набивают ' +
+      'поддержке, а не главному ДД.</div>' +
+    '<h2>Реакции целиком</h2>' +
+    '<table class="tbl"><tr><th>стихии</th><th>реакция</th><th>пара</th><th>что делает</th></tr>' +
+      cyc + '</table>' +
+    '<p class="hint" style="margin-top:0">У каждого эспера есть ещё и личная реакция на ' +
+    'конкретный цикл — она прописана в его пассивке. Смотри карточку эспера, блок с бонусами.</p>' +
+
+    '<h2>Разрушение</h2>' +
+    '<p>У врагов есть шкала <b>разрушения</b> (Break). Пока она цела, урон по врагу режется; ' +
+    'как только выбил её в ноль — открывается окно, в котором и наносится основная часть урона. ' +
+    'Всё эндгейм-время строится вокруг этого окна.</p>' +
+    '<table class="tbl">' +
+      '<tr><th>стат</th><th>по-английски</th><th>что делает</th></tr>' +
+      '<tr><td><b>Интенсивность разрушения</b></td><td>Break Intensity</td>' +
+        '<td>Усиливает урон, который ты наносишь по шкале разрушения. Чем выше — тем быстрее ' +
+        'сбиваешь врага в брейк. Это <b>плоское</b> число, не проценты: картридж S даёт до 180, ' +
+        'сабстат — 60.</td></tr>' +
+      '<tr><td><b>Пробой стойкости</b></td><td>Tenacity Break</td>' +
+        '<td>Сколько стойкости снимает конкретный удар. У разных навыков разное значение.</td></tr>' +
+      '<tr><td><b>Стойкость</b></td><td>Tenacity</td>' +
+        '<td>Сопротивление врага сбиванию. Высокая стойкость — дольше выбивать брейк.</td></tr>' +
+      '<tr><td><b>Интенсивность цикла</b></td><td>Cycle Intensity</td>' +
+        '<td>Множитель урона циклов. Тоже плоское число: картридж S до 180, сабстат 60.</td></tr>' +
+    '</table>' +
+    '<div class="box"><b>Кому что нужно</b>' +
+      'Break-составы (Zankou, Daffodil) качают Интенсивность разрушения — им важно сбить ' +
+      'врага быстрее и чаще. Составы вокруг реакций качают Интенсивность цикла ' +
+      'поддержке. Чистому ДД обычно не нужно ни то, ни другое — ему в приоритете крит ' +
+      'и проценты урона.</div>' +
+
+    '<h2>Модули и картриджи</h2>' +
+    '<table class="tbl">' +
+      '<tr><th></th><th>Картридж</th><th>Модуль</th></tr>' +
+      '<tr><td>главных статов</td><td>1, выпадает случайно</td>' +
+        '<td>2, всегда одни и те же: плоская атака и плоское HP</td></tr>' +
+      '<tr><td>дополнительных</td><td colspan="2">по 4 у обоих, видны сразу, значения не растут</td></tr>' +
+      '<tr><td>прокачка</td><td colspan="2">до +20, каждые 5 уровней включается один ' +
+        'из дополнительных статов (+5, +10, +15, +20). Уровень поднимает <b>только главный</b> стат</td></tr>' +
+      '<tr><td>редкость</td><td colspan="2">B (синий), A (розовый), S (оранжевый) — выше редкость, ' +
+        'выше и главный, и дополнительные</td></tr>' +
+      '<tr><td>разброс значений</td><td>выше, чем у модулей</td>' +
+        '<td>ниже; зато у модулей есть <b>тип</b> II / III / IV — чем больше частей, ' +
+        'тем крупнее статы</td></tr>' +
+    '</table>' +
+    '<p>Тип модуля — это сколько клеток он занимает на сетке Console, форма — как эти клетки ' +
+    'расставлены. Многие эсперы дают бонус за <b>количество модулей своего типа</b> ' +
+    '(«+16% крит. урона за каждый модуль типа III»), поэтому набор типов важнее формы. ' +
+    'Что во что влезает — смотри во вкладке Console.</p>' +
+
+    '<h2>Бой, коротко</h2>' +
+    '<ul>' +
+      '<li><b>Парирование важнее уклонения.</b> Атаки с красным кольцом лучше парировать: ' +
+      'это и окно на ответку, и быстрый набор шкалы цикла.</li>' +
+      '<li><b>Критическое уклонение</b> открывает усиленные удары — у многих эсперов ' +
+      'на нём завязана часть кита.</li>' +
+      '<li><b>Не мешай стихии в кучу.</b> Анима реагирует только с Заклинанием и Космосом. ' +
+      'Пока собираешь одну реакцию, предыдущая успевает свалиться, и в итоге не работает ' +
+      'ни одна. Состав собирается вокруг одной-двух реакций, а не «побольше разных».</li>' +
+    '</ul>' +
+  '</div>';
+  foot('Механики — из игры и гайдов prydwen, значения статов из таблиц модулей.');
+}
+
+// ── калькулятор отдачи статов ──────────────────────────────────────────────
+// Смысл: у любого стата отдача падает по мере роста — 10-й процент крит-шанса
+// стоит дороже первого. Считаем не «сколько стата», а сколько урона добавит
+// ОДИН реальный сабстат S-редкости. Как только один стат начинает давать
+// меньше другого — качать его дальше невыгодно.
+//
+// Урон = ATK × (1 + CR×CD) × (1 + сумма процентов урона).
+// Прирост от добавки Δ считается как производная этого произведения:
+//   ATK%  → Δ × базовая_атака / итоговая_атака
+//   CR    → Δ × CD / (1 + CR×CD)
+//   CD    → Δ × CR / (1 + CR×CD)
+//   DMG%  → Δ / (1 + сумма процентов)
+// Отсюда и «каппа»: крит-шанс и крит-урон уравниваются, когда CD = 2×CR,
+// потому что сабстат даёт 10% шанса против 20% урона. Дальше выгоднее второе.
+const SUB_S = { cr:10, cd:20, atkp:12.5, dmg:10, atk:80 };   // сабстат S-картриджа
+const calc = { atk:2000, base:1000, cr:65, cd:160, dmg:80 };
+
+function calcRows() {
+  const cr = Math.min(100, Math.max(0, calc.cr)) / 100;
+  const cd = Math.max(0, calc.cd) / 100;
+  const dmg = Math.max(0, calc.dmg) / 100;
+  const atk = Math.max(1, calc.atk), base = Math.max(1, calc.base);
+  const critM = 1 + cr * cd;
+  const room = Math.max(0, 1 - cr);                       // сколько крит-шанса ещё влезет
+  const rows = [
+    { k:'cr',   n:'Шанс крита',  add:'+' + SUB_S.cr + '%',
+      g: Math.min(SUB_S.cr / 100, room) * cd / critM },
+    { k:'cd',   n:'Крит. урон',  add:'+' + SUB_S.cd + '%',
+      g: (SUB_S.cd / 100) * cr / critM },
+    { k:'atkp', n:'Атака %',     add:'+' + SUB_S.atkp + '%',
+      g: (SUB_S.atkp / 100) * base / atk },
+    { k:'dmg',  n:'Урон %',      add:'+' + SUB_S.dmg + '%',
+      g: (SUB_S.dmg / 100) / (1 + dmg) },
+    { k:'atk',  n:'Атака плоская', add:'+' + SUB_S.atk,
+      g: SUB_S.atk / atk }
+  ];
+  return rows.sort((a, b) => b.g - a.g);
+}
+function calcVerdict() {
+  const cr = calc.cr, cd = calc.cd;
+  const want = Math.round(cr * 2);                        // равновесие: CD = 2 × CR
+  if (cr >= 99) return 'Крит-шанс упёрся в потолок — <b>дальше только крит. урон</b>. ' +
+    'Всё, что сверх 100%, пропадает впустую; если часть шанса даёт бафф от команды или сет, ' +
+    'своих статов держи ровно столько, чтобы с баффом выходило 100.';
+  if (cd < want - 12) return 'Крит. урон отстаёт: при шансе ' + cr + '% равновесие примерно на ' +
+    '<b>' + want + '% крит. урона</b>. Сейчас ' + cd + '% — <b>качай крит. урон</b>.';
+  if (cd > want + 40) return 'Крит. урон убежал вперёд: при ' + cd + '% крит. урона выгоднее ' +
+    'добирать <b>шанс крита</b> — равновесие для него около <b>' + Math.round(cd / 2) + '%</b>.';
+  return 'Крит сбалансирован: <b>' + cr + '% / ' + cd + '%</b> близко к правилу ' +
+    '<b>крит. урон = 2 × шанс крита</b>. Дальше смотри на таблицу ниже — там видно, ' +
+    'какой стат сейчас даёт больше.';
+}
+function drawCalc() {
+  const withGoals = DB.agents.filter(a => {
+    const g = (GUIDE.agents || {})[a.slug];
+    return g && g.goals && (g.goals.cr || g.goals.cd);
+  });
+  $('filters').innerHTML = '<div class="fgrp"><u>подставить цели</u>' +
+    withGoals.map(a => '<button class="fb" data-goal="' + a.slug + '">' + esc(a.ru) + '</button>').join('') +
+    '</div>';
+  $('filters').querySelectorAll('[data-goal]').forEach(b => b.onclick = () => {
+    const g = (GUIDE.agents || {})[b.dataset.goal] || {};
+    const G = g.goals || {};
+    if (G.atk) calc.atk = G.atk[0];
+    if (G.cr)  calc.cr  = G.cr[0];
+    if (G.cd)  calc.cd  = G.cd[0];
+    if (G.elem || G.dmg) calc.dmg = (G.elem ? G.elem[0] : 0) + (G.dmg ? G.dmg[0] : 0);
+    drawCalc();
+  });
+
+  const rows = calcRows();
+  const top = rows[0].g;
+  const F = ['atk','base','cr','cd','dmg'];
+  const LBL = { atk:'Атака итоговая', base:'Атака базовая (эспер + Arc)',
+                cr:'Шанс крита, %', cd:'Крит. урон, %', dmg:'Сумма процентов урона, %' };
+  $('body').innerHTML = '<div class="doc">' +
+    '<div class="inp">' + F.map(k =>
+      '<div><label>' + esc(LBL[k]) + '</label>' +
+      '<input type="number" step="any" data-k="' + k + '" value="' + calc[k] + '"></div>').join('') +
+    '</div>' +
+    '<div class="verdict">' + calcVerdict() + '</div>' +
+    '<table class="tbl">' +
+      '<tr><th>стат</th><th>один сабстат S</th><th>даст урона</th><th>отдача</th></tr>' +
+      rows.map((r, i) =>
+        '<tr' + (i === 0 ? ' class="top"' : '') + '>' +
+          '<td><b>' + esc(r.n) + '</b></td>' +
+          '<td>' + esc(r.add) + '</td>' +
+          '<td class="num">+' + (r.g * 100).toFixed(2) + '%</td>' +
+          '<td><div class="bar"><i style="width:' + Math.max(2, Math.round(r.g / (top || 1) * 100)) +
+            '%"></i></div></td>' +
+        '</tr>').join('') +
+    '</table>' +
+    '<div class="box"><b>Как этим пользоваться</b>' +
+      'Таблица показывает, сколько процентов урона добавит <b>один</b> дополнительный стат ' +
+      'S-картриджа. Верхняя строка — то, что сейчас выгоднее всего добирать. Когда два стата ' +
+      'сравнялись, дальше их качают вместе: это и есть точка, после которой упор в один ' +
+      'стат начинает проигрывать.</div>' +
+    '<h2>Правила, которые из этого следуют</h2>' +
+    '<ul>' +
+      '<li><b>Крит. урон = 2 × шанс крита.</b> Сабстат даёт 10% шанса или 20% урона, ' +
+      'поэтому равновесие ровно на удвоении. 60/120, 70/140, 80/160.</li>' +
+      '<li><b>Шанс крита выше 100% пропадает.</b> Считай вместе с баффами команды и бонусом ' +
+      'сета: если Street Boxer даёт 14%, а союзник ещё 10%, своих нужно 76%, а не 100%.</li>' +
+      '<li><b>Проценты урона складываются в одну кучу.</b> Универсальный урон, урон стихии и ' +
+      'бонусы сета лежат в одном множителе, поэтому чем больше их уже набрано, тем меньше ' +
+      'стоит следующий процент.</li>' +
+      '<li><b>Атака % работает только от базовой.</b> Плоская атака с модулей в неё не входит, ' +
+      'поэтому у эспера с сильным Arc процент атаки стоит дороже, чем у голого.</li>' +
+      '<li><b>Интенсивности в этой таблице нет.</b> Разрушение и цикл считаются не через ' +
+      'урон эспера, а отдельно — их цель берётся из гайда конкретного персонажа.</li>' +
+    '</ul>' +
+  '</div>';
+  $('body').querySelectorAll('input[data-k]').forEach(inp => inp.oninput = () => {
+    const v = parseFloat(inp.value);
+    calc[inp.dataset.k] = isFinite(v) ? v : 0;
+    const rr = calcRows(), tp = rr[0].g;
+    // перерисовываем только выводы, чтобы не терять фокус в поле
+    const tbl = $('body').querySelector('.tbl');
+    const vd = $('body').querySelector('.verdict');
+    if (vd) vd.innerHTML = calcVerdict();
+    if (tbl) tbl.innerHTML = '<tr><th>стат</th><th>один сабстат S</th><th>даст урона</th>' +
+      '<th>отдача</th></tr>' + rr.map((r, i) =>
+      '<tr' + (i === 0 ? ' class="top"' : '') + '><td><b>' + esc(r.n) + '</b></td><td>' +
+      esc(r.add) + '</td><td class="num">+' + (r.g * 100).toFixed(2) + '%</td>' +
+      '<td><div class="bar"><i style="width:' + Math.max(2, Math.round(r.g / (tp || 1) * 100)) +
+      '%"></i></div></td></tr>').join('');
+  });
+  foot('Значения дополнительных статов — из таблицы модулей prydwen для редкости S.');
+}
+
 // ── карточка эспера ────────────────────────────────────────────────────────
 function prioHtml(s) {
   if (!s) return '';
@@ -770,12 +1216,48 @@ function open(slug) {
           '</div>' : '') +
         (g.skills ? cap('Порядок прокачки') + '<div class="prio">' + prioHtml(g.skills) + '</div>' +
           (g.skillNote ? '<div class="hint">' + esc(g.skillNote) + '</div>' : '') : '') +
+        teamsFor(slug, cap) +
+        synergyFor(g, cap) +
       '</div>' +
     '</div>';
 
   $('sheet').classList.add('on');
   document.body.style.overflow = 'hidden';
   if ($('close')) $('close').onclick = close;
+  // портреты в составах и синергиях переключают карточку на соседа
+  $('sheetIn').querySelectorAll('[data-slug]').forEach(c => c.onclick = () => open(c.dataset.slug));
+}
+
+// Составы, где этот эспер есть. Сначала берём его собственную страницу гайда
+// (там составы под него и расписаны), потом добираем из общего тир-листа.
+function teamsFor(slug, cap) {
+  const own = ((GUIDE.agents || {})[slug] || {}).teams || [];
+  const glob = (GUIDE.teams || []).filter(t => t.slots.some(s => s.indexOf(slug) >= 0));
+  const seen = new Set();
+  const all = own.concat(glob).filter(t => {
+    const k = t.slots.map(s => s.slice().sort().join('/')).join('|');
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return t.slots.length >= 3;
+  });
+  if (!all.length) return '';
+  return cap('Составы с ним', all.length + ' шт.') +
+    teamsHtml(all.map(t => Object.assign({}, t, { tier: t.tier || '' })), true);
+}
+// «С кем играется»: пояснения с prydwen, по одному блоку на союзника.
+function synergyFor(g, cap) {
+  const syn = g.synergy || [];
+  if (!syn.length) return '';
+  return cap('С кем играется') + syn.map(s => {
+    const heads = s.with.map(w => {
+      const a = agentBy(w);
+      return '<span data-slug="' + esc(w) + '" style="display:flex;align-items:center;gap:7px;cursor:pointer">' +
+        '<img src="' + (a ? portrait(a) : '') + '" alt="">' +
+        '<b>' + esc(a ? a.ru : w) + '</b></span>';
+    }).join('');
+    return '<div class="syn"><div class="syn-h">' + heads + '</div><ul>' +
+      s.notes.map(n => '<li>' + esc(n) + '</li>').join('') + '</ul></div>';
+  }).join('');
 }
 function close() {
   $('sheet').classList.remove('on');

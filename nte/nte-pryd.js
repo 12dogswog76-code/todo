@@ -1,6 +1,7 @@
 /**
- * nte-pryd.js v1.5 — забирает с prydwen.gg данные по Neverness to Everness:
- *                    список эсперов, тир-лист, сборки, Arc'и и картриджи.
+ * nte-pryd.js v1.6 — забирает с prydwen.gg данные по Neverness to Everness:
+ *                    список эсперов, тир-лист, сборки, Arc'и, картриджи,
+ *                    баннеры, команды, синергии и коды активации.
  *
  * Зачем через браузер: сайт закрыт проверкой Cloudflare, скрипту снаружи он
  * отдаёт заглушку. Внутри уже открытой вкладки проверка пройдена, и запросы к
@@ -30,8 +31,10 @@
  *   pieces                — какие типы модулей нужны: ['II','III','III','IV']
  *   grid                  — тип сетки Console
  *   skills                — порядок прокачки
+ *   synergy               — с кем играется: [{ with:[слаги], notes:[строки] }]
+ *   teams                 — готовые составы с его страницы
  *
- * Плюс общие справочники: arcs (все Arc'и) и elements/roles.
+ * Плюс общие справочники: elements/roles, тир-лист команд и коды активации.
  *
  * Разбор целей взят из pryd.js v4.5 вместе с исправлениями: процент после
  * первого числа («38% - 72%»), дробные значения, подпись, приклеенная к концу
@@ -39,7 +42,7 @@
  */
 
 (async () => {
-  const VER = 'v1.5';
+  const VER = 'v1.6';
   const PAUSE = 4000;                 // пауза между страницами
   const BASE = '/neverness-to-everness';
 
@@ -233,6 +236,155 @@
     }).filter(x => x.n);
   }
 
+  // ── команды и синергии ────────────────────────────────────────────────────
+  // Классы у блоков команд на сайте свои и меняются от раздела к разделу,
+  // поэтому опираемся не на них, а на структуру: ссылка на эспера ведёт на
+  // /characters/<слаг>, и этого достаточно, чтобы опознать и участника состава,
+  // и заголовок команды (он как раз ссылкой не является).
+  const isCharLink = el => el && el.tagName === 'A' &&
+    /\/characters\/[a-z0-9-]+/.test(el.getAttribute('href') || '');
+  const slugOfLink = el => ((el.getAttribute('href') || '')
+    .match(/\/characters\/([a-z0-9-]+)/) || [])[1] || '';
+  const charLinks = el => isCharLink(el) ? [el] :
+    [...el.querySelectorAll('a[href*="/characters/"]')].filter(isCharLink);
+
+  // «Synergies»: подряд идут ссылки на эсперов, сразу за ними список пояснений.
+  // Иногда одна пачка буллетов относится сразу к двум эсперам (Mint/Nanally) —
+  // тогда в with окажутся оба слага.
+  function readSynergy(doc) {
+    const out = [], seen = new Set();
+    [...doc.querySelectorAll('ul')].forEach(ul => {
+      let prev = ul.previousElementSibling, links = [];
+      while (prev && charLinks(prev).length) {
+        links = charLinks(prev).concat(links);
+        prev = prev.previousElementSibling;
+      }
+      if (!links.length) return;
+      const notes = [...ul.children].map(li => clean(li.textContent))
+        .filter(x => x.length > 8).slice(0, 8);
+      if (!notes.length) return;
+      const withs = [...new Set(links.map(slugOfLink).filter(Boolean))];
+      const key = withs.join('|');
+      if (!withs.length || seen.has(key)) return;
+      seen.add(key);
+      out.push({ with: withs, notes: notes });
+    });
+    return out;
+  }
+
+  // Состав — это несколько «слотов» подряд внутри общего контейнера. Слот
+  // содержит одну ссылку, а если эсперы взаимозаменяемы — две-три. Ищем самый
+  // глубокий контейнер со ссылками: у него нет потомка с тем же их числом.
+  function slotsIn(root) {
+    const out = [];
+    [...root.querySelectorAll('*')].forEach(el => {
+      if (isCharLink(el)) return;
+      const links = charLinks(el);
+      if (!links.length || links.length > 3) return;
+      const deeper = [...el.children].some(ch => !isCharLink(ch) && charLinks(ch).length === links.length);
+      if (deeper) return;
+      out.push({ el: el, slugs: [...new Set(links.map(slugOfLink).filter(Boolean))] });
+    });
+    return out;
+  }
+  function teamName(box) {
+    let node = box;
+    for (let i = 0; i < 3 && node; i++, node = node.parentElement) {
+      const h = node.querySelector('h3,h4,h5,h6');
+      const t = clean(h ? h.textContent : '');
+      if (t && t.length < 60) return t;
+    }
+    const prev = box.previousElementSibling;
+    return clean(prev ? prev.textContent : '').slice(0, 60);
+  }
+  function readTeams(doc) {
+    const groups = new Map();
+    slotsIn(doc.body).forEach(s => {
+      const p = s.el.parentElement;
+      if (!p) return;
+      if (!groups.has(p)) groups.set(p, []);
+      groups.get(p).push(s.slugs);
+    });
+    const out = [], seen = new Set();
+    groups.forEach((slots, p) => {
+      if (slots.length < 3 || slots.length > 6) return;
+      const key = slots.map(s => s.join('/')).join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ name: teamName(p), slots: slots });
+    });
+    return out;
+  }
+
+  // Тир-лист команд: тир помечен текстовым узлом («T0»), дальше идёт название
+  // состава — тоже текстовый узел, но не совпадающий ни с одним именем эспера,
+  // — и уже за ним ссылки на участников.
+  function readTeamTiers(doc) {
+    const names = new Set([...doc.querySelectorAll('a[href*="/characters/"]')]
+      .map(a => clean(a.textContent)).filter(Boolean));
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    const out = [];
+    let tier = '', cur = null, node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeType === 3) {
+        const t = clean(node.nodeValue);
+        if (TIER_MAP[t]) { tier = TIER_MAP[t]; cur = null; continue; }
+        if (!tier || !t || t.length < 3 || t.length > 44 || names.has(t)) continue;
+        if (/tier|list|about|rating|criteria|changelog|prydwen|policy|copyright/i.test(t)) continue;
+        cur = { tier: tier, name: t, slots: [] };
+        out.push(cur);
+        continue;
+      }
+      if (!cur || !isCharLink(node)) continue;
+      const slug = slugOfLink(node);
+      if (!slug) continue;
+      const last = cur.slots[cur.slots.length - 1];
+      // взаимозаменяемые эсперы лежат в одном контейнере — склеиваем их в слот
+      if (last && last.p === node.parentElement) { if (last.v.indexOf(slug) < 0) last.v.push(slug); }
+      else cur.slots.push({ p: node.parentElement, v: [slug] });
+    }
+    return out.filter(t => t.slots.length >= 3 && t.slots.length <= 6)
+              .map(t => ({ tier: t.tier, name: t.name, slots: t.slots.map(s => s.v) }));
+  }
+
+  // ── коды активации ────────────────────────────────────────────────────────
+  // Идём по текстовым узлам, а не по textContent целиком: там код, награда и
+  // дата слипаются в «NTEGIFTAnnulith x50Released on…» без единого пробела.
+  function textLines(root) {
+    const doc = root.ownerDocument;
+    const w = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const out = [];
+    let n;
+    while ((n = w.nextNode())) { const t = clean(n.nodeValue); if (t) out.push(t); }
+    return out;
+  }
+  async function readCodes() {
+    const doc = await getDoc(BASE + '/codes');
+    const L = textLines(doc.body);
+    const out = [];
+    let i = Math.max(0, L.findIndex(x => /^Active/i.test(x)));
+    for (; i < L.length; i++) {
+      if (/^How To Redeem/i.test(L[i])) break;
+      if (!/^[A-Za-z0-9]{5,24}$/.test(L[i])) continue;
+      const rew = [];
+      let j = i + 1;
+      while (j < L.length && !/^Released on/i.test(L[j]) && rew.length < 3) { rew.push(L[j]); j++; }
+      if (j >= L.length || !/^Released on/i.test(L[j])) continue;
+      out.push({
+        code: L[i],
+        rew:  clean(rew.join(' ')).slice(0, 80),
+        date: clean(L[j].replace(/^Released on\s*/i, ''))
+      });
+      i = j;
+    }
+    // «Last updated:» и дата лежат в разных узлах — если после двоеточия пусто,
+    // дата стоит следующей строкой
+    let upd = '';
+    const iu = L.findIndex(x => /^Last updated/i.test(x));
+    if (iu >= 0) upd = L[iu].replace(/^Last updated:?\s*/i, '') || (L[iu + 1] || '');
+    return { updated: clean(upd).slice(0, 24), list: out };
+  }
+
   // ── одна страница эспера ──────────────────────────────────────────────────
   async function readChar(base) {
     const doc = await getDoc(BASE + '/characters/' + base.slug);
@@ -291,6 +443,10 @@
 
     // оценки по режимам: «Damage [A6] T1.5 Endgame PVE»
     out.ratings = readRatings(between(txt, 'Ratings', ['Best Build', 'Best Arcs']));
+
+    // с кем играется и готовые составы с его же страницы
+    out.synergy = readSynergy(doc).filter(s => s.with.indexOf(base.slug) < 0);
+    out.teams = readTeams(doc).filter(t => t.slots.some(s => s.indexOf(base.slug) >= 0));
 
     return out;
   }
@@ -386,6 +542,18 @@
       [...new Set(banners.map(b => b.group))].filter(Boolean).length + ' подборок)');
   } catch (e) { console.warn('баннеры не забрались: ' + e.message); }
 
+  let teams = [];
+  try {
+    teams = readTeamTiers(await getDoc(BASE + '/team-tier-list'));
+    console.log('команд в тир-листе: ' + teams.length);
+  } catch (e) { console.warn('тир-лист команд не забрался: ' + e.message); }
+
+  let codes = { updated: '', list: [] };
+  try {
+    codes = await readCodes();
+    console.log('кодов: ' + codes.list.length + (codes.updated ? ' (обновлены ' + codes.updated + ')' : ''));
+  } catch (e) { console.warn('коды не забрались: ' + e.message); }
+
   const agents = {};
   const thin = [];
   for (let i = 0; i < list.length; i++) {
@@ -402,7 +570,9 @@
         ' карт ' + String(a.carts.length).padEnd(2) +
         ' цели ' + String(gk || '·').padEnd(2) +
         ' сет ' + (a.set.n ? '✓' : '·') +
-        ' сетка ' + (a.grid || '·'));
+        ' сетка ' + String(a.grid || '·').padEnd(2) +
+        ' синерг ' + String(a.synergy.length || '·').padEnd(2) +
+        ' команд ' + (a.teams.length || '·'));
     } catch (e) {
       console.warn('  ' + (i + 1) + '/' + list.length + '  ' + b.slug + '  — ' + e.message);
     }
@@ -423,6 +593,9 @@
     roles: [...new Set(list.map(x => x.role).filter(Boolean))],
     tiers: tiers,
     banners: banners,
+    teams: teams,
+    teamsNote: 'Тир-лист команд prydwen, режимы Beyond the Rail и High Risk Commissions.',
+    codes: codes,
     agents: agents
   };
 
