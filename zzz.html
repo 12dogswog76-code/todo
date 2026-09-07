@@ -803,6 +803,38 @@
   .iss>summary b{font-size:12.5px}
   .iss-n{font-size:10px;color:var(--warn);border:1px solid #fbbf2444;border-radius:20px;
     padding:1px 8px;background:#fbbf2412}
+
+  /* «Что даст апгрейд»: тот же вид, что у сверки с гайдом — блок сворачивается
+     и стоит рядом, поэтому оформлять его иначе было бы шумно. */
+  .upg{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;
+    background:linear-gradient(120deg,var(--pan2),var(--pan))}
+  .upg>summary{list-style:none;cursor:pointer;padding:8px 12px;display:flex;
+    align-items:center;gap:9px;user-select:none}
+  .upg>summary::-webkit-details-marker{display:none}
+  .upg>summary::before{content:'▸';color:var(--tx3);transition:.15s;font-size:11px}
+  .upg[open]>summary::before{transform:rotate(90deg)}
+  .upg>summary b{font-size:12.5px}
+  .upg>summary i{font-style:normal;font-size:10px;color:var(--tx3);border:1px solid var(--line);
+    border-radius:20px;padding:1px 8px}
+  .upg-l{padding:0 12px 4px}
+  .upg-r{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+  .upg-r:first-child{border-top:0}
+  .upg-n{flex:0 0 168px;font-size:12px;color:var(--tx2)}
+  .upg-n i{display:block;font-style:normal;font-size:10px;color:var(--tx3)}
+  .upg-v{flex:1;display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+  .upg-v em{font-style:normal;font-size:10.5px;color:#a7f3c0;background:#4ade800f;
+    border:1px solid #4ade8033;border-radius:7px;padding:1px 7px;white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .upg-v em.dn{color:#fca5a5;background:#f871710f;border-color:#f8717133}
+  .upg-v em.mut{color:var(--tx3);background:transparent;border-color:var(--line)}
+  .upg-p{flex:0 0 52px;text-align:right;font-size:13px;font-weight:800;color:var(--gold);
+    font-variant-numeric:tabular-nums}
+  .upg-p.zero{color:var(--tx3);font-weight:500}
+  @media(max-width:720px){
+    .upg-r{flex-wrap:wrap}
+    .upg-n{flex:1 1 100%}
+    .upg-p{flex:0 0 auto;margin-left:auto}
+  }
   /* Точка — обычный элемент строки, а не абсолютная: так она всегда стоит
      ровно перед текстом и не съезжает вверх на однострочных замечаниях.
      Уровни названы soft/hard, а не warn/bad: класс warn в проекте уже занят
@@ -2592,7 +2624,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v242';
+const APP_VER = 'v243';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5561,6 +5593,10 @@ function renderSheet() {
             '</details>'
           : '<div class="iss ok">Сборка сходится с гайдом ✓</div>';
       }
+      // Прикидка «а если»: сколько даст следующий прорыв, ядро, движок. Свёрнута
+      // по умолчанию — вкладок в карточке и так хватает, а смотрят это не каждый
+      // раз, а когда решаешь, куда девать материалы.
+      h += upHtml(curId);
     }
 
     // ── характеристики ──
@@ -5788,6 +5824,9 @@ function bindSheet() {
   // помним, развёрнута сверка или свёрнута
   document.querySelectorAll('details.iss').forEach(el => el.ontoggle = () => {
     if (ui.issOpen !== el.open) { ui.issOpen = el.open; save(); }
+  });
+  document.querySelectorAll('details.upg').forEach(el => el.ontoggle = () => {
+    if (ui.upOpen !== el.open) { ui.upOpen = el.open; save(); }
   });
   const pr = $('planReset');
   if (pr) pr.onclick = () => {
@@ -6425,6 +6464,130 @@ function discSum(discs) {
 }
 
 // итоговые характеристики агента: сборка = набор дисков (текущий или плановый)
+// ─────────────── что даст апгрейд ───────────────
+// Прикидка «а если» до того, как тратить материалы. Все расчёты идут через ту
+// же calcTotals, только на копии профиля: считать прибавки отдельной формулой
+// нельзя — проценты ядра, диски и оружие перемножаются, и «+18% атаки» в
+// вакууме ничего не значит.
+function upClone(p) {
+  const c = JSON.parse(JSON.stringify(p || {}));
+  if (!c.w) c.w = { id: 0, lvl: 0, br: 0, phase: 1 };
+  return c;
+}
+// Прорыв оружия жёстко привязан к уровню: поднять уровень, не открыв прорыв,
+// в игре нельзя, а вклад у него больше, чем у самого уровня (0.9 против 0.1558).
+function upBr(lvl) { return lvl >= 60 ? 5 : Math.max(0, Math.floor(lvl / 10) - 1); }
+
+// Строки, которые показываем в прибавке. Плоские HP и защита сюда не идут:
+// они растут у всех и ни на что не влияют.
+const UP_SHOW = ['atk', 'cr', 'cd', 'ap', 'am', 'im', 'pen', 'penp', 'er'];
+function upDiff(a, p0, p1) {
+  const T0 = calcTotals(a, p0, p0.discs), T1 = calcTotals(a, p1, p1.discs);
+  const out = [];
+  UP_SHOW.forEach(k => {
+    const v0 = +T0[k] || 0, v1 = +T1[k] || 0, d = v1 - v0;
+    if (Math.abs(d) < 0.05) return;
+    const pct = !!GOAL_PCT[k] || k === 'cr' || k === 'cd';
+    out.push({ k: k, d: d,
+      t: (d > 0 ? '+' : '−') + (pct ? Math.abs(d).toFixed(1) + '%'
+          : (k === 'er' ? Math.abs(d).toFixed(2) : nfmt(Math.abs(d)))) });
+  });
+  return out;
+}
+
+function upList(id) {
+  const a = DB.byId[id], p = prog[id];
+  if (!a || !p || !p.have) return [];
+  const t = tgtOf(p, id);
+  const w = p.w && p.w.id ? DB.engById[p.w.id] : null;
+  const steps = [];
+
+  // 1. Уровень агента. Ступень — ближайший прорыв, а не сразу шестидесятый:
+  //    качают по одному, и «что даст следующий прорыв» — вопрос практический.
+  const lvl = p.lvl || 1;
+  if (lvl < LVL_MAX) {
+    const next = Math.min(LVL_MAX, (Math.floor(lvl / 10) + 1) * 10);
+    if (next > lvl) steps.push({ n: 'Уровень ' + lvl + ' → ' + next, k: 'lvl',
+      mk: c => { c.lvl = next; c.promo = Math.ceil(next / 10) - 1; } });
+    if (next < LVL_MAX) steps.push({ n: 'Уровень ' + lvl + ' → ' + LVL_MAX, k: 'lvl',
+      mk: c => { c.lvl = LVL_MAX; c.promo = Math.ceil(LVL_MAX / 10) - 1; } });
+  }
+
+  // 2. Ядро: следующая ступень и сразу до цели.
+  const core = p.core || 0;
+  const CORE_L = ['—','A','B','C','D','E','F'];
+  if (core < CORE_MAX) {
+    steps.push({ n: 'Ядро ' + CORE_L[core] + ' → ' + CORE_L[core + 1], k: 'core',
+      mk: c => { c.core = core + 1; } });
+    if (core + 1 < t.core) steps.push({ n: 'Ядро ' + CORE_L[core] + ' → ' + CORE_L[t.core] +
+      ' (цель)', k: 'core', mk: c => { c.core = t.core; } });
+  }
+
+  // 3. Движок: уровень с прорывом.
+  const wl = (p.w && p.w.lvl) || 0;
+  if (w && wl < WENG_MAX) {
+    const next = Math.min(WENG_MAX, (Math.floor(wl / 10) + 1) * 10);
+    if (next > wl) steps.push({ n: 'Движок ур. ' + wl + ' → ' + next, k: 'w',
+      mk: c => { c.w.lvl = next; c.w.br = upBr(next); } });
+    if (next < WENG_MAX) steps.push({ n: 'Движок ур. ' + wl + ' → ' + WENG_MAX, k: 'w',
+      mk: c => { c.w.lvl = WENG_MAX; c.w.br = 5; } });
+  }
+
+  // 4. Замена движка на лучший по гайду — при том же уровне, что стоит сейчас.
+  //    Иначе сравнение выходит нечестным: половина прибавки была бы от прокачки.
+  const g = guideOf(id);
+  const best = g && (g.engines || [])[0] ? engByName(g.engines[0].n) : null;
+  if (best && (!w || +best.id !== +w.id)) {
+    const lv = Math.max(wl, 1), br = upBr(lv);
+    steps.push({ n: 'Движок → ' + (best.ru || best.en), k: 'wswap', sub: 'первый по гайду, ур. ' + lv,
+      mk: c => { c.w = { id: best.id, lvl: lv, br: br, phase: (p.w && p.w.phase) || 1 }; } });
+  }
+
+  // 5. Навыки до целей. На характеристики они не влияют — только на готовность,
+  //    поэтому идут отдельной строкой без списка прибавок.
+  const skNow = SKILL_IDX.reduce((s, o) => s + Math.min(t.sk[o.i], (p.sk && p.sk[o.i]) || 1), 0);
+  const skTgt = SKILL_IDX.reduce((s, o) => s + t.sk[o.i], 0);
+  if (skNow < skTgt) {
+    steps.push({ n: 'Навыки до целей', k: 'sk', sub: skNow + ' → ' + skTgt + ' уровней суммарно',
+      mk: c => { c.sk = c.sk || {}; SKILL_IDX.forEach(o => { if (t.sk[o.i]) c.sk[o.i] = t.sk[o.i]; }); } });
+  }
+
+  const pc0 = pctOfP(p, id);
+  return steps.map(s => {
+    const c = upClone(p);
+    s.mk(c);
+    return { n: s.n, sub: s.sub || '', k: s.k,
+             rows: upDiff(a, p, c), pc: pctOfP(c, id) - pc0 };
+  }).filter(x => x.rows.length || x.pc > 0)
+    // Сверху то, что даёт больше готовности: список читается как «за что браться
+    // в первую очередь». При равном приросте вперёд идёт то, где больше
+    // характеристик выросло, а не просто первое по порядку.
+    .sort((x, y) => (y.pc - x.pc) ||
+      (y.rows.filter(r => r.d > 0).length - x.rows.filter(r => r.d > 0).length));
+}
+
+function upHtml(id) {
+  const list = upList(id);
+  if (!list.length) return '';
+  const open = !!ui.upOpen;
+  return '<details class="upg"' + (open ? ' open' : '') + '><summary>' +
+      '<b>Что даст апгрейд</b><i>' + list.length + ' ' +
+      plural(list.length, 'вариант', 'варианта', 'вариантов') + '</i></summary>' +
+    '<div class="upg-l">' + list.map(x =>
+      '<div class="upg-r"><span class="upg-n">' + esc(x.n) +
+        (x.sub ? '<i>' + esc(x.sub) + '</i>' : '') + '</span>' +
+      '<span class="upg-v">' + (x.rows.length
+        ? x.rows.slice(0, 5).map(r => '<em' + (r.d > 0 ? '' : ' class="dn"') + '>' +
+            esc(GUIDE_STAT_SHORT[r.k] || GUIDE_STAT_RU[r.k] || r.k) + ' ' + esc(r.t) + '</em>').join('')
+        : '<em class="mut">характеристики не меняются</em>') + '</span>' +
+      '<b class="upg-p' + (x.pc > 0 ? '' : ' zero') + '">' +
+        (x.pc > 0 ? '+' + x.pc + '%' : '—') + '</b></div>').join('') +
+    '</div><div class="hint">Прибавки посчитаны на копии твоей сборки: диски и ' +
+      'комплекты остаются как есть, меняется только то, что в строке. Последняя ' +
+      'колонка — насколько вырастет готовность. Фаза движка сюда не входит: она ' +
+      'усиливает пассивку, а характеристики не трогает.</div></details>';
+}
+
 function calcTotals(a, p, discs) {
   const b = baseAt(a, p), w = weaponBonus(p), d = discSum(discs);
   const cb = coreBonusOf(a && a.id, p);   // прибавки от прокачанного ядра
