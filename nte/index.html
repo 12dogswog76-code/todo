@@ -95,12 +95,13 @@
     border-radius:18px;overflow:hidden;box-shadow:0 24px 70px #000000b0}
   .sh-head{display:flex;gap:0;flex-wrap:wrap}
   /* Арт — крупный и чистый: подписи на нём не рисуем. Раньше имя со значком
-     стихии лежало поверх картинки и на светлых артах читалось плохо, а сама
-     картинка была вдвое меньше свободного места. Прокручивается вместе с
-     содержимым, как в трекере ZZZ: липкий вариант выглядел так, будто картинка
-     залипла и не реагирует на прокрутку. */
-  .sh-art{flex:0 0 430px;position:relative;align-self:flex-start;
-    background:#0d0f14;height:640px;overflow:hidden;border-radius:18px 0 0 18px}
+     стихии лежало поверх картинки и на светлых артах читалось плохо.
+     Едет за экраном при прокрутке — ровно как .hart в трекере ZZZ: sticky с
+     ограничением по высоте окна. Без него картинка оставалась в начале
+     карточки, и дальше сборку читаешь уже без неё. */
+  .sh-art{flex:0 0 430px;position:sticky;top:14px;align-self:flex-start;
+    background:#0d0f14;height:640px;max-height:calc(100vh - 44px);
+    overflow:hidden;border-radius:18px 0 0 18px}
   .sh-art img{width:100%;height:100%;object-fit:cover;object-position:center 8%;
     position:absolute;inset:0}
   .sh-art:after{content:'';position:absolute;inset:auto 0 0 0;height:22%;
@@ -134,7 +135,7 @@
     cursor:pointer;border-radius:9px;padding:5px 11px;font-size:13px;font-family:inherit}
   .x:hover{border-color:#f87171;color:#f87171}
 
-  .cap{display:flex;align-items:center;gap:9px;margin:26px 0 9px}
+  .cap{display:flex;align-items:center;gap:9px;margin:34px 0 10px}
   .cap:first-child{margin-top:0}
   .cap b{font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--gold)}
   .cap span{flex:1;height:1px;background:var(--line)}
@@ -404,6 +405,15 @@
   .ta span{display:block;font-size:10px;color:var(--tx3);margin-top:3px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+  .ocr{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 4px}
+  .pieces-row{display:flex;gap:8px;flex-wrap:wrap}
+  .pcs{background:var(--pan2);border:1px solid var(--line);border-radius:11px;
+    padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:64px}
+  .pcs .shp{display:grid;gap:1px}
+  .pcs .shp i{width:7px;height:7px;border-radius:1px;background:var(--tx3)}
+  .pcs b{font-family:var(--mono);font-size:12px;color:var(--tx)}
+  .pcs i{font-style:normal;font-size:10px;color:var(--tx3)}
+
   .hint{color:var(--tx3);font-size:11.5px;line-height:1.55;margin-top:9px}
   .empty{color:var(--tx3);font-size:12.5px;padding:26px 0;text-align:center}
 
@@ -434,7 +444,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v7';
+const APP_VER = 'v8';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -866,111 +876,144 @@ function planMask(slug) {
   const g = gridOf(slug);
   return g ? g.mask.map(line => line.split(',').map(x => parseInt(x, 10))) : null;
 }
+// Набор картриджей эспера из игровых таблиц — нужен и ради значка, и ради
+// списка форм, которые он принимает.
+function suitOf(name) {
+  if (!GEAR || !name) return null;
+  const n = String(name).toLowerCase();
+  return GEAR.suits.filter(x => String(x.en || '').toLowerCase() === n ||
+                                String(x.ru || '').toLowerCase() === n)[0] || null;
+}
+
+// ── авторасклад ────────────────────────────────────────────────────────────
+// Гайд говорит, какие типы деталей нужны («II, III, III, IV»), а набор — какие
+// формы он вообще принимает. Раскладываем это по сетке сами: перебор с
+// откатом, крупные детали первыми — так они находят место, пока оно есть.
+// Раньше детали нужно было выкладывать руками, хотя раскладка ровно одна и
+// известна заранее.
+function autoLayout(slug, variant) {
+  const mask = planMask(slug);
+  const g = (GUIDE.agents || {})[slug] || {};
+  const want = (g.pieces || []).slice();
+  if (!mask || !want.length || !GEAR || !GEAR.shapes) return null;
+
+  const suit = suitOf(g.set && g.set.n);
+  const allowed = (suit && suit.geo && suit.geo.length) ? suit.geo : Object.keys(GEAR.shapes);
+  const byType = {};
+  allowed.forEach(n => { const t = typeOf(n); (byType[t] = byType[t] || []).push(n); });
+
+  const H = mask.length, W = mask[0].length;
+  const order = want.map((t, i) => ({ t: t, i: i }))
+    .sort((a, b) => ({ IV:0, III:1, II:2 }[a.t] || 9) - ({ IV:0, III:1, II:2 }[b.t] || 9));
+  const occ = {}, out = [];
+  const shift = (variant || 0);
+
+  function tryPut(cells, r, c) {
+    const keys = [];
+    for (const p of cells) {
+      const rr = r + p[0], cc = c + p[1];
+      if (rr < 0 || cc < 0 || rr >= H || cc >= W) return null;
+      if (mask[rr][cc] < 0 || occ[rr + ':' + cc]) return null;
+      keys.push(rr + ':' + cc);
+    }
+    return keys;
+  }
+  function step(k) {
+    if (k >= order.length) return true;
+    const need = order[k];
+    const forms = (byType[need.t] || []);
+    for (let f = 0; f < forms.length; f++) {
+      const name = forms[(f + shift) % forms.length];
+      for (let rot = 0; rot < 4; rot++) {
+        const cells = rotate(shapeCells(GEAR.shapes[name]), rot);
+        for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+          const keys = tryPut(cells, r, c);
+          if (!keys) continue;
+          keys.forEach(x => { occ[x] = need.i + 1; });
+          out.push({ idx: need.i, t: need.t, name: name, keys: keys });
+          if (step(k + 1)) return true;
+          keys.forEach(x => { delete occ[x]; });
+          out.pop();
+        }
+      }
+    }
+    return false;
+  }
+  if (!step(0)) return null;
+  return out.sort((a, b) => a.idx - b.idx);
+}
+
 function planHtml(slug) {
   const mask = planMask(slug);
   if (!mask) return '<div class="hint">Сетка этого эспера ещё не попала в игровые таблицы.</div>';
   const a = agentBy(slug) || {};
-  const gd = (GUIDE.agents || {})[slug] || {};
+  const g = (GUIDE.agents || {})[slug] || {};
+  const suit = suitOf(g.set && g.set.n);
   const W = mask[0].length;
   const free = mask.reduce((n, r) => n + r.filter(v => v === 0).length, 0);
-  const used = Object.keys(plan.cells).length;
-  const pieces = {};
-  Object.values(plan.cells).forEach(x => { pieces[x.id] = x.t; });
-  const cnt = { II:0, III:0, IV:0 };
-  Object.values(pieces).forEach(t => { if (cnt[t] != null) cnt[t]++; });
 
-  const shapes = Object.keys(GEAR.shapes).sort((x, y) => shapeSize(x) - shapeSize(y));
-  const palette = shapes.map(n => {
-    const cells = rotate(shapeCells(GEAR.shapes[n]), plan.pick === n ? plan.rot : 0);
-    const xs = cells.map(c => c[1]), ys = cells.map(c => c[0]);
-    const x0 = Math.min(...xs), y0 = Math.min(...ys);
-    const w = Math.max(...xs) - x0 + 1, h = Math.max(...ys) - y0 + 1;
-    let mini = '<span class="shp" style="grid-template-columns:repeat(' + w + ',6px)">';
+  const lay = autoLayout(slug, plan.variant) || [];
+  const cellOf = {};
+  lay.forEach(pc => pc.keys.forEach(k => { cellOf[k] = pc; }));
+  const used = Object.keys(cellOf).length;
+
+  // мини-картинки уложенных деталей — как «required pieces» на prydwen
+  const legend = lay.map(pc => {
+    const cells = shapeCells(GEAR.shapes[pc.name]);
+    const ys = cells.map(c => c[0]), xs = cells.map(c => c[1]);
+    const y0 = Math.min(...ys), x0 = Math.min(...xs);
+    const h = Math.max(...ys) - y0 + 1, w = Math.max(...xs) - x0 + 1;
+    let mini = '<span class="shp" style="grid-template-columns:repeat(' + w + ',7px)">';
     for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
       const has = cells.some(pt => pt[0] - y0 === r && pt[1] - x0 === c);
-      mini += '<i style="' + (has ? '' : 'opacity:0') + '"></i>';
+      mini += '<i style="' + (has ? 'background:' + (PIECE_COLORS[pc.t] || '#8b92a3') : 'opacity:0') + '"></i>';
     }
-    mini += '</span>';
-    return '<button class="pi' + (plan.pick === n ? ' on' : '') + '" data-s="' + esc(n) + '" ' +
-      'title="' + esc(shapeName(n)) + ', тип ' + typeOf(n) + '">' + mini + typeOf(n) + '</button>';
+    return '<div class="pcs">' + mini + '</span><b>' + esc(pc.t) + '</b>' +
+      '<i>' + esc(shapeName(pc.name)) + '</i></div>';
   }).join('');
 
+  const board = '<div class="board" style="grid-template-columns:repeat(' + W + ',auto)">' +
+    mask.map((row, r) => row.map((v, c) => {
+      const k = r + ':' + c;
+      const pc = cellOf[k];
+      const st = v < 0 ? ' off' : (pc ? ' on' : '');
+      const bg = pc ? ' style="background:' + (PIECE_COLORS[pc.t] || '#8b92a3') + '"' : '';
+      return '<div class="cell' + st + '"' + bg + '>' + (pc ? '<b>' + esc(pc.t) + '</b>' : '') + '</div>';
+    }).join('')).join('') + '</div>';
+
   return '<div class="plan">' +
-      '<div class="plan-l">' +
-        '<div class="board" style="grid-template-columns:repeat(' + W + ',auto)">' +
-          mask.map((row, r) => row.map((v, c) => {
-            const k = r + ':' + c;
-            const pc = plan.cells[k];
-            const st = v < 0 ? ' off' : (pc ? ' on' : '');
-            const bg = pc ? ' style="background:' + pc.color + '"' : '';
-            return '<div class="cell' + st + '" data-r="' + r + '" data-c="' + c + '"' + bg + '>' +
-              (pc ? '<b>' + esc(pc.t) + '</b>' : '') + '</div>';
-          }).join('')).join('') +
-        '</div>' +
-        '<div class="hint">Выбери деталь справа и щёлкни по сетке. Правая кнопка по детали ' +
-          'на сетке — убрать, по палитре — повернуть.</div>' +
+      '<div class="plan-l">' + board +
+        '<div class="hint">Сетка типа ' + (a.grid || '?') + ', занято ' + used + ' из ' + free +
+          ' клеток. Так детали из гайда как раз помещаются.</div>' +
       '</div>' +
       '<div class="plan-r">' +
-        '<div class="stat">' +
-          '<div class="st' + (used === free ? ' ok' : '') + '"><b>' + used + ' / ' + free + '</b>клеток занято</div>' +
-          '<div class="st"><b>' + cnt.II + '</b>тип II</div>' +
-          '<div class="st"><b>' + cnt.III + '</b>тип III</div>' +
-          '<div class="st"><b>' + cnt.IV + '</b>тип IV</div>' +
-        '</div>' +
-        (gd.trait ? '<div class="set"><div class="trait" style="border:0;padding:0;margin:0">' +
-          '<i>бонус эспера за модули</i>' + esc(tr(gd.trait)) + '</div></div>' : '') +
-        (gd.pieces && gd.pieces.length ? '<div class="cap"><b>Гайд советует</b><span></span></div>' +
-          '<div class="pieces">' + gd.pieces.map(x => '<span class="pc">' + esc(x) + '</span>').join('') +
+        (suit || (g.set && g.set.n) ?
+          '<div class="cap" style="margin-top:0"><b>Набор модулей</b><span></span></div>' +
+          '<div class="cart" style="margin-bottom:10px">' +
+            (suit && suit.icon ? '<img class="cart-ic" src="img/suits/' + esc(suit.icon) + '" alt="">' : '') +
+            '<div class="item-b">' +
+              '<b style="font-size:14px;color:var(--gold)">' + esc(ruName('carts', g.set.n)) + '</b>' +
+              (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(tr(g.set.b2)) + '</div>' : '') +
+              (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(tr(g.set.b4)) + '</div>' : '') +
+              (g.trait ? '<div class="trait"><i>бонус эспера за модули</i>' + esc(tr(g.trait)) + '</div>' : '') +
+            '</div>' +
           '</div>' : '') +
-        '<div class="cap"><b>Детали</b><span></span><em>сетка типа ' + (a.grid || '?') + '</em></div>' +
-        '<div class="pal">' + palette + '</div>' +
-        '<button class="fb" id="planClear">очистить сетку</button>' +
+        (lay.length ? '<div class="cap"><b>Нужные детали</b><span></span><em>из гайда</em></div>' +
+          '<div class="pieces-row">' + legend + '</div>' : '') +
+        (g.pieces && g.pieces.length && !lay.length ?
+          '<div class="hint">Гайд советует детали ' + g.pieces.join(', ') +
+          ', но уложить их на эту сетку не вышло — возможно, набор принимает другие формы.</div>' : '') +
+        '<button class="fb" id="planNext" style="margin-top:12px">другой вариант раскладки</button>' +
       '</div>' +
     '</div>';
 }
-// Перерисовываем только сам планировщик: перерисовка всей карточки схлопывала
-// бы раскрытые блоки и сбрасывала прокрутку.
-function redrawPlan() {
-  const box = $('planBox');
-  if (!box) return;
-  box.innerHTML = planHtml(plan.slug);
-  bindPlan();
-}
 function bindPlan() {
-  const box = $('planBox');
-  if (!box) return;
-  const mask = planMask(plan.slug);
-  box.querySelectorAll('.pi').forEach(b => {
-    b.onclick = () => { plan.pick = (plan.pick === b.dataset.s) ? null : b.dataset.s; plan.rot = 0; redrawPlan(); };
-    b.oncontextmenu = e => { e.preventDefault(); plan.pick = b.dataset.s; plan.rot = (plan.rot + 1) % 4; redrawPlan(); };
-  });
-  box.querySelectorAll('.cell').forEach(c => {
-    c.onclick = () => putPiece(+c.dataset.r, +c.dataset.c, mask);
-    c.oncontextmenu = e => {
-      e.preventDefault();
-      const pc = plan.cells[c.dataset.r + ':' + c.dataset.c];
-      if (!pc) return;
-      Object.keys(plan.cells).forEach(k => { if (plan.cells[k].id === pc.id) delete plan.cells[k]; });
-      redrawPlan();
-    };
-  });
-  if ($('planClear')) $('planClear').onclick = () => { plan.cells = {}; plan.next = 1; redrawPlan(); };
-}
-function putPiece(r, c, mask) {
-  if (!plan.pick || !mask) return;
-  const cells = rotate(shapeCells(GEAR.shapes[plan.pick]), plan.rot);
-  const t = typeOf(plan.pick);
-  const target = [];
-  for (const pt of cells) {
-    const rr = r + pt[0], cc = c + pt[1];
-    if (rr < 0 || cc < 0 || rr >= mask.length || cc >= mask[0].length) return;  // за край
-    if (mask[rr][cc] < 0) return;                                               // клетки нет
-    if (plan.cells[rr + ':' + cc]) return;                                      // занято
-    target.push(rr + ':' + cc);
-  }
-  const id = plan.next++;
-  target.forEach(k => { plan.cells[k] = { id: id, t: t, color: PIECE_COLORS[t] || '#8b92a3' }; });
-  redrawPlan();
+  const b = $('planNext');
+  if (b) b.onclick = () => {
+    plan.variant = (plan.variant || 0) + 1;
+    const box = $('shBody');
+    if (box) { box.innerHTML = planHtml(plan.slug); bindPlan(); }
+  };
 }
 
 // ── баннеры ────────────────────────────────────────────────────────────────
@@ -1344,14 +1387,23 @@ function calcVerdict() {
 }
 // Считаем для конкретного эспера: поля сразу заполняются его целями из гайда,
 // а вопрос «что качать дальше» имеет смысл только применительно к нему.
+// Считаем для конкретного эспера. Числа берём из того, что вписано во вкладке
+// «Сейчас»; если там пусто — из целей гайда, и об этом честно пишем.
 function calcFill(slug) {
+  const my = myStats(slug);
   const G = ((GUIDE.agents || {})[slug] || {}).goals || {};
-  if (G.atk) calc.atk = G.atk[0];
-  if (G.cr)  calc.cr  = G.cr[0];
-  if (G.cd)  calc.cd  = G.cd[0];
-  if (G.elem || G.dmg) calc.dmg = (G.elem ? G.elem[0] : 0) + (G.dmg ? G.dmg[0] : 0);
-  // базовую атаку из гайда не взять — она зависит от Arc; оставляем половину
-  calc.base = Math.max(600, Math.round((calc.atk || 2000) * 0.5));
+  const pick = (k, g) => (my[k] != null ? my[k] : (G[g] ? G[g][0] : null));
+  calc.atk = pick('atk', 'atk') || 2000;
+  calc.cr  = pick('cr', 'cr')   || 50;
+  calc.cd  = pick('cd', 'cd')   || 100;
+  const dmg = my.dmg != null ? my.dmg : ((G.dmg ? G.dmg[0] : 0) + (G.elem ? G.elem[0] : 0));
+  calc.dmg = dmg || 0;
+  // Базовая атака — та, от которой считаются проценты: сам эспер плюс оружие,
+  // без плоской прибавки с модулей. В игре её отдельно не показывают, поэтому
+  // берём половину итоговой: у собранного персонажа это близко к правде и
+  // спрашивать лишнее число не приходится.
+  calc.base = Math.max(500, Math.round(calc.atk * 0.5));
+  calc.fromMe = my.atk != null || my.cr != null || my.cd != null;
 }
 function calcTable() {
   const rows = calcRows(), top = rows[0].g;
@@ -1363,10 +1415,14 @@ function calcTable() {
       '%"></i></div></td></tr>').join('');
 }
 function calcHtml() {
-  const F = ['atk','base','cr','cd','dmg'];
-  const LBL = { atk:'Атака итоговая', base:'Атака базовая (эспер + оружие)',
-                cr:'Шанс крита, %', cd:'Крит. урон, %', dmg:'Сумма процентов урона, %' };
-  return '<div class="inp">' + F.map(k =>
+  const F = ['atk','cr','cd','dmg'];
+  const LBL = { atk:'Атака', cr:'Шанс крита, %', cd:'Крит. урон, %',
+                dmg:'Сумма процентов урона, %' };
+  return '<div class="hint" style="margin:0 0 8px">' +
+      (calc.fromMe ? 'Числа взяты из твоих характеристик выше.'
+                   : 'Числа взяты из целей гайда — впиши свои выше, и расчёт пойдёт по ним.') +
+    '</div>' +
+    '<div class="inp">' + F.map(k =>
       '<div><label>' + esc(LBL[k]) + '</label>' +
       '<input type="number" step="any" data-k="' + k + '" value="' + calc[k] + '"></div>').join('') +
     '</div>' +
@@ -1480,6 +1536,7 @@ function open(slug) {
 function bindShBody() {
   bindPlan();
   bindCalc();
+  bindMy(shSlug);
   $('shBody').querySelectorAll('[data-slug]').forEach(c =>
     c.onclick = () => open(c.dataset.slug));
 }
@@ -1527,8 +1584,111 @@ function shBody(slug, g, a) {
       (g.skillNote ? '<div class="hint">' + esc(g.skillNote) + '</div>' : '') : '');
 }
 
-// «Сейчас» — что с эспером сегодня: идёт ли его баннер, где он в тир-листе,
-// в скольких мета-составах встречается и что ему выгоднее качать.
+// ── мои характеристики ─────────────────────────────────────────────────────
+// Переносить их из игры автоматически нечем: у NTE нет ни витрины профиля, ни
+// открытого API — эти цифры видны только на экране персонажа. Поэтому вписываем
+// руками один раз, а браузер их запоминает: дальше карточка сама показывает,
+// чего не хватает до целей гайда, и калькулятор считает по твоим числам.
+const MY_KEYS = [
+  ['hp',  'ОЗ',                 'hp',   0],
+  ['atk', 'Атака',              'atk',  0],
+  ['def', 'Защита',             'def',  0],
+  ['cr',  'Шанс крита, %',      'cr',   1],
+  ['cd',  'Крит. урон, %',      'cd',   1],
+  ['dmg', 'Урон стихии, %',     'elem', 1],
+  ['cyc', 'Инт. цикла',         'cyc',  0],
+  ['brk', 'Инт. разрушения',    'brk',  0]
+];
+function myStats(slug) {
+  try { return JSON.parse(localStorage.getItem('nte-my-' + slug)) || {}; }
+  catch (e) { return {}; }
+}
+function myStatsSave(slug, obj) {
+  try { localStorage.setItem('nte-my-' + slug, JSON.stringify(obj)); } catch (e) {}
+}
+// Скриншот уходит на воркер, тот читает числа моделью зрения и возвращает их.
+// Перед отправкой ужимаем до 1400px и в jpeg: экран 2K весит мегабайты, а для
+// распознавания хватает и этого.
+const OCR_API = ['/api/nte/ocr',
+                 'https://api.alextask.ru/api/nte/ocr',
+                 'https://alextask.ru/api/nte/ocr',
+                 'https://alextask-push.12dogswog76.workers.dev/api/nte/ocr']
+  .filter((b, i) => i === 0 || b.indexOf('//' + location.host + '/') < 0);
+
+function shrink(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1400 / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      cv.toBlob(b => b ? res(b) : rej(new Error('не сжалось')), 'image/jpeg', 0.85);
+    };
+    img.onerror = () => rej(new Error('это не картинка'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function ocrShot(file, slug, say) {
+  say('сжимаю картинку…');
+  let blob;
+  try { blob = await shrink(file); } catch (e) { say('не вышло: ' + e.message, 1); return; }
+  say('распознаю, это занимает секунд десять…');
+  let data = null, err = '';
+  for (const u of OCR_API) {
+    try {
+      const r = await fetch(u, { method: 'POST', body: blob,
+        headers: { 'Content-Type': 'application/octet-stream' } });
+      const j = await r.json();
+      if (j && j.stats) { data = j; break; }
+      err = (j && j.error) || 'пустой ответ';
+    } catch (e) { err = e.message; }
+  }
+  if (!data) { say('не вышло: ' + err, 1); return; }
+  const got = data.stats || {};
+  const n = Object.keys(got).length;
+  if (!n) { say('на картинке не нашлось характеристик — попробуй скрин экрана персонажа целиком', 1); return; }
+  const my = myStats(slug);
+  Object.keys(got).forEach(k => { my[k] = got[k]; });
+  myStatsSave(slug, my);
+  say('распознано значений: ' + n + ' — проверь числа глазами');
+  calcFill(slug);
+  const g = (GUIDE.agents || {})[slug] || {};
+  $('shBody').innerHTML = nowHtml(slug, g, agentBy(slug), (t, note) =>
+    '<div class="cap" style="margin-top:0"><b>' + esc(t) + '</b><span></span>' +
+    (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
+  bindShBody();
+}
+
+function myHtml(slug, g) {
+  const my = myStats(slug), G = g.goals || {};
+  return '<div class="inp">' + MY_KEYS.map(k => {
+    const goal = G[k[2]] ? G[k[2]][0] : null;
+    const have = my[k[0]];
+    const ok = goal != null && have != null && have >= goal;
+    const miss = goal != null && have != null && have < goal;
+    return '<div>' +
+      '<label>' + esc(k[1]) +
+        (goal != null ? ' <span style="color:var(--tx3)">цель ' + goal + (k[3] ? '%' : '') + '</span>' : '') +
+      '</label>' +
+      '<input type="number" step="any" data-my="' + k[0] + '" value="' + (have != null ? have : '') + '" ' +
+        'style="' + (ok ? 'border-color:#4ade8066' : miss ? 'border-color:#fbbf2466' : '') + '">' +
+      (miss ? '<div class="hint" style="margin:3px 0 0">не хватает ' +
+        Math.round((goal - have) * 10) / 10 + (k[3] ? '%' : '') + '</div>' : '') +
+    '</div>';
+  }).join('') + '</div>' +
+  '<div class="ocr">' +
+    '<button class="fb" id="ocrPick">📷 прочитать со скриншота</button>' +
+    '<input type="file" id="ocrFile" accept="image/*" style="display:none">' +
+    '<span class="hint" id="ocrSay" style="margin:0">или вставь скрин из буфера — Ctrl+V</span>' +
+  '</div>' +
+  '<div class="hint">Числа лежат в этом браузере. Витрины профиля и API у NTE нет, ' +
+  'поэтому сами они не подтянутся: либо вписать руками, либо распознать со скриншота ' +
+  'экрана персонажа.</div>';
+}
+
+// «Сейчас» — что с эспером сегодня: баннер, место в мете, твои характеристики
+// и что выгоднее качать дальше.
 function nowHtml(slug, g, a, cap) {
   const bans = (GUIDE.banners || []).filter(b => b.slug === slug);
   const live = bans.filter(b => /current|сейчас/i.test(b.key + ' ' + b.group))[0];
@@ -1556,66 +1716,41 @@ function nowHtml(slug, g, a, cap) {
   return tiles + banner +
     (rat.mode ? '<div class="hint">Оценка prydwen: ' + esc(RATE_RU[rat.role] || rat.role || '') +
       ', режим ' + esc(RATE_RU[rat.mode] || rat.mode) + '.</div>' : '') +
+    cap('Мои характеристики', 'из игры, вручную') + myHtml(slug, g) +
     cal;
 }
-
-// Составы, где этот эспер есть: со своей страницы гайда (там они расписаны
-// под него) плюс из общего тир-листа команд.
-//
-// Тир есть только у вторых, поэтому раньше половина составов висела без ранга,
-// а «Zankou Hyper» и вовсе показывался дважды — один раз со страницы эспера,
-// другой из тир-листа, потому что слоты у них слегка разные (на странице
-// перечислены альтернативы, в тир-листе — основной вариант). Сводим их по
-// названию: совпало — берём слоты с гайда, а ранг из тир-листа.
-const teamKey = t => String(t.name || '').toLowerCase().replace(/[^a-zа-я0-9]+/gi, '');
-function teamsFor(slug, cap) {
-  const own = ((GUIDE.agents || {})[slug] || {}).teams || [];
-  const glob = (GUIDE.teams || []).filter(t => t.slots.some(s => s.indexOf(slug) >= 0));
-  const byName = {};
-  glob.forEach(t => { byName[teamKey(t)] = t; });
-
-  const out = [], seen = new Set();
-  const push = t => {
-    if (t.slots.length < 3) return;
-    const k = teamKey(t) || t.slots.map(s => s.slice().sort().join('/')).join('|');
-    if (seen.has(k)) return;
-    seen.add(k);
-    out.push(t);
+function bindMy(slug) {
+  const box = $('shBody');
+  if (!box) return;
+  const say = (t, bad) => {
+    const el = $('ocrSay');
+    if (el) { el.textContent = t; el.style.color = bad ? '#fbbf24' : 'var(--acc)'; }
   };
-  own.forEach(t => {
-    const g = byName[teamKey(t)];
-    push(Object.assign({}, t, { tier: (g && g.tier) || '', note: g ? '' : 'состав из гайда' }));
+  if ($('ocrPick')) {
+    $('ocrPick').onclick = () => $('ocrFile').click();
+    $('ocrFile').onchange = e => { const f = e.target.files[0]; if (f) ocrShot(f, slug, say); };
+    // вставка скрина из буфера — самый быстрый путь: Win+Shift+S и сразу Ctrl+V
+    box.onpaste = e => {
+      const it = [...(e.clipboardData ? e.clipboardData.items : [])]
+        .filter(x => x.type && x.type.indexOf('image') === 0)[0];
+      if (!it) return;
+      e.preventDefault();
+      ocrShot(it.getAsFile(), slug, say);
+    };
+  }
+  box.querySelectorAll('input[data-my]').forEach(inp => inp.onchange = () => {
+    const my = myStats(slug);
+    const v = parseFloat(inp.value);
+    if (isFinite(v)) my[inp.dataset.my] = v; else delete my[inp.dataset.my];
+    myStatsSave(slug, my);
+    calcFill(slug);
+    const g = (GUIDE.agents || {})[slug] || {};
+    const a = agentBy(slug);
+    box.innerHTML = nowHtml(slug, g, a, (t, note) =>
+      '<div class="cap" style="margin-top:0"><b>' + esc(t) + '</b><span></span>' +
+      (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
+    bindShBody();
   });
-  glob.forEach(t => push(Object.assign({}, t, { note: '' })));
-  if (!out.length) return '';
-  // сперва то, у чего есть ранг, и по убыванию ранга
-  out.sort((x, y) => {
-    const r = t => { const i = TIERS.indexOf(t.tier); return i < 0 ? 99 : i; };
-    return r(x) - r(y);
-  });
-  return cap('Составы с ним', out.length + ' шт.') + teamsHtml(out, true);
-}
-// «С кем играется»: по блоку на союзника, каждый разворачивается. Раскрытым
-// весь список занимал полтора экрана — при девяти-одиннадцати союзниках это
-// нечитаемо.
-function synergyFor(g, cap) {
-  const syn = g.synergy || [];
-  if (!syn.length) return '';
-  return cap('С кем играется', syn.length + ' союзников') + syn.map(s => {
-    const names = s.with.map(w => { const x = agentBy(w); return x ? x.ru : w; }).join(' / ');
-    const pics = s.with.map(w => {
-      const x = agentBy(w);
-      return '<img src="' + (x ? portrait(x) : '') + '" alt="" loading="lazy">';
-    }).join('');
-    return '<details class="fold"><summary>' + pics +
-        '<b>' + esc(names) + '</b>' +
-        '<span class="hint" style="margin:0 0 0 auto">' + s.notes.length + '</span>' +
-      '</summary>' +
-      '<div class="fold-in"><ul style="margin:0;padding-left:18px;color:var(--tx2);' +
-        'font-size:12px;line-height:1.6">' +
-        s.notes.map(n => '<li>' + esc(tr(n)) + '</li>').join('') +
-      '</ul></div></details>';
-  }).join('');
 }
 
 function close() {
