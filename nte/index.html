@@ -94,24 +94,34 @@
   .sheet-in{max-width:1180px;margin:0 auto;background:var(--pan);border:1px solid var(--line);
     border-radius:18px;overflow:hidden;box-shadow:0 24px 70px #000000b0}
   .sh-head{display:flex;gap:0;flex-wrap:wrap}
-  /* Арт держим коротким и липким: длинная колонка на весь рост карточки
-     уезжала вверх, стоило пролистать до сборки, и дальше читаешь простыню
-     без картинки. Теперь он остаётся на месте, как в ZZZ. */
-  .sh-art{flex:0 0 330px;position:sticky;top:0;align-self:flex-start;
-    background:#0d0f14;height:430px;overflow:hidden;border-radius:18px 0 0 0}
-  .sh-art img{width:100%;height:100%;object-fit:cover;object-position:center 12%;
+  /* Арт — крупный и чистый: подписи на нём не рисуем. Раньше имя со значком
+     стихии лежало поверх картинки и на светлых артах читалось плохо, а сама
+     картинка была вдвое меньше свободного места. Липкий, чтобы не уезжал,
+     пока листаешь сборку. */
+  .sh-art{flex:0 0 430px;position:sticky;top:0;align-self:flex-start;
+    background:#0d0f14;height:640px;overflow:hidden;border-radius:18px 0 0 18px}
+  .sh-art img{width:100%;height:100%;object-fit:cover;object-position:center 8%;
     position:absolute;inset:0}
-  .sh-art:after{content:'';position:absolute;inset:auto 0 0 0;height:42%;
-    background:linear-gradient(180deg,#0d0f1400,#111318)}
-  .sh-name{position:absolute;left:18px;right:18px;bottom:14px;z-index:2}
-  .sh-name b{display:block;font-size:26px;font-weight:800;line-height:1.1;text-shadow:0 2px 10px #000}
-  .sh-name i{font-style:normal;font-size:12px;color:var(--tx2)}
-  /* строка «тир · стихия · роль» рядом с именем — как в ZZZ */
-  .sh-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
-  .tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;
-    border-radius:8px;background:#000000a8;border:1px solid var(--line);color:var(--tx)}
-  .tag img{width:14px;height:14px}
+  .sh-art:after{content:'';position:absolute;inset:auto 0 0 0;height:22%;
+    background:linear-gradient(180deg,#0d0f1400,#0d0f14cc)}
+  /* имя, латиница и «тир · стихия · роль» — в теле карточки, а не на арте */
+  .sh-title{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+  .sh-title h2{margin:0;font-size:27px;font-weight:800;line-height:1.05}
+  .sh-title h2 i{display:block;font-style:normal;font-size:12.5px;color:var(--tx3);
+    font-weight:400;margin-top:2px}
+  .sh-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  .tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:4px 9px;
+    border-radius:9px;background:var(--pan2);border:1px solid var(--line);color:var(--tx)}
+  .tag img{width:15px;height:15px}
   .tag.tier{color:var(--gold);font-weight:800}
+  /* вкладки внутри карточки — те же, что в трекере ZZZ */
+  .htabs{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 14px;
+    border-bottom:1px solid var(--line);padding-bottom:10px}
+  .htab{background:var(--pan2);border:1px solid var(--line);color:var(--tx2);cursor:pointer;
+    border-radius:10px;padding:6px 14px;font-size:12.5px;font-family:inherit;transition:.12s}
+  .htab:hover{border-color:var(--tx3);color:var(--tx)}
+  .htab.on{border-color:var(--acc);color:#a7f3c0;font-weight:600;
+    background:linear-gradient(180deg,#4ade8029,#4ade8014)}
   .sh-body{flex:1;min-width:320px;padding:18px 20px 22px}
   .sh-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:16px}
   .chip{display:flex;align-items:center;gap:6px;background:var(--pan2);border:1px solid var(--line);
@@ -360,19 +370,28 @@
   .fold>summary:before{content:'▸';color:var(--tx3);font-size:11px}
   .fold[open]>summary:before{content:'▾'}
   .fold>summary b{color:var(--tx)}
+  .fold>summary img{width:26px;height:26px;border-radius:7px;object-fit:cover;background:#0d0f14}
   .fold-in{padding:0 13px 13px}
 
-  /* ── тир-лист по ролям ── */
-  .trow{display:flex;gap:12px;margin-bottom:9px;background:var(--pan2);border:1px solid var(--line);
-    border-radius:14px;padding:10px 12px;align-items:stretch;box-shadow:var(--glass)}
-  .trow-l{flex:0 0 54px;font-size:21px;font-weight:800;text-align:center;color:var(--gold);
-    display:flex;align-items:center;justify-content:center}
-  .trow-l.t0{color:#fca5a5} .trow-l.t3{color:var(--tx3)}
-  .trole{flex:1;display:flex;flex-direction:column;gap:7px}
-  .trole-r{display:flex;gap:9px;align-items:center}
-  .trole-n{flex:0 0 96px;font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:6px}
-  .trole-n img{width:16px;height:16px}
-  .trole-g{flex:1;display:flex;flex-wrap:wrap;gap:7px}
+  /* ── тир-лист: роли колонками ──
+     Как на prydwen: сверху заголовки ролей, под ними эсперы своей колонкой.
+     Раньше роли шли строками одна под другой, и сравнить «кто сильнее среди
+     ДД» приходилось, прыгая глазами через всю ширину. */
+  .tgrid{display:grid;gap:8px;align-items:stretch}
+  .thead{display:contents}
+  .thead > div{position:sticky;top:56px;z-index:5;background:var(--bg);
+    padding:7px 10px;border:1px solid var(--line);border-radius:11px;
+    font-size:12px;color:var(--tx2);display:flex;align-items:center;gap:7px;justify-content:center}
+  .thead > div img{width:17px;height:17px}
+  .thead > div.corner{border-color:transparent;background:transparent}
+  .tcell{background:var(--pan2);border:1px solid var(--line);border-radius:13px;
+    padding:9px;display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start;
+    box-shadow:var(--glass);min-height:64px}
+  .tcell.empty-c{background:transparent;border-style:dashed;opacity:.35}
+  .tlab{font-size:21px;font-weight:800;color:var(--gold);display:flex;align-items:center;
+    justify-content:center;background:var(--pan2);border:1px solid var(--line);
+    border-radius:13px;box-shadow:var(--glass)}
+  .tlab.t0{color:#fca5a5} .tlab.t3{color:var(--tx3)}
   .ta{width:72px;cursor:pointer;text-align:center;transition:.12s;position:relative}
   .ta:hover{transform:translateY(-2px)}
   .ta .pic{position:relative}
@@ -413,7 +432,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v5';
+const APP_VER = 'v6';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -758,43 +777,49 @@ function drawCarts() {
 // На портретах — значки стихии и роли, чтобы не открывать карточку ради этого.
 const ROLE_ORDER = ['Damage', 'Buff', 'Survival'];
 function drawTier() {
-  const roles = [...new Set(DB.agents.map(a => a.role).filter(Boolean))];
-  $('filters').innerHTML = fgroup('роль', 'role', roles, roleIcon, ROLE_RU) +
+  const els = [...new Set(DB.agents.map(a => a.el).filter(Boolean))].sort();
+  const roles = ROLE_ORDER.filter(r => DB.agents.some(a => a.role === r))
+    .concat([...new Set(DB.agents.map(a => a.role).filter(Boolean))].filter(r => ROLE_ORDER.indexOf(r) < 0));
+  $('filters').innerHTML =
+    fgroup('стихия', 'el', els, elIcon, EL_RU) +
+    fgroup('роль', 'role', roles, roleIcon, ROLE_RU) +
     '<span class="fcnt">' + DB.agents.filter(a => a.tier).length + ' с оценкой</span>';
   bindFilters();
+
   const q = state.q.trim().toLowerCase();
-  const rows = TIERS.map((t, i) => {
-    const inTier = DB.agents.filter(a => a.tier === t &&
-      (!state.role || a.role === state.role) &&
-      (!q || (a.ru + a.en).toLowerCase().indexOf(q) >= 0));
-    if (!inTier.length) return '';
-    const order = ROLE_ORDER.filter(r => inTier.some(a => a.role === r))
-      .concat([...new Set(inTier.map(a => a.role))].filter(r => ROLE_ORDER.indexOf(r) < 0));
-    return '<div class="trow"><div class="trow-l ' + (i === 0 ? 't0' : i >= 4 ? 't3' : '') + '">' +
-      esc(t) + '</div><div class="trole">' +
-      order.map(r => {
-        const list = inTier.filter(a => (a.role || '') === r);
-        if (!list.length) return '';
-        return '<div class="trole-r">' +
-          '<div class="trole-n">' + (r ? '<img src="' + roleIcon(r) + '" alt="">' : '') +
-            esc(ROLE_RU[r] || r || 'без роли') + '</div>' +
-          '<div class="trole-g">' + list.map(a =>
-            '<div class="ta" data-slug="' + a.slug + '"><div class="pic">' +
-              '<img class="p" src="' + portrait(a) + '" alt="" loading="lazy">' +
-              '<span class="badges">' +
-                (a.el ? '<img src="' + elIcon(a.el) + '" title="' + esc(EL_RU[a.el] || a.el) + '" alt="">' : '') +
-                (a.role ? '<img src="' + roleIcon(a.role) + '" title="' + esc(ROLE_RU[a.role] || a.role) + '" alt="">' : '') +
-              '</span></div>' +
-              '<span>' + esc(a.ru) + '</span></div>').join('') +
-          '</div></div>';
-      }).join('') +
-      '</div></div>';
-  }).filter(Boolean).join('');
-  $('body').innerHTML = rows || '<div class="empty">Пусто — сними фильтр.</div>';
+  const fit = a => (!state.el || a.el === state.el) && (!state.role || a.role === state.role) &&
+    (!q || (a.ru + a.en).toLowerCase().indexOf(q) >= 0);
+  // колонки — роли, строки — тиры; в ячейке эсперы этой роли в этом тире
+  const cols = roles.filter(r => !state.role || r === state.role);
+  const rows = TIERS.filter(t => DB.agents.some(a => a.tier === t && fit(a)));
+  if (!rows.length) { $('body').innerHTML = '<div class="empty">Пусто — сними фильтр.</div>'; foot(''); return; }
+
+  const cell = (t, r) => {
+    const list = DB.agents.filter(a => a.tier === t && a.role === r && fit(a))
+      .sort((x, y) => x.ru.localeCompare(y.ru, 'ru'));
+    if (!list.length) return '<div class="tcell empty-c"></div>';
+    return '<div class="tcell">' + list.map(a =>
+      '<div class="ta" data-slug="' + a.slug + '"><div class="pic">' +
+        '<img class="p" src="' + portrait(a) + '" alt="" loading="lazy">' +
+        '<span class="badges">' +
+          (a.el ? '<img src="' + elIcon(a.el) + '" title="' + esc(EL_RU[a.el] || a.el) + '" alt="">' : '') +
+        '</span></div>' +
+        '<span>' + esc(a.ru) + '</span></div>').join('') + '</div>';
+  };
+  $('body').innerHTML =
+    '<div class="tgrid" style="grid-template-columns:56px repeat(' + cols.length + ',1fr)">' +
+      '<div class="thead"><div class="corner"></div>' +
+        cols.map(r => '<div><img src="' + roleIcon(r) + '" alt="">' +
+          esc(ROLE_RU[r] || r) + '</div>').join('') +
+      '</div>' +
+      rows.map((t, i) =>
+        '<div class="tlab ' + (i === 0 ? 't0' : i >= 4 ? 't3' : '') + '">' + esc(t) + '</div>' +
+        cols.map(r => cell(t, r)).join('')).join('') +
+    '</div>';
   $('body').querySelectorAll('.ta').forEach(c => c.onclick = () => open(c.dataset.slug));
-  foot('Оценки с prydwen.gg для эндгейма PVE, внутри тира разложено по ролям. ' +
-       'У троих эсперов сборок ещё нет — они вне списка.');
+  foot('Оценки с prydwen.gg для эндгейма PVE. Колонки — роли, строки — тир.');
 }
+
 // ── Console: сетка эспера ──────────────────────────────────────────────────
 // Живёт внутри карточки: сетка у каждого эспера своя, и в отрыве от персонажа
 // планировщик не нужен. Маска — из игры: «-1» значит, что клетки нет вовсе.
@@ -1394,72 +1419,46 @@ function picksHtml(list, kind) {
     '</div>').join('') + '</div>';
 }
 
+// ── карточка эспера: четыре вкладки ────────────────────────────────────────
+// Раньше всё лежало одной простынёй: сборка, составы, синергии, сетка и
+// калькулятор подряд — до сетки нужно было пролистать метр текста. Разложено
+// так же, как в трекере ZZZ.
+const SH_TABS = [['guide','Гайд'], ['team','Команды'], ['now','Сейчас'], ['con','Консоль']];
+let shTab = 'guide';
+let shSlug = '';
+
 function open(slug) {
   const a = agentBy(slug);
-  const g = (GUIDE.agents || {})[slug] || {};
   if (!a) return;
-  const cap = (t, note) => '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
-    (note ? '<em>' + esc(note) + '</em>' : '') + '</div>';
-  const has = g.arcs && g.arcs.length;
+  if (shSlug !== slug) shTab = 'guide';
+  shSlug = slug;
+  const g = (GUIDE.agents || {})[slug] || {};
 
   plan = { cells: {}, pick: null, rot: 0, next: 1, slug: slug };
   calcFill(slug);
 
-  // Тир, стихия и роль — строкой под именем, как в трекере ZZZ. Тип сетки
-  // Console отсюда убран: это внутренняя мелочь, и она есть в самом блоке
-  // сетки ниже, где от неё хоть какой-то толк.
   const tags =
     (a.tier ? '<span class="tag tier">' + esc(a.tier) + '</span>' : '') +
     (a.el ? '<span class="tag"><img src="' + elIcon(a.el) + '" alt="">' +
       esc(EL_RU[a.el] || a.el) + '</span>' : '') +
     (a.role ? '<span class="tag"><img src="' + roleIcon(a.role) + '" alt="">' +
       esc(ROLE_RU[a.role] || a.role) + '</span>' : '');
+  const shown = SH_TABS.filter(t => t[0] !== 'con' || gridOf(slug));
 
   $('sheetIn').innerHTML =
     '<div class="sh-head" style="--el:var(--' + esc(a.el) + ')">' +
-      '<div class="sh-art">' +
-        '<img src="' + artOf(a) + '" alt="' + esc(a.ru) + '">' +
-        '<div class="sh-name"><b>' + esc(a.ru) + '</b><i>' + esc(a.en) + '</i>' +
-          '<div class="sh-tags">' + tags + '</div>' +
-        '</div>' +
-      '</div>' +
+      '<div class="sh-art"><img src="' + artOf(a) + '" alt="' + esc(a.ru) + '"></div>' +
       '<div class="sh-body">' +
-        '<div class="sh-top"><button class="x" id="close">✕ закрыть</button></div>' +
-        (!has ? '<div class="empty">Сборки для этого эспера ещё нет — на prydwen ' +
-                'её добавят ближе к выходу.</div>' : '') +
-        (has ? cap('Оружие', 'проценты: сила относительно лучшего') +
-               picksHtml(g.arcs, 'arc') : '') +
-        (has ? cap('Картриджи') + picksHtml(g.carts, 'cart') : '') +
-        (g.main || g.subs ?
-          cap('Приоритет характеристик') +
-          '<div class="prio">' +
-            (g.main ? '<b>Главные:</b> ' + prioHtml(g.main) + '<br>' : '') +
-            (g.subs ? '<b>Дополнительные:</b> ' + prioHtml(g.subs) : '') +
-          '</div>' +
-          (g.statNote ? '<div class="hint">' + esc(tr(g.statNote)) + '</div>' : '') : '') +
-        (g.goals && Object.keys(g.goals).length ?
-          cap('Куда стремиться', 'уровень 60') + goalsHtml(g, a) : '') +
-        (g.set && g.set.n ?
-          cap('Набор модулей') +
-          '<div class="set">' +
-            '<div class="set-n" title="' + esc(g.set.n) + '">' + esc(ruName('carts', g.set.n)) + '</div>' +
-            (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(tr(g.set.b2)) + '</div>' : '') +
-            (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(tr(g.set.b4)) + '</div>' : '') +
-            (g.pieces && g.pieces.length ?
-              '<div class="pieces"><span class="hint" style="margin:0">нужны детали:</span>' +
-              g.pieces.map(x => '<span class="pc">' + esc(x) + '</span>').join('') + '</div>' : '') +
-            (g.trait ? '<div class="trait"><i>бонус эспера за модули</i>' + esc(tr(g.trait)) + '</div>' : '') +
-          '</div>' : '') +
-        (g.skills ? cap('Порядок прокачки') + '<div class="prio">' + prioHtml(g.skills) + '</div>' +
-          (g.skillNote ? '<div class="hint">' + esc(g.skillNote) + '</div>' : '') : '') +
-        teamsFor(slug, cap) +
-        synergyFor(g, cap) +
-        (gridOf(slug) ?
-          '<details class="fold"><summary><b>Сетка Console</b> — разложить модули</summary>' +
-          '<div class="fold-in" id="planBox">' + planHtml(slug) + '</div></details>' : '') +
-        (g.goals && (g.goals.cr || g.goals.cd) ?
-          '<details class="fold"><summary><b>Что качать дальше</b> — отдача характеристик</summary>' +
-          '<div class="fold-in" id="calcBox">' + calcHtml() + '</div></details>' : '') +
+        '<div class="sh-title">' +
+          '<h2>' + esc(a.ru) + '<i>' + esc(a.en) + '</i>' +
+            '<div class="sh-tags">' + tags + '</div>' +
+          '</h2>' +
+          '<button class="x" id="close" style="margin-left:auto">✕ закрыть</button>' +
+        '</div>' +
+        '<div class="htabs">' + shown.map(t =>
+          '<button class="htab' + (shTab === t[0] ? ' on' : '') + '" data-h="' + t[0] + '">' +
+          esc(t[1]) + '</button>').join('') + '</div>' +
+        '<div id="shBody">' + shBody(slug, g, a) + '</div>' +
       '</div>' +
     '</div>';
 
@@ -1467,10 +1466,94 @@ function open(slug) {
   $('sheet').scrollTop = 0;
   document.body.style.overflow = 'hidden';
   if ($('close')) $('close').onclick = close;
+  $('sheetIn').querySelectorAll('.htab').forEach(b => b.onclick = () => {
+    shTab = b.dataset.h;
+    $('sheetIn').querySelectorAll('.htab').forEach(x => x.classList.toggle('on', x.dataset.h === shTab));
+    $('shBody').innerHTML = shBody(slug, g, a);
+    bindShBody();
+  });
+  bindShBody();
+}
+function bindShBody() {
   bindPlan();
   bindCalc();
-  // портреты в составах и синергиях переключают карточку на соседа
-  $('sheetIn').querySelectorAll('[data-slug]').forEach(c => c.onclick = () => open(c.dataset.slug));
+  $('shBody').querySelectorAll('[data-slug]').forEach(c =>
+    c.onclick = () => open(c.dataset.slug));
+}
+
+function shBody(slug, g, a) {
+  const cap = (t, note) => '<div class="cap" style="margin-top:0"><b>' + esc(t) + '</b><span></span>' +
+    (note ? '<em>' + esc(note) + '</em>' : '') + '</div>';
+  const has = g.arcs && g.arcs.length;
+
+  if (shTab === 'con') return planHtml(slug);
+
+  if (shTab === 'team') {
+    const t = teamsFor(slug, cap), syn = synergyFor(g, cap);
+    return (t || syn) ? t + syn :
+      '<div class="empty">Составов для этого эспера на prydwen пока нет.</div>';
+  }
+
+  if (shTab === 'now') return nowHtml(slug, g, a, cap);
+
+  if (!has) return '<div class="empty">Сборки для этого эспера ещё нет — на prydwen ' +
+    'её добавят ближе к выходу.</div>';
+  return cap('Оружие', 'проценты: сила относительно лучшего') + picksHtml(g.arcs, 'arc') +
+    cap('Картриджи') + picksHtml(g.carts, 'cart') +
+    (g.main || g.subs ?
+      cap('Приоритет характеристик') +
+      '<div class="prio">' +
+        (g.main ? '<b>Главные:</b> ' + prioHtml(g.main) + '<br>' : '') +
+        (g.subs ? '<b>Дополнительные:</b> ' + prioHtml(g.subs) : '') +
+      '</div>' +
+      (g.statNote ? '<div class="hint">' + esc(tr(g.statNote)) + '</div>' : '') : '') +
+    (g.goals && Object.keys(g.goals).length ?
+      cap('Куда стремиться', 'уровень 60') + goalsHtml(g, a) : '') +
+    (g.set && g.set.n ?
+      cap('Набор модулей') +
+      '<div class="set">' +
+        '<div class="set-n" title="' + esc(g.set.n) + '">' + esc(ruName('carts', g.set.n)) + '</div>' +
+        (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(tr(g.set.b2)) + '</div>' : '') +
+        (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(tr(g.set.b4)) + '</div>' : '') +
+        (g.pieces && g.pieces.length ?
+          '<div class="pieces"><span class="hint" style="margin:0">нужны детали:</span>' +
+          g.pieces.map(x => '<span class="pc">' + esc(x) + '</span>').join('') + '</div>' : '') +
+        (g.trait ? '<div class="trait"><i>бонус эспера за модули</i>' + esc(tr(g.trait)) + '</div>' : '') +
+      '</div>' : '') +
+    (g.skills ? cap('Порядок прокачки') + '<div class="prio">' + prioHtml(g.skills) + '</div>' +
+      (g.skillNote ? '<div class="hint">' + esc(g.skillNote) + '</div>' : '') : '');
+}
+
+// «Сейчас» — что с эспером сегодня: идёт ли его баннер, где он в тир-листе,
+// в скольких мета-составах встречается и что ему выгоднее качать.
+function nowHtml(slug, g, a, cap) {
+  const bans = (GUIDE.banners || []).filter(b => b.slug === slug);
+  const live = bans.filter(b => /current|сейчас/i.test(b.key + ' ' + b.group))[0];
+  const next = bans.filter(b => b !== live)[0];
+  const inTeams = (GUIDE.teams || []).filter(t => t.slots.some(x => x.indexOf(slug) >= 0));
+  const asCore = inTeams.filter(t => (t.slots[0] || []).indexOf(slug) >= 0).length;
+  const rat = g.ratings || {};
+
+  const tiles = '<div class="stat">' +
+      (a.tier ? '<div class="st"><b>' + esc(a.tier) + '</b>место в тир-листе</div>' : '') +
+      (rat.awk ? '<div class="st"><b>' + esc(rat.awk) + '</b>оценка при пробуждениях</div>' : '') +
+      '<div class="st' + (inTeams.length ? ' ok' : '') + '"><b>' + inTeams.length + '</b>мета-составов</div>' +
+      (asCore ? '<div class="st"><b>' + asCore + '</b>из них он ядро</div>' : '') +
+    '</div>';
+  const banner = live
+    ? '<div class="verdict">Баннер <b>идёт прямо сейчас</b>: ' + esc(banDates(live)) +
+      (live.patch ? ' · ' + esc(live.patch) : '') + '</div>'
+    : next
+      ? '<div class="box"><b>Ближайший баннер</b>' + esc(next.group) + ': ' + esc(banDates(next)) +
+        (next.patch ? ' · ' + esc(next.patch) : '') + '</div>'
+      : '<div class="hint">Баннера в расписании нет — либо он уже прошёл, либо ещё не объявлен.</div>';
+  const cal = (g.goals && (g.goals.cr || g.goals.cd))
+    ? cap('Что качать дальше', 'отдача одного сабстата') + '<div id="calcBox">' + calcHtml() + '</div>'
+    : '';
+  return tiles + banner +
+    (rat.mode ? '<div class="hint">Оценка prydwen: ' + esc(RATE_RU[rat.role] || rat.role || '') +
+      ', режим ' + esc(RATE_RU[rat.mode] || rat.mode) + '.</div>' : '') +
+    cal;
 }
 
 // Составы, где этот эспер есть. Сначала берём его собственную страницу гайда
@@ -1489,21 +1572,29 @@ function teamsFor(slug, cap) {
   return cap('Составы с ним', all.length + ' шт.') +
     teamsHtml(all.map(t => Object.assign({}, t, { tier: t.tier || '' })), true);
 }
-// «С кем играется»: пояснения с prydwen, по одному блоку на союзника.
+// «С кем играется»: по блоку на союзника, каждый разворачивается. Раскрытым
+// весь список занимал полтора экрана — при девяти-одиннадцати союзниках это
+// нечитаемо.
 function synergyFor(g, cap) {
   const syn = g.synergy || [];
   if (!syn.length) return '';
-  return cap('С кем играется') + syn.map(s => {
-    const heads = s.with.map(w => {
-      const a = agentBy(w);
-      return '<span data-slug="' + esc(w) + '" style="display:flex;align-items:center;gap:7px;cursor:pointer">' +
-        '<img src="' + (a ? portrait(a) : '') + '" alt="">' +
-        '<b>' + esc(a ? a.ru : w) + '</b></span>';
+  return cap('С кем играется', syn.length + ' союзников') + syn.map(s => {
+    const names = s.with.map(w => { const x = agentBy(w); return x ? x.ru : w; }).join(' / ');
+    const pics = s.with.map(w => {
+      const x = agentBy(w);
+      return '<img src="' + (x ? portrait(x) : '') + '" alt="" loading="lazy">';
     }).join('');
-    return '<div class="syn"><div class="syn-h">' + heads + '</div><ul>' +
-      s.notes.map(n => '<li>' + esc(tr(n)) + '</li>').join('') + '</ul></div>';
+    return '<details class="fold"><summary>' + pics +
+        '<b>' + esc(names) + '</b>' +
+        '<span class="hint" style="margin:0 0 0 auto">' + s.notes.length + '</span>' +
+      '</summary>' +
+      '<div class="fold-in"><ul style="margin:0;padding-left:18px;color:var(--tx2);' +
+        'font-size:12px;line-height:1.6">' +
+        s.notes.map(n => '<li>' + esc(tr(n)) + '</li>').join('') +
+      '</ul></div></details>';
   }).join('');
 }
+
 function close() {
   $('sheet').classList.remove('on');
   document.body.style.overflow = '';
