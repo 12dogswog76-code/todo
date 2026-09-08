@@ -179,7 +179,10 @@
     color:var(--tx3);font-size:9px;font-weight:700;flex:none}
 
   .set{background:var(--pan2);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
-  .set-n{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:7px}
+  .set-n{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:7px;
+    display:flex;align-items:center;gap:9px}
+  .set-n img{width:38px;height:38px;object-fit:contain;border-radius:9px;
+    background:#0d0f14;border:1px solid var(--line);padding:2px}
   .set-b{font-size:12px;line-height:1.55;color:var(--tx2);padding:4px 0}
   .set-b i{font-style:normal;color:var(--acc);font-weight:700;margin-right:6px}
   .pieces{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap;align-items:center}
@@ -468,7 +471,11 @@
     .team{gap:8px}
     .team-n{flex:1 1 100%}
     .tgrid{font-size:12px}
-    .thead > div{padding:6px;font-size:11px;flex-direction:column;gap:2px;text-align:center}
+    /* sticky здесь считался от десктопной шапки (top:56px) — на телефоне она
+       вдвое выше, и подпись роли зависала прямо над портретами. Липкость на
+       узком экране не нужна: таблица и так листается целиком. */
+    .thead > div{position:static;padding:6px;font-size:11px;
+      flex-direction:column;gap:2px;text-align:center}
   }
   /* Совсем узкие экраны: три колонки ролей в 375px не влезают. Схлопывать их
      нельзя — тогда ячейки разъезжаются по строкам и тир перестаёт совпадать с
@@ -503,7 +510,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v15';
+const APP_VER = 'v16';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -1675,7 +1682,11 @@ function shBody(slug, g, a) {
     (g.set && g.set.n ?
       cap('Набор модулей') +
       '<div class="set">' +
-        '<div class="set-n" title="' + esc(g.set.n) + '">' + esc(ruName('carts', g.set.n)) + '</div>' +
+        // значок набора — тот же, что в игре: по названию его не опознать
+        '<div class="set-n" title="' + esc(g.set.n) + '">' +
+          (suitOf(g.set.n) && suitOf(g.set.n).icon ?
+            '<img src="img/suits/' + esc(suitOf(g.set.n).icon) + '" alt="" loading="lazy">' : '') +
+          esc(ruName('carts', g.set.n)) + '</div>' +
         (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(tr(g.set.b2)) + '</div>' : '') +
         (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(tr(g.set.b4)) + '</div>' : '') +
         (g.pieces && g.pieces.length ?
