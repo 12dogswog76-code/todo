@@ -96,9 +96,10 @@
   .sh-head{display:flex;gap:0;flex-wrap:wrap}
   /* Арт — крупный и чистый: подписи на нём не рисуем. Раньше имя со значком
      стихии лежало поверх картинки и на светлых артах читалось плохо, а сама
-     картинка была вдвое меньше свободного места. Липкий, чтобы не уезжал,
-     пока листаешь сборку. */
-  .sh-art{flex:0 0 430px;position:sticky;top:0;align-self:flex-start;
+     картинка была вдвое меньше свободного места. Прокручивается вместе с
+     содержимым, как в трекере ZZZ: липкий вариант выглядел так, будто картинка
+     залипла и не реагирует на прокрутку. */
+  .sh-art{flex:0 0 430px;position:relative;align-self:flex-start;
     background:#0d0f14;height:640px;overflow:hidden;border-radius:18px 0 0 18px}
   .sh-art img{width:100%;height:100%;object-fit:cover;object-position:center 8%;
     position:absolute;inset:0}
@@ -133,8 +134,9 @@
     cursor:pointer;border-radius:9px;padding:5px 11px;font-size:13px;font-family:inherit}
   .x:hover{border-color:#f87171;color:#f87171}
 
-  .cap{display:flex;align-items:center;gap:9px;margin:18px 0 8px}
-  .cap b{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--tx2)}
+  .cap{display:flex;align-items:center;gap:9px;margin:26px 0 9px}
+  .cap:first-child{margin-top:0}
+  .cap b{font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--gold)}
   .cap span{flex:1;height:1px;background:var(--line)}
   .cap em{font-style:normal;font-size:10px;color:var(--tx3);border:1px solid var(--line);
     border-radius:20px;padding:1px 8px}
@@ -432,7 +434,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v6';
+const APP_VER = 'v7';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -1070,8 +1072,9 @@ function teamMatches(t, q) {
 function teamsHtml(list, withTier) {
   return list.map(t =>
     '<div class="team">' +
-      (withTier ? '<div class="team-l ' + (t.tier === 'S+' ? 't0' : /C|D/.test(t.tier) ? 't3' : '') + '">' +
-        esc(t.tier || '') + '</div>' : '') +
+      (withTier ? '<div class="team-l ' + (t.tier === 'S+' ? 't0' : (!t.tier || /C|D/.test(t.tier)) ? 't3' : '') +
+        '" title="' + (t.tier ? 'место в тир-листе команд' : 'этого состава в тир-листе команд нет') + '">' +
+        esc(t.tier || '·') + '</div>' : '') +
       '<div class="team-n">' + esc(t.name || 'состав') +
         (t.note ? '<i>' + esc(t.note) + '</i>' : '') + '</div>' +
       '<div class="team-s">' + t.slots.map(slotHtml).join('') + '</div>' +
@@ -1423,7 +1426,7 @@ function picksHtml(list, kind) {
 // Раньше всё лежало одной простынёй: сборка, составы, синергии, сетка и
 // калькулятор подряд — до сетки нужно было пролистать метр текста. Разложено
 // так же, как в трекере ZZZ.
-const SH_TABS = [['guide','Гайд'], ['team','Команды'], ['now','Сейчас'], ['con','Консоль']];
+const SH_TABS = [['guide','Гайд'], ['now','Сейчас'], ['team','Команды'], ['con','Консоль']];
 let shTab = 'guide';
 let shSlug = '';
 
@@ -1556,21 +1559,41 @@ function nowHtml(slug, g, a, cap) {
     cal;
 }
 
-// Составы, где этот эспер есть. Сначала берём его собственную страницу гайда
-// (там составы под него и расписаны), потом добираем из общего тир-листа.
+// Составы, где этот эспер есть: со своей страницы гайда (там они расписаны
+// под него) плюс из общего тир-листа команд.
+//
+// Тир есть только у вторых, поэтому раньше половина составов висела без ранга,
+// а «Zankou Hyper» и вовсе показывался дважды — один раз со страницы эспера,
+// другой из тир-листа, потому что слоты у них слегка разные (на странице
+// перечислены альтернативы, в тир-листе — основной вариант). Сводим их по
+// названию: совпало — берём слоты с гайда, а ранг из тир-листа.
+const teamKey = t => String(t.name || '').toLowerCase().replace(/[^a-zа-я0-9]+/gi, '');
 function teamsFor(slug, cap) {
   const own = ((GUIDE.agents || {})[slug] || {}).teams || [];
   const glob = (GUIDE.teams || []).filter(t => t.slots.some(s => s.indexOf(slug) >= 0));
-  const seen = new Set();
-  const all = own.concat(glob).filter(t => {
-    const k = t.slots.map(s => s.slice().sort().join('/')).join('|');
-    if (seen.has(k)) return false;
+  const byName = {};
+  glob.forEach(t => { byName[teamKey(t)] = t; });
+
+  const out = [], seen = new Set();
+  const push = t => {
+    if (t.slots.length < 3) return;
+    const k = teamKey(t) || t.slots.map(s => s.slice().sort().join('/')).join('|');
+    if (seen.has(k)) return;
     seen.add(k);
-    return t.slots.length >= 3;
+    out.push(t);
+  };
+  own.forEach(t => {
+    const g = byName[teamKey(t)];
+    push(Object.assign({}, t, { tier: (g && g.tier) || '', note: g ? '' : 'состав из гайда' }));
   });
-  if (!all.length) return '';
-  return cap('Составы с ним', all.length + ' шт.') +
-    teamsHtml(all.map(t => Object.assign({}, t, { tier: t.tier || '' })), true);
+  glob.forEach(t => push(Object.assign({}, t, { note: '' })));
+  if (!out.length) return '';
+  // сперва то, у чего есть ранг, и по убыванию ранга
+  out.sort((x, y) => {
+    const r = t => { const i = TIERS.indexOf(t.tier); return i < 0 ? 99 : i; };
+    return r(x) - r(y);
+  });
+  return cap('Составы с ним', out.length + ' шт.') + teamsHtml(out, true);
 }
 // «С кем играется»: по блоку на союзника, каждый разворачивается. Раскрытым
 // весь список занимал полтора экрана — при девяти-одиннадцати союзниках это
