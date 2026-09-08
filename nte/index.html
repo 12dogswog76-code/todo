@@ -326,12 +326,58 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v3';
+const APP_VER = 'v4';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
 
-let DB = null, GUIDE = null, RU = null, GEAR = null;
+let DB = null, GUIDE = null, RU = null, GEAR = null, I18N = null;
+
+// ── перевод текстов с prydwen ──────────────────────────────────────────────
+// Сами тексты приезжают с сайта по-английски и при каждом новом прогоне
+// сборщика перезаписываются. Поэтому перевод лежит отдельным файлом-словарём
+// «оригинал → русский»: данные можно пересобирать сколько угодно, перевод от
+// этого не теряется. Чего в словаре нет — показываем как есть.
+function tr(s) {
+  if (!s) return s;
+  const d = I18N && I18N.t;
+  return (d && d[s]) || s;
+}
+// Приоритеты («Crit Rate > Crit DMG > ATK %») и порядок прокачки — это не
+// предложения, а перечни через > и =. Переводим по токенам, разделители
+// оставляем на месте.
+const PRIO_RU = {
+  'atk':'Атака', 'flat atk':'Атака (плоская)', 'flat attack':'Атака (плоская)',
+  'atk %':'Атака %', 'hp':'HP', 'hp %':'HP %', 'def':'Защита', 'def %':'Защита %',
+  'crit rate':'Шанс крита', 'crit rate %':'Шанс крита',
+  'crit dmg':'Крит. урон', 'crit dmg %':'Крит. урон',
+  'dmg':'Урон %', 'dmg %':'Урон %', 'dmg%':'Урон %',
+  'break intensity':'Инт. разрушения', 'cycle intensity':'Инт. цикла',
+  'healing bonus':'Бонус лечения', 'mental damage':'Ментальный урон',
+  'anima dmg':'Урон Анимы', 'anima dmg %':'Урон Анимы',
+  'chaos dmg':'Урон Хаоса', 'chaos dmg %':'Урон Хаоса',
+  'cosmos dmg':'Урон Космоса', 'cosmos dmg %':'Урон Космоса',
+  'incantation dmg':'Урон Заклинания', 'incantation dmg %':'Урон Заклинания',
+  'lakshana dmg':'Урон Лакшаны', 'lakshana dmg %':'Урон Лакшаны',
+  'psyche dmg':'Урон Психики', 'psyche dmg %':'Урон Психики', 'psyche damage':'Урон Психики',
+  'basic':'Обычная', 'basics':'Обычные', 'skill':'Навык', 'ult':'Ульта',
+  'ultimate':'Ульта', 'support':'Поддержка', 'support skill':'Навык поддержки',
+  'passive 1':'Пассивка 1', 'passive 2':'Пассивка 2'
+};
+function prioRu(s) {
+  return String(s || '').split(/(\s*(?:>>|>|=)\s*)/).map(p => {
+    if (/^[\s>=]*$/.test(p)) return p;
+    const t = p.trim().replace(/\s+/g, ' ');
+    const ru = PRIO_RU[t.toLowerCase()];
+    return ru ? p.replace(t, ru) : p;
+  }).join('');
+}
+const RATE_RU = { Damage:'Урон', Support:'Поддержка', Hybrid:'Гибрид',
+                  Survival:'Выживание', Buff:'Поддержка', 'Endgame PVE':'эндгейм PVE' };
+// Награды за коды: валюты оставляем как в игре, служебные слова переводим.
+function rewRu(s) {
+  return String(s || '').replace(/\bMaterials\b/g, 'материалы').replace(/\bx(\d+)/g, '×$1');
+}
 const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan: 'mint' };
 
 const TABS = [
@@ -382,10 +428,11 @@ const artOf = a => 'img/art/' + a.slug + '.png';
 
 async function load() {
   const grab = (f, opt) => fetch(f).then(r => r.json()).catch(() => opt ? null : Promise.reject(new Error(f)));
-  const [db, guide, dict, gear] = await Promise.all([
-    grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1), grab('nte-gear.json', 1)
+  const [db, guide, dict, gear, i18n] = await Promise.all([
+    grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1),
+    grab('nte-gear.json', 1), grab('nte-i18n.json', 1)
   ]);
-  DB = db; GUIDE = guide; RU = dict; GEAR = gear;
+  DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n;
   $('ver').textContent = APP_VER;
   drawTabs();
   draw();
@@ -640,7 +687,7 @@ function drawPlan() {
           '<div class="st"><b>' + cnt.IV + '</b>тип IV</div>' +
         '</div>' +
         (gd.trait ? '<div class="set"><div class="trait" style="border:0;padding:0;margin:0">' +
-          '<i>бонус эспера за модули</i>' + esc(gd.trait) + '</div></div>' : '') +
+          '<i>бонус эспера за модули</i>' + esc(tr(gd.trait)) + '</div></div>' : '') +
         (gd.pieces && gd.pieces.length ? '<div class="cap"><b>Гайд советует</b><span></span></div>' +
           '<div class="pieces">' + gd.pieces.map(p => '<span class="pc">' + esc(p) + '</span>').join('') +
           '</div>' : '') +
@@ -872,7 +919,7 @@ function drawCodes() {
       ? '<div class="list">' + list.map(c =>
           '<div class="code">' +
             '<b>' + esc(c.code) + '</b>' +
-            '<i>' + esc(c.rew || '') +
+            '<i>' + esc(rewRu(c.rew || '')) +
               (c.note ? ' <em>· ' + esc(codeNote(c.note)) + '</em>' : '') +
               (c.date ? ' <em>· с ' + esc(ruDate(c.date)) + '</em>' : '') +
               (c.until ? ' <em>· до ' + esc(ruDate(c.until)) + '</em>' : '') + '</i>' +
@@ -1160,7 +1207,7 @@ function drawCalc() {
 // ── карточка эспера ────────────────────────────────────────────────────────
 function prioHtml(s) {
   if (!s) return '';
-  return esc(s).replace(/(&gt;&gt;|&gt;|=)/g, '<span class="gt">$1</span>');
+  return esc(prioRu(s)).replace(/(&gt;&gt;|&gt;|=)/g, '<span class="gt">$1</span>');
 }
 function goalsHtml(g, a) {
   const G = g.goals || {}, N = g.goalNotes || {};
@@ -1169,7 +1216,7 @@ function goalsHtml(g, a) {
   return '<div class="goals">' + keys.map(k => {
     const lo = G[k][0], hi = G[k][1];
     const val = (lo === hi ? lo : lo + ' – ' + hi) + (STAT_PCT[k] ? '%' : '');
-    const note = N[k] || '';
+    const note = tr(N[k] || '');
     return '<div class="goal' + (note ? ' note' : '') + '"' +
       (note ? ' title="' + esc(note) + '"' : '') + '>' +
       '<span>' + esc(statName(k, a)) + (note ? ' <u>?</u>' : '') + '</span>' +
@@ -1223,19 +1270,19 @@ function open(slug) {
             (g.main ? '<b>Главные:</b> ' + prioHtml(g.main) + '<br>' : '') +
             (g.subs ? '<b>Дополнительные:</b> ' + prioHtml(g.subs) : '') +
           '</div>' +
-          (g.statNote ? '<div class="hint">' + esc(g.statNote) + '</div>' : '') : '') +
+          (g.statNote ? '<div class="hint">' + esc(tr(g.statNote)) + '</div>' : '') : '') +
         (g.goals && Object.keys(g.goals).length ?
           cap('Куда стремиться', 'уровень 60') + goalsHtml(g, a) : '') +
         (g.set && g.set.n ?
           cap('Набор модулей') +
           '<div class="set">' +
             '<div class="set-n" title="' + esc(g.set.n) + '">' + esc(ruName('carts', g.set.n)) + '</div>' +
-            (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(g.set.b2) + '</div>' : '') +
-            (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(g.set.b4) + '</div>' : '') +
+            (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(tr(g.set.b2)) + '</div>' : '') +
+            (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(tr(g.set.b4)) + '</div>' : '') +
             (g.pieces && g.pieces.length ?
               '<div class="pieces"><span class="hint" style="margin:0">нужны детали:</span>' +
               g.pieces.map(p => '<span class="pc">' + esc(p) + '</span>').join('') + '</div>' : '') +
-            (g.trait ? '<div class="trait"><i>бонус эспера за модули</i>' + esc(g.trait) + '</div>' : '') +
+            (g.trait ? '<div class="trait"><i>бонус эспера за модули</i>' + esc(tr(g.trait)) + '</div>' : '') +
           '</div>' : '') +
         (g.skills ? cap('Порядок прокачки') + '<div class="prio">' + prioHtml(g.skills) + '</div>' +
           (g.skillNote ? '<div class="hint">' + esc(g.skillNote) + '</div>' : '') : '') +
@@ -1279,7 +1326,7 @@ function synergyFor(g, cap) {
         '<b>' + esc(a ? a.ru : w) + '</b></span>';
     }).join('');
     return '<div class="syn"><div class="syn-h">' + heads + '</div><ul>' +
-      s.notes.map(n => '<li>' + esc(n) + '</li>').join('') + '</ul></div>';
+      s.notes.map(n => '<li>' + esc(tr(n)) + '</li>').join('') + '</ul></div>';
   }).join('');
 }
 function close() {
