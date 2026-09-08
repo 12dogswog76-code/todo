@@ -91,8 +91,11 @@
   .sheet{position:fixed;inset:0;z-index:40;background:#05060988;backdrop-filter:blur(4px);
     display:none;overflow:auto;padding:24px 14px}
   .sheet.on{display:block}
+  /* overflow тут держать нельзя: он делает карточку контейнером прокрутки, и
+     position:sticky у арта прилипает к ней, а не к экрану — картинка стояла на
+     месте, сколько ни листай. Скругление вешаем на сам арт и на тело. */
   .sheet-in{max-width:1180px;margin:0 auto;background:var(--pan);border:1px solid var(--line);
-    border-radius:18px;overflow:hidden;box-shadow:0 24px 70px #000000b0}
+    border-radius:18px;box-shadow:0 24px 70px #000000b0}
   .sh-head{display:flex;gap:0;flex-wrap:wrap}
   /* Арт — крупный и чистый: подписи на нём не рисуем. Раньше имя со значком
      стихии лежало поверх картинки и на светлых артах читалось плохо.
@@ -444,7 +447,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v8';
+const APP_VER = 'v9';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -988,7 +991,7 @@ function planHtml(slug) {
       '</div>' +
       '<div class="plan-r">' +
         (suit || (g.set && g.set.n) ?
-          '<div class="cap" style="margin-top:0"><b>Набор модулей</b><span></span></div>' +
+          '<div class="cap" style="margin-top:4px"><b>Набор модулей</b><span></span></div>' +
           '<div class="cart" style="margin-bottom:10px">' +
             (suit && suit.icon ? '<img class="cart-ic" src="img/suits/' + esc(suit.icon) + '" alt="">' : '') +
             '<div class="item-b">' +
@@ -1542,7 +1545,10 @@ function bindShBody() {
 }
 
 function shBody(slug, g, a) {
-  const cap = (t, note) => '<div class="cap" style="margin-top:0"><b>' + esc(t) + '</b><span></span>' +
+  // margin-top тут не сбрасываем: раньше inline-стиль стоял на каждом заголовке
+  // и перебивал отступ из CSS, поэтому разделы шли впритык друг к другу.
+  // Первому заголовку отступ снимает правило .cap:first-child.
+  const cap = (t, note) => '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
     (note ? '<em>' + esc(note) + '</em>' : '') + '</div>';
   const has = g.arcs && g.arcs.length;
 
@@ -1655,7 +1661,7 @@ async function ocrShot(file, slug, say) {
   calcFill(slug);
   const g = (GUIDE.agents || {})[slug] || {};
   $('shBody').innerHTML = nowHtml(slug, g, agentBy(slug), (t, note) =>
-    '<div class="cap" style="margin-top:0"><b>' + esc(t) + '</b><span></span>' +
+    '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
     (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
   bindShBody();
 }
@@ -1747,10 +1753,68 @@ function bindMy(slug) {
     const g = (GUIDE.agents || {})[slug] || {};
     const a = agentBy(slug);
     box.innerHTML = nowHtml(slug, g, a, (t, note) =>
-      '<div class="cap" style="margin-top:0"><b>' + esc(t) + '</b><span></span>' +
+      '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
       (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
     bindShBody();
   });
+}
+
+// Составы, где этот эспер есть: со своей страницы гайда (там они расписаны
+// под него) плюс из общего тир-листа команд.
+//
+// Тир есть только у вторых, поэтому раньше половина составов висела без ранга,
+// а «Zankou Hyper» показывался дважды — один раз со страницы эспера, другой из
+// тир-листа, потому что слоты у них слегка разные. Сводим их по названию:
+// совпало — берём слоты с гайда, а ранг из тир-листа.
+const teamKey = t => String(t.name || '').toLowerCase().replace(/[^a-zа-я0-9]+/gi, '');
+function teamsFor(slug, cap) {
+  const own = ((GUIDE.agents || {})[slug] || {}).teams || [];
+  const glob = (GUIDE.teams || []).filter(t => t.slots.some(s => s.indexOf(slug) >= 0));
+  const byName = {};
+  glob.forEach(t => { byName[teamKey(t)] = t; });
+
+  const out = [], seen = new Set();
+  const push = t => {
+    if (t.slots.length < 3) return;
+    const k = teamKey(t) || t.slots.map(s => s.slice().sort().join('/')).join('|');
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(t);
+  };
+  own.forEach(t => {
+    const g = byName[teamKey(t)];
+    push(Object.assign({}, t, { tier: (g && g.tier) || '', note: g ? '' : 'состав из гайда' }));
+  });
+  glob.forEach(t => push(Object.assign({}, t, { note: '' })));
+  if (!out.length) return '';
+  out.sort((x, y) => {
+    const r = t => { const i = TIERS.indexOf(t.tier); return i < 0 ? 99 : i; };
+    return r(x) - r(y);
+  });
+  return cap('Составы с ним', out.length + ' шт.') + teamsHtml(out, true);
+}
+
+// «С кем играется»: по блоку на союзника, каждый разворачивается. Раскрытым
+// весь список занимал полтора экрана — при девяти-одиннадцати союзниках это
+// нечитаемо.
+function synergyFor(g, cap) {
+  const syn = g.synergy || [];
+  if (!syn.length) return '';
+  return cap('С кем играется', syn.length + ' союзников') + syn.map(s => {
+    const names = s.with.map(w => { const x = agentBy(w); return x ? x.ru : w; }).join(' / ');
+    const pics = s.with.map(w => {
+      const x = agentBy(w);
+      return '<img src="' + (x ? portrait(x) : '') + '" alt="" loading="lazy">';
+    }).join('');
+    return '<details class="fold"><summary>' + pics +
+        '<b>' + esc(names) + '</b>' +
+        '<span class="hint" style="margin:0 0 0 auto">' + s.notes.length + '</span>' +
+      '</summary>' +
+      '<div class="fold-in"><ul style="margin:0;padding-left:18px;color:var(--tx2);' +
+        'font-size:12px;line-height:1.6">' +
+        s.notes.map(n => '<li>' + esc(tr(n)) + '</li>').join('') +
+      '</ul></div></details>';
+  }).join('');
 }
 
 function close() {
