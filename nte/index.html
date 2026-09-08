@@ -11,7 +11,11 @@
 <meta name="theme-color" content="#08090c">
 <meta name="mobile-web-app-capable" content="yes">
 <title>NTE — справочник</title>
-<link rel="icon" href="../icon.svg">
+<!-- Своя иконка вкладки. Раньше подтягивалась ../icon.svg от списка задач,
+     и в браузере справочник было не отличить от него. -->
+<link rel="icon" href="icon-nte.ico" sizes="any">
+<link rel="icon" type="image/png" href="icon-nte.png">
+<link rel="apple-touch-icon" href="icon-nte.png">
 <style>
   :root{
     color-scheme: dark;
@@ -449,7 +453,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v12';
+const APP_VER = 'v13';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
