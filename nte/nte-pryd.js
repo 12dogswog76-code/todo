@@ -444,11 +444,11 @@
   // ключом, а у карточек — точные даты в ISO.
   const GRID_RU = {
     'current-character':  'Идут сейчас',
-    'current-weapon':     'Arc — идут сейчас',
+    'current-weapon':     'Оружие — идёт сейчас',
     'upcoming-character': 'Следующие эсперы',
-    'upcoming-weapon':    'Следующие Arc',
+    'upcoming-weapon':    'Следующее оружие',
     'next-character':     'Следующие эсперы',
-    'next-weapon':        'Следующие Arc'
+    'next-weapon':        'Следующее оружие'
   };
   function unescapeNext(s) {
     return String(s).replace(/\\u003c/gi, '<').replace(/\\u003e/gi, '>')
