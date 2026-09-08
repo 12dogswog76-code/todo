@@ -137,6 +137,8 @@
   .x{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--tx3);
     cursor:pointer;border-radius:9px;padding:5px 11px;font-size:13px;font-family:inherit}
   .x:hover{border-color:#f87171;color:#f87171}
+  a.x{color:var(--tx3);display:inline-flex;align-items:center}
+  a.x:hover{border-color:var(--acc);color:var(--acc)}
 
   .cap{display:flex;align-items:center;gap:9px;margin:20px 0 9px}
   .cap:first-child{margin-top:0}
@@ -447,7 +449,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v11';
+const APP_VER = 'v12';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -556,6 +558,7 @@ async function load() {
   ]);
   DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n;
   $('ver').textContent = APP_VER;
+  workerVer();
   drawTabs();
   draw();
 }
@@ -1205,6 +1208,23 @@ function drawCodes() {
   foot('Коды с prydwen, обновление тянет воркер alextask.');
   if (!codesLive) refreshCodes();
 }
+// Версия воркера — рядом с версией страницы: без неё непонятно, залит ли
+// свежий воркер, и почему, например, не работает распознавание скриншотов.
+async function workerVer() {
+  for (const b of API_BASES) {
+    try {
+      const r = await fetch(b + '/api/zzz/ping', { cache: 'no-store' });
+      const j = await r.json();
+      if (j && j.v) {
+        $('ver').textContent = APP_VER + ' · воркер ' + j.v;
+        $('ver').title = 'версия страницы и версия Cloudflare Worker';
+        return;
+      }
+    } catch (e) {}
+  }
+  $('ver').textContent = APP_VER + ' · воркер не отвечает';
+}
+
 async function refreshCodes() {
   const one = u => fetch(u, { cache: 'no-store' }).then(r => r.json())
     .then(j => (j && j.list && j.list.length) ? j : Promise.reject(new Error('пусто')));
@@ -1515,7 +1535,13 @@ function open(slug) {
           '<h2>' + esc(a.ru) + '<i>' + esc(a.en) + '</i>' +
             '<div class="sh-tags">' + tags + '</div>' +
           '</h2>' +
-          '<button class="x" id="close" style="margin-left:auto">✕ закрыть</button>' +
+          '<div style="margin-left:auto;display:flex;gap:7px;align-items:center">' +
+            '<a class="x" href="https://www.prydwen.gg/neverness-to-everness/characters/' +
+              esc(slug) + '" target="_blank" rel="noopener" ' +
+              'title="Полный гайд по эсперу на prydwen.gg: разбор кита, ротации, расчёты" ' +
+              'style="text-decoration:none">гайд на prydwen ↗</a>' +
+            '<button class="x" id="close">✕ закрыть</button>' +
+          '</div>' +
         '</div>' +
         '<div class="htabs">' + shown.map(t =>
           '<button class="htab' + (shTab === t[0] ? ' on' : '') + '" data-h="' + t[0] + '">' +
