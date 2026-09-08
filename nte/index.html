@@ -447,7 +447,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v10';
+const APP_VER = 'v11';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -1615,11 +1615,26 @@ function myStatsSave(slug, obj) {
 // Скриншот уходит на воркер, тот читает числа моделью зрения и возвращает их.
 // Перед отправкой ужимаем до 1400px и в jpeg: экран 2K весит мегабайты, а для
 // распознавания хватает и этого.
-const OCR_API = ['/api/nte/ocr',
-                 'https://api.alextask.ru/api/nte/ocr',
-                 'https://alextask.ru/api/nte/ocr',
-                 'https://alextask-push.12dogswog76.workers.dev/api/nte/ocr']
-  .filter((b, i) => i === 0 || b.indexOf('//' + location.host + '/') < 0);
+const API_BASES = ['', 'https://api.alextask.ru', 'https://alextask.ru',
+                   'https://alextask-push.12dogswog76.workers.dev']
+  .filter((b, i) => i === 0 || b.indexOf('//' + location.host) < 0);
+const OCR_API = API_BASES.map(b => b + '/api/nte/ocr');
+
+// Лучшая модель распознавания закрыта лицензией Meta: её принимают одним
+// запросом «agree», и в дашборде Cloudflare такой кнопки нет. Воркеру доступ к
+// AI уже выдан, поэтому согласие отправляет он — по нажатию здесь.
+async function aiAgree(say) {
+  say('отправляю согласие с лицензией…');
+  for (const b of API_BASES) {
+    try {
+      const r = await fetch(b + '/api/nte/agree', { method: 'POST' });
+      const j = await r.json();
+      if (j && j.ok) { say('лицензия принята — распознавание теперь идёт лучшей моделью'); return; }
+      if (j && j.error) { say('не вышло: ' + j.error, 1); return; }
+    } catch (e) {}
+  }
+  say('воркер не ответил — залит ли alextask-worker.js версии 27?', 1);
+}
 
 function shrink(file) {
   return new Promise((res, rej) => {
@@ -1650,7 +1665,22 @@ async function ocrShot(file, slug, say) {
       err = (j && j.error) || 'пустой ответ';
     } catch (e) { err = e.message; }
   }
-  if (!data) { say('не вышло: ' + err, 1); return; }
+  if (!data) {
+    say('не вышло: ' + err, 1);
+    // модель просит разовое согласие — предлагаем нажать кнопку прямо тут
+    if (/agree|5016|лицензи/i.test(err)) {
+      const el = $('ocrSay');
+      if (el) {
+        const b = document.createElement('button');
+        b.className = 'fb';
+        b.style.marginLeft = '8px';
+        b.textContent = 'принять лицензию модели';
+        b.onclick = () => aiAgree(say);
+        el.after(b);
+      }
+    }
+    return;
+  }
   const got = data.stats || {};
   const n = Object.keys(got).length;
   if (!n) { say('на картинке не нашлось характеристик — попробуй скрин экрана персонажа целиком', 1); return; }
