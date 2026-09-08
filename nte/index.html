@@ -846,7 +846,18 @@ function codeRedeemHint() {
 }
 function drawCodes() {
   const fallback = GUIDE.codes || { list: [] };
-  const src = (codesLive && codesLive.list && codesLive.list.length) ? codesLive : fallback;
+  // Живой список главнее: в нём появляются новые коды и пропадают закрытые.
+  // Но если воркер крутится старой версии и не отдал дату с пометкой — берём
+  // их из своего файла, чтобы карточка не обеднела.
+  const src = (codesLive && codesLive.list && codesLive.list.length)
+    ? { updated: codesLive.updated || fallback.updated,
+        list: codesLive.list.map(c => {
+          const old = (fallback.list || []).filter(x => x.code === c.code)[0] || {};
+          return { code: c.code, rew: c.rew || old.rew || '',
+                   note: c.note || old.note || '', date: c.date || old.date || '',
+                   until: c.until || old.until || '' };
+        }) }
+    : fallback;
   const q = state.q.trim().toLowerCase();
   const list = (src.list || []).filter(c => !q ||
     (c.code + ' ' + (c.rew || '')).toLowerCase().indexOf(q) >= 0);
