@@ -44,6 +44,7 @@
   .top{position:sticky;top:0;z-index:20;background:#08090ce8;backdrop-filter:blur(10px);
     border-bottom:1px solid var(--line);padding:11px 0;margin-bottom:16px}
   .top-in{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .top-in .srch{margin-left:auto}
   .logo{font-size:19px;font-weight:800;letter-spacing:.5px;display:flex;align-items:center;gap:9px}
   .logo b{color:var(--gold)}
   .logo i{font-style:normal;font-size:10px;color:var(--tx3);border:1px solid var(--line);
@@ -224,7 +225,10 @@
   .bc{display:flex;gap:11px;padding:10px 12px;border-radius:13px;background:var(--pan2);
     border:1px solid var(--line);box-shadow:var(--glass);align-items:center;cursor:default}
   .bc.live{border-color:#4ade8047;background:linear-gradient(120deg,#4ade800f,var(--pan2))}
-  .bc.top{border-color:#ffd54a3d}
+  /* Класс назывался «top» — ровно как у шапки сайта, и карточка получала её
+     position:sticky с z-index:20: главные баннеры прилипали к верху экрана и
+     наезжали на меню. Имя должно быть своим. */
+  .bc.bc-main{border-color:#ffd54a3d}
   .bc img{width:52px;height:52px;border-radius:11px;object-fit:cover;flex:none;
     background:#0d0f14;border:1px solid var(--line)}
   .bc-b{min-width:0;flex:1}
@@ -233,6 +237,10 @@
   .bc-k{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);
     border:1px solid var(--line);border-radius:20px;padding:1px 7px;margin-right:5px}
   .bc-k.arc{color:#c4b5fd;border-color:#a78bfa40}
+  /* дата — то, ради чего сюда и заходят: когда кончится и сколько осталось */
+  .bc-b i.bc-d{color:var(--gold);font-weight:700;font-size:11.5px;margin-top:2px}
+  .bc-b i.bc-d.off{color:var(--tx3);font-weight:400}
+  .bc.live .bc-b i.bc-d{color:var(--acc)}
 
   /* ── планировщик Console ── */
   .plan{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
@@ -427,6 +435,18 @@
   .empty{color:var(--tx3);font-size:12.5px;padding:26px 0;text-align:center}
 
   @media(max-width:820px){
+    /* Шапка: кнопки по центру, поиск во всю ширину под ними — иначе он висел
+       справа отдельной строкой и выглядел приклеенным сбоку. */
+    .top-in{justify-content:center;gap:9px}
+    .tabs{justify-content:center}
+    .top-in .srch{margin-left:0;flex:1 1 100%;min-width:0}
+    .logo{width:100%;justify-content:center}
+    /* значки стихии и роли на плитке эспера были почти с портрет */
+    .card-e img{width:16px;height:16px;padding:1.5px}
+    .card-t{font-size:10px;padding:2px 6px}
+    .fbar{gap:9px}
+    .fb{padding:5px 9px;font-size:11.5px}
+    .fb img{width:14px;height:14px}
     /* position:static тут был ошибкой: сама картинка внутри лежит absolute, и
        без позиционированного родителя она растягивалась на всю карточку —
        арт заливал экран и перекрывал сборку. Держим relative, липкость на
@@ -455,7 +475,9 @@
      ролью. Поэтому оставляем таблицу как есть и даём листать её вбок. */
   @media(max-width:560px){
     #body{overflow-x:auto}
-    .tgrid{min-width:540px}
+    /* 540 не хватало: в колонке помещался ровно один портрет, и тир-лист
+       вытягивался в узкие полосы. 640 дают по два в ряд. */
+    .tgrid{min-width:640px}
     .thead > div{font-size:10.5px;padding:5px}
     .ta{width:64px}
     .ta img.p{width:56px;height:56px}
@@ -481,7 +503,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v14';
+const APP_VER = 'v15';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -1084,16 +1106,18 @@ function drawBanners() {
         '<em>' + g.items.length + '</em></div>' +
       '<div class="bcards">' + g.items.map(b => {
         const a = DB.agents.filter(x => x.slug === b.slug)[0];
-        const pic = a ? portrait(a) : '';
-        return '<div class="bc' + (isLive(g) ? ' live' : '') + (b.top ? ' top' : '') + '">' +
+        // у оружия своего слага нет — ищем иконку по названию в игровой базе
+        const pic = a ? portrait(a) : arcPic(b.name);
+        return '<div class="bc' + (isLive(g) ? ' live' : '') + (b.top ? ' bc-main' : '') + '">' +
           (pic ? '<img src="' + pic + '" alt="" loading="lazy">' : '') +
           '<div class="bc-b">' +
             '<b><span class="bc-k' + (b.kind === 'arc' ? ' arc' : '') + '">' +
               (b.kind === 'arc' ? 'оружие' : 'эспер') + '</span>' +
               esc(a ? a.ru : ruName('arcs', b.name)) + '</b>' +
             (b.patch ? '<i>' + esc(b.patch) + '</i>' : '') +
-            (b.from ? '<i>' + esc(banDates(b)) + '</i>' :
-              (b.dates ? '<i>' + esc(b.dates) + '</i>' : '<i>дата не объявлена</i>')) +
+            (b.from ? '<i class="bc-d">' + esc(banDates(b)) + '</i>' :
+              (b.dates ? '<i class="bc-d">' + esc(b.dates) + '</i>' :
+                         '<i class="bc-d off">дата не объявлена</i>')) +
           '</div></div>';
       }).join('') + '</div>' +
     '</div>').join('');
@@ -1101,6 +1125,21 @@ function drawBanners() {
 }
 // Даты приходят в ISO («2026-08-19») — показываем по-нашему, днём и месяцем.
 // Если баннер идёт прямо сейчас, дописываем, сколько ему осталось.
+// Иконка Arc из игровой базы: у баннеров оружия нет ни слага, ни картинки —
+// сопоставляем по названию, английскому или русскому.
+function arcPic(name) {
+  if (!GEAR || !name) return '';
+  const n = String(name).toLowerCase();
+  const a = GEAR.arcs.filter(x => String(x.en || '').toLowerCase() === n ||
+                                  String(x.ru || '').toLowerCase() === n)[0];
+  if (a) return 'img/arcs/' + a.icon;
+  // У будущих баннеров оружие ещё безымянное, и prydwen подписывает их именем
+  // эспера («Blackbird», «Akane Rin»). Ставим тогда его портрет — лучше, чем
+  // пустая рамка.
+  const who = DB.agents.filter(x => String(x.en || '').toLowerCase() === n ||
+                                    String(x.ru || '').toLowerCase() === n)[0];
+  return who ? portrait(who) : '';
+}
 function banDates(b) {
   const d = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? m[3] + '.' + m[2] : ''; };
   const from = d(b.from), to = d(b.to);
