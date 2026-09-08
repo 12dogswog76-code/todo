@@ -510,7 +510,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v17';
+const APP_VER = 'v19';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -1744,17 +1744,30 @@ async function aiAgree(say) {
   say('воркер не ответил — залит ли alextask-worker.js версии 27?', 1);
 }
 
+// Воркер переводит картинку в массив байтов, и на крупных файлах это упирается
+// в его лимит процессорного времени: запрос повисал на минуты без ответа.
+// Поэтому ужимаем с запасом и, если всё равно тяжело, давим сильнее — пока не
+// уложимся в 300 КБ. Текст характеристик крупный, читается и в таком виде.
+const OCR_MAX_BYTES = 200 * 1024;
+function draw(img, w) {
+  const k = Math.min(1, w / Math.max(img.width, img.height));
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  return cv;
+}
 function shrink(file) {
   return new Promise((res, rej) => {
     const img = new Image();
-    img.onload = () => {
-      // 1600, а не 1400: подписи характеристик в игре мелкие, и на сжатой
-      // картинке модель их путала. Вес всё равно в пределах пары сотен КБ.
-      const k = Math.min(1, 1600 / Math.max(img.width, img.height));
-      const cv = document.createElement('canvas');
-      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
-      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-      cv.toBlob(b => b ? res(b) : rej(new Error('не сжалось')), 'image/jpeg', 0.92);
+    img.onload = async () => {
+      try {
+        for (const [w, q] of [[900, 0.8], [800, 0.75], [700, 0.7], [600, 0.65]]) {
+          const cv = draw(img, w);
+          const b = await new Promise(r => cv.toBlob(r, 'image/jpeg', q));
+          if (b && b.size <= OCR_MAX_BYTES) return res(b);
+          if (w === 600) return res(b);           // мельче уже нет смысла
+        }
+      } catch (e) { rej(e); }
     };
     img.onerror = () => rej(new Error('это не картинка'));
     img.src = URL.createObjectURL(file);
@@ -1764,16 +1777,22 @@ async function ocrShot(file, slug, say) {
   say('сжимаю картинку…');
   let blob;
   try { blob = await shrink(file); } catch (e) { say('не вышло: ' + e.message, 1); return; }
-  say('распознаю, это занимает секунд десять…');
+  say('распознаю (' + Math.round(blob.size / 1024) + ' КБ), это секунд десять…');
   let data = null, err = '';
   for (const u of OCR_API) {
+    // Ограничение по времени обязательно: без него зависший запрос оставляет
+    // надпись «распознаю…» навсегда, и непонятно, работает оно или нет.
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 45000);
     try {
-      const r = await fetch(u, { method: 'POST', body: blob,
+      const r = await fetch(u, { method: 'POST', body: blob, signal: ctl.signal,
         headers: { 'Content-Type': 'application/octet-stream' } });
       const j = await r.json();
       if (j && j.stats) { data = j; break; }
       err = (j && j.error) || 'пустой ответ';
-    } catch (e) { err = e.message; }
+    } catch (e) {
+      err = e.name === 'AbortError' ? 'сервер молчал 45 секунд' : e.message;
+    } finally { clearTimeout(timer); }
   }
   if (!data) {
     say('не вышло: ' + err, 1);
