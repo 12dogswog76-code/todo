@@ -574,6 +574,26 @@
   .flat-b{padding:12px 14px 14px}
   .flat-b b{font-family:var(--disp);font-size:16px;color:var(--gold)}
 
+  /* карта */
+  .mapwrap{position:relative;width:100%;overflow:auto;border:1px solid var(--line);
+    border-radius:16px;background:#0b0d10}
+  .mapin{position:relative;width:100%;padding-top:100%}
+  .maptiles{position:absolute;inset:0;display:grid;gap:0}
+  .maptiles img{width:100%;height:100%;display:block;object-fit:cover}
+  .mp{position:absolute;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;
+    background:var(--c);border:1.5px solid rgba(0,0,0,.65);cursor:pointer;
+    box-shadow:0 0 6px var(--c);transition:.12s}
+  .mp:hover{transform:scale(1.5);z-index:5}
+  .mp.on{background:transparent;box-shadow:none;border-color:var(--c);opacity:.5}
+  .mapbar{display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap;margin-top:10px}
+  .mapbar button{padding:7px 12px;border-radius:10px;background:var(--pan);
+    border:1px solid var(--line);color:var(--tx2);cursor:pointer;font-size:12px}
+  .mapbar button:hover{border-color:var(--acc);color:var(--tx)}
+  .mapbar label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--tx3);
+    text-transform:uppercase;letter-spacing:.5px}
+  .mapbar input{width:82px;padding:6px 8px;border-radius:9px;background:var(--pan);
+    border:1px solid var(--line);color:var(--tx);font-family:var(--mono),monospace;font-size:12px}
+
   /* планировщик прокачки: два поля уровня рядом */
   .lvpair{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 9px}
   .lvpair label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--tx3);
@@ -740,7 +760,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v30';
+const APP_VER = 'v31';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -820,7 +840,7 @@ const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan:
 const TABS = [
   ['espers', 'Эсперы'], ['arcs', 'Оружие'], ['carts', 'Картриджи'],
   ['tier', 'Тир-лист'], ['teams', 'Команды'], ['ban', 'Баннеры'],
-  ['codes', 'Коды'], ['city', 'Город'], ['mech', 'Механики']
+  ['codes', 'Коды'], ['city', 'Город'], ['map', 'Карта'], ['mech', 'Механики']
 ];
 
 const EL_RU = { Anima:'Анима', Chaos:'Хаос', Cosmos:'Космос',
@@ -909,6 +929,7 @@ function draw() {
   if (t === 'ban')    return drawBanners();
   if (t === 'codes')  return drawCodes();
   if (t === 'city')   return drawCity();
+  if (t === 'map')    return drawMap();
   if (t === 'mech')   return drawMech();
 }
 
@@ -1973,6 +1994,120 @@ function drawCity() {
   $('body').innerHTML = '<div class="list">' + list.map(carCard).join('') + '</div>';
   foot('Транспорт: цена из салона, тюнинг и раскраски — из таблиц игры. ' +
        'Машины без цены выдают за задания и события.');
+}
+
+// ── карта города ───────────────────────────────────────────────────────────
+// Точки и подложка — из файлов игры (build-nte-db.ps1), чужие карты не
+// копируем. Плитки лежат сеткой n×n; всё рисуем в долях от размера карты,
+// поэтому зум — это просто масштаб контейнера, без пересчёта координат.
+//
+// Привязка мировых координат к картинке в файлах игры не записана, поэтому
+// вписываем облако точек в карту и даём подстройку: сдвиг и масштаб
+// сохраняются в браузере, один раз подогнал — и дальше всё на местах.
+const MAP_GRP = { tp: 'переходы', shop: 'магазины', locker: 'хранение', place: 'места' };
+const MAP_COL = { tp: '#4ade80', shop: '#ffb800', locker: '#6fc0ff', place: '#b98bff' };
+function mapCal() {
+  try { return Object.assign({ dx: 0, dy: 0, k: 1, z: 4 },
+    JSON.parse(localStorage.getItem('nte-map-cal')) || {}); }
+  catch (e) { return { dx: 0, dy: 0, k: 1, z: 4 }; }
+}
+function mapCalSave(v) {
+  try { localStorage.setItem('nte-map-cal', JSON.stringify(v)); } catch (e) {}
+}
+function mapFound() {
+  try { return JSON.parse(localStorage.getItem('nte-map-found')) || {}; }
+  catch (e) { return {}; }
+}
+function mapFoundToggle(id) {
+  const f = mapFound();
+  if (f[id]) delete f[id]; else f[id] = 1;
+  try { localStorage.setItem('nte-map-found', JSON.stringify(f)); } catch (e) {}
+}
+// Облако точек → доли 0..1. Поле в 6 % по краям: у самых крайних точек
+// маркер иначе наполовину уезжает за картинку.
+function mapBox(pts) {
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const w = (x1 - x0) || 1, h = (y1 - y0) || 1;
+  // 12 % — подобрано наложением точек на плитки карты: при нём улицы и
+  // магазины совпадают, при 6 % город уезжает за край.
+  const pad = 0.12, side = Math.max(w, h) / (1 - 2 * pad);
+  return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, side: side };
+}
+function drawMap() {
+  const M = (CITY && CITY.map) || null;
+  if (!M || !(M.pts || []).length) {
+    $('filters').innerHTML = '';
+    $('body').innerHTML = '<div class="empty">Карта не собрана — прогони build-nte-db.ps1.</div>';
+    foot('');
+    return;
+  }
+  const cal = mapCal(), found = mapFound();
+  const q = state.q.trim().toLowerCase();
+  const grps = [...new Set(M.pts.map(p => p.g))];
+  const shown = M.pts.filter(p => (!state.el || p.g === state.el) &&
+    (!q || ((p.t || '') + ' ' + (p.ru || '')).toLowerCase().indexOf(q) >= 0));
+  const box = mapBox(M.pts);
+  const tiles = M.tiles || {}, n = tiles[String(cal.z)] || 6;
+
+  $('filters').innerHTML =
+    fgroup('слой', 'el', grps, null, MAP_GRP) +
+    '<span class="fcnt">' + shown.length + ' точек · отмечено ' +
+      Object.keys(found).length + '</span>';
+  bindFilters();
+
+  const marks = shown.map(p => {
+    const fx = 0.5 + (p.x - box.cx) / box.side, fy = 0.5 - (p.y - box.cy) / box.side;
+    const left = ((fx - 0.5) * cal.k + 0.5) * 100 + cal.dx;
+    const top  = ((fy - 0.5) * cal.k + 0.5) * 100 + cal.dy;
+    if (left < -5 || left > 105 || top < -5 || top > 105) return '';
+    return '<i class="mp' + (found[p.id] ? ' on' : '') + '" data-p="' + esc(p.id) + '"' +
+      ' style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%;' +
+      '--c:' + (MAP_COL[p.g] || '#fff') + '" title="' + esc((p.t || '') +
+      (p.ru ? ' — ' + p.ru : '')) + '"></i>';
+  }).join('');
+
+  const grid = [];
+  for (let i = 1; i <= n * n; i++) {
+    grid.push('<img src="img/map/z' + cal.z + '/map_bigworld_1' +
+      String(i).padStart(4, '0') + '.png" alt="" loading="lazy">');
+  }
+  $('body').innerHTML =
+    '<div class="mapwrap"><div class="mapin" id="mapIn">' +
+      '<div class="maptiles" style="grid-template-columns:repeat(' + n + ',1fr)">' +
+        grid.join('') + '</div>' +
+      marks +
+    '</div></div>' +
+    '<div class="mapbar">' +
+      '<button data-mz="3">подробнее</button><button data-mz="4">обзор</button>' +
+      '<span class="hint" style="margin:0">подстройка:</span>' +
+      '<label>вбок<input type="number" step="0.5" value="' + cal.dx + '" data-cal="dx"></label>' +
+      '<label>вверх<input type="number" step="0.5" value="' + cal.dy + '" data-cal="dy"></label>' +
+      '<label>масштаб<input type="number" step="0.02" value="' + cal.k + '" data-cal="k"></label>' +
+      '<button data-mreset>сбросить отметки</button>' +
+    '</div>';
+
+  $('body').querySelectorAll('.mp').forEach(el => el.onclick = () => {
+    mapFoundToggle(el.dataset.p);
+    el.classList.toggle('on');
+  });
+  $('body').querySelectorAll('[data-mz]').forEach(b => b.onclick = () => {
+    const c = mapCal(); c.z = +b.dataset.mz; mapCalSave(c); draw();
+  });
+  $('body').querySelectorAll('input[data-cal]').forEach(inp => inp.onchange = () => {
+    const c = mapCal(); c[inp.dataset.cal] = +inp.value || 0;
+    if (inp.dataset.cal === 'k' && !c.k) c.k = 1;
+    mapCalSave(c); draw();
+  });
+  const rs = $('body').querySelector('[data-mreset]');
+  if (rs) rs.onclick = () => {
+    try { localStorage.removeItem('nte-map-found'); } catch (e) {}
+    draw();
+  };
+  foot('Карта из файлов игры: ' + M.pts.length + ' точек — переходы, магазины, службы и камеры хранения. ' +
+       'Клик по точке отмечает её как пройденную, отметки хранит браузер. ' +
+       'Если точки не совпали с подложкой, подстрой сдвиг и масштаб внизу.');
 }
 
 // ── коды активации ─────────────────────────────────────────────────────────
