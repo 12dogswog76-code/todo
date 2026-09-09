@@ -152,26 +152,31 @@
 
   /* ── карточка эспера ── */
   .sheet{position:fixed;inset:0;z-index:40;background:#05060988;backdrop-filter:blur(4px);
-    display:none;overflow:auto;padding:24px 14px}
-  .sheet.on{display:block}
-  /* overflow тут держать нельзя: он делает карточку контейнером прокрутки, и
-     position:sticky у арта прилипает к ней, а не к экрану — картинка стояла на
-     месте, сколько ни листай. Скругление вешаем на сам арт и на тело. */
-  .sheet-in{max-width:1180px;margin:0 auto;background:var(--pan);border:1px solid var(--line);
-    border-radius:18px;box-shadow:0 24px 70px #000000b0}
-  .sh-head{display:flex;gap:0;flex-wrap:wrap}
+    display:none;padding:18px 14px}
+  .sheet.on{display:flex}
+  /* Карточка — две колонки: слева неподвижный арт с именем и вкладками,
+     справа прокручивается только содержимое. Липкий арт, который «едет» за
+     экраном, на длинных сборках показывал персонажу одни ноги. */
+  .sheet-in{max-width:1180px;width:100%;margin:auto;background:var(--pan);
+    border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 70px #000000b0;
+    max-height:calc(100vh - 36px);overflow:hidden}
+  .sh-head{display:flex;gap:0;flex-wrap:wrap;max-height:calc(100vh - 38px)}
   /* Арт — крупный и чистый: подписи на нём не рисуем. Раньше имя со значком
      стихии лежало поверх картинки и на светлых артах читалось плохо.
      Едет за экраном при прокрутке — ровно как .hart в трекере ZZZ: sticky с
      ограничением по высоте окна. Без него картинка оставалась в начале
      карточки, и дальше сборку читаешь уже без неё. */
-  .sh-art{flex:0 0 430px;position:sticky;top:14px;align-self:flex-start;
-    background:#0d0f14;height:640px;max-height:calc(100vh - 44px);
-    overflow:hidden;border-radius:18px 0 0 18px}
-  .sh-art img{width:100%;height:100%;object-fit:cover;object-position:center 8%;
+  .sh-art{flex:0 0 400px;position:relative;align-self:stretch;overflow:hidden;
+    border-radius:18px 0 0 18px;
+    /* Подложка под артом красится стихией: на голом чёрном фоне персонаж
+       выглядел вырезанным и приклеенным на пустое поле. */
+    background:radial-gradient(120% 80% at 50% 0%,
+      color-mix(in srgb,var(--el,#666) 26%,transparent) 0%,
+      color-mix(in srgb,var(--el,#666) 8%,transparent) 45%, #0d0f14 100%)}
+  .sh-art img{width:100%;height:100%;object-fit:cover;object-position:center 6%;
     position:absolute;inset:0}
-  .sh-art:after{content:'';position:absolute;inset:auto 0 0 0;height:22%;
-    background:linear-gradient(180deg,#0d0f1400,#0d0f14cc)}
+  .sh-art:after{content:'';position:absolute;inset:auto 0 0 0;height:26%;
+    background:linear-gradient(180deg,#0d0f1400,#0d0f14e6)}
   /* имя, латиница и «тир · стихия · роль» — в теле карточки, а не на арте */
   .sh-title{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:10px}
   .sh-title h2{margin:0;font-family:var(--disp);font-size:32px;font-weight:600;
@@ -195,7 +200,8 @@
     letter-spacing:.2em;text-transform:uppercase;font-family:var(--body);transition:.2s}
   .htab:hover{color:hsla(0,0%,100%,.7);background:hsla(0,0%,100%,.04)}
   .htab.on{color:var(--acc);background:hsla(140,70%,60%,.15);border-color:hsla(140,70%,60%,.35)}
-  .sh-body{flex:1;min-width:320px;padding:18px 20px 22px}
+  .sh-body{flex:1;min-width:320px;padding:18px 20px 22px;overflow-y:auto;
+    max-height:calc(100vh - 38px)}
   .sh-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:16px}
   .chip{display:flex;align-items:center;gap:6px;background:var(--pan2);border:1px solid var(--line);
     border-radius:10px;padding:5px 11px;font-size:12px;color:var(--tx2)}
@@ -397,6 +403,17 @@
     border-radius:8px;padding:4px 10px;font-size:11.5px;font-family:inherit}
   .code button:hover{border-color:var(--acc);color:var(--acc)}
   .code button.done{border-color:var(--acc);color:var(--acc)}
+  /* введённый код гаснет, но остаётся на виду — чтобы не искать его заново */
+  .code.done-c{opacity:.45}
+  .code.done-c b{color:var(--tx2);text-decoration:line-through}
+  .ck{flex:none;display:flex;align-items:center;cursor:pointer}
+  .ck input{position:absolute;opacity:0;width:0;height:0}
+  .ck span{width:19px;height:19px;border-radius:6px;border:1px solid var(--line-hard);
+    display:block;transition:.15s}
+  .ck input:checked + span{background:var(--acc);border-color:var(--acc);
+    box-shadow:0 0 12px hsla(140,70%,60%,.4)}
+  .ck input:checked + span:after{content:'✓';display:block;text-align:center;
+    color:#0d0f14;font-size:13px;font-weight:900;line-height:17px}
 
   /* ── механики и калькулятор ── */
   .doc{max-width:940px}
@@ -436,6 +453,11 @@
   .wp{background:linear-gradient(135deg,hsla(0,0%,100%,.03),rgba(10,10,10,.8));
     border:1px solid var(--line-soft);border-radius:16px;overflow:hidden;transition:.2s}
   .wp:hover{border-color:var(--line)}
+  /* Раскрытая карточка занимает всю ширину списка. Раньше она росла в своей
+     колонке, а соседние в том же ряду вытягивались следом — рядом с текстом
+     висели два пустых прямоугольника. */
+  .wp.open{grid-column:1/-1;border-color:hsla(140,70%,60%,.35);
+    box-shadow:0 0 28px hsla(140,70%,60%,.10)}
   .wp-h{display:flex;gap:11px;padding:10px 12px;cursor:pointer;align-items:center}
   .wp-h:hover{background:#ffffff06}
   .wp-ic{width:56px;height:56px;flex:none;border-radius:11px;object-fit:contain;
@@ -530,6 +552,7 @@
     padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:64px}
   .pcs .shp{display:grid;gap:1px}
   .pcs .shp i{width:7px;height:7px;border-radius:1px;background:var(--tx3)}
+  .pcs.extra{opacity:.62;border-style:dashed}
   .pcs b{font-family:var(--mono);font-size:12px;color:var(--tx)}
   .pcs i{font-style:normal;font-size:10px;color:var(--tx3)}
 
@@ -610,7 +633,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v22';
+const APP_VER = 'v23';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -1059,61 +1082,126 @@ function suitOf(name) {
 }
 
 // ── авторасклад ────────────────────────────────────────────────────────────
-// Гайд говорит, какие типы деталей нужны («II, III, III, IV»), а набор — какие
-// формы он вообще принимает. Раскладываем это по сетке сами: перебор с
-// откатом, крупные детали первыми — так они находят место, пока оно есть.
-// Раньше детали нужно было выкладывать руками, хотя раскладка ровно одна и
-// известна заранее.
+// Сетка вмещает больше деталей, чем перечисляет гайд: у Занку двадцать клеток,
+// а «II, III, III, IV» занимают двенадцать. Оставшееся место в игре тоже
+// заполняют — модулями того типа, за который у эспера начислен бонус
+// («+16% крит. урона за каждый модуль типа III»). Поэтому кладём сперва
+// перечисленное гайдом, а потом добиваем сетку выгодным типом, пока лезет.
+//
+// Перебор идёт с откатом: крупные детали первыми, иначе они не находят места.
+function traitInfo(g) {
+  const t = tr(g.trait || '');
+  const type = (t.match(/типа\s+(IV|III|II)/i) || t.match(/Type\s+(IV|III|II)/i) || [])[1] || '';
+  const val = parseFloat((t.match(/([\d.]+)\s*%/) || [])[1] || '0');
+  // что именно растёт — берём кусок до «за каждый»
+  const what = t.split(/за каждый|for each/i)[0].replace(/[+\d.%]+\s*$/, '').trim();
+  return { type: type.toUpperCase(), val: val, what: what };
+}
 function autoLayout(slug, variant) {
   const mask = planMask(slug);
   const g = (GUIDE.agents || {})[slug] || {};
-  const want = (g.pieces || []).slice();
-  if (!mask || !want.length || !GEAR || !GEAR.shapes) return null;
+  if (!mask || !GEAR || !GEAR.shapes) return null;
 
   const suit = suitOf(g.set && g.set.n);
-  const allowed = (suit && suit.geo && suit.geo.length) ? suit.geo : Object.keys(GEAR.shapes);
-  const byType = {};
-  allowed.forEach(n => { const t = typeOf(n); (byType[t] = byType[t] || []).push(n); });
-
   const H = mask.length, W = mask[0].length;
-  const order = want.map((t, i) => ({ t: t, i: i }))
-    .sort((a, b) => ({ IV:0, III:1, II:2 }[a.t] || 9) - ({ IV:0, III:1, II:2 }[b.t] || 9));
-  const occ = {}, out = [];
-  const shift = (variant || 0);
+  // Сначала пробуем формы, которые принимает набор эспера. У части наборов их
+  // мало, и такими деталями сетку целиком не закрыть — тогда идём вторым
+  // заходом по всем формам игры: лучше полная раскладка чужими формами, чем
+  // пустая сетка.
+  const suitForms = (suit && suit.geo && suit.geo.length) ? suit.geo : null;
+  const tryWith = allowed => {
 
-  function tryPut(cells, r, c) {
-    const keys = [];
-    for (const p of cells) {
-      const rr = r + p[0], cc = c + p[1];
-      if (rr < 0 || cc < 0 || rr >= H || cc >= W) return null;
-      if (mask[rr][cc] < 0 || occ[rr + ':' + cc]) return null;
-      keys.push(rr + ':' + cc);
+  // Заранее считаем все варианты «форма + поворот»: сдвигать их по сетке
+  // придётся тысячи раз, и пересчитывать координаты каждый раз незачем.
+  const forms = [];
+  allowed.forEach(name => {
+    const seen = new Set();
+    for (let rot = 0; rot < 4; rot++) {
+      const cells = rotate(shapeCells(GEAR.shapes[name]), rot);
+      const ys = cells.map(c => c[0]), xs = cells.map(c => c[1]);
+      const y0 = Math.min(...ys), x0 = Math.min(...xs);
+      const norm = cells.map(c => [c[0] - y0, c[1] - x0])
+        .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const key = JSON.stringify(norm);
+      if (seen.has(key)) continue;      // симметричные повороты не плодим
+      seen.add(key);
+      forms.push({ name: name, t: typeOf(name), cells: norm });
     }
-    return keys;
+  });
+
+  // Порядок перебора решает, каким выйдет результат. Сперва то, что назвал
+  // гайд, потом тип, за который эсперу начислен бонус, и лишь затем остальное.
+  const want = (g.pieces || []).slice();
+  const need = { II:0, III:0, IV:0 };
+  want.forEach(t => { if (need[t] != null) need[t]++; });
+  const goodType = traitInfo(g).type || 'III';
+  const shift = (variant || 0);
+  const rank = f => (need[f.t] > 0 ? 0 : f.t === goodType ? 1 : 2);
+
+  const occ = new Array(H * W).fill(0);
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++)
+    if (mask[r][c] < 0) occ[r * W + c] = -1;      // клетки нет вовсе
+  const out = [];
+  let steps = 0;
+  // Лучшее частичное решение: если полного не найдётся, покажем хотя бы его.
+  let best = [];
+
+  // Ключевая мысль: на каждом шаге закрываем ПЕРВУЮ свободную клетку. Тогда
+  // пропустить её нельзя, и дырок в раскладке не остаётся — жадный проход
+  // раньше оставлял по три-пять пустых клеток именно потому, что клал деталь
+  // где придётся и обходил неудобные места стороной.
+  function firstFree() {
+    for (let i = 0; i < occ.length; i++) if (occ[i] === 0) return i;
+    return -1;
   }
-  function step(k) {
-    if (k >= order.length) return true;
-    const need = order[k];
-    const forms = (byType[need.t] || []);
-    for (let f = 0; f < forms.length; f++) {
-      const name = forms[(f + shift) % forms.length];
-      for (let rot = 0; rot < 4; rot++) {
-        const cells = rotate(shapeCells(GEAR.shapes[name]), rot);
-        for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
-          const keys = tryPut(cells, r, c);
-          if (!keys) continue;
-          keys.forEach(x => { occ[x] = need.i + 1; });
-          out.push({ idx: need.i, t: need.t, name: name, keys: keys });
-          if (step(k + 1)) return true;
-          keys.forEach(x => { delete occ[x]; });
-          out.pop();
+  function solve() {
+    if (steps++ > 60000) return false;            // страховка от долгого перебора
+    if (out.length > best.length) best = out.slice();
+    const i = firstFree();
+    if (i < 0) return true;                        // всё закрыто
+    const r0 = Math.floor(i / W), c0 = i % W;
+    const list = forms.slice().sort((a, b) => rank(a) - rank(b));
+    for (let k = 0; k < list.length; k++) {
+      const f = list[(k + shift) % list.length];
+      // деталь должна накрыть эту клетку — примеряем каждой своей клеткой
+      for (const anchor of f.cells) {
+        const dr = r0 - anchor[0], dc = c0 - anchor[1];
+        let ok = true;
+        const idx = [];
+        for (const p of f.cells) {
+          const rr = dr + p[0], cc = dc + p[1];
+          if (rr < 0 || cc < 0 || rr >= H || cc >= W) { ok = false; break; }
+          const j = rr * W + cc;
+          if (occ[j] !== 0) { ok = false; break; }
+          idx.push(j);
         }
+        if (!ok) continue;
+        const n = out.length + 1;
+        idx.forEach(j => { occ[j] = n; });
+        const fromGuide = need[f.t] > 0;
+        if (fromGuide) need[f.t]--;
+        out.push({ idx: out.length, t: f.t, name: f.name,
+                   keys: idx.map(j => Math.floor(j / W) + ':' + (j % W)),
+                   extra: !fromGuide });
+        if (solve()) return true;
+        idx.forEach(j => { occ[j] = 0; });
+        out.pop();
+        if (fromGuide) need[f.t]++;
       }
     }
     return false;
   }
-  if (!step(0)) return null;
-  return out.sort((a, b) => a.idx - b.idx);
+    return solve() ? out : best;
+  };
+
+  const first = tryWith(suitForms || Object.keys(GEAR.shapes));
+  const cells = mask.reduce((n, r) => n + r.filter(v => v === 0).length, 0);
+  const covered = l => l.reduce((n, p) => n + p.keys.length, 0);
+  if (suitForms && covered(first) < cells) {
+    const second = tryWith(Object.keys(GEAR.shapes));
+    if (covered(second) > covered(first)) return second;
+  }
+  return first;
 }
 
 function planHtml(slug) {
@@ -1130,7 +1218,11 @@ function planHtml(slug) {
   lay.forEach(pc => pc.keys.forEach(k => { cellOf[k] = pc; }));
   const used = Object.keys(cellOf).length;
 
-  // мини-картинки уложенных деталей — как «required pieces» на prydwen
+  const cnt = { II:0, III:0, IV:0 };
+  lay.forEach(pc => { if (cnt[pc.t] != null) cnt[pc.t]++; });
+  const ti = traitInfo(g);
+  const bonus = ti.type && ti.val ? Math.round(cnt[ti.type] * ti.val * 10) / 10 : 0;
+
   const legend = lay.map(pc => {
     const cells = shapeCells(GEAR.shapes[pc.name]);
     const ys = cells.map(c => c[0]), xs = cells.map(c => c[1]);
@@ -1139,10 +1231,11 @@ function planHtml(slug) {
     let mini = '<span class="shp" style="grid-template-columns:repeat(' + w + ',7px)">';
     for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
       const has = cells.some(pt => pt[0] - y0 === r && pt[1] - x0 === c);
-      mini += '<i style="' + (has ? 'background:' + (PIECE_COLORS[pc.t] || '#8b92a3') : 'opacity:0') + '"></i>';
+      mini += '<i style="' + (has ? 'background:' + (PIECE_COLORS[pc.t] || '#8b92a3') +
+        (pc.extra ? ';opacity:.55' : '') : 'opacity:0') + '"></i>';
     }
-    return '<div class="pcs">' + mini + '</span><b>' + esc(pc.t) + '</b>' +
-      '<i>' + esc(shapeName(pc.name)) + '</i></div>';
+    return '<div class="pcs' + (pc.extra ? ' extra' : '') + '">' + mini + '</span>' +
+      '<b>' + esc(pc.t) + '</b><i>' + esc(shapeName(pc.name)) + '</i></div>';
   }).join('');
 
   const board = '<div class="board" style="grid-template-columns:repeat(' + W + ',auto)">' +
@@ -1150,16 +1243,26 @@ function planHtml(slug) {
       const k = r + ':' + c;
       const pc = cellOf[k];
       const st = v < 0 ? ' off' : (pc ? ' on' : '');
-      const bg = pc ? ' style="background:' + (PIECE_COLORS[pc.t] || '#8b92a3') + '"' : '';
+      const bg = pc ? ' style="background:' + (PIECE_COLORS[pc.t] || '#8b92a3') +
+        (pc.extra ? ';opacity:.62' : '') + '"' : '';
       return '<div class="cell' + st + '"' + bg + '>' + (pc ? '<b>' + esc(pc.t) + '</b>' : '') + '</div>';
     }).join('')).join('') + '</div>';
 
   return '<div class="plan">' +
       '<div class="plan-l">' + board +
-        '<div class="hint">Сетка типа ' + (a.grid || '?') + ', занято ' + used + ' из ' + free +
-          ' клеток. Так детали из гайда как раз помещаются.</div>' +
+        '<div class="hint">Сетка типа ' + (a.grid || '?') + ': занято ' + used + ' из ' + free +
+          ' клеток. Ярким показаны детали из гайда, приглушённым — чем добить остаток.</div>' +
       '</div>' +
       '<div class="plan-r">' +
+        '<div class="stat">' +
+          '<div class="st"><b>' + cnt.II + '</b>тип II</div>' +
+          '<div class="st"><b>' + cnt.III + '</b>тип III</div>' +
+          '<div class="st"><b>' + cnt.IV + '</b>тип IV</div>' +
+          (bonus ? '<div class="st ok"><b>+' + bonus + '%</b>' + esc(ti.what || 'бонус эспера') + '</div>' : '') +
+        '</div>' +
+        (g.trait ? '<div class="verdict" style="margin-bottom:12px">' + esc(tr(g.trait)) +
+          (bonus ? ' <b>Сейчас на сетке ' + cnt[ti.type] + ' таких — это +' + bonus + '%.</b>' : '') +
+          '</div>' : '') +
         (suit || (g.set && g.set.n) ?
           '<div class="cap" style="margin-top:4px"><b>Набор модулей</b><span></span></div>' +
           '<div class="cart" style="margin-bottom:10px">' +
@@ -1168,18 +1271,15 @@ function planHtml(slug) {
               '<b style="font-size:14px;color:var(--gold)">' + esc(ruName('carts', g.set.n)) + '</b>' +
               (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(tr(g.set.b2)) + '</div>' : '') +
               (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(tr(g.set.b4)) + '</div>' : '') +
-              (g.trait ? '<div class="trait"><i>бонус эспера за модули</i>' + esc(tr(g.trait)) + '</div>' : '') +
             '</div>' +
           '</div>' : '') +
-        (lay.length ? '<div class="cap"><b>Нужные детали</b><span></span><em>из гайда</em></div>' +
-          '<div class="pieces-row">' + legend + '</div>' : '') +
-        (g.pieces && g.pieces.length && !lay.length ?
-          '<div class="hint">Гайд советует детали ' + g.pieces.join(', ') +
-          ', но уложить их на эту сетку не вышло — возможно, набор принимает другие формы.</div>' : '') +
+        (lay.length ? '<div class="cap"><b>Что стоит на сетке</b><span></span><em>' +
+          lay.length + ' деталей</em></div><div class="pieces-row">' + legend + '</div>' : '') +
         '<button class="fb" id="planNext" style="margin-top:12px">другой вариант раскладки</button>' +
       '</div>' +
     '</div>';
 }
+
 function bindPlan() {
   const b = $('planNext');
   if (b) b.onclick = () => {
@@ -1336,6 +1436,18 @@ function ruDate(s) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
   return m ? m[3] + '.' + m[2] + '.' + m[1] : s;
 }
+// Какие коды уже введены — держим в браузере. У каждого свои: кто открыл сайт,
+// тот и отмечает, чужие галочки не мешают.
+function codesUsed() {
+  try { return JSON.parse(localStorage.getItem('nte-codes-used')) || {}; }
+  catch (e) { return {}; }
+}
+function codeToggle(code) {
+  const u = codesUsed();
+  if (u[code]) delete u[code]; else u[code] = Date.now();
+  try { localStorage.setItem('nte-codes-used', JSON.stringify(u)); } catch (e) {}
+  drawCodes();
+}
 function codeRedeemHint() {
   return 'Где вводить: в игре нажми <b>Esc</b> (на геймпаде — Start), открой телефон, ' +
          'значок с тремя нотами рядом с профилем, дальше кнопка <b>Redeem Code</b>.';
@@ -1355,10 +1467,14 @@ function drawCodes() {
         }) }
     : fallback;
   const q = state.q.trim().toLowerCase();
+  const used = codesUsed();
   const list = (src.list || []).filter(c => !q ||
-    (c.code + ' ' + (c.rew || '')).toLowerCase().indexOf(q) >= 0);
+    (c.code + ' ' + (c.rew || '')).toLowerCase().indexOf(q) >= 0)
+    // введённые уезжают вниз: сверху то, что ещё можно забрать
+    .slice().sort((x, y) => (used[x.code] ? 1 : 0) - (used[y.code] ? 1 : 0));
+  const left = list.filter(c => !used[c.code]).length;
   const when = src.updated || '';
-  $('filters').innerHTML = '<span class="fcnt">' + list.length + ' кодов' +
+  $('filters').innerHTML = '<span class="fcnt">не введено ' + left + ' из ' + list.length +
     (codesLive ? ' · обновлено с сервера' : '') + '</span>';
   $('body').innerHTML =
     '<div class="box">' + codeRedeemHint() +
@@ -1366,7 +1482,10 @@ function drawCodes() {
     '</div>' +
     (list.length
       ? '<div class="list">' + list.map(c =>
-          '<div class="code">' +
+          '<div class="code' + (used[c.code] ? ' done-c' : '') + '">' +
+            '<label class="ck" title="отметить, что уже ввёл">' +
+              '<input type="checkbox" data-u="' + esc(c.code) + '"' +
+              (used[c.code] ? ' checked' : '') + '><span></span></label>' +
             '<b>' + esc(c.code) + '</b>' +
             '<i>' + esc(rewRu(c.rew || '')) +
               (c.note ? ' <em>· ' + esc(codeNote(c.note)) + '</em>' : '') +
@@ -1377,6 +1496,8 @@ function drawCodes() {
       : '<div class="empty">Кодов нет.</div>') +
     '<div class="hint">Коды не бессрочные: часть из них рано или поздно закроют. ' +
     'Если игра пишет, что код недействителен — значит, срок вышел.</div>';
+  $('body').querySelectorAll('input[data-u]').forEach(x =>
+    x.onchange = () => codeToggle(x.dataset.u));
   $('body').querySelectorAll('.code button').forEach(b => b.onclick = () => {
     const t = b.dataset.c;
     const done = () => { b.textContent = 'скопировано'; b.classList.add('done');
