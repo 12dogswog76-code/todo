@@ -159,8 +159,8 @@
      экраном, на длинных сборках показывал персонажу одни ноги. */
   .sheet-in{max-width:1180px;width:100%;margin:auto;background:var(--pan);
     border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 70px #000000b0;
-    max-height:100%;overflow:hidden;display:flex}
-  .sh-head{display:flex;gap:0;flex-wrap:wrap;width:100%;min-height:0}
+    max-height:100%;overflow:hidden;display:flex;align-items:stretch}
+  .sh-head{display:flex;gap:0;flex:1 1 auto;min-height:0;min-width:0}
   /* Арт — крупный и чистый: подписи на нём не рисуем. Раньше имя со значком
      стихии лежало поверх картинки и на светлых артах читалось плохо.
      Едет за экраном при прокрутке — ровно как .hart в трекере ZZZ: sticky с
@@ -486,13 +486,15 @@
   .lvl div.max{border-color:#ffd54a4d}
   .lvl div.max b{color:var(--gold)}
   /* ползунки уровня и список материалов */
-  .lvpick{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;
-    margin-top:10px}
-  .lvpick label{font-size:9px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
-    color:hsla(0,0%,100%,.3);display:block}
-  .lvpick label b{font-family:var(--disp);font-size:17px;letter-spacing:0;color:var(--acc);
-    margin-left:7px}
-  .lvpick input{width:100%;margin-top:6px;accent-color:var(--acc);background:transparent}
+  .lvpick{position:relative;margin:12px 0 30px}
+  .lvpick input{width:100%;accent-color:var(--acc);background:transparent;display:block;
+    height:22px;cursor:pointer}
+  /* деления под дорожкой — как разметка уровней на ntebuild */
+  .ticks{position:relative;height:14px;margin-top:-2px}
+  .ticks span{position:absolute;transform:translateX(-50%);font-size:8.5px;font-weight:800;
+    letter-spacing:.08em;color:hsla(0,0%,100%,.28);padding-top:5px}
+  .ticks span:before{content:'';position:absolute;top:0;left:50%;width:1px;height:4px;
+    background:hsla(0,0%,100%,.2)}
   .mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px}
   .mat{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;
     background:var(--pan);border:1px solid var(--line-soft);font-size:11px}
@@ -652,7 +654,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v24';
+const APP_VER = 'v25';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -759,7 +761,10 @@ const portrait = a => 'img/espers/' + a.slug + '.png';
 const artOf = a => 'img/art/' + a.slug + '.png';
 
 async function load() {
-  const grab = (f, opt) => fetch(f).then(r => r.json()).catch(() => opt ? null : Promise.reject(new Error(f)));
+  // ?v=версия — иначе браузер отдаёт файл из кеша, и свежие поля данных
+  // (опыт, материалы прокачки) на странице просто не появляются.
+  const grab = (f, opt) => fetch(f + '?v=' + APP_VER).then(r => r.json())
+    .catch(() => opt ? null : Promise.reject(new Error(f)));
   const [db, guide, dict, gear, i18n] = await Promise.all([
     grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1),
     grab('nte-gear.json', 1), grab('nte-i18n.json', 1)
@@ -928,92 +933,108 @@ function drawArcs() {
     (hasStats ? '' : ' Характеристики появятся после прогона build-nte-db.ps1.'));
 }
 
-// Разворот: два ползунка «с уровня» и «до уровня», под ними — что вырастет и
-// во что обойдётся. Считаем по игровым таблицам: опыт на каждый уровень плюс
-// материалы и деньги за прорывы, которые попадают в выбранный отрезок.
-const arcPlan = {};                       // выбранные уровни, по одному на оружие
-function arcRange(a) {
-  const p = arcPlan[a.id] || {};
-  const max = (a.lv || []).length ? a.lv[a.lv.length - 1].lv : 80;
-  return { from: p.from != null ? p.from : 1, to: p.to != null ? p.to : max, max: max };
-}
+// Разворот: один ползунок уровня. Под ним — что оружие даёт на этом уровне и
+// во что обошёлся путь с первого. Двух ползунков не нужно: качают всегда с
+// начала, а «с какого по какой» — вопрос, который в игре не стоит.
+const arcLv = {};                          // выбранный уровень, по одному на оружие
+function arcMaxLv(a) { const l = a.lv || []; return l.length ? l[l.length - 1].lv : 80; }
 function arcAtk(a, lv) {
   const row = (a.lv || []).filter(x => x.lv === lv)[0];
   return row ? row.atk : 0;
 }
-// Прорывы, которые придётся сделать по дороге: у каждого свой предел уровня,
-// и без него дальше не поднять.
-function arcSteps(a, from, to) {
-  return (a.bt || []).filter(b => b.n > 0 && b.maxLv > from && b.maxLv <= to + 0.5 ||
-                                  (b.n > 0 && b.maxLv >= from && b.maxLv < to));
+// Сколько прорывов пройдено к этому уровню: у каждого свой потолок, выше него
+// без прорыва не поднять.
+function arcStage(a, lv) {
+  const bt = (a.bt || []).slice().sort((x, y) => x.n - y.n);
+  let last = bt[0] || null;
+  for (const b of bt) { if (b.maxLv < lv) last = b; }
+  const done = bt.filter(b => b.n > 0 && b.maxLv < lv);
+  return { done: done, cur: last };
 }
-function arcCost(a, from, to) {
-  const exp = (a.exp || []).slice(from - 1, to - 1).reduce((n, x) => n + (x || 0), 0);
+// Вторая характеристика оружия растёт прорывами: показываем ту, что уже открыта.
+function arcSub(a, lv) {
+  const st = arcStage(a, lv);
+  const from = st.done.length ? st.done[st.done.length - 1] : (a.bt || [])[0];
+  const mods = (from && from.mods) || [];
+  return mods.filter(m => m.p !== 'AtkBase')[0] || null;
+}
+function arcBonusAtk(a, lv) {
+  const st = arcStage(a, lv);
+  const from = st.done.length ? st.done[st.done.length - 1] : (a.bt || [])[0];
+  const m = ((from && from.mods) || []).filter(x => x.p === 'AtkBase')[0];
+  return m ? m.v : 0;
+}
+function arcCost(a, lv) {
+  const exp = (a.exp || []).slice(0, Math.max(0, lv - 1)).reduce((n, x) => n + (x || 0), 0);
   const items = {}, add = list => (list || []).forEach(it => {
-    const k = it.id;
-    if (!items[k]) items[k] = { ru: it.ru, icon: it.icon, rar: it.rar, n: 0 };
-    items[k].n += it.n;
+    if (!items[it.id]) items[it.id] = { ru: it.ru, icon: it.icon, rar: it.rar, n: 0 };
+    items[it.id].n += it.n;
   });
   let gold = 0;
-  // прорыв нужен, когда его предел уровня лежит внутри выбранного отрезка
-  (a.bt || []).forEach(b => {
-    if (b.n === 0) return;
-    const prev = ((a.bt || []).filter(x => x.n === b.n - 1)[0] || {}).maxLv || 1;
-    if (prev >= to || b.maxLv <= from) return;
-    add(b.need); gold += b.gold || 0;
-  });
+  arcStage(a, lv).done.forEach(b => { add(b.need); gold += b.gold || 0; });
   return { exp: exp, gold: gold, items: Object.values(items) };
 }
+const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
 function arcDetail(a, who) {
   const lv = a.lv || [];
   if (!lv.length) return '<div class="hint">' + esc(a.desc || '') + '</div>';
-  const r = arcRange(a);
-  const cost = arcCost(a, r.from, r.to);
-  const bt = (a.bt || []);
-  const sub2 = (bt[bt.length - 1] || { mods: [] }).mods.filter(m => m.p !== 'AtkBase')[0];
-  const num = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const max = arcMaxLv(a);
+  const cur = arcLv[a.id] != null ? arcLv[a.id] : max;
+  // деления как на ntebuild: каждые десять уровней и последний
+  const marks = [];
+  for (let i = 1; i <= max; i += 10) marks.push(i === 1 ? 1 : i - 1);
+  if (marks[marks.length - 1] !== max) marks.push(max);
 
   return (who ? '<div class="hint" style="margin:9px 0 0">Именное оружие: <b>' + esc(who.ru) +
       '</b> — у него от него больше всего пользы.</div>' : '') +
-    '<div class="cap"><b>Прокачка</b><span></span><em>с ' + r.from + ' до ' + r.to + ' уровня</em></div>' +
+    '<div class="cap"><b>Прокачка</b><span></span><em id="lvcap' + esc(a.id) + '">до ' + cur +
+      ' уровня</em></div>' +
     '<div class="lvpick">' +
-      '<label>с уровня <b>' + r.from + '</b>' +
-        '<input type="range" min="1" max="' + r.max + '" value="' + r.from +
-        '" data-arc="' + esc(a.id) + '" data-k="from"></label>' +
-      '<label>до уровня <b>' + r.to + '</b>' +
-        '<input type="range" min="1" max="' + r.max + '" value="' + r.to +
-        '" data-arc="' + esc(a.id) + '" data-k="to"></label>' +
+      '<input type="range" min="1" max="' + max + '" value="' + cur +
+        '" step="1" data-arc="' + esc(a.id) + '">' +
+      '<div class="ticks">' + marks.map(m =>
+        '<span style="left:' + ((m - 1) / (max - 1) * 100).toFixed(2) + '%">' + m + '</span>').join('') +
+      '</div>' +
     '</div>' +
-    '<div class="stat" style="margin-top:10px">' +
-      '<div class="st"><b>' + num(arcAtk(a, r.from)) + ' → ' + num(arcAtk(a, r.to)) + '</b>атака</div>' +
+    '<div class="stat" id="lvst' + esc(a.id) + '">' + arcStatHtml(a, cur) + '</div>' +
+    '<div id="lvmat' + esc(a.id) + '">' + arcMatHtml(a, cur) + '</div>' +
+    (a.desc ? '<div class="hint">' + esc(a.desc) + '</div>' : '');
+}
+function arcStatHtml(a, lv) {
+  const sub2 = arcSub(a, lv), bonus = arcBonusAtk(a, lv);
+  const st = arcStage(a, lv);
+  return '<div class="st ok"><b>' + num(arcAtk(a, lv) + bonus) + '</b>атака на ' + lv + ' ур.</div>' +
+    (sub2 ? '<div class="st"><b>' + esc(statVal(sub2)) + '</b>' + esc(sub2.ru) + '</div>' : '') +
+    '<div class="st"><b>' + st.done.length + '</b>прорывов пройдено</div>';
+}
+function arcMatHtml(a, lv) {
+  const cost = arcCost(a, lv);
+  if (!cost.exp && !cost.items.length) return '';
+  return '<div class="cap"><b>Во что обойдётся</b><span></span><em>с первого уровня</em></div>' +
+    '<div class="stat">' +
       (cost.exp ? '<div class="st"><b>' + num(cost.exp) + '</b>опыта</div>' : '') +
       (cost.gold ? '<div class="st"><b>' + num(cost.gold) + '</b>монет</div>' : '') +
     '</div>' +
-    (cost.items.length ?
-      '<div class="cap"><b>Материалы</b><span></span><em>на прорывы в этом отрезке</em></div>' +
-      '<div class="mats">' + cost.items.map(it =>
-        '<div class="mat' + (it.rar ? ' r' + esc(it.rar) : '') + '">' +
-          (it.icon ? '<img src="img/items/' + esc(it.icon) + '" alt="" loading="lazy">' : '') +
-          '<span>' + esc(it.ru) + '</span><b>×' + it.n + '</b></div>').join('') +
-      '</div>' : '') +
-    (sub2 ? '<div class="hint">Вторая характеристика на максимуме: ' + esc(sub2.ru) +
-      ' +' + esc(statVal(sub2)) + '.</div>' : '') +
-    (a.desc ? '<div class="hint">' + esc(a.desc) + '</div>' : '');
+    (cost.items.length ? '<div class="mats">' + cost.items.map(it =>
+      '<div class="mat' + (it.rar ? ' r' + esc(it.rar) : '') + '">' +
+        (it.icon ? '<img src="img/items/' + esc(it.icon) + '" alt="" loading="lazy">' : '') +
+        '<span>' + esc(it.ru) + '</span><b>×' + it.n + '</b></div>').join('') + '</div>' : '');
 }
 function bindArcPlan() {
-  $('body').querySelectorAll('input[data-arc]').forEach(inp => inp.oninput = () => {
-    const id = inp.dataset.arc, k = inp.dataset.k, v = +inp.value;
-    const p = arcPlan[id] = arcPlan[id] || {};
-    p[k] = v;
-    // ползунки не должны перехлёстываться: «с» не выше «до»
-    if (p.from != null && p.to != null) {
-      if (k === 'from' && p.from > p.to) p.to = p.from;
-      if (k === 'to' && p.to < p.from) p.from = p.to;
-    }
-    const card = inp.closest('.wp');
-    const a = GEAR.arcs.filter(x => x.id === id)[0];
-    card.querySelector('.wp-d').innerHTML = arcDetail(a, arcOwner(a));
-    bindArcPlan();
+  $('body').querySelectorAll('input[data-arc]').forEach(inp => {
+    // Обновляем только цифры: если перерисовать блок целиком, ползунок
+    // пересоздаётся прямо под курсором и перетаскивание обрывается на первом
+    // же движении — со стороны это выглядит как «он не ездит».
+    inp.oninput = () => {
+      const id = inp.dataset.arc, lv = +inp.value;
+      arcLv[id] = lv;
+      const a = GEAR.arcs.filter(x => x.id === id)[0];
+      const cap = $('lvcap' + id), st = $('lvst' + id), mat = $('lvmat' + id);
+      if (cap) cap.textContent = 'до ' + lv + ' уровня';
+      if (st) st.innerHTML = arcStatHtml(a, lv);
+      if (mat) mat.innerHTML = arcMatHtml(a, lv);
+    };
   });
 }
 
