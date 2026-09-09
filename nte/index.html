@@ -574,6 +574,17 @@
   .flat-b{padding:12px 14px 14px}
   .flat-b b{font-family:var(--disp);font-size:16px;color:var(--gold)}
 
+  /* скины */
+  .skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px}
+  .skin{border:1px solid var(--line-soft);border-radius:15px;overflow:hidden;cursor:pointer;
+    background:linear-gradient(135deg,hsla(0,0%,100%,.03),rgba(10,10,10,.8));transition:.2s}
+  .skin:hover{border-color:var(--line);transform:translateY(-2px)}
+  .skin img,.skin-no{width:100%;height:210px;object-fit:cover;display:block;background:#0d0f14}
+  .skin-b{padding:9px 11px 11px}
+  .skin-b b{font-family:var(--disp);font-size:14px;color:var(--tx)}
+  .skin-b i{display:block;font-style:normal;font-size:10.5px;color:var(--tx3);
+    text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+
   /* значки характеристик — родные игровые, из UI_Icon/Attribute */
   .sti{width:16px;height:16px;object-fit:contain;flex:none;opacity:.85;
     vertical-align:-3px;margin-right:5px}
@@ -722,7 +733,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v28';
+const APP_VER = 'v29';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -903,7 +914,10 @@ function fgroup(label, key, list, icon, ru) {
       esc(ru ? (ru[v] || v) : v) + '</button>').join('') + '</div>';
 }
 function bindFilters() {
-  $('filters').querySelectorAll('.fb').forEach(b => b.onclick = () => {
+  // Только кнопки-фильтры: переключатель раздела рисуется тем же классом, и
+  // без выборки по data-f этот обработчик затирал его собственный — на вкладке
+  // «Город» кнопка «Недвижимость» переставала нажиматься.
+  $('filters').querySelectorAll('.fb[data-f]').forEach(b => b.onclick = () => {
     const k = b.dataset.f;
     state[k] = (state[k] === b.dataset.v) ? '' : b.dataset.v;   // повторный клик снимает
     draw();
@@ -1191,7 +1205,7 @@ function vgroup(label, key, pairs) {
     '</div>';
 }
 function bindViews() {
-  $('filters').querySelectorAll('[data-v2]').forEach(b => b.onclick = () => {
+  $('filters').querySelectorAll('.fb[data-v2]').forEach(b => b.onclick = () => {
     state[b.dataset.v2] = b.dataset.vv; draw();
   });
 }
@@ -1876,6 +1890,49 @@ function flatCard(f) {
     '</div>' +
   '</div>';
 }
+// Скины — чистая косметика, но их много и они привязаны к эсперам, поэтому
+// показываем сеткой с портретами и фильтром по эсперу.
+function drawSkins(head, q) {
+  const all = (CITY.skins || []).filter(x => !x.def);
+  const list = all.filter(x => !q ||
+    ((x.ru || '') + ' ' + (x.en || '') + ' ' +
+     ((agentBy(x.slug) || {}).ru || '')).toLowerCase().indexOf(q) >= 0);
+  $('filters').innerHTML = head + '<span class="fcnt">' + list.length + ' из ' + all.length + '</span>';
+  bindViews();
+  $('body').innerHTML = '<div class="skins">' + list.map(x => {
+    const a = x.slug ? agentBy(x.slug) : null;
+    const pic = x.pic ? 'img/skins/' + String(x.pic).split('/').pop() : '';
+    return '<div class="skin"' + (a ? ' data-slug="' + esc(a.slug) + '"' : '') + '>' +
+      (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy">' : '<div class="skin-no"></div>') +
+      '<div class="skin-b"><b>' + esc(x.ru) + '</b>' + rarPill(x.rar) +
+        '<i>' + esc(a ? a.ru : (x.kind === 'Glide' ? 'планер' : '—')) + '</i>' +
+        (x.src ? '<div class="hint" style="margin:4px 0 0">' + esc(x.src) + '</div>' : '') +
+      '</div></div>';
+  }).join('') + '</div>';
+  $('body').querySelectorAll('[data-slug]').forEach(c => c.onclick = () => open(c.dataset.slug));
+  foot('Скины из файлов игры: имя, редкость и способ получения. На стати не влияют. ' +
+       'Клик по карточке открывает эспера.');
+}
+// Аномальная мебель — то, ради чего покупают жильё: снять розыск, телепорт,
+// прибавки к характеристикам. Уровни — ступени прокачки предмета.
+function drawAnom(head, q) {
+  const all = CITY.anom || [];
+  const list = all.filter(x => !q ||
+    ((x.ru || '') + ' ' + (x.desc || '')).toLowerCase().indexOf(q) >= 0);
+  $('filters').innerHTML = head + '<span class="fcnt">' + list.length + ' предметов</span>';
+  bindViews();
+  $('body').innerHTML = list.length ? '<div class="list">' + list.map(x =>
+    '<div class="cart"><div class="item-b">' +
+      '<b style="font-size:14px;color:var(--gold)">' + esc(x.ru) + '</b>' +
+      (x.desc ? '<div class="set-b">' + esc(x.desc) + '</div>' : '') +
+      (x.lv && x.lv.length ? '<details class="mfold" style="margin-top:8px"><summary><b>' +
+        x.lv.length + ' ступеней прокачки</b></summary><div class="mfold-in">' +
+        '<ol style="margin:8px 0 0;padding-left:20px;color:var(--tx2);font-size:12px;line-height:1.6">' +
+        x.lv.map(v => '<li>' + esc(v) + '</li>').join('') + '</ol></div></details>' : '') +
+    '</div></div>').join('') + '</div>'
+    : '<div class="empty">Данных нет — прогони build-nte-db.ps1.</div>';
+  foot('Аномальная мебель ставится в купленное жильё. Тексты и ступени — из файлов игры.');
+}
 function drawCity() {
   if (!CITY) {
     $('filters').innerHTML = '';
@@ -1885,7 +1942,10 @@ function drawCity() {
   }
   const q = state.q.trim().toLowerCase();
   const view = state.tview || 'cars';
-  const head = vgroup('раздел', 'tview', [['cars', 'Транспорт'], ['flats', 'Недвижимость']]);
+  const head = vgroup('раздел', 'tview',
+    [['cars', 'Транспорт'], ['flats', 'Недвижимость'], ['skins', 'Скины'], ['anom', 'Аномалии']]);
+  if (view === 'skins') return drawSkins(head, q);
+  if (view === 'anom')  return drawAnom(head, q);
   if (view === 'flats') {
     const list = (CITY.flats || []).filter(f => !q ||
       ((f.ru || '') + ' ' + (f.addr || '') + ' ' + (f.type || '')).toLowerCase().indexOf(q) >= 0);
@@ -1902,7 +1962,7 @@ function drawCity() {
   if (state.rar && brands.indexOf(state.rar) >= 0) list = list.filter(c => c.brand === state.rar);
   $('filters').innerHTML = head + fgroup('марка', 'rar', brands, null, null) +
     '<span class="fcnt">' + list.length + ' из ' + (CITY.cars || []).length + '</span>';
-  bindViews(); bindFilters();
+  bindFilters(); bindViews();
   $('body').innerHTML = '<div class="list">' + list.map(carCard).join('') + '</div>';
   foot('Транспорт: цена из салона, тюнинг и раскраски — из таблиц игры. ' +
        'Машины без цены выдают за задания и события.');
