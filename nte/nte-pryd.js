@@ -42,7 +42,7 @@
  */
 
 (async () => {
-  const VER = 'v1.7';
+  const VER = 'v1.8';
   const PAUSE = 4000;                 // пауза между страницами
   const BASE = '/neverness-to-everness';
 
@@ -89,14 +89,28 @@
     NUM + '\\s*(%?)\\s*\\+?\\s*(?:(?:-|–|—|to)\\s*' + NUM + '\\s*(%?)\\s*\\+?)?' +
     '\\s*(?:\\(([^)]{0,160})\\))?', 'g');
 
+  // «… bonus Crit DMG» → 'cd'. Ищем самое длинное совпадение с конца подписи.
+  function statKey(raw) {
+    const w = String(raw || '').toUpperCase().split(/[^A-Z%]+/).filter(Boolean);
+    for (let n = Math.min(3, w.length); n >= 1; n--) {
+      const k = STAT[w.slice(w.length - n).join(' ')];
+      if (k) return k;
+    }
+    return null;
+  }
+
   function readGoals(block) {
     const goals = {}, notes = {};
     const eg = block.replace(/\s*\n\s*/g, ' ');
     let m;
     GRE.lastIndex = 0;
     while ((m = GRE.exec(eg))) {
-      // подпись бывает приклеена к концу предыдущего предложения
-      const k = STAT[m[1].trim().split('.').pop().trim().toUpperCase()];
+      // Подпись бывает приклеена к концу предыдущего предложения, причём
+      // предыдущее может кончаться цифрой: «Crit Rate: 30%+ before Passive 1 or
+      // Street Boxer set bonus Crit DMG: 120%+». Из-за цифры совпадение
+      // начиналось с середины пояснения, ключ не узнавался и крит. урон
+      // терялся целиком. Поэтому пробуем хвосты подписи: три слова, два, одно.
+      const k = statKey(m[1]);
       if (!k) continue;
       const toN = s => parseFloat(String(s).replace(/,/g, ''));
       const lo = toN(m[2]), hi = m[4] != null ? toN(m[4]) : lo;

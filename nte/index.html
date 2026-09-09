@@ -562,6 +562,11 @@
   .mfold>summary b{font-family:var(--disp);font-size:17px;letter-spacing:.02em;color:var(--tx)}
   .mfold-in{padding:0 16px 14px}
   .mfold-in>:first-child{margin-top:0}
+  /* значки характеристик — родные игровые, из UI_Icon/Attribute */
+  .sti{width:16px;height:16px;object-fit:contain;flex:none;opacity:.85;
+    vertical-align:-3px;margin-right:5px}
+  .goal .sti{margin-right:0}
+
   /* награда за код: значок предмета вместо голого английского названия */
   .rw{display:inline-flex;align-items:center;gap:5px;margin:2px 6px 2px 0;padding:2px 8px 2px 3px;
     border:1px solid var(--line-soft);border-radius:9px;background:var(--pan);
@@ -705,7 +710,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v26';
+const APP_VER = 'v27';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -784,7 +789,8 @@ const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan:
 // эспера: сами по себе, в отрыве от конкретного персонажа, они бесполезны.
 const TABS = [
   ['espers', 'Эсперы'], ['arcs', 'Оружие'], ['carts', 'Картриджи'],
-  ['tier', 'Тир-лист'], ['ban', 'Баннеры'], ['codes', 'Коды'], ['mech', 'Механики']
+  ['tier', 'Тир-лист'], ['teams', 'Команды'], ['ban', 'Баннеры'],
+  ['codes', 'Коды'], ['mech', 'Механики']
 ];
 
 const EL_RU = { Anima:'Анима', Chaos:'Хаос', Cosmos:'Космос',
@@ -869,6 +875,7 @@ function draw() {
   if (t === 'arcs')   return drawArcs();
   if (t === 'carts')  return drawCarts();
   if (t === 'tier')   return drawTier();
+  if (t === 'teams')  return drawTeams();
   if (t === 'ban')    return drawBanners();
   if (t === 'codes')  return drawCodes();
   if (t === 'mech')   return drawMech();
@@ -1757,6 +1764,54 @@ function teamsHtml(list, withTier) {
       '<div class="team-s">' + t.slots.map(slotHtml).join('') + '</div>' +
     '</div>').join('');
 }
+// ── вкладка «Команды» ──────────────────────────────────────────────────────
+// Составы приезжают из двух мест: тир-лист команд prydwen (там есть место) и
+// карточки эсперов (там места нет, зато составов больше). Приоритет у
+// тир-листа: если состав есть в обоих, берём его версию с местом, а из
+// карточки — только те, которых в тир-листе нет.
+function allTeams() {
+  const out = [], seen = new Set();
+  const key = t => teamKey(t) || t.slots.map(s => s.slice().sort().join('/')).join('|');
+  (GUIDE.teams || []).forEach(t => {
+    const k = key(t);
+    if (seen.has(k)) return;
+    seen.add(k); out.push(Object.assign({}, t, { src: 'тир-лист команд' }));
+  });
+  Object.keys(GUIDE.agents || {}).forEach(slug => {
+    ((GUIDE.agents[slug] || {}).teams || []).forEach(t => {
+      const k = key(t);
+      if (seen.has(k) || t.slots.length < 3) return;
+      seen.add(k);
+      out.push(Object.assign({}, t, { tier: '', src: 'из гайда ' + (agentBy(slug) || {}).ru }));
+    });
+  });
+  return out;
+}
+function drawTeams() {
+  const q = state.q.trim().toLowerCase();
+  let list = allTeams();
+  if (state.el) list = list.filter(t => t.slots.some(s => s.some(x => {
+    const a = agentBy(x); return a && a.el === state.el;
+  })));
+  if (q) list = list.filter(t => ((t.name || '') + ' ' + t.slots.map(s => s.map(x => {
+    const a = agentBy(x); return (a ? a.ru + ' ' + a.en : x);
+  }).join(' ')).join(' ')).toLowerCase().indexOf(q) >= 0);
+  list.sort((x, y) => {
+    const r = t => { const i = TIERS.indexOf(t.tier); return i < 0 ? 99 : i; };
+    return r(x) - r(y) || String(x.name || '').localeCompare(String(y.name || ''), 'ru');
+  });
+  const els = [...new Set(DB.agents.map(a => a.el).filter(Boolean))].sort();
+  $('filters').innerHTML = fgroup('стихия', 'el', els, elIcon, EL_RU) +
+    '<span class="fcnt">' + list.length + ' составов</span>';
+  bindFilters();
+  $('body').innerHTML = list.length
+    ? '<div class="list">' + teamsHtml(list.map(t =>
+        Object.assign({}, t, { note: t.src })), true) + '</div>'
+    : '<div class="empty">Составов нет — прогони nte-pryd.js.</div>';
+  bindTeamClicks();
+  foot('Составы с prydwen: место — из тир-листа команд, остальные из гайдов эсперов. ' +
+       'Несколько портретов в одной ячейке — взаимозаменяемые эсперы. Клик по портрету открывает карточку.');
+}
 function bindTeamClicks() {
   $('body').querySelectorAll('.alt').forEach(c => c.onclick = () => open(c.dataset.slug));
 }
@@ -2140,6 +2195,25 @@ function prioHtml(s) {
   if (!s) return '';
   return esc(prioRu(s)).replace(/(&gt;&gt;|&gt;|=)/g, '<span class="gt">$1</span>');
 }
+// Значки характеристик — родные игровые, из UI_Icon/Attribute. Качает их
+// build-nte-db.ps1; пока картинок нет, подписи просто остаются без значка.
+const STAT_ICON = {
+  hp:   'icon_attri_shengming.png',
+  atk:  'icon_attri_gongji.png',
+  def:  'icon_attri_fangyu.png',
+  cr:   'icon_attri_baoji.png',
+  cd:   'icon_attri_baojishanghai.png',
+  brk:  'Icon_TenacityDestroyEfficiency.png',
+  cyc:  'Icon_attri_count_up.png',
+  dmg:  'Icon_DamageUp_white.png',
+  elem: 'Icon_DamageUp_yellow.png',
+  heal: 'Icon_HealUp.png',
+  er:   'Icon_CostGainEfficiency.png'
+};
+function statIco(k) {
+  const f = STAT_ICON[k];
+  return f ? '<img class="sti" src="img/stat/' + esc(f) + '" alt="" loading="lazy">' : '';
+}
 function goalsHtml(g, a) {
   const G = g.goals || {}, N = g.goalNotes || {};
   const keys = Object.keys(G);
@@ -2149,7 +2223,7 @@ function goalsHtml(g, a) {
     const val = (lo === hi ? lo : lo + ' – ' + hi) + (STAT_PCT[k] ? '%' : '');
     const note = tr(N[k] || '');
     return '<div class="goal' + (note ? ' note' : '') + '"' +
-      (note ? ' title="' + esc(note) + '"' : '') + '>' +
+      (note ? ' title="' + esc(note) + '"' : '') + '>' + statIco(k) +
       '<span>' + esc(statName(k, a)) + (note ? ' <u>?</u>' : '') + '</span>' +
       '<b>' + esc(val) + '</b></div>';
   }).join('') + '</div>';
@@ -2437,7 +2511,7 @@ function myHtml(slug, g) {
     const ok = goal != null && have != null && have >= goal;
     const miss = goal != null && have != null && have < goal;
     return '<div>' +
-      '<label>' + esc(k[1]) +
+      '<label>' + statIco(k[0]) + esc(k[1]) +
         (goal != null ? ' <span style="color:var(--tx3)">цель ' + goal + (k[3] ? '%' : '') + '</span>' : '') +
       '</label>' +
       '<input type="number" step="any" data-my="' + k[0] + '" value="' + (have != null ? have : '') + '" ' +
