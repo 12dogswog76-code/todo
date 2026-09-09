@@ -2624,7 +2624,7 @@
 <script>
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v243';
+const APP_VER = 'v244';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -4194,15 +4194,52 @@ function imgUrl(kind, v) {
 // именно его декодирование тормозило скролл. Если webp нет (или база собрана
 // не скриптом, а из сети), возвращаем исходный адрес.
 function agentPic(a, kind) {
-  const v = a.art || a.icon || '';
-  if (!v || /^https?:/.test(v)) return v;
-  const m = /^art_(\d+)\.png$/i.exec(v);
-  return m ? 'img/zzz/agents/' + kind + '_' + m[1] + '.webp' : 'img/zzz/agents/' + v;
+  return picChain(a, kind)[0];
 }
-// подстраховка: если webp не отдался — подставляем исходный png
-function picFallback(a) {
+// Порядок, в котором пробуем картинку: сначала webp (старые агенты), потом png
+// (новые — webp средствами Windows не записать), в конце полный арт.
+// Раньше возвращался только webp, и у Кларет с Рокси плитка была пустой.
+function picChain(a, kind) {
   const v = a.art || a.icon || '';
-  return (!v || /^https?:/.test(v)) ? '' : 'img/zzz/agents/' + v;
+  if (!v) return [''];
+  if (/^https?:/.test(v)) return [v];
+  const m = /^art_(\d+)\.png$/i.exec(v);
+  if (!m) return ['img/zzz/agents/' + v];
+  const base = 'img/zzz/agents/' + kind + '_' + m[1];
+  return [base + '.webp', base + '.png', 'img/zzz/agents/' + v];
+}
+// Обёртка для onerror в атрибуте: там доступен только сам элемент, поэтому
+// агента находим по id, записанному в data-pic.
+function picNextById(el) {
+  const a = (DB && DB.agents || []).filter(x => String(x.id) === el.dataset.pic)[0];
+  if (!a) { el.style.display = 'none'; return; }
+  picNext(el, a, el.dataset.kind || 'card');
+}
+// Следующий адрес из цепочки — для onerror у <img>.
+function picNext(el, a, kind) {
+  const chain = picChain(a, kind);
+  const i = chain.indexOf(el.getAttribute('src'));
+  const nx = (i >= 0 && i + 1 < chain.length) ? chain[i + 1] : '';
+  if (nx) { el.src = nx; return true; }
+  el.style.display = 'none';
+  return false;
+}
+// Фон-подложка задаётся через CSS, onerror там не сработает: проверяем
+// загрузку заранее и подставляем первый живой адрес.
+function picBg(a, kind, sel) {
+  const chain = picChain(a, kind).filter(Boolean);
+  let i = 0;
+  const tryOne = () => {
+    if (i >= chain.length) return;
+    const im = new Image();
+    im.onload = () => {
+      const el = document.querySelector(sel);
+      if (el) el.style.backgroundImage = 'url(' + chain[i] + ')';
+    };
+    im.onerror = () => { i++; tryOne(); };
+    im.src = chain[i];
+  };
+  tryOne();
 }
 
 // Ленивая загрузка полезна в сетке из шестидесяти карточек, но вредна внутри
@@ -4297,7 +4334,7 @@ function cardHTML(a, idx) {
   const mods = have ? modifiersOf(a.id, p).sum : 0;
   const el = (a.element || [])[0] || '';
   const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
-  const pic = agentPic(a, 'card'), picAlt = picFallback(a);
+  const pic = agentPic(a, 'card');
 
   let bars = '';
   if (have) {
@@ -4320,8 +4357,8 @@ function cardHTML(a, idx) {
     '<div class="ph">' +
       (pic ? '<img src="' + esc(pic) + '" alt="" width="480" height="480" decoding="async"' +
         (idx != null && idx < EAGER_CARDS ? ' fetchpriority="high"' : ' loading="lazy"') +
-        ' data-alt="' + esc(picAlt) + '" onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
-        '{this.src=this.dataset.alt}else{this.style.display=\'none\'}">' : '') +
+        ' data-pic="' + esc(a.id) + '" data-kind="card"' +
+        ' onerror="picNextById(this)">' : '') +
       '<span class="rk">' + rankBadge(a.rarity, 'sm', 'Редкость ' + a.rarity) + '</span>' +
       (tierOf(a.id) ? (function () {
         const t = tierOf(a.id), src = tierSrc() || {};
@@ -5491,12 +5528,12 @@ function renderSheet() {
   const a = DB.byId[curId], p = P(curId);
   const el = (a.element || [])[0] || '';
   const col = (ELEM[el] && ELEM[el].c) || '#e53e3e';
-  const art = agentPic(a, 'hero'), artAlt = picFallback(a);
+  const art = agentPic(a, 'hero');
 
   let h = '<div class="hero" style="--el:' + col + '"><div class="hart">' +
     // низ колонки заполняем размытым тем же артом, чтобы не оставалось пустоты,
     // когда правая колонка длиннее картинки
-    (art ? '<div class="hbg" style="background-image:url(' + esc(art) + ')"></div>' : '') +
+    (art ? '<div class="hbg" id="heroBg"></div>' : '') +
     // Имя агента огромными буквами по диагонали, очень медленно ползёт —
     // фон карточки перестаёт быть просто размытым артом.
     '<div class="hroll" aria-hidden="true"><div class="hroll-in">' +
@@ -5505,9 +5542,8 @@ function renderSheet() {
       '<span>' + esc(((a.en || a.ru) + ' · ').repeat(12)) + '</span>' +
     '</div></div>' +
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
-    (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async" data-alt="' + esc(artAlt) + '" ' +
-      'onerror="if(this.dataset.alt&&this.src.indexOf(this.dataset.alt)<0)' +
-      '{this.src=this.dataset.alt}else{this.style.display=\'none\'}"></div>' : '') +
+    (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async"' +
+      ' data-pic="' + esc(a.id) + '" data-kind="hero" onerror="picNextById(this)"></div>' : '') +
     '<div class="who"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span>' +
       '<div class="tags"><span class="tg el" title="' + esc((ELEM[el] && ELEM[el].ru) || '') + '">' +
         elIcon(el, 16) + '</span>' +
@@ -5805,6 +5841,9 @@ function renderSheet() {
 
   $('sheet').innerHTML = h;
   $('modal').classList.add('open');
+  // фон-подложка: ставим первый живой адрес из цепочки, иначе у новых агентов
+  // (webp ещё не сделан) низ карточки оставался пустым
+  if (art) picBg(a, 'hero', '#heroBg');
   bindSheet();
   if (info) openInfo(info.kind, info.slot);
   if (editing) openEditor(editing.kind, editing.slot);
