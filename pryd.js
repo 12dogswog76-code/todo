@@ -63,7 +63,7 @@
   // строкой в консоли, и браузер спокойно отдаёт его из кэша — прогон на пять
   // минут уходил впустую на старом коде, а понять это было можно только по
   // готовому файлу.
-  const VER = 'v4.5';
+  const VER = 'v4.6';
   const PAUSE = 5000;          // пауза между страницами
   const TIER_URL = '/zenless/tier-list';
 
@@ -80,7 +80,8 @@
     'ukinami-yuzuha':1411,'pan-yinhu':1421,'ye-shunguang':1431,'manato':1441,
     'lucia':1451,'seed':1461,'banyue':1471,'dialyn':1481,'sunna':1491,'aria':1501,
     'nangong-yu':1511,'cissia':1521,'billy-starlight':1531,'promeia':1541,
-    'pyrois':1551,'velina':1561,'norma':1571,'remielle':1581,'sigrid':1591
+    'pyrois':1551,'velina':1561,'norma':1571,'remielle':1581,'sigrid':1591,
+    'claret':1611,'roxy':1621
   };
   const TIER_MAP = { 'T0':'S+', 'T0.5':'S', 'T1':'A', 'T1.5':'B', 'T2':'C', 'T3':'D' };
   const ROLE_MAP = { 'Crit DPS':'dmg', 'Anomaly DPS':'anomaly', 'Support':'support' };
@@ -403,7 +404,13 @@
       // нельзя: трекер показывает абсолютное, и цель «130» рядом с текущим
       // «1.20» выглядела бредом. Процентный вид уводим в отдельный erp.
       if (k === 'er' && pct) k = 'erp';
-      const toN = s => parseFloat(String(s).replace(/,/g, ''));
+      // «9,500» — это тысячи, а «128,9%» — дробное: у Кларет цель по криту
+      // записана с запятой, и обычная чистка запятых превращала её в 1289.
+      const toN = s => {
+        const t = String(s).trim();
+        return /^\d+,\d{1,2}$/.test(t) ? parseFloat(t.replace(',', '.'))
+                                        : parseFloat(t.replace(/,/g, ''));
+      };
       const lo = toN(gm[2]);
       const hi = gm[4] != null ? toN(gm[4]) : lo;
       if (isFinite(lo)) {
@@ -587,7 +594,30 @@
     return out;
   }
 
+  // Список агентов зашит в SLUGS: там же лежат их номера из игры, которые со
+  // страницы не достать. Из-за этого новых персонажей скрипт молча пропускал —
+  // Кларет вышла, гайд на сайте есть, а в сборе её нет. Теперь заглядываем в
+  // каталог и сообщаем, если появился кто-то незнакомый.
+  async function checkNewSlugs() {
+    try {
+      const doc = await getDoc('/zenless/characters');
+      const seen = {};
+      [...doc.querySelectorAll('a[href*="/zenless/characters/"]')].forEach(a2 => {
+        const m = /\/zenless\/characters\/([a-z0-9-]+)\/?$/.exec(a2.getAttribute('href') || '');
+        if (m) seen[m[1]] = true;
+      });
+      const nw = Object.keys(seen).filter(x => !SLUGS[x]);
+      if (nw.length) {
+        console.warn('%cНовые агенты на сайте: ' + nw.join(', ') +
+          '\nОни не собраны. Добавь их в список SLUGS вместе с номером из игры ' +
+          '(его видно в zzz-db.json) и прогони скрипт заново.',
+          'color:#fbbf24;font-size:13px');
+      }
+    } catch (e) { /* каталог не открылся — не беда, сбор всё равно пойдёт */ }
+  }
+
   // ── поехали ───────────────────────────────────────────────────────────────
+  await checkNewSlugs();
   const slugs = Object.keys(SLUGS);
   console.log('%cpryd.js ' + VER + ' · тир-лист + ' + slugs.length + ' агентов, примерно ' +
               Math.ceil((slugs.length + 1) * PAUSE / 60000) + ' мин',
