@@ -42,7 +42,7 @@
  */
 
 (async () => {
-  const VER = 'v1.8';
+  const VER = 'v1.9';
   const PAUSE = 4000;                 // пауза между страницами
   const BASE = '/neverness-to-everness';
 
@@ -90,8 +90,12 @@
     '\\s*(?:\\(([^)]{0,160})\\))?', 'g');
 
   // «… bonus Crit DMG» → 'cd'. Ищем самое длинное совпадение с конца подписи.
+  // Пояснение к предыдущей строке часто слипается со следующей подписью без
+  // пробела («set bonusCrit DMG»): у prydwen это соседние узлы разметки. Без
+  // расклейки хвост читался как просто «DMG», и крит. урон уезжал в «урон %».
   function statKey(raw) {
-    const w = String(raw || '').toUpperCase().split(/[^A-Z%]+/).filter(Boolean);
+    const w = String(raw || '').replace(/([a-z])([A-Z])/g, '$1 $2')
+      .toUpperCase().split(/[^A-Z%]+/).filter(Boolean);
     for (let n = Math.min(3, w.length); n >= 1; n--) {
       const k = STAT[w.slice(w.length - n).join(' ')];
       if (k) return k;
@@ -130,12 +134,16 @@
   //
   // Ищем место склейки: конец аббревиатуры перед началом слова (ATK|Chaos) или
   // звёздочка перед заглавной буквой (Break Intensity*Break Intensity increases).
-  const STAT_GLUE = /\*[A-Z]|[A-Z]{2,}(?=[A-Z][a-z])/;
+  // Третий вариант — слипшаяся граница «…IntensityCrit Rate can be…»: строчная
+  // буква, за которой сразу идёт заглавная и снова строчные. Так у prydwen
+  // выглядит начало пояснения, приклеенное к концу перечня характеристик.
+  const STAT_GLUE = /\*[A-Z]|[A-Z]{2,}(?=[A-Z][a-z])|[a-z](?=[A-Z][a-z]{2})/;
   function statCut(s) {
     const t = clean(s);
     const m = STAT_GLUE.exec(t);
     if (!m || m.index < 4) return { line: t, rest: '' };
-    // у звёздочки отрезаем её саму, у аббревиатуры — оставляем её в строке
+    // у звёздочки отрезаем её саму, у аббревиатуры и слипшейся границы —
+    // оставляем последнюю букву перечня в строке
     const at = m[0][0] === '*' ? m.index : m.index + m[0].length;
     return { line: clean(t.slice(0, at)), rest: clean(t.slice(at)) };
   }
