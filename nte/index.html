@@ -159,14 +159,15 @@
      экраном, на длинных сборках показывал персонажу одни ноги. */
   .sheet-in{max-width:1180px;width:100%;margin:auto;background:var(--pan);
     border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 70px #000000b0;
-    max-height:calc(100vh - 36px);overflow:hidden}
-  .sh-head{display:flex;gap:0;flex-wrap:wrap;max-height:calc(100vh - 38px)}
+    max-height:100%;overflow:hidden;display:flex}
+  .sh-head{display:flex;gap:0;flex-wrap:wrap;width:100%;min-height:0}
   /* Арт — крупный и чистый: подписи на нём не рисуем. Раньше имя со значком
      стихии лежало поверх картинки и на светлых артах читалось плохо.
      Едет за экраном при прокрутке — ровно как .hart в трекере ZZZ: sticky с
      ограничением по высоте окна. Без него картинка оставалась в начале
      карточки, и дальше сборку читаешь уже без неё. */
-  .sh-art{flex:0 0 400px;position:relative;align-self:stretch;overflow:hidden;
+  .sh-art{flex:0 0 380px;position:relative;align-self:stretch;overflow:hidden;
+    max-height:100%;
     border-radius:18px 0 0 18px;
     /* Подложка под артом красится стихией: на голом чёрном фоне персонаж
        выглядел вырезанным и приклеенным на пустое поле. */
@@ -200,8 +201,7 @@
     letter-spacing:.2em;text-transform:uppercase;font-family:var(--body);transition:.2s}
   .htab:hover{color:hsla(0,0%,100%,.7);background:hsla(0,0%,100%,.04)}
   .htab.on{color:var(--acc);background:hsla(140,70%,60%,.15);border-color:hsla(140,70%,60%,.35)}
-  .sh-body{flex:1;min-width:320px;padding:18px 20px 22px;overflow-y:auto;
-    max-height:calc(100vh - 38px)}
+  .sh-body{flex:1;min-width:320px;padding:18px 20px 22px;overflow-y:auto;min-height:0}
   .sh-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:16px}
   .chip{display:flex;align-items:center;gap:6px;background:var(--pan2);border:1px solid var(--line);
     border-radius:10px;padding:5px 11px;font-size:12px;color:var(--tx2)}
@@ -485,6 +485,21 @@
   .lvl div b{display:block;font-family:var(--mono);font-size:12.5px;color:var(--tx)}
   .lvl div.max{border-color:#ffd54a4d}
   .lvl div.max b{color:var(--gold)}
+  /* ползунки уровня и список материалов */
+  .lvpick{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;
+    margin-top:10px}
+  .lvpick label{font-size:9px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+    color:hsla(0,0%,100%,.3);display:block}
+  .lvpick label b{font-family:var(--disp);font-size:17px;letter-spacing:0;color:var(--acc);
+    margin-left:7px}
+  .lvpick input{width:100%;margin-top:6px;accent-color:var(--acc);background:transparent}
+  .mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px}
+  .mat{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;
+    background:var(--pan);border:1px solid var(--line-soft);font-size:11px}
+  .mat img{width:32px;height:32px;object-fit:contain;flex:none}
+  .mat span{flex:1;color:var(--tx2);line-height:1.3}
+  .mat b{font-family:var(--disp);font-size:15px;color:var(--tx)}
+  .mat.rS{border-color:hsla(41,100%,50%,.35)} .mat.rA{border-color:hsla(266,29%,51%,.35)}
 
   /* ── картриджи ── */
   .cart{display:flex;gap:12px;padding:12px 14px;border-radius:16px;
@@ -577,8 +592,12 @@
        без позиционированного родителя она растягивалась на всю карточку —
        арт заливал экран и перекрывал сборку. Держим relative, липкость на
        телефоне не нужна: колонки одна под другой. */
-    .sh-art{flex:1 1 100%;position:relative;top:auto;height:46vh;max-height:360px;
-      border-radius:18px 18px 0 0}
+    /* На телефоне карточка прокручивается целиком, поэтому высоту ограничиваем
+       и колонки ставим одна под другой. */
+    .sheet-in{max-height:100%;display:block;overflow-y:auto}
+    .sh-head{display:block}
+    .sh-body{overflow:visible;max-height:none}
+    .sh-art{width:100%;height:46vh;max-height:360px;border-radius:18px 18px 0 0}
     .sh-art img{object-position:center 6%}
     .sh-body{padding:14px 14px 20px}
     .grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
@@ -633,7 +652,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v23';
+const APP_VER = 'v24';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -900,33 +919,102 @@ function drawArcs() {
     '</div>';
   }).join('') + '</div>'
     : '<div class="empty">Ничего не нашлось.</div>';
-  $('body').querySelectorAll('.wp-h').forEach(h => h.onclick = () => h.parentElement.classList.toggle('open'));
+  $('body').querySelectorAll('.wp-h').forEach(h => h.onclick = () => {
+    h.parentElement.classList.toggle('open');
+    bindArcPlan();
+  });
+  bindArcPlan();
   foot('Оружие, характеристики и иконки — из таблиц игры. Всего: ' + GEAR.arcs.length + '.' +
     (hasStats ? '' : ' Характеристики появятся после прогона build-nte-db.ps1.'));
 }
 
-// Разворот: рост атаки по уровням и что дают прорывы.
+// Разворот: два ползунка «с уровня» и «до уровня», под ними — что вырастет и
+// во что обойдётся. Считаем по игровым таблицам: опыт на каждый уровень плюс
+// материалы и деньги за прорывы, которые попадают в выбранный отрезок.
+const arcPlan = {};                       // выбранные уровни, по одному на оружие
+function arcRange(a) {
+  const p = arcPlan[a.id] || {};
+  const max = (a.lv || []).length ? a.lv[a.lv.length - 1].lv : 80;
+  return { from: p.from != null ? p.from : 1, to: p.to != null ? p.to : max, max: max };
+}
+function arcAtk(a, lv) {
+  const row = (a.lv || []).filter(x => x.lv === lv)[0];
+  return row ? row.atk : 0;
+}
+// Прорывы, которые придётся сделать по дороге: у каждого свой предел уровня,
+// и без него дальше не поднять.
+function arcSteps(a, from, to) {
+  return (a.bt || []).filter(b => b.n > 0 && b.maxLv > from && b.maxLv <= to + 0.5 ||
+                                  (b.n > 0 && b.maxLv >= from && b.maxLv < to));
+}
+function arcCost(a, from, to) {
+  const exp = (a.exp || []).slice(from - 1, to - 1).reduce((n, x) => n + (x || 0), 0);
+  const items = {}, add = list => (list || []).forEach(it => {
+    const k = it.id;
+    if (!items[k]) items[k] = { ru: it.ru, icon: it.icon, rar: it.rar, n: 0 };
+    items[k].n += it.n;
+  });
+  let gold = 0;
+  // прорыв нужен, когда его предел уровня лежит внутри выбранного отрезка
+  (a.bt || []).forEach(b => {
+    if (b.n === 0) return;
+    const prev = ((a.bt || []).filter(x => x.n === b.n - 1)[0] || {}).maxLv || 1;
+    if (prev >= to || b.maxLv <= from) return;
+    add(b.need); gold += b.gold || 0;
+  });
+  return { exp: exp, gold: gold, items: Object.values(items) };
+}
 function arcDetail(a, who) {
-  const lv = a.lv || [], bt = a.bt || [];
+  const lv = a.lv || [];
   if (!lv.length) return '<div class="hint">' + esc(a.desc || '') + '</div>';
-  const marks = [1, 20, 40, 50, 60, 70, 80];
-  const rows = marks.map(n => lv.filter(x => x.lv === n)[0]).filter(Boolean);
-  const last = lv[lv.length - 1];
-  return (who ? '<div class="hint" style="margin-top:9px">Именное оружие: <b>' + esc(who.ru) +
+  const r = arcRange(a);
+  const cost = arcCost(a, r.from, r.to);
+  const bt = (a.bt || []);
+  const sub2 = (bt[bt.length - 1] || { mods: [] }).mods.filter(m => m.p !== 'AtkBase')[0];
+  const num = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+  return (who ? '<div class="hint" style="margin:9px 0 0">Именное оружие: <b>' + esc(who.ru) +
       '</b> — у него от него больше всего пользы.</div>' : '') +
-    '<div class="cap"><b>Атака по уровням</b><span></span></div>' +
-    '<div class="lvl">' + rows.map(r =>
-      '<div' + (r.lv === last.lv ? ' class="max"' : '') + '>' + r.lv + ' ур.<b>' + r.atk + '</b></div>').join('') +
+    '<div class="cap"><b>Прокачка</b><span></span><em>с ' + r.from + ' до ' + r.to + ' уровня</em></div>' +
+    '<div class="lvpick">' +
+      '<label>с уровня <b>' + r.from + '</b>' +
+        '<input type="range" min="1" max="' + r.max + '" value="' + r.from +
+        '" data-arc="' + esc(a.id) + '" data-k="from"></label>' +
+      '<label>до уровня <b>' + r.to + '</b>' +
+        '<input type="range" min="1" max="' + r.max + '" value="' + r.to +
+        '" data-arc="' + esc(a.id) + '" data-k="to"></label>' +
     '</div>' +
-    (bt.length ? '<div class="cap"><b>Прорывы</b><span></span><em>предел уровня и прибавка</em></div>' +
-      '<div class="lvl">' + bt.map(b =>
-        '<div' + (b.n === bt.length - 1 ? ' class="max"' : '') + '>' +
-          (b.n === 0 ? 'без прорыва' : 'прорыв ' + b.n) +
-          '<b>до ' + b.maxLv + ' ур.</b>' +
-          (b.mods || []).map(m => '<span style="display:block;font-size:10px;color:var(--tx2)">' +
-            esc(m.ru) + ' +' + esc(statVal(m)) + '</span>').join('') +
-        '</div>').join('') + '</div>' : '') +
+    '<div class="stat" style="margin-top:10px">' +
+      '<div class="st"><b>' + num(arcAtk(a, r.from)) + ' → ' + num(arcAtk(a, r.to)) + '</b>атака</div>' +
+      (cost.exp ? '<div class="st"><b>' + num(cost.exp) + '</b>опыта</div>' : '') +
+      (cost.gold ? '<div class="st"><b>' + num(cost.gold) + '</b>монет</div>' : '') +
+    '</div>' +
+    (cost.items.length ?
+      '<div class="cap"><b>Материалы</b><span></span><em>на прорывы в этом отрезке</em></div>' +
+      '<div class="mats">' + cost.items.map(it =>
+        '<div class="mat' + (it.rar ? ' r' + esc(it.rar) : '') + '">' +
+          (it.icon ? '<img src="img/items/' + esc(it.icon) + '" alt="" loading="lazy">' : '') +
+          '<span>' + esc(it.ru) + '</span><b>×' + it.n + '</b></div>').join('') +
+      '</div>' : '') +
+    (sub2 ? '<div class="hint">Вторая характеристика на максимуме: ' + esc(sub2.ru) +
+      ' +' + esc(statVal(sub2)) + '.</div>' : '') +
     (a.desc ? '<div class="hint">' + esc(a.desc) + '</div>' : '');
+}
+function bindArcPlan() {
+  $('body').querySelectorAll('input[data-arc]').forEach(inp => inp.oninput = () => {
+    const id = inp.dataset.arc, k = inp.dataset.k, v = +inp.value;
+    const p = arcPlan[id] = arcPlan[id] || {};
+    p[k] = v;
+    // ползунки не должны перехлёстываться: «с» не выше «до»
+    if (p.from != null && p.to != null) {
+      if (k === 'from' && p.from > p.to) p.to = p.from;
+      if (k === 'to' && p.to < p.from) p.from = p.to;
+    }
+    const card = inp.closest('.wp');
+    const a = GEAR.arcs.filter(x => x.id === id)[0];
+    card.querySelector('.wp-d').innerHTML = arcDetail(a, arcOwner(a));
+    bindArcPlan();
+  });
 }
 
 // ── картриджи ──────────────────────────────────────────────────────────────
