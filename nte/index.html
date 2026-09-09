@@ -574,6 +574,13 @@
   .flat-b{padding:12px 14px 14px}
   .flat-b b{font-family:var(--disp);font-size:16px;color:var(--gold)}
 
+  /* кнопка облака в шапке */
+  .cloudb{margin-left:10px;padding:5px 11px;border-radius:9px;background:var(--pan);
+    border:1px solid var(--line);color:var(--tx3);cursor:pointer;font-size:11px;
+    text-transform:uppercase;letter-spacing:.08em}
+  .cloudb:hover{border-color:var(--acc);color:var(--tx)}
+  .cloudb.on{color:var(--acc);border-color:hsla(140,70%,60%,.4)}
+
   /* карта */
   .mapwrap{position:relative;width:100%;overflow:auto;border:1px solid var(--line);
     border-radius:16px;background:#0b0d10}
@@ -746,6 +753,7 @@
 
 <div class="top"><div class="wrap top-in">
   <div class="logo">NTE<b>·</b><i id="ver"></i></div>
+  <button class="cloudb" id="cloudBtn" title="Синхронизация отметок между устройствами">облако</button>
   <div class="tabs" id="tabs"></div>
   <div class="top-sp"></div>
   <input class="srch" id="q" type="search" placeholder="поиск" autocomplete="off">
@@ -760,7 +768,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v31';
+const APP_VER = 'v32';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -900,6 +908,8 @@ async function load() {
   DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n; CITY = city;
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
+  $('cloudBtn').onclick = showSync;
+  $('cloudBtn').classList.toggle('on', !!syncCfg().np);
   workerVer();
   drawTabs();
   draw();
@@ -3058,6 +3068,159 @@ function showFresh() {
   $('sheet').scrollTop = 0;
   document.body.style.overflow = 'hidden';
   if ($('close')) $('close').onclick = close;
+}
+// ── синхронизация отметок между устройствами ───────────────────────────────
+// Всё, что ты отмечаешь на сайте — свои характеристики, уровни для планировщика,
+// введённые коды, найденные точки на карте — лежит в браузере. На телефоне это
+// уже другой браузер и другие отметки. Поэтому кладём всё в маленькое хранилище
+// npoint и синхронизируем по коду подключения.
+//
+// Адрес хранилища — он же ключ доступа: кто знает адрес, тот может и читать, и
+// перезаписывать. Поэтому код подключения нигде не показывается сам собой, его
+// нужно нажать «показать», и делиться им нельзя.
+const SYNC_PREFIX = 'nte-';
+// эти ключи объединяем, а не заменяем: отметки с двух устройств должны сложиться
+const SYNC_MERGE = ['nte-map-found', 'nte-codes-used'];
+// служебное, чужому устройству не нужно
+const SYNC_SKIP = ['nte-sync', 'nte-mech-open', 'nte-map-cal'];
+function syncCfg() {
+  try { return JSON.parse(localStorage.getItem('nte-sync')) || {}; }
+  catch (e) { return {}; }
+}
+function syncCfgSave(v) {
+  try { localStorage.setItem('nte-sync', JSON.stringify(v)); } catch (e) {}
+}
+function syncCollect() {
+  const out = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || k.indexOf(SYNC_PREFIX) !== 0 || SYNC_SKIP.indexOf(k) >= 0) continue;
+    try { out[k] = JSON.parse(localStorage.getItem(k)); }
+    catch (e) { out[k] = localStorage.getItem(k); }
+  }
+  return out;
+}
+function syncApply(data, at) {
+  const mine = syncCollect();
+  Object.keys(data || {}).forEach(k => {
+    let v = data[k];
+    if (SYNC_MERGE.indexOf(k) >= 0 && mine[k] && typeof mine[k] === 'object' && typeof v === 'object') {
+      v = Object.assign({}, v, mine[k]);   // отметки складываем
+    } else if (at < (syncCfg().at || 0)) {
+      return;                              // наше свежее — облачное не берём
+    }
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+  });
+}
+// npoint не отдаёт CORS-заголовки на запись, поэтому идём через свой воркер —
+// тот же путь, что у трекера ZZZ. Прямой запрос пробуем первым: если сеть
+// позволяет, лишнего посредника не будет.
+function syncUrls(id, write) {
+  const via = API_BASES.map(b => b + '/api/cloud/' + id);
+  // На запись npoint не отдаёт CORS-заголовки, прямой запрос из браузера
+  // заведомо не пройдёт — сразу идём через свой воркер. На чтение прямой
+  // работает и он быстрее.
+  return write ? via : ['https://api.npoint.io/' + id].concat(via);
+}
+async function syncTry(id, opt) {
+  let last = null;
+  for (const u of syncUrls(id, !!(opt && opt.method === 'POST'))) {
+    try {
+      const r = await fetch(u, Object.assign({ cache: 'no-store' }, opt || {}));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r;
+    } catch (e) { last = e; }
+  }
+  throw last || new Error('нет связи');
+}
+// Из ссылки «https://api.npoint.io/abc123» или кода подключения достаём id
+function syncId(raw) {
+  const t = String(raw || '').trim();
+  const m = t.match(/npoint\.io\/([A-Za-z0-9]+)/);
+  if (m) return m[1];
+  if (/^[A-Za-z0-9]{8,40}$/.test(t)) return t;
+  return '';
+}
+async function syncNow(say) {
+  const cfg = syncCfg();
+  if (!cfg.np) { say('Сначала подключи хранилище', 1); return; }
+  say('синхронизирую…');
+  try {
+    let cloud = null;
+    try {
+      const r = await syncTry(cfg.np);
+      cloud = await r.json();
+    } catch (e) { cloud = null; }        // пустое хранилище — это нормально
+    if (cloud && cloud.data) syncApply(cloud.data, +cloud.at || 0);
+    const body = JSON.stringify({ v: 1, at: Date.now(), data: syncCollect() });
+    await syncTry(cfg.np, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body });
+    cfg.at = Date.now();
+    syncCfgSave(cfg);
+    say('готово: отметки сведены ' + new Date(cfg.at).toLocaleString('ru'));
+    draw();
+  } catch (e) {
+    say('не вышло: ' + (e && e.message ? e.message : e) +
+        '. Мешать может VPN или блокировщик.', 1);
+  }
+}
+function showSync() {
+  const cfg = syncCfg();
+  const on = !!cfg.np;
+  $('sheetIn').innerHTML =
+    '<div class="sh-body">' +
+      '<div class="sh-title"><h2>Облако<i>отметки на всех устройствах</i></h2>' +
+        '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
+      '</div>' +
+      '<div class="box">' +
+        (on ? '<div class="verdict">Подключено ✓ последняя сверка: ' +
+                (cfg.at ? new Date(cfg.at).toLocaleString('ru') : 'ещё не было') + '</div>'
+            : '<div class="hint">Хранилище бесплатное и своё: зайди на ' +
+              '<a href="https://www.npoint.io/" target="_blank" rel="noopener">npoint.io</a>, ' +
+              'нажми «Create JSON bin», сохрани — и скопируй ссылку вида ' +
+              '<b>api.npoint.io/xxxxxxxx</b>. Вставь её сюда. На втором устройстве ' +
+              'вставь тот же адрес — отметки сойдутся.</div>') +
+        '<div class="inp" style="margin-top:9px"><div>' +
+          '<label>ссылка на хранилище или код подключения</label>' +
+          '<input id="syncKey" type="text" autocomplete="off" placeholder="api.npoint.io/…">' +
+        '</div></div>' +
+        '<div class="mapbar" style="margin-top:10px">' +
+          '<button id="syncOn">' + (on ? 'заменить' : 'подключить') + '</button>' +
+          (on ? '<button id="syncGo">синхронизировать</button>' +
+                '<button id="syncShow">показать код</button>' +
+                '<button id="syncOff">отключить</button>' : '') +
+        '</div>' +
+        '<div class="hint" id="syncMsg" style="margin-top:8px"></div>' +
+        '<div class="hint">Едут: твои характеристики, уровни для планировщика, ' +
+        'введённые коды и найденные точки на карте. Отметки с двух устройств ' +
+        'складываются, а не затирают друг друга.</div>' +
+        '<div class="hint" style="color:#fbbf24">Адрес хранилища — это и есть ключ: ' +
+        'кто его знает, тот может читать и перезаписывать твои отметки. Никому не показывай.</div>' +
+      '</div>' +
+    '</div>';
+  $('sheet').classList.add('on');
+  $('sheet').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+  if ($('close')) $('close').onclick = close;
+  const say = (t, bad) => {
+    const el = $('syncMsg');
+    if (el) { el.textContent = t; el.style.color = bad ? '#ff5a5a' : 'var(--acc)'; }
+  };
+  if ($('syncOn')) $('syncOn').onclick = () => {
+    const id = syncId($('syncKey').value);
+    if (!id) { say('Не разобрал адрес. Нужна ссылка вида api.npoint.io/xxxxxxxx', 1); return; }
+    syncCfgSave({ np: id, at: 0 });
+    say('подключено, свожу отметки…');
+    syncNow(say).then(() => showSync());
+  };
+  if ($('syncGo')) $('syncGo').onclick = () => syncNow(say);
+  if ($('syncShow')) $('syncShow').onclick = () => {
+    $('syncKey').value = 'https://api.npoint.io/' + syncCfg().np;
+    say('код в поле выше — скопируй и вставь на другом устройстве');
+  };
+  if ($('syncOff')) $('syncOff').onclick = () => {
+    syncCfgSave({});
+    showSync();
+  };
 }
 function close() {
   $('sheet').classList.remove('on');
