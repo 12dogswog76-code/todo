@@ -562,6 +562,18 @@
   .mfold>summary b{font-family:var(--disp);font-size:17px;letter-spacing:.02em;color:var(--tx)}
   .mfold-in{padding:0 16px 14px}
   .mfold-in>:first-child{margin-top:0}
+  /* город: карточки машин и квартир */
+  .car-ic{width:76px;height:52px;object-fit:cover}
+  .brand{display:inline-block;margin-left:8px;font-size:10.5px;color:var(--tx3);
+    text-transform:uppercase;letter-spacing:.08em}
+  .flats{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  .flat{border:1px solid var(--line-soft);border-radius:16px;overflow:hidden;
+    background:linear-gradient(135deg,hsla(0,0%,100%,.03),rgba(10,10,10,.8));transition:.2s}
+  .flat:hover{border-color:var(--line);transform:translateY(-1px)}
+  .flat img{width:100%;height:150px;object-fit:cover;display:block;background:#0d0f14}
+  .flat-b{padding:12px 14px 14px}
+  .flat-b b{font-family:var(--disp);font-size:16px;color:var(--gold)}
+
   /* значки характеристик — родные игровые, из UI_Icon/Attribute */
   .sti{width:16px;height:16px;object-fit:contain;flex:none;opacity:.85;
     vertical-align:-3px;margin-right:5px}
@@ -710,12 +722,12 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v27';
+const APP_VER = 'v28';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
 
-let DB = null, GUIDE = null, RU = null, GEAR = null, I18N = null;
+let DB = null, GUIDE = null, RU = null, GEAR = null, I18N = null, CITY = null;
 
 // ── перевод текстов с prydwen ──────────────────────────────────────────────
 // Сами тексты приезжают с сайта по-английски и при каждом новом прогоне
@@ -783,14 +795,14 @@ function rewHtml(s) {
       esc(it.ru || name) + (cnt ? '<b>×' + esc(cnt) + '</b>' : '') + '</span>';
   }).join('');
 }
-const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan: 'mint', cview: 'sets' };
+const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan: 'mint', cview: 'sets', tview: 'cars' };
 
 // Команды, планировщик Console и калькулятор статов живут внутри карточки
 // эспера: сами по себе, в отрыве от конкретного персонажа, они бесполезны.
 const TABS = [
   ['espers', 'Эсперы'], ['arcs', 'Оружие'], ['carts', 'Картриджи'],
   ['tier', 'Тир-лист'], ['teams', 'Команды'], ['ban', 'Баннеры'],
-  ['codes', 'Коды'], ['mech', 'Механики']
+  ['codes', 'Коды'], ['city', 'Город'], ['mech', 'Механики']
 ];
 
 const EL_RU = { Anima:'Анима', Chaos:'Хаос', Cosmos:'Космос',
@@ -843,11 +855,11 @@ async function load() {
   // (опыт, материалы прокачки) на странице просто не появляются.
   const grab = (f, opt) => fetch(f + '?v=' + APP_VER).then(r => r.json())
     .catch(() => opt ? null : Promise.reject(new Error(f)));
-  const [db, guide, dict, gear, i18n] = await Promise.all([
+  const [db, guide, dict, gear, i18n, city] = await Promise.all([
     grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1),
-    grab('nte-gear.json', 1), grab('nte-i18n.json', 1)
+    grab('nte-gear.json', 1), grab('nte-i18n.json', 1), grab('nte-city.json', 1)
   ]);
-  DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n;
+  DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n; CITY = city;
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
   workerVer();
@@ -878,6 +890,7 @@ function draw() {
   if (t === 'teams')  return drawTeams();
   if (t === 'ban')    return drawBanners();
   if (t === 'codes')  return drawCodes();
+  if (t === 'city')   return drawCity();
   if (t === 'mech')   return drawMech();
 }
 
@@ -1815,6 +1828,86 @@ function drawTeams() {
 function bindTeamClicks() {
   $('body').querySelectorAll('.alt').forEach(c => c.onclick = () => open(c.dataset.slug));
 }
+// ── город: транспорт и жильё ───────────────────────────────────────────────
+// Не боёвка, но в NTE это половина игры: машину надо купить и обвесить,
+// квартиру — купить и обставить. Данные из таблиц игры, файл отдельный.
+const CUR_RU = { Fons: 'фонсов', Annulith: 'аннулита', gold: 'монет',
+                 RobbankCoin: 'жетонов Robbank', Beetle: 'монет' };
+function money(n, cur) {
+  return num(n) + ' ' + (CUR_RU[cur] || cur || '');
+}
+function carCard(c) {
+  const types = Object.keys(c.modTypes || {});
+  return '<div class="cart">' +
+    (c.icon ? '<img class="cart-ic car-ic" src="img/cars/' + esc(c.icon) + '" alt="" loading="lazy">' : '') +
+    '<div class="item-b">' +
+      '<b style="font-size:14px;color:var(--gold)" title="' + esc(c.en || '') + '">' + esc(c.ru) + '</b>' +
+      rarPill(c.rar) +
+      (c.brand ? '<span class="brand">' + esc(c.brand) + '</span>' : '') +
+      '<div class="geo">' +
+        (c.price ? '<span class="gsh">' + money(c.price, c.cur) + '</span>'
+                 : '<span class="gsh">' + esc(carSrc(c.src)) + '</span>') +
+        (c.mods ? '<span class="gsh">' + c.mods + ' деталей тюнинга</span>' : '') +
+        (c.skins && c.skins.length ? '<span class="gsh">' + c.skins.length + ' раскрасок</span>' : '') +
+      '</div>' +
+      (types.length ? '<div class="hint" style="margin:6px 0 0">Тюнинг: ' +
+        esc(types.map(t => t + ' ×' + c.modTypes[t]).join(', ')) + '</div>' : '') +
+      (c.desc ? '<div class="hint">' + esc(c.desc) + '</div>' : '') +
+    '</div>' +
+  '</div>';
+}
+const CAR_SRC = { Shop: 'покупается в салоне', Quest: 'за задание', Activity: 'за событие',
+                  Gift: 'подарок', Default: 'выдаётся сразу' };
+function carSrc(s) { return CAR_SRC[s] || (s ? 'источник: ' + s : 'источник неизвестен'); }
+function flatCard(f) {
+  const pic = f.pic ? 'img/flats/' + esc(f.pic) : '';
+  return '<div class="flat">' +
+    (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy">' : '') +
+    '<div class="flat-b">' +
+      '<b>' + esc(f.ru) + '</b><span class="brand">' + esc(f.type) + '</span>' +
+      (f.addr ? '<div class="hint" style="margin:4px 0 0">' + esc(f.addr) + '</div>' : '') +
+      '<div class="geo">' +
+        (f.price ? '<span class="gsh">' + money(f.price, f.cur) + '</span>' : '') +
+        (f.park ? '<span class="gsh">парковка на ' + f.park + '</span>' : '') +
+        (f.load ? '<span class="gsh">мебели на ' + num(f.load) + '</span>' : '') +
+        (f.sale && f.sale !== 'OnSale' ? '<span class="gsh">не продаётся</span>' : '') +
+      '</div>' +
+      (f.slog ? '<div class="hint">' + esc(f.slog) + '</div>' : '') +
+    '</div>' +
+  '</div>';
+}
+function drawCity() {
+  if (!CITY) {
+    $('filters').innerHTML = '';
+    $('body').innerHTML = '<div class="empty">Нет nte-city.json — прогони build-nte-db.ps1.</div>';
+    foot('');
+    return;
+  }
+  const q = state.q.trim().toLowerCase();
+  const view = state.tview || 'cars';
+  const head = vgroup('раздел', 'tview', [['cars', 'Транспорт'], ['flats', 'Недвижимость']]);
+  if (view === 'flats') {
+    const list = (CITY.flats || []).filter(f => !q ||
+      ((f.ru || '') + ' ' + (f.addr || '') + ' ' + (f.type || '')).toLowerCase().indexOf(q) >= 0);
+    $('filters').innerHTML = head + '<span class="fcnt">' + list.length + ' объектов</span>';
+    bindViews();
+    $('body').innerHTML = '<div class="flats">' + list.map(flatCard).join('') + '</div>';
+    foot('Недвижимость: цена, парковка и предел по мебели — из таблиц игры. ' +
+         'Купленная квартира открывает свои занятия и место под мебель с бонусами.');
+    return;
+  }
+  let list = (CITY.cars || []).filter(c => !q ||
+    ((c.ru || '') + ' ' + (c.en || '') + ' ' + (c.brand || '')).toLowerCase().indexOf(q) >= 0);
+  const brands = [...new Set((CITY.cars || []).map(c => c.brand).filter(Boolean))].sort();
+  if (state.rar && brands.indexOf(state.rar) >= 0) list = list.filter(c => c.brand === state.rar);
+  $('filters').innerHTML = head + fgroup('марка', 'rar', brands, null, null) +
+    '<span class="fcnt">' + list.length + ' из ' + (CITY.cars || []).length + '</span>';
+  bindViews(); bindFilters();
+  $('body').innerHTML = '<div class="list">' + list.map(carCard).join('') + '</div>';
+  foot('Транспорт: цена из салона, тюнинг и раскраски — из таблиц игры. ' +
+       'Машины без цены выдают за задания и события.');
+}
+
 // ── коды активации ─────────────────────────────────────────────────────────
 // Список лежит в nte-guide.json как запасной, а свежий приезжает от воркера:
 // он раз в 12 часов сам ходит на страницу кодов. Если воркер молчит — просто
