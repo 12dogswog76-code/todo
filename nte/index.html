@@ -381,7 +381,10 @@
 
   /* ── баннеры ── */
   .bgrp{margin-bottom:18px}
-  .bcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:9px}
+  /* Плашки во всю ширину ряда: с артом на фоне узкая карточка смотрится
+     обрезанной, а места на странице всё равно хватает — до правого края
+     оставалось полэкрана пустоты. */
+  .bcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:11px}
   .bc{display:flex;gap:12px;padding:11px 13px;border-radius:16px;
     background:linear-gradient(135deg,hsla(0,0%,100%,.03),rgba(10,10,10,.8));
     border:1px solid var(--line-soft);align-items:center;cursor:default;transition:.2s}
@@ -389,16 +392,18 @@
   /* Плашка с артом: картинка уходит фоном вправо и растворяется к левому
      краю, чтобы текст поверх читался. Высота фиксированная — иначе соседние
      карточки в ряду получаются разной высоты и ряд «пляшет». */
-  .bc.bc-art{position:relative;overflow:hidden;min-height:104px;
-    padding-right:34%;isolation:isolate}
+  .bc.bc-art{position:relative;overflow:hidden;min-height:132px;
+    padding-right:42%;isolation:isolate}
   .bc.bc-art::before{content:'';position:absolute;inset:0;z-index:-2;
-    background-image:var(--bg);background-size:auto 190%;
-    background-position:right -10% top -18%;background-repeat:no-repeat}
+    background-image:var(--bg);background-size:auto 215%;
+    background-position:right 2% top -30%;background-repeat:no-repeat}
   .bc.bc-art::after{content:'';position:absolute;inset:0;z-index:-1;
-    background:linear-gradient(90deg,rgba(10,11,14,.97) 34%,rgba(10,11,14,.72) 62%,
-      rgba(10,11,14,.30) 100%)}
+    background:linear-gradient(90deg,rgba(10,11,14,.97) 30%,rgba(10,11,14,.70) 58%,
+      rgba(10,11,14,.22) 100%)}
   .bc.bc-art.live::after{background:linear-gradient(90deg,
-    rgba(10,22,16,.96) 34%,rgba(10,20,15,.70) 62%,rgba(10,18,14,.28) 100%)}
+    rgba(10,22,16,.96) 30%,rgba(10,20,15,.68) 58%,rgba(10,18,14,.20) 100%)}
+  /* плашки без арта не должны быть заметно ниже соседних в ряду */
+  .bc{min-height:104px}
   .bc.live{border-color:hsla(140,70%,60%,.5);
     background:linear-gradient(135deg,hsla(140,70%,60%,.10),rgba(10,10,10,.8));
     box-shadow:0 0 28px hsla(140,70%,60%,.15),inset 0 0 40px hsla(140,70%,60%,.04)}
@@ -1129,7 +1134,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v53';
+const APP_VER = 'v54';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -2200,6 +2205,19 @@ function bindPlan() {
 // Арт для фона плашки баннера. Берём крупную версию обычного вида эспера,
 // если её собрал build-nte-art.ps1: в img/art лежит картинка с prydwen, она
 // подходит, но у крупной выше и разрешение, и качество.
+// Название для плашки. У объявленных заранее баннеров оружия имени у самого
+// оружия ещё нет — в расписании стоит имя эспера, которому оно достанется
+// («Blackbird», «Akane»). Русского названия для такой строки в базе оружия не
+// найдётся, поэтому подставляем имя эспера и пишем, что это его оружие.
+function banName(b) {
+  const ru = ruName('arcs', b.name);
+  if (ru && ru !== b.name) return ru;
+  const who = (DB.agents || []).filter(x =>
+    String(x.en).toLowerCase() === String(b.name).toLowerCase() ||
+    String(x.slug).toLowerCase() === String(b.name).toLowerCase())[0];
+  if (who) return 'оружие ' + who.ru;
+  return b.name;
+}
 function bannerArt(a) {
   const def = ((CITY && CITY.skins) || []).filter(x => x.slug === a.slug && x.def && x.pic)[0];
   if (def) {
@@ -2251,11 +2269,11 @@ function drawBanners() {
           '<div class="bc-b">' +
             '<b><span class="bc-k' + (b.kind === 'arc' ? ' arc' : '') + '">' +
               (b.kind === 'arc' ? 'оружие' : 'эспер') + '</span>' +
-              esc(a ? a.ru : ruName('arcs', b.name)) + '</b>' +
+              esc(a ? a.ru : banName(b)) + '</b>' +
             (b.patch ? '<i>' + esc(b.patch) + '</i>' : '') +
             (b.from ? '<i class="bc-d">' + esc(banDates(b)) + '</i>' :
               (b.dates ? '<i class="bc-d">' + esc(b.dates) + '</i>' :
-                         '<i class="bc-d off">появится с выходом патча</i>')) +
+                         '<i class="bc-d off">даты ещё не объявлены</i>')) +
             banClock(b) +
           '</div></div>';
       }).join('') + '</div>' +
@@ -2394,13 +2412,19 @@ function banDates(b) {
   const d = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? m[3] + '.' + m[2] : ''; };
   const from = d(b.from), to = d(b.to);
   if (!from) return b.dates || '';
-  let out = from + (to ? ' — ' + to : '');
-  const end = Date.parse(b.to), now = Date.now();
-  if (end && end > now) {
-    const days = Math.ceil((end - now) / 86400000);
-    if (days <= 60) out += ', осталось ' + days + ' ' + plural(days, 'день', 'дня', 'дней');
-  }
-  return out;
+  // «Осталось N дней» тут не пишем: строкой ниже идёт живой отсчёт с
+  // секундами, и на плашке получалось два одинаковых текста подряд. В
+  // карточке эспера отсчёта нет — туда дни добавляет banLeft.
+  return from + (to ? ' — ' + to : '');
+}
+// Сколько осталось — словами. Нужно там, где нет бегущего отсчёта: в карточке
+// эспера на вкладке «Сейчас».
+function banLeft(b) {
+  const end = Date.parse(b && b.to), now = Date.now();
+  if (!end || end <= now) return '';
+  const days = Math.ceil((end - now) / 86400000);
+  if (days > 60) return '';
+  return ', осталось ' + days + ' ' + plural(days, 'день', 'дня', 'дней');
 }
 function plural(n, a, b2, c) {
   const n10 = n % 10, n100 = n % 100;
@@ -4372,8 +4396,11 @@ function open(slug) {
       esc(EL_RU[a.el] || a.el) + '</span>' : '') +
     (a.role ? '<span class="tag"><img src="' + roleIcon(a.role) + '" alt="">' +
       esc(ROLE_RU[a.role] || a.role) + '</span>' : '');
+  // Вкладка «Пробуждения» показывается и когда игровых таблиц ещё нет: у
+  // свежих эсперов список ступеней строится по названиям из разбора.
+  const hasAwk = (AWK[slug] || []).length || ((NB[slug] || {}).nodes || []).length;
   const shown = SH_TABS.filter(t => (t[0] !== 'con' || gridOf(slug)) &&
-                                    (t[0] !== 'awk' || (AWK[slug] || []).length));
+                                    (t[0] !== 'awk' || hasAwk));
   const facts = factsHtml(g);
 
   $('sheetIn').innerHTML =
@@ -4515,7 +4542,17 @@ function awkSave(slug, obj) {
   try { localStorage.setItem('nte-awk-' + slug, list.join(',')); } catch (e) {}
 }
 function awkHtml(slug, g, cap) {
-  const list = AWK[slug] || [];
+  let list = AWK[slug] || [];
+  const nbAll = (NB[slug] || {}).nodes || [];
+  // Свежих эсперов в дамп игры выкладывают не сразу: таблицы Character/Awaken
+  // у них нет, и вкладка не появлялась вовсе. Названия ступеней при этом
+  // известны из разбора — строим список по ним, без описаний. Как только
+  // таблицы появятся, сборщик подставит настоящие тексты.
+  let fromNb = false;
+  if (!list.length && nbAll.length) {
+    list = nbAll.map(x => ({ n: x.n, en: x.en, ru: '', desc: '' }));
+    fromNb = true;
+  }
   if (!list.length) return '<div class="empty">Для этого эспера таблицы пробуждений ' +
     'в игре ещё нет.</div>';
   const have = awkHave(slug);
@@ -4564,8 +4601,14 @@ function awkHtml(slug, g, cap) {
       '<div class="hint">Резонанс даётся за <b>число</b> открытых ступеней, а не ' +
       'за конкретные: первый — когда их три, второй — когда все шесть. Какие ' +
       'именно выбраны, тут не важно.</div>' : '') +
-    '<div class="hint">Тексты — из таблиц игры. Что ты выбрал, помнит этот ' +
-    'браузер.</div>';
+    (fromNb
+      ? '<div class="hint">Описаний пока нет: этого эспера ещё не выложили в ' +
+        'общий дамп игры, так что названия ступеней взяты из разбора' +
+        (nb.url ? ' — <a href="' + esc(nb.url) + '" target="_blank" rel="noopener">' +
+          'что они делают ↗</a>' : '') +
+        '. Появятся в игре — подтянутся сами.</div>'
+      : '<div class="hint">Тексты — из таблиц игры. Что ты выбрал, помнит этот ' +
+        'браузер.</div>');
 }
 function bindAwk(slug) {
   const box = $('shBody');
@@ -4925,10 +4968,10 @@ function nowHtml(slug, g, a, cap) {
     // ломает защиту. Это оценка разборщиков, из файлов игры её не достать.
     roleHtml(slug);
   const banner = live
-    ? '<div class="verdict">Баннер <b>идёт прямо сейчас</b>: ' + esc(banDates(live)) +
+    ? '<div class="verdict">Баннер <b>идёт прямо сейчас</b>: ' + esc(banDates(live) + banLeft(live)) +
       (live.patch ? ' · ' + esc(live.patch) : '') + '</div>'
     : next
-      ? '<div class="box"><b>Ближайший баннер</b>' + esc(next.group) + ': ' + esc(banDates(next)) +
+      ? '<div class="box"><b>Ближайший баннер</b>' + esc(next.group) + ': ' + esc(banDates(next) + banLeft(next)) +
         (next.patch ? ' · ' + esc(next.patch) : '') + '</div>'
       : '<div class="hint">Баннера в расписании нет — либо он уже прошёл, либо ещё не объявлен.</div>';
   const cal = (g.goals && (g.goals.cr || g.goals.cd))
