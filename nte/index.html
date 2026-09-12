@@ -123,6 +123,25 @@
   .fcnt{font-size:9px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;
     color:hsla(0,0%,100%,.25);margin-left:auto}
 
+  /* ── режим карты ──
+     Карте нужна площадь. В обычном режиме страница упирается в 1560 пикселей
+     и на широком мониторе по бокам пустует половина экрана; шапка со строкой
+     фильтров съедают ещё полторы сотни по высоте. На вкладке карты снимаем
+     и то и другое: ширина по окну, шапка тоньше, счётчик точек уезжает в
+     угол карты. Остальные вкладки этого не замечают. */
+  body.mapmode .wrap{max-width:none;padding:0 12px}
+  body.mapmode .top{padding:5px 0;margin-bottom:9px}
+  body.mapmode .top-in{gap:10px}
+  body.mapmode .logo{font-size:19px}
+  body.mapmode .tb{padding:5px 11px}
+  body.mapmode .srch{padding:6px 12px}
+  body.mapmode #filters{display:none}
+  body.mapmode #foot{margin-top:8px}
+  .mapcnt{position:absolute;left:12px;top:10px;z-index:6;pointer-events:none;
+    background:rgba(10,12,16,.78);border:1px solid var(--line);border-radius:9px;
+    padding:5px 10px;font-size:9px;font-weight:800;letter-spacing:.22em;
+    text-transform:uppercase;color:hsla(0,0%,100%,.45)}
+
   /* ── сетка эсперов ── */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:11px}
   /* Карточка красится цветом стихии: диагональный градиент от её цвета к
@@ -1087,7 +1106,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v43';
+const APP_VER = 'v44';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1317,6 +1336,9 @@ function drawTabs() {
 function draw() {
   const t = state.tab;
   $('q').style.display = (t === 'mech') ? 'none' : '';
+  // На карте всё лишнее ужимается: страница шире 1560, шапка тоньше, строка
+  // фильтров схлопывается — счётчик точек переезжает в угол самой карты.
+  document.body.classList.toggle('mapmode', t === 'map');
   const one = {
     espers: drawEspers, arcs: drawArcs, carts: drawCarts, tier: drawTier,
     teams: drawTeams, ban: drawBanners, codes: drawCodes, city: drawCity,
@@ -2852,13 +2874,27 @@ function mapCats(pts) {
 // занимает полотно на экране: сторона окна × зум × плотность экрана. Берём
 // самый лёгкий слой, которому хватает разрешения. Плотность режем двойкой:
 // на 4K-мониторе иначе сразу требуется слой, которого нет.
+// Слой 1 — самый подробный, 51×51 плиток по 512. Держать 2601 файл на сайте
+// накладно (одна выкладка — часы из-за ограничений GitHub), поэтому сборщик
+// склеивает их по 3×3: получается 17×17 блоков по 1536, те же 26112 пикселей
+// по стороне. Отсюда и разный размер плитки у слоёв.
+const MAP_TILEPX = { 1: 1536 };
+function mapTilePx(lay) { return MAP_TILEPX[lay] || 512; }
+function mapTileSrc(lay, n, r, c) {
+  if (lay === 1) {
+    return 'img/map/z1/b_' + String(r).padStart(2, '0') + '_' +
+           String(c).padStart(2, '0') + '.jpg';
+  }
+  return 'img/map/z' + lay + '/map_bigworld_1' +
+         String(r * n + c + 1).padStart(4, '0') + '.png';
+}
 function mapLayer(z, tiles, side) {
   const need = (side || 900) * z * Math.min(2, window.devicePixelRatio || 1);
-  const lays = Object.keys(tiles).map(Number).sort((a, b) => b - a);  // 4, 3, 2
+  const lays = Object.keys(tiles).map(Number).sort((a, b) => b - a);  // 4, 3, 2, 1
   let lay = lays.length ? lays[0] : 4;
   for (const l of lays) {
     lay = l;
-    if ((tiles[String(l)] || 6) * 512 >= need) break;
+    if ((tiles[String(l)] || 6) * mapTilePx(l) >= need) break;
   }
   return lay;
 }
@@ -2962,7 +2998,7 @@ function mapTilesSwap() {
       keep[k] = 1;
       if (mapTileEls[k]) continue;
       const im = document.createElement('img');
-      im.src = 'img/map/z' + lay + '/map_bigworld_1' + String(i).padStart(4, '0') + '.png';
+      im.src = mapTileSrc(lay, n, r, c);
       im.alt = ''; im.draggable = false;
       im.style.cssText = 'left:' + (c * st) + '%;top:' + (r * st) + '%;' +
                          'width:' + st + '%;height:' + st + '%';
@@ -3109,8 +3145,9 @@ function drawMap() {
     (!q || ((p.t || '') + ' ' + (p.ru || '')).toLowerCase().indexOf(q) >= 0));
   const box = mapBox(all);
 
-  $('filters').innerHTML = '<span class="fcnt">показано ' + shown.length + ' из ' + all.length +
-    ' · отмечено ' + Object.keys(found).length + '</span>';
+  $('filters').innerHTML = '';
+  const cnt = '<div class="mapcnt">показано ' + shown.length + ' из ' + all.length +
+    ' · отмечено ' + Object.keys(found).length + '</div>';
 
   const marks = shown.map(p => {
     const [fx, fy] = mapXY(p, box);
@@ -3153,6 +3190,7 @@ function drawMap() {
         '<div class="maptiles" id="mapTiles" data-lay="0"></div>' +
         marks + mineMarks +
       '</div>' +
+      cnt +
       '<div class="mapzoom">' +
         '<button data-mz="+">+</button><button data-mz="-">−</button>' +
         '<button data-mz="0" title="вернуть как было">⟲</button>' +
