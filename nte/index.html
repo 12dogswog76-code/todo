@@ -1067,8 +1067,17 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v41';
+const APP_VER = 'v42';
 const $ = id => document.getElementById(id);
+
+// Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
+// EV_API и OCR_API, а они собираются на верхнем уровне скрипта. Если объявить
+// ниже по файлу, браузер падает на «Cannot access before initialization» и
+// страница остаётся пустой — const не всплывает, в отличие от function.
+// Свой домен из списка выкидываем, чтобы не звать самих себя дважды.
+const API_BASES = ['', 'https://api.alextask.ru', 'https://alextask.ru',
+                   'https://alextask-push.12dogswog76.workers.dev']
+  .filter((b, i) => i === 0 || b.indexOf('//' + location.host) < 0);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
 
@@ -4064,10 +4073,7 @@ function myStatsSave(slug, obj) {
 // Скриншот уходит на воркер, тот читает числа моделью зрения и возвращает их.
 // Перед отправкой ужимаем до 1400px и в jpeg: экран 2K весит мегабайты, а для
 // распознавания хватает и этого.
-const API_BASES = ['', 'https://api.alextask.ru', 'https://alextask.ru',
-                   'https://alextask-push.12dogswog76.workers.dev']
-  .filter((b, i) => i === 0 || b.indexOf('//' + location.host) < 0);
-const OCR_API = API_BASES.map(b => b + '/api/nte/ocr');
+const OCR_API = API_BASES.map(b => b + '/api/nte/ocr');   // API_BASES — в шапке скрипта
 
 // Лучшая модель распознавания закрыта лицензией Meta: её принимают одним
 // запросом «agree», и в дашборде Cloudflare такой кнопки нет. Воркеру доступ к
