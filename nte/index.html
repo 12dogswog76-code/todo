@@ -1100,7 +1100,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v48';
+const APP_VER = 'v49';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -2975,21 +2975,52 @@ let mapPts = [];        // все показанные точки: доли, ц�
 let mapIcons = {};      // кэш картинок значков: адрес → Image
 let mapHot = null;      // точка под курсором
 let mapVis = [];        // попавшие в кадр: по ним ищем, что под курсором
-const MAP_R = 10;       // радиус значка на экране
+let mapR = 10;          // радиус значка сейчас — зависит от приближения
 
 // Значки подгружаем по мере надобности. Пока картинка не пришла — рисуем
 // цветной кружок, когда пришла — холст перерисовывается сам.
+// Значок сразу после загрузки уменьшается в копию 48×48 и дальше рисуется уже
+// из неё. Двумя выигрышами. Первый — качество: исходники бывают и 411 пикселей,
+// а браузер при рисовании ужимает их грубым фильтром в один проход, отчего на
+// мелком значке оставалась каша. Здесь уменьшение идёт ступенями и с хорошим
+// сглаживанием, один раз на значок. Второй — скорость: рисовать две тысячи
+// картинок из маленькой копии заметно дешевле, чем из большой.
+const MAP_IC = 48;
 function mapIcon(src) {
   if (!src) return null;
   let im = mapIcons[src];
   if (im === undefined) {
     im = new Image();
-    im.onload = () => { im.ok = 1; mapDotsSoon(); };
+    im.onload = () => {
+      try {
+        let cv = document.createElement('canvas');
+        let w = im.naturalWidth || MAP_IC, h = im.naturalHeight || MAP_IC;
+        // ступенями по половине, пока не подберёмся к нужному размеру
+        let src2 = im;
+        while (w > MAP_IC * 2) {
+          w = Math.max(MAP_IC, Math.round(w / 2));
+          h = Math.max(MAP_IC, Math.round(h / 2));
+          const step = document.createElement('canvas');
+          step.width = w; step.height = h;
+          const sx = step.getContext('2d');
+          sx.imageSmoothingEnabled = true; sx.imageSmoothingQuality = 'high';
+          sx.drawImage(src2, 0, 0, w, h);
+          src2 = step;
+        }
+        cv.width = MAP_IC; cv.height = MAP_IC;
+        const cx = cv.getContext('2d');
+        cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+        cx.drawImage(src2, 0, 0, MAP_IC, MAP_IC);
+        im.mip = cv;
+      } catch (e) { im.mip = im; }
+      im.ok = 1;
+      mapDotsSoon();
+    };
     im.onerror = () => { im.ok = 0; };
     im.src = src;
     mapIcons[src] = im;
   }
-  return im && im.ok ? im : null;
+  return im && im.ok ? (im.mip || im) : null;
 }
 let mapDotsRaf = 0;
 function mapDotsSoon() {
@@ -3018,59 +3049,91 @@ function mapDots() {
   for (let i = 0; i < mapPts.length; i++) {
     const p = mapPts[i];
     const x = ox + p.fx * side, y = oy + p.fy * side;
-    if (x < -MAP_R || x > W + MAP_R || y < -MAP_R || y > H + MAP_R) continue;
+    if (x < -24 || x > W + 24 || y < -24 || y > H + 24) continue;
     p.sx = x; p.sy = y;
     vis.push(p);
   }
   mapVis = vis;
-  // Три уровня подробности. Когда карту отдалили, точки всё равно налезают
-  // друг на друга, и рисовать каждой подложку с обводкой смысла нет — а стоит
-  // это дорого. Поэтому чем больше точек в кадре, тем проще вид:
-  //   до 1200 — как было: тёмный кружок, цветная рамка, значок;
-  //   до 3000 — только значок, без подложки и обводки;
-  //   дальше — цветные точки.
-  const mode = vis.length > 3000 ? 2 : (vis.length > 1200 ? 1 : 0);
-  const R = mode ? 4 : MAP_R;
+  // Когда карта отдалена и точек в кадре под три тысячи, они всё равно
+  // налезают друг на друга: рисуем их простыми квадратиками. В остальных
+  // случаях — полноценный значок.
+  const tiny = vis.length > 2400;
+  // Размер значка растёт с приближением. На обзоре мелкий значок — это норма,
+  // точек много и важно только где они лежат. А вот когда подошёл вплотную,
+  // значок должен читаться: что именно там лежит, сундук или автомат.
+  const zf = Math.max(0, Math.min(1, (mapView.z - 1.5) / 6.5));
+  const R = Math.round(7 + 8 * zf);        // радиус подложки: 7 … 15
+  const IC = Math.round(R * 1.7);          // сторона картинки: 12 … 26
+  mapR = tiny ? 5 : R;                     // по нему ищем, что под курсором
 
-  for (let i = 0; i < vis.length; i++) {
-    const p = vis[i];
-    ctx.globalAlpha = p.on ? 0.32 : 1;
-    if (mode === 2) {
+  if (tiny) {
+    for (let i = 0; i < vis.length; i++) {
+      const p = vis[i];
+      ctx.globalAlpha = p.on ? 0.32 : 1;
       ctx.fillStyle = p.on ? '#8a8a8a' : p.col;
       ctx.fillRect(p.sx - 2.5, p.sy - 2.5, 5, 5);
-      continue;
     }
-    const im = p.ic ? mapIcon(p.ic) : null;
-    if (im && mode === 1) {
-      ctx.drawImage(im, p.sx - 7, p.sy - 7, 14, 14);
-      continue;
-    }
-    if (im) {
-      ctx.fillStyle = 'rgba(8,10,14,.82)';
-      ctx.beginPath(); ctx.arc(p.sx, p.sy, MAP_R, 0, 6.2832); ctx.fill();
-      ctx.strokeStyle = p.on ? '#8a8a8a' : p.col; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.drawImage(im, p.sx - 8, p.sy - 8, 16, 16);
-      continue;
-    }
-    ctx.fillStyle = p.on ? '#8a8a8a' : p.col;
-    ctx.beginPath(); ctx.arc(p.sx, p.sy, R, 0, 6.2832); ctx.fill();
-    if (!mode) {
-      ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1.5; ctx.stroke();
-      if (p.mine) {     // своя точка — звёздочка, чтобы не путать с игровыми
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#1a0d14'; ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('✦', p.sx, p.sy + 0.5);
-      }
-    }
-  }
-  // точка под курсором — поверх всех и с подсветкой
-  if (mapHot && mapHot.sx != null) {
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(mapHot.sx, mapHot.sy, MAP_R + 3, 0, 6.2832); ctx.stroke();
+    return mapDotsHot(ctx);
+  }
+
+  // Подложки и обводки собираем в общие контуры и заливаем разом: три тысячи
+  // отдельных beginPath/fill стоят дорого, а цветов у точек десяток.
+  const backs = new Path2D(), byCol = new Map(), fills = new Map();
+  for (let i = 0; i < vis.length; i++) {
+    const p = vis[i];
+    const col = p.on ? '#8a8a8a' : p.col;
+    const im = p.ic ? mapIcon(p.ic) : null;
+    if (im) {
+      backs.moveTo(p.sx + R, p.sy);
+      backs.arc(p.sx, p.sy, R, 0, 6.2832);
+      let path = byCol.get(col);
+      if (!path) { path = new Path2D(); byCol.set(col, path); }
+      path.moveTo(p.sx + R, p.sy);
+      path.arc(p.sx, p.sy, R, 0, 6.2832);
+    } else {
+      let path = fills.get(col);
+      if (!path) { path = new Path2D(); fills.set(col, path); }
+      path.moveTo(p.sx + R - 1, p.sy);
+      path.arc(p.sx, p.sy, R - 1, 0, 6.2832);
+    }
   }
   ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(8,10,14,.85)';
+  ctx.fill(backs);
+  ctx.lineWidth = 1.6;
+  byCol.forEach((path, col) => { ctx.strokeStyle = col; ctx.stroke(path); });
+  fills.forEach((path, col) => {
+    ctx.fillStyle = col; ctx.fill(path);
+    ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.stroke(path);
+  });
+
+  // Сами картинки — из подготовленных копий 48×48 (см. mapIcon).
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  for (let i = 0; i < vis.length; i++) {
+    const p = vis[i];
+    const im = p.ic ? mapIcon(p.ic) : null;
+    if (!im) continue;
+    ctx.globalAlpha = p.on ? 0.32 : 1;
+    ctx.drawImage(im, p.sx - IC / 2, p.sy - IC / 2, IC, IC);
+  }
+  // своя точка — звёздочка, чтобы не путать с игровыми значками
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#1a0d14';
+  ctx.font = 'bold ' + Math.round(R * 1.2) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < vis.length; i++) {
+    if (vis[i].mine) ctx.fillText('✦', vis[i].sx, vis[i].sy + 0.5);
+  }
+  return mapDotsHot(ctx);
+}
+// Точка под курсором — поверх всех и с белым ободком.
+function mapDotsHot(ctx) {
+  if (!mapHot || mapHot.sx == null) return;
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(mapHot.sx, mapHot.sy, mapR + 3, 0, 6.2832); ctx.stroke();
 }
 // Наведение, отметки и свои точки. Узлов у точек больше нет, поэтому события
 // висят на самом окне карты, а нужная точка ищется по координатам курсора.
@@ -3089,13 +3152,17 @@ function bindMapDots() {
       mapDots();
     }
     if (p) {
-      // подсказку держим в пределах окна: у правого края она уезжала за экран
-      const r = wrap.getBoundingClientRect();
-      const x = e.clientX - r.left, y = e.clientY - r.top;
+      // Подсказку вешаем на саму точку, а не на курсор: так она не дрожит
+      // вслед за мышью и всегда понятно, к какому значку относится.
       tip.textContent = p.t;
       tip.style.display = 'block';
-      tip.style.left = Math.min(x + 14, wrap.clientWidth - tip.offsetWidth - 8) + 'px';
-      tip.style.top = Math.max(4, y - tip.offsetHeight - 12) + 'px';
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      let x = p.sx - w / 2;
+      let y = p.sy - mapR - h - 8;
+      if (y < 4) y = p.sy + mapR + 8;                       // у верхнего края — снизу
+      x = Math.max(4, Math.min(x, wrap.clientWidth - w - 4));
+      tip.style.left = Math.round(x) + 'px';
+      tip.style.top = Math.round(y) + 'px';
     } else {
       tip.style.display = 'none';
     }
@@ -3146,7 +3213,7 @@ function mapHit(cx, cy) {
   if (!wrap) return null;
   const r = wrap.getBoundingClientRect();
   const x = cx - r.left, y = cy - r.top;
-  let best = null, bd = (MAP_R + 2) * (MAP_R + 2);
+  let best = null, bd = (mapR + 3) * (mapR + 3);
   for (let i = mapVis.length - 1; i >= 0; i--) {
     const p = mapVis[i];
     const dx = p.sx - x, dy = p.sy - y, d = dx * dx + dy * dy;
