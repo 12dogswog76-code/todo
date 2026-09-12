@@ -694,9 +694,13 @@
      Мышь холст не ловит — события висят на самом окне карты. */
   .mapcv{position:absolute;inset:0;pointer-events:none;z-index:3}
   .maptip{position:absolute;display:none;z-index:7;pointer-events:none;
-    max-width:280px;background:rgba(10,12,16,.94);border:1px solid var(--line-hard);
-    border-radius:8px;padding:5px 9px;font-size:11.5px;color:var(--tx);
-    box-shadow:0 4px 14px #0009}
+    max-width:300px;background:rgba(10,12,16,.96);border:1px solid var(--line-hard);
+    border-radius:10px;padding:6px 10px;font-size:11.5px;color:var(--tx);
+    box-shadow:0 4px 14px #0009;align-items:center;gap:9px;line-height:1.25}
+  .maptip.on{display:flex}
+  .maptip img{width:44px;height:44px;object-fit:contain;flex:0 0 auto;
+    background:#ffffff08;border-radius:8px;padding:3px}
+  .maptip span{min-width:0}
   .mapzoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:5px;z-index:6}
   .mapzoom button{width:32px;height:32px;border-radius:9px;background:rgba(12,14,18,.85);
     border:1px solid var(--line);color:var(--tx);cursor:pointer;font-size:15px;line-height:1}
@@ -1100,7 +1104,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v50';
+const APP_VER = 'v51';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3086,8 +3090,8 @@ function mapDots() {
   // точек много и важно только где они лежат. А вот когда подошёл вплотную,
   // значок должен читаться: что именно там лежит, сундук или автомат.
   const zf = Math.max(0, Math.min(1, (mapView.z - 1.5) / 6.5));
-  const R = Math.round(7 + 8 * zf);        // радиус подложки: 7 … 15
-  const IC = Math.round(R * 1.7);          // сторона картинки: 12 … 26
+  const R = Math.round(7 + 9 * zf);        // радиус подложки: 7 … 16
+  const IC = Math.round(R * 1.75);         // сторона картинки: 12 … 28
   mapR = tiny ? 5 : R;                     // по нему ищем, что под курсором
 
   if (tiny) {
@@ -3180,8 +3184,14 @@ function bindMapDots() {
     if (p) {
       // Подсказку вешаем на саму точку, а не на курсор: так она не дрожит
       // вслед за мышью и всегда понятно, к какому значку относится.
-      tip.textContent = p.t;
-      tip.style.display = 'block';
+      //
+      // Значок в ней показывается крупно. На карте он физически маленький —
+      // тридцать пикселей, и больше делать нельзя, точек тысячи и они
+      // слипнутся. А разглядеть, что именно там лежит, всё равно надо: здесь
+      // та же картинка идёт в полный рост.
+      tip.innerHTML = (p.ic ? '<img src="' + esc(p.ic) + '" alt="">' : '') +
+                      '<span>' + esc(p.t) + '</span>';
+      tip.classList.add('on');
       const w = tip.offsetWidth, h = tip.offsetHeight;
       let x = p.sx - w / 2;
       let y = p.sy - mapR - h - 8;
@@ -3190,11 +3200,11 @@ function bindMapDots() {
       tip.style.left = Math.round(x) + 'px';
       tip.style.top = Math.round(y) + 'px';
     } else {
-      tip.style.display = 'none';
+      tip.classList.remove('on');
     }
   });
   wrap.addEventListener('mouseleave', () => {
-    tip.style.display = 'none';
+    tip.classList.remove('on');
     if (mapHot) { mapHot = null; mapDots(); }
   });
 
