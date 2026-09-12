@@ -283,6 +283,18 @@
      Раньше S красился в var(--Incantation) — это цвет стихии «Заклинание»,
      розово-фиолетовый, и легендарное оружие было не отличить от эпического. */
   .row .r-S{color:var(--gold)} .row .r-A{color:#a78bfa} .row .r-B{color:#60a5fa}
+  /* строка списка раскрывается: внутри — описание вещи и её цифры */
+  .pick{margin:0}
+  .pick>summary{list-style:none;cursor:pointer}
+  .pick>summary::-webkit-details-marker{display:none}
+  .pick>summary:after{content:'';width:6px;height:6px;flex:none;margin-left:2px;
+    border-right:2px solid var(--tx3);border-bottom:2px solid var(--tx3);
+    transform:rotate(45deg);transition:.2s}
+  .pick[open]>summary:after{transform:rotate(-135deg)}
+  .pick[open]>summary{border-bottom-left-radius:0;border-bottom-right-radius:0}
+  .pick-in{padding:10px 13px 12px;margin:-4px 0 0;border-radius:0 0 14px 14px;
+    background:var(--pan2);border:1px solid var(--line-soft);border-top:0}
+  .pick-bt{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
   /* картинка вещи в строке: по названию оружие и набор не опознать */
   .row>img{width:34px;height:34px;flex:none;border-radius:9px;object-fit:contain;
     background:#0d0f14;border:1px solid var(--line);padding:2px}
@@ -635,16 +647,23 @@
   .mapin{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
   .maptiles{position:absolute;inset:0;display:grid;gap:0}
   .maptiles img{width:100%;height:100%;display:block;object-fit:cover;user-select:none}
-  /* значок точки: картинка из игры, а если её нет — цветная метка */
-  .mp{position:absolute;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
+  /* Значок точки: картинка из игры, а если её нет — цветная метка.
+     --mz ставит скрипт при каждом изменении масштаба: это 1/зум, чтобы значок
+     на экране всегда был одного размера. margin убран — центрирование делает
+     translate внутри того же transform, иначе сжатие сбивало точку привязки. */
+  .mp{position:absolute;width:20px;height:20px;border-radius:50%;
+    transform:translate(-50%,-50%) scale(var(--mz,1));transform-origin:center;
     background:var(--c);border:1.5px solid rgba(0,0,0,.7);cursor:pointer;
-    box-shadow:0 0 6px var(--c);transition:transform .12s;display:flex;
+    box-shadow:0 0 6px var(--c);transition:none;display:flex;
     align-items:center;justify-content:center}
   .mp.pic{background:rgba(8,10,14,.82);box-shadow:0 0 0 1.5px var(--c),0 2px 6px #000a;
     border-color:transparent}
   .mp img{width:16px;height:16px;object-fit:contain;pointer-events:none}
-  .mp:hover{transform:scale(1.45);z-index:5}
+  .mp:hover{transform:translate(-50%,-50%) scale(calc(var(--mz,1) * 1.45));z-index:5}
   .mp.on{opacity:.35;filter:grayscale(1)}
+  /* своя точка: звёздочка, чтобы не путать с игровыми значками */
+  .mp.mine{background:rgba(8,10,14,.85);border:1.5px solid var(--c);color:var(--c);
+    font-size:13px;font-style:normal;line-height:1;box-shadow:0 0 8px var(--c)}
   .mapzoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:5px;z-index:6}
   .mapzoom button{width:32px;height:32px;border-radius:9px;background:rgba(12,14,18,.85);
     border:1px solid var(--line);color:var(--tx);cursor:pointer;font-size:15px;line-height:1}
@@ -800,11 +819,16 @@
     border-right:2px solid var(--tx3);border-bottom:2px solid var(--tx3);
     transform:rotate(45deg);transition:.2s;flex:none}
   .suit[open]>summary:after{transform:rotate(-135deg)}
-  .suit-in{padding:0 14px 14px}
-  /* Раскрытая карточка раскладывается в колонки. До этого всё шло одной
-     лентой вниз: у машины с двадцатью узлами тюнинга раскрытая карточка
-     уезжала на два экрана, и до раскрасок надо было листать. */
-  .wide{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+  /* Раскрытая карточка раскладывается в колонки слева направо. До этого всё
+     шло одной лентой вниз: у машины с двадцатью узлами тюнинга раскрытая
+     карточка уезжала на два экрана, и до раскрасок надо было листать.
+     Разделы («Характеристики», «Тюнинг», «Раскраски») — это .sec, они и
+     встают рядом; внутри каждого раздела своя сетка. */
+  .suit-in{padding:0 14px 14px;display:grid;gap:0 18px;align-items:start;
+    grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+  .sec{min-width:0}
+  .sec.full{grid-column:1/-1}
+  .wide{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
     gap:9px;align-items:start}
   /* характеристики машины: значение со стока и потолок с тюнингом */
   .vstats{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
@@ -1002,7 +1026,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v35';
+const APP_VER = 'v36';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -1670,8 +1694,9 @@ function drawCarts() {
       // втрое. Ранг S виден в шапке набора, значения по рангам — в общей
       // таблице «что может выпасть».
       '<div class="suit-in">' +
-        (s.geo.length ? cap2('Принимает модули', s.geo.length + ' формы') +
-          geoHtml(s.geo, top && top.rar) : '') +
+        (s.geo.length ? '<div class="sec full">' +
+          cap2('Принимает модули', s.geo.length + ' формы') +
+          geoHtml(s.geo, top && top.rar) + '</div>' : '') +
       '</div>' +
     '</details>';
   }).join('') + '</div>' +
@@ -2246,15 +2271,31 @@ function drawTeams() {
   if (pick.length === 0) {
     // Никто не выбран — раскладываем по стихиям: так видно, чем вообще
     // играют за каждую стихию, а не сплошной список из сорока составов.
+    //
+    // Стихия состава — по первому слоту, но фильтр оставляет и те составы,
+    // где выбранная стихия стоит вторым-третьим номером. Из-за этого при
+    // выбранной Лакшане первым блоком оказывалась Анима: у состава ведущим
+    // был анимовый эспер. Поэтому при выбранной стихии её блок идёт первым,
+    // а внутри него — сначала составы, где эспер этой стихии ведущий.
     const els = [...new Set(list.map(teamEl).filter(Boolean))]
-      .sort((a, b) => String(EL_RU[a] || a).localeCompare(String(EL_RU[b] || b), 'ru'));
-    els.forEach(el => {
-      const own = list.filter(t => teamEl(t) === el);
-      if (own.length) blocks.push({ t: EL_RU[el] || el, n: own.length + ' составов',
-                                    list: own, el: el });
-    });
-    const rest = list.filter(t => !teamEl(t));
-    if (rest.length) blocks.push({ t: 'Прочие', n: rest.length + ' составов', list: rest });
+      .sort((a, b) =>
+        (a === state.el ? -1 : 0) - (b === state.el ? -1 : 0) ||
+        String(EL_RU[a] || a).localeCompare(String(EL_RU[b] || b), 'ru'));
+    if (state.el) {
+      // при выбранной стихии блок один: все составы с ней, ведущие сверху
+      const own = list.slice().sort((x, y) =>
+        (teamEl(x) === state.el ? 0 : 1) - (teamEl(y) === state.el ? 0 : 1));
+      blocks.push({ t: EL_RU[state.el] || state.el, n: own.length + ' составов',
+                    list: own, el: state.el });
+    } else {
+      els.forEach(el => {
+        const own = list.filter(t => teamEl(t) === el);
+        if (own.length) blocks.push({ t: EL_RU[el] || el, n: own.length + ' составов',
+                                      list: own, el: el });
+      });
+      const rest = list.filter(t => !teamEl(t));
+      if (rest.length) blocks.push({ t: 'Прочие', n: rest.length + ' составов', list: rest });
+    }
   } else if (pick.length === 1) {
     const a = agentBy(pick[0]);
     blocks.push({ t: 'Составы с ним', n: (a ? a.ru : pick[0]), list: list.filter(x => has(x, pick[0])) });
@@ -2400,23 +2441,31 @@ function carCard(c) {
       '</div>' +
     '</summary>' +
     '<div class="suit-in">' +
-      (c.desc ? '<div class="hint">' + esc(c.desc) + '</div>' : '') +
+      (c.desc ? '<div class="sec full"><div class="hint">' + esc(c.desc) + '</div></div>' : '') +
       ((c.stats || []).length ?
-        cap2('Характеристики', 'со стока → с тюнингом') + vstatsHtml(c.stats) +
-        '<div class="hint">Потолок считается по каждой характеристике отдельно: ' +
-        'в каждом узле берётся лучшая по ней деталь. Собрать все максимумы ' +
-        'одновременно не всегда выйдет — в узле у деталей разный набор.</div>' : '') +
-      (c.modGold ? '<div class="hint">Полный комплект деталей, без косметики: ' +
-        money(c.modGold, 'Fons') + '</div>' : '') +
-      cap2('Тюнинг', 'по узлам') + partsHtml(c.parts) +
-      (skins.length ? cap2('Раскраски', skins.length + ' шт.') +
-        '<div class="parts">' + skins.map(sk =>
+        '<div class="sec">' +
+          cap2('Характеристики', 'со стока → с тюнингом') + vstatsHtml(c.stats) +
+          '<div class="hint">Потолок считается по каждой характеристике отдельно: ' +
+          'в каждом узле берётся лучшая по ней деталь. Собрать все максимумы ' +
+          'одновременно не всегда выйдет — в узле у деталей разный набор.</div>' +
+          (c.modGold ? '<div class="hint">Полный комплект деталей, без косметики: ' +
+            money(c.modGold, 'Fons') + '</div>' : '') +
+        '</div>' : '') +
+      (Object.keys(c.parts || {}).length
+        ? '<div class="sec">' + cap2('Тюнинг', 'по узлам') + partsHtml(c.parts) + '</div>' : '') +
+      (skins.length ? '<div class="sec">' + cap2('Раскраски', skins.length + ' шт.') +
+        '<div class="wide">' + skins.map(sk =>
           '<div class="part">' +
             (sk.icon ? '<img src="img/cars/' + esc(String(sk.icon).split('/').pop()) +
               '" alt="" loading="lazy">' : '') +
             '<div class="part-b"><b>' + esc(sk.ru || sk.id) + '</b>' +
               (sk.desc ? '<div class="hint" style="margin:3px 0 0">' + esc(sk.desc) + '</div>' : '') +
-            '</div></div>').join('') + '</div>' : '') +
+            '</div></div>').join('') + '</div></div>' : '') +
+      // машина есть в таблицах, а данных по ней нет — так честнее, чем пустое место
+      (!(c.stats || []).length && !Object.keys(c.parts || {}).length && !skins.length
+        ? '<div class="sec full"><div class="hint">В таблицах игры по этой машине ' +
+          'только источник (' + esc(carSrc(c.src)) + '): ни тюнинга, ни характеристик, ' +
+          'ни раскрасок там нет.</div></div>' : '') +
     '</div>' +
   '</details>';
 }
@@ -2472,14 +2521,17 @@ function flatCard(f, anom) {
       '</div>' +
     '</summary>' +
     '<div class="suit-in">' +
-      (f.slog ? '<div class="hint">' + esc(f.slog) + '</div>' : '') +
-      (f.desc ? '<div class="hint">' + esc(f.desc) + '</div>' : '') +
+      (f.slog || f.desc ? '<div class="sec full">' +
+        (f.slog ? '<div class="hint">' + esc(f.slog) + '</div>' : '') +
+        (f.desc ? '<div class="hint">' + esc(f.desc) + '</div>' : '') + '</div>' : '') +
       (() => { const ps = flatPics(f); return ps.length
-        ? cap2('Как выглядит', ps.length + ' фото') + galHtml(ps, f.id) : ''; })() +
-      (anom && anom.length ? cap2('Аномальная мебель', anom.length + ' предметов') +
+        ? '<div class="sec">' + cap2('Как выглядит', ps.length + ' фото') +
+          galHtml(ps, f.id) + '</div>' : ''; })() +
+      (anom && anom.length ? '<div class="sec">' +
+        cap2('Аномальная мебель', anom.length + ' предметов') +
         '<div class="hint" style="margin:0 0 8px">Ставится в любое купленное жильё — ' +
         'привязки к конкретному дому в файлах игры нет.</div>' +
-        '<div class="wide">' + anom.map(anomCard).join('') + '</div>' : '') +
+        '<div class="wide">' + anom.map(anomCard).join('') + '</div></div>' : '') +
     '</div>' +
   '</details>';
 }
@@ -2558,6 +2610,21 @@ function mapFoundToggle(id) {
   if (f[id]) delete f[id]; else f[id] = 1;
   try { localStorage.setItem('nte-map-found', JSON.stringify(f)); } catch (e) {}
 }
+// Свои точки.
+//
+// Сундуков, ресурсов и точек кражи в игровых таблицах нет: они лежат внутри
+// самих уровней, а не в справочниках. У чужих карт они есть потому, что их
+// собирали руками игроки — по одной, месяцами. Скопировать чужую базу нельзя,
+// а вот отмечать свои находки можно: Shift + клик по карте ставит точку с
+// названием, она хранится в браузере и уезжает в облако вместе с отметками.
+const MINE_KINDS = ['сундук', 'ресурс', 'точка кражи', 'предмет', 'задание', 'другое'];
+function mapMine() {
+  try { return JSON.parse(localStorage.getItem('nte-map-mine')) || []; }
+  catch (e) { return []; }
+}
+function mapMineSave(v) {
+  try { localStorage.setItem('nte-map-mine', JSON.stringify(v)); } catch (e) {}
+}
 // какие категории скрыты
 function mapOff() {
   try { return JSON.parse(localStorage.getItem('nte-map-off')) || {}; }
@@ -2605,7 +2672,24 @@ function mapApply() {
   const el = $('mapIn');
   if (!el) return;
   el.style.transform = 'translate(' + mapView.x + 'px,' + mapView.y + 'px) scale(' + mapView.z + ')';
+  // Значки лежат внутри масштабируемого слоя, иначе их пришлось бы двигать
+  // руками при каждом сдвиге карты. Но расти вместе с картой они не должны:
+  // на восьмикратном приближении кружки закрывали пол-экрана. Поэтому каждый
+  // значок сжимается обратно — в CSS это переменная --mz, на которую
+  // помножен его собственный масштаб.
+  el.style.setProperty('--mz', (1 / mapView.z).toFixed(4));
   mapTilesSwap();
+}
+// Сдвиг значков во время подгонки привязки. Полная перерисовка на каждое
+// движение мыши тормозила бы: точек четыреста, и каждая — свой узел. Поэтому
+// двигаем уже нарисованные, а исходные доли держим в data-атрибутах.
+function mapMarksMove(c) {
+  document.querySelectorAll('.mp').forEach(el => {
+    const fx = +el.dataset.fx, fy = +el.dataset.fy;
+    if (!isFinite(fx)) return;
+    el.style.left = (((fx - 0.5) * c.k + 0.5) * 100 + c.dx).toFixed(3) + '%';
+    el.style.top  = (((fy - 0.5) * c.k + 0.5) * 100 + c.dy).toFixed(3) + '%';
+  });
 }
 // Перерисовка подложки при смене уровня. Меняем только плитки: значки и
 // положение карты остаются, поэтому на глаз это просто «стало чётче».
@@ -2655,6 +2739,26 @@ function mapSideHtml(cats, off, cal) {
         '</summary>' +
         '<div class="mapcats">' + own.map(one).join('') + '</div></details>';
     }).join('') +
+    // свои точки: то, чего в игровых таблицах нет вовсе
+    (() => {
+      const mine = mapMine();
+      const by = {};
+      mine.forEach(m => by[m.kind] = (by[m.kind] || 0) + 1);
+      const rows = Object.keys(by).sort();
+      return '<details class="mgrp"' + (rows.length ? ' open' : '') + '>' +
+        '<summary><i style="--c:#ff7ab6"></i><b>мои точки</b><em>' + mine.length + '</em></summary>' +
+        '<div class="mapcats">' +
+          (rows.length ? rows.map(k =>
+            '<label class="mcat' + (off['мои: ' + k] ? ' off' : '') + '">' +
+              '<input type="checkbox" data-cat="' + esc('мои: ' + k) + '"' +
+                (off['мои: ' + k] ? '' : ' checked') + '>' +
+              '<i style="--c:#ff7ab6"></i><span>' + esc(k) + '</span><em>' + by[k] + '</em>' +
+            '</label>').join('')
+          : '<div class="hint" style="margin:4px 0">Пока пусто. Сундуков и ресурсов в ' +
+            'таблицах игры нет — их собирают руками. <b>Shift + клик</b> по карте ставит ' +
+            'свою точку, правая кнопка по ней убирает.</div>') +
+        '</div></details>';
+    })() +
     '<div class="mapbar">' +
       '<button data-mreset>сбросить отметки</button>' +
     '</div>' +
@@ -2664,8 +2768,12 @@ function mapSideHtml(cats, off, cal) {
         '<label>вверх<input type="number" step="0.5" value="' + cal.dy + '" data-cal="dy"></label>' +
         '<label>масштаб<input type="number" step="0.02" value="' + cal.k + '" data-cal="k"></label>' +
       '</div>' +
-      '<div class="hint">Если значки не совпали с картой — подвинь их тут. ' +
-      'В файлах игры привязки мировых координат к картинке нет, поэтому она подобрана на глаз.</div>' +
+      '<div class="hint">Быстрее всего — <b>зажать Alt и потянуть прямо по карте</b>: ' +
+      'поедут только значки, карта останется на месте. <b>Alt + колесо</b> растягивает ' +
+      'расстановку. Числа тут — то же самое, только вручную.<br><br>' +
+      'В файлах игры привязки мировых координат к картинке нет вовсе — ни в таблицах ' +
+      'точек, ни в настройках мини-карты. Поэтому подгонка руками, зато один раз: ' +
+      'значения остаются в этом браузере.</div>' +
       '</div></details>';
 }
 function drawMap() {
@@ -2691,14 +2799,27 @@ function drawMap() {
     const fx = 0.5 + (p.x - box.cx) / box.side, fy = 0.5 - (p.y - box.cy) / box.side;
     const left = ((fx - 0.5) * cal.k + 0.5) * 100 + cal.dx;
     const top  = ((fy - 0.5) * cal.k + 0.5) * 100 + cal.dy;
-    if (left < -5 || left > 105 || top < -5 || top > 105) return '';
+    // за краем карты значок не прячем: при подгонке привязки его надо видеть,
+    // иначе тянешь пустоту. Уходящие совсем далеко всё же отсекаем
+    if (left < -60 || left > 160 || top < -60 || top > 160) return '';
     const ic = p.ic ? '<img src="img/mapicon/' + esc(p.ic) + '" alt="" loading="lazy">' : '';
     return '<i class="mp' + (found[p.id] ? ' on' : '') + (ic ? ' pic' : '') +
-      '" data-p="' + esc(p.id) + '"' +
+      '" data-p="' + esc(p.id) + '" data-fx="' + fx.toFixed(5) + '" data-fy="' + fy.toFixed(5) + '"' +
       ' style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%;' +
       '--c:' + (MAP_COL[p.g] || '#fff') + '" title="' + esc((p.t || '') +
       (p.ru ? ' — ' + p.ru : '')) + '">' + ic + '</i>';
   }).join('');
+
+  // свои точки поверх игровых: их доли уже в координатах картинки, привязка
+  // к ним не применяется — их ставил человек по самой карте
+  const mine = mapMine().filter(m => !off['мои: ' + m.kind] &&
+    (!q || ((m.t || '') + ' ' + (m.kind || '')).toLowerCase().indexOf(q) >= 0));
+  const mineMarks = mine.map(m =>
+    '<i class="mp mine' + (found['mine-' + m.id] ? ' on' : '') + '" data-p="mine-' +
+      esc(m.id) + '" data-mine="' + esc(m.id) + '"' +
+      ' style="left:' + (m.fx * 100).toFixed(3) + '%;top:' + (m.fy * 100).toFixed(3) + '%;' +
+      '--c:#ff7ab6" title="' + esc(m.t + ' · ' + m.kind + ' · своя точка, ПКМ — убрать') +
+      '">✦</i>').join('');
 
   // подложку рисует mapTilesSwap: уровень зависит от текущего масштаба
   $('body').innerHTML =
@@ -2706,7 +2827,7 @@ function drawMap() {
       '<aside class="mapside">' + mapSideHtml(cats, off, cal) + '</aside>' +
       '<div class="mapwrap" id="mapWrap"><div class="mapin" id="mapIn">' +
         '<div class="maptiles" id="mapTiles" data-lay="0"></div>' +
-        marks +
+        marks + mineMarks +
       '</div>' +
       '<div class="mapzoom">' +
         '<button data-mz="+">+</button><button data-mz="-">−</button>' +
@@ -2718,10 +2839,35 @@ function drawMap() {
   mapApply();
   bindMapDrag();
 
-  $('body').querySelectorAll('.mp').forEach(el => el.onclick = e => {
-    e.stopPropagation();
-    mapFoundToggle(el.dataset.p);
-    el.classList.toggle('on');
+  $('body').querySelectorAll('.mp').forEach(el => {
+    el.onclick = e => {
+      e.stopPropagation();
+      mapFoundToggle(el.dataset.p);
+      el.classList.toggle('on');
+    };
+    // свою точку можно убрать правой кнопкой — чужие не трогаем
+    if (el.dataset.mine) el.oncontextmenu = e => {
+      e.preventDefault(); e.stopPropagation();
+      mapMineSave(mapMine().filter(m => String(m.id) !== el.dataset.mine));
+      draw();
+    };
+  });
+  // Shift + клик по карте — поставить свою точку там, куда ткнул
+  const wrapEl = $('mapWrap');
+  if (wrapEl) wrapEl.addEventListener('click', e => {
+    if (!e.shiftKey || e.target.classList.contains('mp')) return;
+    const inEl = $('mapIn');
+    const r = inEl.getBoundingClientRect();
+    // делим на текущий масштаб: прямоугольник уже растянут трансформацией
+    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
+    const t = prompt('Что здесь? Например: «сундук у моста»');
+    if (!t) return;
+    const kind = (prompt('Тип: ' + MINE_KINDS.join(' / '), MINE_KINDS[0]) || 'другое').trim();
+    const all = mapMine();
+    all.push({ id: Date.now().toString(36), t: t.trim(), kind: kind, fx: fx, fy: fy });
+    mapMineSave(all);
+    draw();
   });
   $('body').querySelectorAll('input[data-cat]').forEach(inp => inp.onchange = () => {
     const o = mapOff();
@@ -2752,9 +2898,10 @@ function drawMap() {
     draw();
   };
   foot('Карта из файлов игры: ' + M.pts.length + ' точек — переходы, магазины и службы. ' +
-       'Сундуков и ресурсов в игровых таблицах нет, они лежат внутри уровней. ' +
-       'Тяни мышью, колесо приближает; чем ближе, тем мельче нарезка подложки. ' +
-       'Клик по значку отмечает место как пройденное, отметки хранит браузер.');
+       'Сундуков и ресурсов в игровых таблицах нет, они лежат внутри уровней, и на ' +
+       'чужих картах появились потому, что их собирали руками игроки. Свои находки ' +
+       'можно отмечать самому: Shift + клик. Тяни мышью, колесо приближает; ' +
+       'Alt + перетаскивание двигает значки, если они не совпали с картой.');
 }
 // Перетаскивание и зум. Колесо над картой не должно прокручивать страницу,
 // поэтому слушатель ставим неленивым (passive: false) и гасим событие.
@@ -2762,24 +2909,54 @@ function bindMapDrag() {
   const wrap = $('mapWrap');
   if (!wrap) return;
   let drag = null;
+  // С зажатым Alt тянется не карта, а слой значков: так привязку подгоняешь
+  // глазами за пару секунд вместо вбивания чисел в поля. Alt + колесо меняет
+  // масштаб расстановки. Привязки мировых координат к картинке в файлах игры
+  // нет вовсе, поэтому подгонка руками — единственный способ попасть точно.
   wrap.onmousedown = e => {
     if (e.button !== 0) return;
+    if (e.altKey) {
+      const c = mapCal();
+      drag = { alt: 1, sx: e.clientX, sy: e.clientY, dx: c.dx, dy: c.dy,
+               w: wrap.getBoundingClientRect().width };
+      wrap.classList.add('grab');
+      return;
+    }
     drag = { sx: e.clientX, sy: e.clientY, x: mapView.x, y: mapView.y };
     wrap.classList.add('grab');
   };
   window.addEventListener('mousemove', e => {
     if (!drag) return;
+    if (drag.alt) {
+      // пиксели в проценты от стороны карты, с поправкой на текущий зум
+      const k = 100 / (drag.w * mapView.z);
+      const c = mapCal();
+      c.dx = Math.round((drag.dx + (e.clientX - drag.sx) * k) * 100) / 100;
+      c.dy = Math.round((drag.dy + (e.clientY - drag.sy) * k) * 100) / 100;
+      mapCalSave(c);
+      mapMarksMove(c);
+      return;
+    }
     mapView.x = drag.x + (e.clientX - drag.sx);
     mapView.y = drag.y + (e.clientY - drag.sy);
     mapApply();
   });
   window.addEventListener('mouseup', () => {
     if (!drag) return;
+    const wasAlt = drag.alt;
     drag = null;
     wrap.classList.remove('grab');
+    if (wasAlt) draw();          // перерисовываем, чтобы обновились поля привязки
   });
   wrap.addEventListener('wheel', e => {
     e.preventDefault();
+    if (e.altKey) {
+      const c = mapCal();
+      c.k = Math.round(Math.max(0.2, c.k * (e.deltaY < 0 ? 1.02 : 1 / 1.02)) * 1000) / 1000;
+      mapCalSave(c);
+      draw();
+      return;
+    }
     const r = wrap.getBoundingClientRect();
     // точка под курсором должна остаться на месте
     const cx = e.clientX - r.left, cy = e.clientY - r.top;
@@ -2872,7 +3049,10 @@ function drawCodes() {
     .slice().sort((x, y) => (used[x.code] ? 1 : 0) - (used[y.code] ? 1 : 0));
   const left = list.filter(c => !used[c.code]).length;
   const when = src.updated || '';
-  $('filters').innerHTML = '<span class="fcnt">не введено ' + left + ' из ' + list.length +
+  $('filters').innerHTML = '<div class="fgrp"><u>список</u>' +
+    '<button class="fb" id="codesUpd" title="запросить у воркера свежий список, ' +
+    'минуя его двенадцатичасовой кэш">обновить сейчас</button></div>' +
+    '<span class="fcnt">не введено ' + left + ' из ' + list.length +
     (codesLive ? ' · обновлено с сервера' : '') + '</span>';
   $('body').innerHTML =
     '<div class="box">' + codeRedeemHint() +
@@ -2920,6 +3100,10 @@ function drawCodes() {
     ? 'ntebuild.com' : (codesLive ? 'prydwen.gg' : 'запасной список в файле');
   foot('Коды с ' + from + ', обновление тянет воркер alextask. ' +
        'Отметки «уже ввёл» хранятся в этом браузере.');
+  if ($('codesUpd')) $('codesUpd').onclick = () => {
+    $('codesUpd').textContent = 'обновляю…';
+    refreshCodes(true).then(() => { if (state.tab === 'codes') drawCodes(); });
+  };
   if (!codesLive) refreshCodes();
 }
 // Версия воркера — рядом с версией страницы: без неё непонятно, залит ли
@@ -2939,8 +3123,12 @@ async function workerVer() {
   $('ver').textContent = APP_VER + ' · воркер не отвечает';
 }
 
-async function refreshCodes() {
-  const one = u => fetch(u, { cache: 'no-store' }).then(r => r.json())
+// force — обойти кэш воркера. Он держит снимок двенадцать часов, и после
+// смены источника список ещё полдня приезжает старый; кнопкой это лечится
+// за секунду, а сама вкладка по-прежнему не дёргает чужие сайты лишний раз.
+async function refreshCodes(force) {
+  const one = u => fetch(u + (force ? '?fresh=1' : ''), { cache: 'no-store' })
+    .then(r => r.json())
     .then(j => (j && j.list && j.list.length) ? j : Promise.reject(new Error('пусто')));
   try {
     codesLive = await Promise.any(CODES_API.map(one));
@@ -3238,7 +3426,47 @@ function goalsHtml(g, a) {
       '<b>' + esc(val) + '</b></div>';
   }).join('') + '</div>';
 }
-function picksHtml(list, kind) {
+// Что показать, если вещь раскрыть. У оружия — описание, атака на максимуме
+// и что дают прорывы; у картриджа — бонусы набора, формы модулей и, если это
+// набор из гайда, его особенность для этого эспера. Раньше набор был отдельным
+// блоком ниже по карточке и повторял строку списка слово в слово.
+function pickInner(x, kind, g) {
+  const it = kind === 'arc' ? arcOf(x.n) : suitOf(x.n);
+  if (!it) return '<div class="hint" style="margin:0">В таблицах игры этой вещи нет — ' +
+    'скорее всего, она новая, и сборщик её ещё не видел.</div>';
+  const out = [];
+  if (it.desc) out.push('<div class="hint" style="margin:0 0 7px">' + esc(it.desc) + '</div>');
+
+  if (kind === 'arc') {
+    const top = (it.lv || [])[(it.lv || []).length - 1];
+    if (top) out.push('<div class="geo"><span class="gsh">атака на ' + top.lv +
+      ' уровне <b>' + top.atk + '</b></span>' +
+      (it.rar ? '<span class="gsh">ранг ' + esc(it.rar) + '</span>' : '') + '</div>');
+    // прорывы: что прибавляется к характеристикам на каждой ступени
+    const bt = (it.bt || []).filter(b => b.n > 0 && (b.mods || []).length);
+    if (bt.length) out.push('<div class="pick-bt">' + bt.map(b =>
+      '<span class="gsh">' + b.n + ' прорыв: ' +
+      b.mods.map(m => esc(m.ru) + ' +' + m.v + (m.pct ? '%' : '')).join(', ') +
+      '</span>').join('') + '</div>');
+  } else {
+    (it.bonuses || []).forEach(b =>
+      out.push('<div class="set-b"><i>' + b.n + '</i>' + esc(tr(b.text)) + '</div>'));
+    if ((it.geo || []).length) out.push('<div class="geo" style="margin-top:7px">' +
+      '<span class="hint" style="margin:0">формы модулей:</span>' +
+      it.geo.map(gg => '<span class="gsh">' + shapeMini(gg) +
+        (shapeType(gg) ? 'тип ' + shapeType(gg) : '') + '</span>').join('') + '</div>');
+    // особенность эспера действует только с его набором
+    if (g && g.set && g.set.n === x.n) {
+      if ((g.pieces || []).length) out.push('<div class="pieces">' +
+        '<span class="hint" style="margin:0">нужны модули:</span>' +
+        g.pieces.map(p => '<span class="pc">' + esc(p) + '</span>').join('') + '</div>');
+      if (g.trait) out.push('<div class="trait"><i>бонус эспера за модули</i>' +
+        esc(tr(g.trait)) + '</div>');
+    }
+  }
+  return out.join('');
+}
+function picksHtml(list, kind, g) {
   if (!list || !list.length) return '<div class="hint" style="margin:0">Данных пока нет.</div>';
   return '<div class="rows">' + list.map((x, i) => {
     // Картинка вещи из игры: у оружия — своя, у набора картриджей — значок
@@ -3248,14 +3476,14 @@ function picksHtml(list, kind) {
     const pic = it && it.icon
       ? (kind === 'arc' ? 'img/arcs/' : 'img/suits/') + it.icon : '';
     const rar = x.r || (it && it.rar) || '';
-    return '<div class="row' + (i === 0 ? ' best' : '') + '">' +
+    return '<details class="pick"><summary class="row' + (i === 0 ? ' best' : '') + '">' +
       '<u>' + (i + 1) + '</u>' +
       (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy">' : '') +
       '<b class="' + (rar ? 'r-' + esc(rar) : '') + '" title="' + esc(x.n) + '">' +
         esc(ruName(kind === 'arc' ? 'arcs' : 'carts', x.n)) + '</b>' +
       (x.m ? '<span class="m">' + esc(x.m) + '</span>' : '') +
       (x.pct != null ? '<span class="pct">' + x.pct + '%</span>' : '') +
-    '</div>';
+    '</summary><div class="pick-in">' + pickInner(x, kind, g) + '</div></details>';
   }).join('') + '</div>';
 }
 
@@ -3427,8 +3655,11 @@ function shBody(slug, g, a) {
 
   if (!has) return '<div class="empty">Сборки для этого эспера ещё нет — на prydwen ' +
     'её добавят ближе к выходу.</div>';
-  return cap('Оружие', 'проценты: сила относительно лучшего') + picksHtml(g.arcs, 'arc') +
-    cap('Картриджи') + picksHtml(g.carts, 'cart') +
+  // Списки раскрываются по клику: внутри строки — описание вещи, её цифры и,
+  // у набора эспера, бонусы 2 и 4 предметов. Отдельного блока «Набор модулей»
+  // больше нет — он повторял первую строку картриджей слово в слово.
+  return cap('Оружие', 'нажми, чтобы раскрыть') + picksHtml(g.arcs, 'arc', g) +
+    cap('Картриджи', 'нажми, чтобы раскрыть') + picksHtml(g.carts, 'cart', g) +
     (g.main || g.subs ?
       cap('Приоритет характеристик') +
       '<div class="prio">' +
@@ -3438,21 +3669,6 @@ function shBody(slug, g, a) {
       (g.statNote ? '<div class="hint">' + esc(tr(g.statNote)) + '</div>' : '') : '') +
     (g.goals && Object.keys(g.goals).length ?
       cap('Куда стремиться', 'уровень 60') + goalsHtml(g, a) : '') +
-    (g.set && g.set.n ?
-      cap('Набор модулей') +
-      '<div class="set">' +
-        // значок набора — тот же, что в игре: по названию его не опознать
-        '<div class="set-n" title="' + esc(g.set.n) + '">' +
-          (suitOf(g.set.n) && suitOf(g.set.n).icon ?
-            '<img src="img/suits/' + esc(suitOf(g.set.n).icon) + '" alt="" loading="lazy">' : '') +
-          esc(ruName('carts', g.set.n)) + '</div>' +
-        (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(tr(g.set.b2)) + '</div>' : '') +
-        (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(tr(g.set.b4)) + '</div>' : '') +
-        (g.pieces && g.pieces.length ?
-          '<div class="pieces"><span class="hint" style="margin:0">нужны модули:</span>' +
-          g.pieces.map(x => '<span class="pc">' + esc(x) + '</span>').join('') + '</div>' : '') +
-        (g.trait ? '<div class="trait"><i>бонус эспера за модули</i>' + esc(tr(g.trait)) + '</div>' : '') +
-      '</div>' : '') +
     (g.skills ? cap('Порядок прокачки') + '<div class="prio">' + prioHtml(g.skills) + '</div>' +
       (g.skillNote ? '<div class="hint">' + esc(g.skillNote) + '</div>' : '') : '');
 }
