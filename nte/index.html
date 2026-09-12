@@ -386,6 +386,19 @@
     background:linear-gradient(135deg,hsla(0,0%,100%,.03),rgba(10,10,10,.8));
     border:1px solid var(--line-soft);align-items:center;cursor:default;transition:.2s}
   .bc:hover{transform:translateY(-1px);border-color:var(--line)}
+  /* Плашка с артом: картинка уходит фоном вправо и растворяется к левому
+     краю, чтобы текст поверх читался. Высота фиксированная — иначе соседние
+     карточки в ряду получаются разной высоты и ряд «пляшет». */
+  .bc.bc-art{position:relative;overflow:hidden;min-height:104px;
+    padding-right:34%;isolation:isolate}
+  .bc.bc-art::before{content:'';position:absolute;inset:0;z-index:-2;
+    background-image:var(--bg);background-size:auto 190%;
+    background-position:right -10% top -18%;background-repeat:no-repeat}
+  .bc.bc-art::after{content:'';position:absolute;inset:0;z-index:-1;
+    background:linear-gradient(90deg,rgba(10,11,14,.97) 34%,rgba(10,11,14,.72) 62%,
+      rgba(10,11,14,.30) 100%)}
+  .bc.bc-art.live::after{background:linear-gradient(90deg,
+    rgba(10,22,16,.96) 34%,rgba(10,20,15,.70) 62%,rgba(10,18,14,.28) 100%)}
   .bc.live{border-color:hsla(140,70%,60%,.5);
     background:linear-gradient(135deg,hsla(140,70%,60%,.10),rgba(10,10,10,.8));
     box-shadow:0 0 28px hsla(140,70%,60%,.15),inset 0 0 40px hsla(140,70%,60%,.04)}
@@ -850,6 +863,9 @@
     background:linear-gradient(135deg,hsla(140,70%,60%,.07),var(--pan))}
   .awk-h .m{font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
     color:var(--acc);border:1px solid hsla(140,70%,60%,.4);border-radius:999px;padding:2px 8px}
+  /* ступень, которую советуют брать первой */
+  .awk-h .m.top{color:var(--gold);border-color:hsla(41,100%,50%,.45)}
+  .awk.want{border-color:hsla(41,100%,50%,.3)}
   .awk-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .awk-h img{width:38px;height:38px;object-fit:contain;flex:none;border-radius:9px;
     background:#0d0f14;border:1px solid var(--line);padding:2px}
@@ -1113,7 +1129,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v52';
+const APP_VER = 'v53';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1132,6 +1148,11 @@ let DB = null, GUIDE = null, RU = null, GEAR = null, I18N = null, CITY = null;
 let AWK = {};
 // точки карты со StarDB: сундуки, находки, враги — то, чего нет в таблицах игры
 let SDB = null;
+// разборы с ntebuild: какие ступени пробуждения брать первыми и чем эспер
+// полезен команде. В файлах игры этого нет — это оценка тех, кто в него играл
+let NB = {};
+// крупные арты скинов: имя мелкой картинки → имя крупной в img/artbig
+let ART = {};
 
 // ── перевод текстов с prydwen ──────────────────────────────────────────────
 // Сами тексты приезжают с сайта по-английски и при каждом новом прогоне
@@ -1292,10 +1313,18 @@ function looks(a) {
   ((CITY && CITY.skins) || [])
     .filter(x => x.slug === a.slug && !x.def && x.pic)
     .sort((x, y) => String(x.ru).localeCompare(String(y.ru), 'ru'))
-    .forEach(x => out.push({
-      ru: x.ru, desc: x.desc, rar: x.rar, src: x.src,
-      pic: 'img/skins/' + String(x.pic).split('/').pop()
-    }));
+    .forEach(x => {
+      const nm = String(x.pic).split('/').pop();
+      // Крупная версия, если её собрал build-nte-art.ps1. В таблицах игры
+      // лежит картинка для мелкой плашки интерфейса, 380 пикселей по ширине,
+      // и рядом с артом эспера она выглядит мутной. Крупные — те же скины
+      // из полноразмерного набора, ужатые до тысячи с небольшим.
+      const big = ART[nm];
+      out.push({
+        ru: x.ru, desc: x.desc, rar: x.rar, src: x.src,
+        pic: big ? 'img/artbig/' + big : 'img/skins/' + nm
+      });
+    });
   return out;
 }
 let lookIdx = 0;      // какой облик показан в открытой карточке
@@ -1305,14 +1334,17 @@ async function load() {
   // (опыт, материалы прокачки) на странице просто не появляются.
   const grab = (f, opt) => fetch(f + '?v=' + APP_VER).then(r => r.json())
     .catch(() => opt ? null : Promise.reject(new Error(f)));
-  const [db, guide, dict, gear, i18n, city, awk, sdb] = await Promise.all([
+  const [db, guide, dict, gear, i18n, city, awk, sdb, nb, art] = await Promise.all([
     grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1),
     grab('nte-gear.json', 1), grab('nte-i18n.json', 1), grab('nte-city.json', 1),
-    grab('nte-awaken.json', 1), grab('nte-map.json', 1)
+    grab('nte-awaken.json', 1), grab('nte-map.json', 1), grab('nte-build.json', 1),
+    grab('nte-art.json', 1)
   ]);
   DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n; CITY = city;
   AWK = (awk && awk.awaken) || {};
   SDB = sdb || null;
+  NB = (nb && nb.a) || {};
+  ART = (art && art.a) || {};
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
   $('cloudBtn').onclick = showSync;
@@ -2165,6 +2197,17 @@ function bindPlan() {
 // Расписание берётся с prydwen: своей таблицы под баннеры в игре нет. Карточки
 // приходят уже сгруппированными — «идут сейчас», «следующие», «объявленные», —
 // поэтому просто выводим их подборками в том же порядке.
+// Арт для фона плашки баннера. Берём крупную версию обычного вида эспера,
+// если её собрал build-nte-art.ps1: в img/art лежит картинка с prydwen, она
+// подходит, но у крупной выше и разрешение, и качество.
+function bannerArt(a) {
+  const def = ((CITY && CITY.skins) || []).filter(x => x.slug === a.slug && x.def && x.pic)[0];
+  if (def) {
+    const big = ART[String(def.pic).split('/').pop()];
+    if (big) return 'img/artbig/' + big;
+  }
+  return artOf(a);
+}
 function drawBanners() {
   const list = (GUIDE.banners || []).filter(b => {
     const q = state.q.trim().toLowerCase();
@@ -2195,7 +2238,14 @@ function drawBanners() {
         const pic = a ? portrait(a) : arcPic(b.name);
         const go = a ? ' data-ban-slug="' + esc(a.slug) + '"'
                      : ' data-ban-arc="' + esc(ruName('arcs', b.name) || b.name) + '"';
-        return '<div class="bc' + (isLive(g) ? ' live' : '') + (b.top ? ' bc-main' : '') + '"' +
+        // За текстом — крупный арт эспера, как на ntebuild: плашка перестаёт
+        // быть строкой списка и сразу читается, кто на баннере. Арт берём тот
+        // же, что и в карточке, только фоном и с затемнением. Если крупного
+        // нет (оружие, новый эспер) — плашка остаётся обычной.
+        const bg = a ? bannerArt(a) : '';
+        return '<div class="bc' + (isLive(g) ? ' live' : '') + (b.top ? ' bc-main' : '') +
+            (bg ? ' bc-art' : '') + '"' +
+            (bg ? ' style="--bg:url(\'' + bg + '\')"' : '') +
             go + ' title="открыть' + (a ? ' карточку эспера' : ' оружие') + '">' +
           (pic ? '<img src="' + pic + '" alt="" loading="lazy">' : '') +
           '<div class="bc-b">' +
@@ -4472,18 +4522,26 @@ function awkHtml(slug, g, cap) {
   const n = Object.keys(have).length;
   const want = ((g.ratings || {}).awk || '').replace(/[^\d]/g, '');
   const eff = list.filter(x => !x.res), res = list.filter(x => x.res);
+  // Какие ступени советуют брать первыми — с разбора ntebuild. В файлах игры
+  // такого нет и быть не может: все шесть по игре равноправны, а порядок —
+  // оценка тех, кто в эспера играл.
+  const nb = NB[slug] || {};
+  const top = {};
+  (nb.awk || []).forEach(x => { top[x.n] = x.en || 1; });
   const card = x =>
     '<div class="awk' + (!x.res && have[x.n] ? ' on' : '') +
-      (x.res && n >= x.n ? ' on' : '') + '"' +
+      (x.res && n >= x.n ? ' on' : '') + (!x.res && top[x.n] ? ' want' : '') + '"' +
       (x.res ? '' : ' data-awk="' + x.n + '" title="нажми, если оно у тебя выбрано"') + '>' +
       '<div class="awk-h">' +
         (x.pic ? '<img src="img/awk/' + esc(x.pic) + '" alt="" loading="lazy">' : '') +
         '<u>' + (x.res ? 'резонанс ' : 'A') + x.n + '</u>' +
         '<b>' + esc(x.ru || x.en || '') + '</b>' +
+        (!x.res && top[x.n] ? '<span class="m top">★ берут первым</span>' : '') +
         (!x.res && have[x.n] ? '<span class="m">выбрано</span>' : '') +
       '</div>' +
       (x.desc ? '<div class="awk-d">' + esc(x.desc).replace(/\n/g, '<br>') + '</div>' : '') +
     '</div>';
+  const topList = Object.keys(top).sort().map(k => 'A' + k);
   return cap('Сколько у тебя', n ? 'выбрано ' + n + ' из 6' : 'пока ни одного') +
     '<div class="hint">Пробуждения тут не идут по порядку, как созвездия в ' +
     'соседних играх. Каждый дубликат эспера даёт <b>одну ступень на выбор</b>: с ' +
@@ -4491,6 +4549,14 @@ function awkHtml(slug, g, cap) {
     'себе — карточки нажимаются.' +
     (want ? ' По оценке prydwen эспер заметно прибавляет, когда ступеней ' +
       'набирается <b>' + esc(want) + '</b>.' : '') + '</div>' +
+    (topList.length
+      ? '<div class="box" style="margin-bottom:10px"><b>Что брать первым</b>' +
+        'По разбору ntebuild самые полезные ступени у этого эспера — <b>' +
+        topList.join(', ') + '</b>. Ниже они отмечены звёздочкой. Это не правило ' +
+        'игры, а оценка тех, кто в него играл: ' +
+        (nb.url ? '<a href="' + esc(nb.url) + '" target="_blank" rel="noopener">' +
+          'разбор целиком ↗</a>' : 'смотри разбор на ntebuild') + '.</div>'
+      : '') +
     cap('Пробуждения', eff.length + ' ступеней на выбор') +
     '<div class="awks">' + eff.map(card).join('') + '</div>' +
     (res.length ? cap('Резонансы', 'за количество, а не за номер') +
@@ -4808,6 +4874,36 @@ function bindCharPlan(slug) {
     bindCharPlan(slug);
   });
 }
+// Роль эспера в составе — с разбора ntebuild. Их формулировка на английском
+// и короткая: «S-rank Anima Main DPS / Follow-up Attack». Переводим знакомые
+// куски, остальное оставляем как есть: новые роли появятся с патчами, и
+// английский ярлык лучше пропуска.
+const TEAMROLE_RU = {
+  'main dps': 'основной урон', 'sub-dps': 'второй номер по урону',
+  'sub dps': 'второй номер по урону', 'burst dps': 'урон по всплеску',
+  'support': 'поддержка', 'buffer': 'усиливает команду',
+  'healer': 'лечение', 'healer / buffer': 'лечение и усиление',
+  'follow-up attack': 'добивающие удары', 'on-field': 'бьёт сам, на поле',
+  'off-field': 'бьёт из-за спины', 'breaker': 'ломает защиту',
+  'debuffer': 'ослабляет врагов', 'shielder': 'щиты',
+  'anomaly': 'аномалии', 'hybrid': 'универсал'
+};
+function roleRu(s) {
+  return String(s || '').split('/').map(p => {
+    const t = p.trim().replace(/\s+/g, ' ');
+    // ранг и стихия в начале строки у нас и так показаны в шапке — убираем
+    const cut = t.replace(/^[SAB]-rank\s+/i, '')
+                 .replace(/^(Anima|Cosmos|Chaos|Plasma|Lakshana|Incantation)\s+/i, '');
+    return TEAMROLE_RU[cut.toLowerCase()] || cut;
+  }).filter(Boolean).join(' · ');
+}
+function roleHtml(slug) {
+  const nb = NB[slug] || {};
+  if (!nb.role) return '';
+  return '<div class="box"><b>Зачем он в команде</b>' + esc(roleRu(nb.role)) +
+    (nb.url ? ' · <a href="' + esc(nb.url) + '" target="_blank" rel="noopener">' +
+      'разбор на ntebuild ↗</a>' : '') + '</div>';
+}
 function nowHtml(slug, g, a, cap) {
   const bans = (GUIDE.banners || []).filter(b => b.slug === slug);
   const live = bans.filter(b => /current|сейчас/i.test(b.key + ' ' + b.group))[0];
@@ -4823,7 +4919,11 @@ function nowHtml(slug, g, a, cap) {
       (asCore ? '<div class="st" title="Составы, где он стоит первым номером: вся команда ' +
         'работает на него, остальные подают ресурс и баффы">' +
         '<b>' + asCore + '</b>из них он главный</div>' : '') +
-    '</div>';
+    '</div>' +
+    // Чем эспер занят в составе. Игра пишет только роль-ярлык («Урон»), а
+    // полезно другое: он сам бьёт или разгоняет чужой урон, держит ресурс,
+    // ломает защиту. Это оценка разборщиков, из файлов игры её не достать.
+    roleHtml(slug);
   const banner = live
     ? '<div class="verdict">Баннер <b>идёт прямо сейчас</b>: ' + esc(banDates(live)) +
       (live.patch ? ' · ' + esc(live.patch) : '') + '</div>'
