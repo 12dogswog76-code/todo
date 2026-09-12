@@ -582,24 +582,54 @@
   .cloudb.on{color:var(--acc);border-color:hsla(140,70%,60%,.4)}
 
   /* карта */
-  .mapwrap{position:relative;width:100%;overflow:auto;border:1px solid var(--line);
-    border-radius:16px;background:#0b0d10}
-  .mapin{position:relative;width:100%;padding-top:100%}
+  .maprow{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:start}
+  .mapwrap{position:relative;width:100%;padding-top:100%;overflow:hidden;
+    border:1px solid var(--line);border-radius:16px;background:#0b0d10;cursor:grab}
+  .mapwrap.grab{cursor:grabbing}
+  .mapin{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
   .maptiles{position:absolute;inset:0;display:grid;gap:0}
-  .maptiles img{width:100%;height:100%;display:block;object-fit:cover}
-  .mp{position:absolute;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;
-    background:var(--c);border:1.5px solid rgba(0,0,0,.65);cursor:pointer;
-    box-shadow:0 0 6px var(--c);transition:.12s}
-  .mp:hover{transform:scale(1.5);z-index:5}
-  .mp.on{background:transparent;box-shadow:none;border-color:var(--c);opacity:.5}
-  .mapbar{display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap;margin-top:10px}
-  .mapbar button{padding:7px 12px;border-radius:10px;background:var(--pan);
-    border:1px solid var(--line);color:var(--tx2);cursor:pointer;font-size:12px}
+  .maptiles img{width:100%;height:100%;display:block;object-fit:cover;user-select:none}
+  /* значок точки: картинка из игры, а если её нет — цветная метка */
+  .mp{position:absolute;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
+    background:var(--c);border:1.5px solid rgba(0,0,0,.7);cursor:pointer;
+    box-shadow:0 0 6px var(--c);transition:transform .12s;display:flex;
+    align-items:center;justify-content:center}
+  .mp.pic{background:rgba(8,10,14,.82);box-shadow:0 0 0 1.5px var(--c),0 2px 6px #000a;
+    border-color:transparent}
+  .mp img{width:16px;height:16px;object-fit:contain;pointer-events:none}
+  .mp:hover{transform:scale(1.45);z-index:5}
+  .mp.on{opacity:.35;filter:grayscale(1)}
+  .mapzoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:5px;z-index:6}
+  .mapzoom button{width:32px;height:32px;border-radius:9px;background:rgba(12,14,18,.85);
+    border:1px solid var(--line);color:var(--tx);cursor:pointer;font-size:15px;line-height:1}
+  .mapzoom button:hover{border-color:var(--acc)}
+  /* колонка категорий справа */
+  .mapside{border:1px solid var(--line-soft);border-radius:16px;background:var(--pan);
+    padding:12px;max-height:calc(100vh - 150px);overflow:auto}
+  .mapside-h{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .mapside-h b{font-family:var(--disp);font-size:15px;color:var(--tx)}
+  .mapside-h span{margin-left:auto;display:flex;gap:5px}
+  .mapside-h button{padding:4px 9px;border-radius:8px;background:var(--pan2);
+    border:1px solid var(--line);color:var(--tx3);cursor:pointer;font-size:10.5px}
+  .mapside-h button:hover{border-color:var(--acc);color:var(--tx)}
+  .mapcats{display:flex;flex-direction:column;gap:2px}
+  .mcat{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:9px;
+    cursor:pointer;font-size:11.5px;color:var(--tx2)}
+  .mcat:hover{background:var(--pan2)}
+  .mcat.off{opacity:.4}
+  .mcat input{width:13px;height:13px;flex:none;accent-color:var(--acc)}
+  .mcat img{width:18px;height:18px;object-fit:contain;flex:none}
+  .mcat i{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none;margin:0 4px}
+  .mcat span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mcat em{font-style:normal;font-size:10px;color:var(--tx3);font-family:var(--mono),monospace}
+  .mapbar{display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap;margin-top:10px}
+  .mapbar button{padding:6px 10px;border-radius:9px;background:var(--pan2);
+    border:1px solid var(--line);color:var(--tx2);cursor:pointer;font-size:11px}
   .mapbar button:hover{border-color:var(--acc);color:var(--tx)}
-  .mapbar label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--tx3);
+  .mapbar label{display:flex;flex-direction:column;gap:3px;font-size:9.5px;color:var(--tx3);
     text-transform:uppercase;letter-spacing:.5px}
-  .mapbar input{width:82px;padding:6px 8px;border-radius:9px;background:var(--pan);
-    border:1px solid var(--line);color:var(--tx);font-family:var(--mono),monospace;font-size:12px}
+  .mapbar input{width:70px;padding:5px 7px;border-radius:8px;background:var(--pan2);
+    border:1px solid var(--line);color:var(--tx);font-family:var(--mono),monospace;font-size:11px}
 
   /* планировщик прокачки: два поля уровня рядом */
   .lvpair{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 9px}
@@ -607,6 +637,108 @@
     text-transform:uppercase;letter-spacing:.6px}
   .lvpair input{width:78px;padding:7px 9px;border-radius:10px;background:var(--pan);
     border:1px solid var(--line);color:var(--tx);font-family:var(--disp);font-size:15px}
+
+  /* переключение обликов эспера */
+  .lk-a{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:56px;
+    border:0;border-radius:10px;background:rgba(8,10,14,.55);color:#fff;font-size:24px;
+    line-height:1;cursor:pointer;opacity:0;transition:.15s;z-index:3}
+  .sh-art:hover .lk-a{opacity:.75}
+  .lk-a:hover{opacity:1;background:rgba(8,10,14,.8)}
+  .lk-a.l{left:8px} .lk-a.r{right:8px}
+  .lk-row{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:5px;z-index:3}
+  .lk{width:42px;height:56px;padding:0;border-radius:9px;overflow:hidden;cursor:pointer;
+    border:1px solid hsla(0,0%,100%,.18);background:#0d0f14;transition:.15s}
+  .lk img{width:100%;height:100%;object-fit:cover;object-position:center 12%;
+    filter:grayscale(.7) brightness(.55);transition:.15s}
+  .lk:hover img{filter:grayscale(0) brightness(.85)}
+  .lk.on{border-color:var(--acc)}
+  .lk.on img{filter:none}
+  .lk-name{position:absolute;left:12px;bottom:10px;z-index:3;font-size:11px;color:var(--tx2);
+    background:rgba(8,10,14,.6);padding:4px 9px;border-radius:9px;backdrop-filter:blur(4px)}
+  .lk-name i{font-style:normal;display:block;font-size:9.5px;color:var(--tx3)}
+
+  /* тюнинг: узел раскрывается */
+  .node{border:1px solid var(--line-soft);border-radius:12px;background:var(--pan);
+    margin-bottom:6px;overflow:hidden}
+  .node[open]{border-color:var(--line)}
+  .node>summary{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;
+    list-style:none;font-size:12.5px;color:var(--tx2)}
+  .node>summary::-webkit-details-marker{display:none}
+  .node>summary b{color:var(--tx);font-size:12.5px}
+  .node>summary em{margin-left:auto;font-style:normal;font-size:10px;color:var(--tx3);
+    font-family:var(--mono),monospace}
+  .node-in{padding:0 12px 10px;display:grid;gap:6px}
+  .tune{padding:8px 10px;border-radius:10px;background:var(--pan2);border:1px solid var(--line-soft)}
+  .tune.std{border-color:hsla(140,70%,60%,.28)}
+  .tune-t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .tune-t b{font-size:12px;color:var(--tx);flex:1;min-width:120px}
+  .tune-s{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+  /* цена значком валюты */
+  .cash{display:inline-flex;align-items:center;gap:4px}
+  .cash img{width:15px;height:15px;object-fit:contain}
+  .cash b{font-family:var(--disp);font-size:13px;color:var(--tx)}
+  .flat-ic{width:96px;height:62px;object-fit:cover}
+  .flat-big{width:100%;border-radius:12px;display:block;margin:4px 0 2px}
+
+  /* коды: сверху сам код и кнопка, снизу награда и срок */
+  .codes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:9px}
+  .code{display:block;padding:11px 13px;border-radius:14px;background:var(--pan);
+    border:1px solid var(--line-soft);transition:.15s}
+  .code:hover{border-color:var(--line)}
+  .code.done-c{opacity:.5}
+  .code-t{display:flex;align-items:center;gap:9px}
+  .code-t b{font-family:var(--mono),monospace;font-size:14px;color:var(--tx);
+    letter-spacing:.04em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .code.done-c .code-t b{text-decoration:line-through}
+  .code-t button{padding:5px 10px;border-radius:8px;background:var(--pan2);
+    border:1px solid var(--line);color:var(--tx2);cursor:pointer;font-size:10.5px;flex:none}
+  .code-t button:hover{border-color:var(--acc);color:var(--tx)}
+  .code-t button.done{border-color:var(--acc);color:var(--acc)}
+  .code-r{margin-top:8px;display:flex;flex-wrap:wrap;gap:0}
+  .code-d{margin-top:6px;font-size:10.5px;color:var(--tx3)}
+
+  /* полоса портретов на вкладке «Команды» */
+  .roster{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .rost{display:flex;flex-direction:column;align-items:center;gap:3px;width:62px;padding:5px 3px;
+    border-radius:12px;background:var(--pan);border:1px solid var(--line-soft);cursor:pointer;
+    transition:.15s}
+  .rost:hover{border-color:var(--line);transform:translateY(-1px)}
+  .rost.on{border-color:var(--acc);background:hsla(140,70%,60%,.08)}
+  .rost img{width:44px;height:44px;border-radius:10px;object-fit:cover;
+    filter:grayscale(.6) brightness(.8);transition:.15s}
+  .rost.on img{filter:none}
+  .rost span{font-size:9px;color:var(--tx3);max-width:56px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .rost.clr{width:auto;padding:5px 12px;justify-content:center;color:var(--tx3);font-size:11px}
+
+  /* набор картриджей: карточка раскрывается */
+  .suit{border:1px solid var(--line-soft);border-radius:16px;overflow:hidden;
+    background:linear-gradient(135deg,hsla(0,0%,100%,.03),rgba(10,10,10,.8));transition:.2s}
+  .suit[open]{border-color:var(--line);background:var(--pan2)}
+  .suit>summary{display:flex;gap:12px;padding:12px 14px;cursor:pointer;list-style:none;
+    align-items:flex-start}
+  .suit>summary::-webkit-details-marker{display:none}
+  .suit>summary:after{content:'';margin-left:auto;align-self:center;width:7px;height:7px;
+    border-right:2px solid var(--tx3);border-bottom:2px solid var(--tx3);
+    transform:rotate(45deg);transition:.2s;flex:none}
+  .suit[open]>summary:after{transform:rotate(-135deg)}
+  .suit-in{padding:0 14px 14px}
+  .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+  .part{display:flex;gap:9px;padding:8px 10px;border-radius:12px;background:var(--pan);
+    border:1px solid var(--line-soft);align-items:flex-start}
+  .part img{width:44px;height:44px;object-fit:contain;flex:none;border-radius:9px;
+    background:#0d0f14;border:1px solid var(--line);padding:2px}
+  .part-b{min-width:0}
+  .part-b b{font-size:12.5px;color:var(--tx)}
+  /* что может выпасть */
+  .drops{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:7px}
+  .drop{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:11px;
+    background:var(--pan);border:1px solid var(--line-soft);font-size:11.5px}
+  .drop>span{flex:1;color:var(--tx2)}
+  .dv{display:flex;gap:9px}
+  .sv{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--tx3)}
+  .sv b{font-family:var(--disp);font-size:13px;color:var(--tx)}
+  .sv i{font-style:normal}
 
   /* скины */
   .skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px}
@@ -715,6 +847,9 @@
     .sh-art{width:100%;height:46vh;max-height:360px;border-radius:18px 18px 0 0}
     .sh-art img{object-position:center 6%}
     .sh-body{padding:14px 14px 20px}
+    /* на телефоне колонка категорий уходит под карту */
+    .maprow{grid-template-columns:minmax(0,1fr)}
+    .mapside{max-height:none}
     .grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
     .sh-title h2{font-size:22px}
     .sheet{padding:10px 8px}
@@ -768,7 +903,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v32';
+const APP_VER = 'v33';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -841,7 +976,7 @@ function rewHtml(s) {
       esc(it.ru || name) + (cnt ? '<b>×' + esc(cnt) + '</b>' : '') + '</span>';
   }).join('');
 }
-const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan: 'mint', cview: 'sets', tview: 'cars' };
+const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan: 'mint', tview: 'cars' };
 
 // Команды, планировщик Console и калькулятор статов живут внутри карточки
 // эспера: сами по себе, в отрыве от конкретного персонажа, они бесполезны.
@@ -895,6 +1030,21 @@ const elIcon = el => 'img/ui/el-' + String(el).toLowerCase() + '.png';
 const roleIcon = r => 'img/ui/role-' + String(r).toLowerCase() + '.webp';
 const portrait = a => 'img/espers/' + a.slug + '.png';
 const artOf = a => 'img/art/' + a.slug + '.png';
+// Обликов у эспера может быть несколько: обычный вид и купленные скины.
+// Список собирает build-nte-db.ps1 из файлов игры; здесь просто складываем
+// в один ряд, чтобы листать стрелками у арта, как в игровом гардеробе.
+function looks(a) {
+  const out = [{ ru: 'Обычный вид', pic: artOf(a), def: true }];
+  ((CITY && CITY.skins) || [])
+    .filter(x => x.slug === a.slug && !x.def && x.pic)
+    .sort((x, y) => String(x.ru).localeCompare(String(y.ru), 'ru'))
+    .forEach(x => out.push({
+      ru: x.ru, desc: x.desc, rar: x.rar, src: x.src,
+      pic: 'img/skins/' + String(x.pic).split('/').pop()
+    }));
+  return out;
+}
+let lookIdx = 0;      // какой облик показан в открытой карточке
 
 async function load() {
   // ?v=версия — иначе браузер отдаёт файл из кеша, и свежие поля данных
@@ -1259,92 +1409,124 @@ function geoSize(name) {
   return flat ? flat.length / 2 : 0;
 }
 function suitById(id) { return (GEAR.suits || []).filter(s => s.id === id)[0]; }
-function modCard(m) {
-  const suit = m.core ? suitById(m.suit) : null;
-  const ic = m.icon ? 'img/mods/' + m.icon
-    : (suit && suit.icon ? 'img/suits/' + suit.icon : '');
+
+// ── картриджи ──────────────────────────────────────────────────────────────
+// В игре на сетку Console кладут две разные детали, и путать их нельзя:
+//   «Картридж» — квадратный, принадлежит набору, даёт бонус набора;
+//   «Модуль»  — фигурный, к наборам не относится, расширяет сетку.
+// Раньше они лежали в трёх разных списках (наборы, картриджи, модули), и одно
+// и то же имя встречалось дважды. Теперь один список наборов: раскрыл — и
+// видишь бонусы, картриджи всех рангов и какие модули набор принимает.
+function statVals(r) {
+  const cols = ['S', 'A', 'B'];
+  const f = n => String(Math.round(n * 10) / 10).replace('.', ',');
+  return cols.map(c => {
+    const v = r.val && r.val[c];
+    if (!v) return '';
+    const u = r.pct ? '%' : '';
+    return '<span class="sv">' + rarPill(c) + '<b>' + f(v.max) + u + '</b>' +
+      '<i>с ' + f(v.min) + u + '</i></span>';
+  }).join('');
+}
+// Что может выпасть на картридже — общая таблица для всех наборов: пул
+// одинаковый, меняется только ранг детали.
+function dropHtml() {
+  const rows = GEAR.modStats || [];
+  if (!rows.length) return '';
+  return '<details class="mfold"><summary><b>Что может выпасть на картридже</b></summary>' +
+    '<div class="mfold-in">' +
+    '<div class="hint" style="margin:8px 0">Основная характеристика выпадает случайно из ' +
+    'этого списка. Число — значение на 20 уровне, мелким — стартовое.</div>' +
+    '<div class="drops">' + rows.map(r =>
+      '<div class="drop">' + statIco(dropKey(r.p)) + '<span>' + esc(r.ru) + '</span>' +
+      '<div class="dv">' + statVals(r) + '</div></div>').join('') + '</div>' +
+    '</div></details>';
+}
+// имя характеристики из таблицы → ключ значка
+function dropKey(p) {
+  const t = String(p || '');
+  if (/^HPMax/.test(t)) return 'hp';
+  if (/^Atk/.test(t)) return 'atk';
+  if (/^Def/.test(t)) return 'def';
+  if (/^CritDamage/.test(t)) return 'cd';
+  if (/^Crit/.test(t)) return 'cr';
+  if (/^DamageUp/.test(t)) return 'elem';
+  if (/^Mag/.test(t)) return 'cyc';
+  if (/Unbal/.test(t)) return 'brk';
+  if (/Heal/.test(t)) return 'heal';
+  return '';
+}
+function partCard(m) {
   const bits = [];
   if (m.grids) bits.push('<span class="gsh">+' + m.grids + ' к сетке</span>');
   if (!m.core && geoSize(m.geo)) bits.push('<span class="gsh">' + shapeMini(m.geo) +
     'занимает ' + geoSize(m.geo) + '</span>');
   if (m.max) bits.push('<span class="gsh">до ' + m.max + ' ур.</span>');
   if (m.baseN) bits.push('<span class="gsh">' + m.baseN + ' осн. + ' + m.subN + ' доп.</span>');
-  const cost = [];
-  if (m.exp) cost.push(num(m.exp) + ' опыта');
-  if (m.gold) cost.push(num(m.gold) + ' монет за уровень');
-  return '<div class="cart">' +
-    (ic ? '<img class="cart-ic" src="' + esc(ic) + '" alt="" loading="lazy">' : '') +
-    '<div class="item-b">' +
-      '<b style="font-size:14px;color:var(--gold)" title="' + esc(m.en || '') + '">' + esc(m.ru || m.id) +
-        '</b>' + rarPill(m.rar) +
-      (suit ? '<div class="set-b"><i>набор</i>' + esc(suit.ru || suit.en || m.suit) + '</div>' : '') +
+  if (m.gold) bits.push('<span class="gsh">' + num(m.gold) + ' монет за уровень</span>');
+  return '<div class="part">' +
+    (m.icon ? '<img src="img/mods/' + esc(m.icon) + '" alt="" loading="lazy">' : '') +
+    '<div class="part-b"><b>' + esc(m.ru || m.id) + '</b>' + rarPill(m.rar) +
       (bits.length ? '<div class="geo">' + bits.join('') + '</div>' : '') +
-      (cost.length ? '<div class="hint" style="margin:6px 0 0">Прокачка: ' + cost.join(' · ') + '</div>' : '') +
-    '</div>' +
-  '</div>';
-}
-// Пул характеристик: что вообще может выпасть на детали и в каких пределах —
-// от нулевого уровня до предела. Значения из кривых игры, по рангу детали.
-function modStatsHtml() {
-  const rows = GEAR.modStats || [];
-  if (!rows.length) return '';
-  const cols = ['S', 'A', 'B'];
-  return '<div class="cap"><b>Что может выпасть</b><span></span><em>основная характеристика, 0 → предел</em></div>' +
-    '<div class="mtab"><table><thead><tr><th>характеристика</th>' +
-      cols.map(c => '<th>' + rarPill(c) + '</th>').join('') + '</tr></thead><tbody>' +
-    rows.map(r => '<tr><td>' + esc(r.ru) + '</td>' + cols.map(c => {
-      const v = r.val && r.val[c];
-      if (!v) return '<td>—</td>';
-      const u = r.pct ? '%' : '';
-      // num() округляет до целого — здесь это съело бы «37,5 %» до 38
-      const f = n => String(Math.round(n * 10) / 10).replace('.', ',');
-      return '<td><b>' + f(v.max) + u + '</b><i>с ' + f(v.min) + u + '</i></td>';
-    }).join('') + '</tr>').join('') + '</tbody></table></div>';
+    '</div></div>';
 }
 function drawCarts() {
   if (!GEAR) { $('body').innerHTML = '<div class="empty">Нет nte-gear.json — прогони build-nte-db.ps1.</div>'; return; }
   const q = state.q.trim().toLowerCase();
-  const view = state.cview || 'sets';
   const mods = GEAR.mods || [];
-  const tabs = [['sets', 'Наборы']];
-  if (mods.some(m => !m.core)) tabs.push(['mods', 'Модули']);
-  if (mods.some(m => m.core)) tabs.push(['cores', 'Картриджи']);
-  const head = tabs.length > 1 ? vgroup('раздел', 'cview', tabs) : '';
-
-  if (view === 'mods' || view === 'cores') {
-    const list = mods.filter(m => !!m.core === (view === 'cores'))
-      .filter(m => !q || ((m.ru || '') + ' ' + (m.en || '')).toLowerCase().indexOf(q) >= 0);
-    $('filters').innerHTML = head + '<span class="fcnt">' + list.length + '</span>';
-    bindViews();
-    $('body').innerHTML = (view === 'cores' ? modStatsHtml() : '') +
-      '<div class="list">' + list.map(modCard).join('') + '</div>';
-    foot(view === 'cores'
-      ? 'Картридж — квадратная деталь набора: даёт бонус набора и одну основную характеристику из пула. Значок показан от набора: своей картинки у картриджей в файлах игры нет.'
-      : 'Модуль — фигурная деталь: расширяет сетку Console и даёт случайные характеристики, к наборам не относится. Формы, ранги и цена прокачки — из таблиц игры.');
-    return;
-  }
-
-  const named = GEAR.suits.map(s => ({
+  const named = (GEAR.suits || []).map(s => ({
     id: s.id, bonuses: s.bonuses, name: s.ru || s.en || s.id, en: s.en || '',
     icon: s.icon || '', geo: s.geo || []
   })).filter(s => !q || (s.name + ' ' + s.en).toLowerCase().indexOf(q) >= 0)
      .sort((x, y) => x.name.localeCompare(y.name, 'ru'));
-  $('filters').innerHTML = head + '<span class="fcnt">' + named.length + ' из ' + GEAR.suits.length + '</span>';
-  bindViews();
-  $('body').innerHTML = '<div class="list">' + named.map(s =>
-    '<div class="cart">' +
-      (s.icon ? '<img class="cart-ic" src="img/suits/' + esc(s.icon) + '" alt="" loading="lazy">' : '') +
-      '<div class="item-b">' +
-        '<b style="font-size:14px;color:var(--gold)" title="' + esc(s.en) + '">' + esc(s.name) + '</b>' +
-        s.bonuses.map(b => '<div class="set-b"><i>' + b.n + '</i>' + esc(tr(b.text)) + '</div>').join('') +
-        (s.geo.length ? '<div class="geo"><u>принимает детали</u>' + s.geo.map(g =>
-          '<span class="gsh">' + shapeMini(g) + (shapeType(g) ? 'тип ' + shapeType(g) : '') +
-          '</span>').join('') + '</div>' : '') +
+
+  // фигурные модули к наборам не относятся — они общие, показываем отдельным
+  // свёрнутым блоком внизу, а не отдельной вкладкой
+  const plain = mods.filter(m => !m.core)
+    .sort((a, b) => (a.grids - b.grids) || String(a.rar).localeCompare(String(b.rar)));
+
+  $('filters').innerHTML = '<span class="fcnt">' + named.length + ' наборов</span>';
+  $('body').innerHTML = '<div class="list">' + named.map(s => {
+    const carts = mods.filter(m => m.core && m.suit === s.id)
+      .sort((a, b) => ['S', 'A', 'B'].indexOf(a.rar) - ['S', 'A', 'B'].indexOf(b.rar));
+    const top = carts[0];
+    // значок набора заменяем картинкой его картриджа: в игре узнают по ней
+    const pic = (top && top.icon) ? 'img/mods/' + top.icon
+              : (s.icon ? 'img/suits/' + s.icon : '');
+    return '<details class="suit">' +
+      '<summary>' +
+        (pic ? '<img class="cart-ic" src="' + esc(pic) + '" alt="" loading="lazy">' : '') +
+        '<div class="item-b">' +
+          '<b style="font-size:14px;color:var(--gold)" title="' + esc(s.en) + '">' + esc(s.name) + '</b>' +
+          (carts.length ? rarPill(carts[0].rar) : '') +
+          s.bonuses.map(b => '<div class="set-b"><i>' + b.n + '</i>' + esc(tr(b.text)) + '</div>').join('') +
+        '</div>' +
+      '</summary>' +
+      '<div class="suit-in">' +
+        (carts.length ? cap2('Картриджи набора', carts.length + ' ранга') +
+          '<div class="parts">' + carts.map(partCard).join('') + '</div>' : '') +
+        (s.geo.length ? cap2('Принимает модули', s.geo.length + ' формы') +
+          '<div class="geo">' + s.geo.map(g =>
+            '<span class="gsh">' + shapeMini(g) + (shapeType(g) ? 'тип ' + shapeType(g) : '') +
+            '</span>').join('') + '</div>' : '') +
       '</div>' +
-    '</div>').join('') + '</div>';
-  foot('Наборы картриджей: бонус включается, когда на сетке собрано столько деталей набора. ' +
-       'Значки, тексты и требования к формам — из игры.' +
-       (named.some(x => x.icon) ? '' : ' Значки появятся после прогона build-nte-db.ps1.'));
+    '</details>';
+  }).join('') + '</div>' +
+  dropHtml() +
+  (plain.length ? '<details class="mfold"><summary><b>Модули — общие для всех наборов</b></summary>' +
+    '<div class="mfold-in"><div class="hint" style="margin:8px 0">Фигурные модули: ' +
+    'расширяют сетку Console и дают случайные характеристики. К наборам не ' +
+    'относятся, бонус набора от них не зависит.</div>' +
+    '<div class="parts">' + plain.map(partCard).join('') + '</div></div></details>' : '');
+
+  foot('Наборы картриджей из файлов игры: бонус включается, когда на сетке собрано ' +
+       'столько картриджей набора. Раскрой набор — увидишь его картриджи всех рангов ' +
+       'и какие модули он принимает.');
+}
+// заголовок внутри раскрытого набора
+function cap2(t, note) {
+  return '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
+    (note ? '<em>' + esc(note) + '</em>' : '') + '</div>';
 }
 // ── тир-лист ───────────────────────────────────────────────────────────────
 // Внутри тира эсперы разложены по ролям: в одной строке S+ стояли и Хаос с
@@ -1618,7 +1800,7 @@ function planHtml(slug) {
   return '<div class="plan">' +
       '<div class="plan-l">' + board +
         '<div class="hint">Сетка типа ' + (a.grid || '?') + ': занято ' + used + ' из ' + free +
-          ' клеток. Ярким показаны детали из гайда, приглушённым — чем добить остаток.</div>' +
+          ' клеток. Ярким показаны модули и картриджи из гайда, приглушённым — чем добить остаток.</div>' +
       '</div>' +
       '<div class="plan-r">' +
         '<div class="stat">' +
@@ -1641,7 +1823,7 @@ function planHtml(slug) {
             '</div>' +
           '</div>' : '') +
         (lay.length ? '<div class="cap"><b>Что стоит на сетке</b><span></span><em>' +
-          lay.length + ' деталей</em></div><div class="pieces-row">' + legend + '</div>' : '') +
+          lay.length + ' шт.</em></div><div class="pieces-row">' + legend + '</div>' : '') +
         '<button class="fb" id="planNext" style="margin-top:12px">другой вариант раскладки</button>' +
       '</div>' +
     '</div>';
@@ -1852,30 +2034,87 @@ function allTeams() {
   });
   return out;
 }
+// Выбранные эсперы на вкладке «Команды» — лежат в браузере, чтобы не
+// сбрасываться при переходе на карточку и обратно.
+function teamPick() {
+  try { return JSON.parse(sessionStorage.getItem('nte-team-pick')) || []; }
+  catch (e) { return []; }
+}
+function teamPickSave(v) {
+  try { sessionStorage.setItem('nte-team-pick', JSON.stringify(v)); } catch (e) {}
+}
 function drawTeams() {
   const q = state.q.trim().toLowerCase();
+  const pick = teamPick();
   let list = allTeams();
-  if (state.el) list = list.filter(t => t.slots.some(s => s.some(x => {
-    const a = agentBy(x); return a && a.el === state.el;
-  })));
   if (q) list = list.filter(t => ((t.name || '') + ' ' + t.slots.map(s => s.map(x => {
     const a = agentBy(x); return (a ? a.ru + ' ' + a.en : x);
   }).join(' ')).join(' ')).toLowerCase().indexOf(q) >= 0);
-  list.sort((x, y) => {
+  const byTier = (x, y) => {
     const r = t => { const i = TIERS.indexOf(t.tier); return i < 0 ? 99 : i; };
     return r(x) - r(y) || String(x.name || '').localeCompare(String(y.name || ''), 'ru');
+  };
+  list.sort(byTier);
+
+  const has = (t, slug) => t.slots.some(sl => sl.indexOf(slug) >= 0);
+  // Выбрано несколько — сверху составы, где они играют вместе. Нет таких —
+  // блок не показываем вовсе, чтобы не создавать ощущение, что он пустой.
+  let blocks = [];
+  if (pick.length === 0) {
+    blocks.push({ t: '', n: list.length + ' составов', list: list });
+  } else if (pick.length === 1) {
+    const a = agentBy(pick[0]);
+    blocks.push({ t: 'Составы с ним', n: (a ? a.ru : pick[0]), list: list.filter(x => has(x, pick[0])) });
+  } else {
+    const both = list.filter(x => pick.every(p => has(x, p)));
+    if (both.length) {
+      blocks.push({ t: 'Играют вместе', n: both.length + ' составов', list: both });
+    }
+    pick.forEach(p => {
+      const a = agentBy(p);
+      const own = list.filter(x => has(x, p) && both.indexOf(x) < 0);
+      if (own.length) blocks.push({ t: a ? a.ru : p, n: own.length + ' составов', list: own });
+    });
+  }
+  blocks = blocks.filter(b => b.list.length);
+
+  // полоса портретов: только те, кто вообще встречается в составах
+  const inTeams = {};
+  allTeams().forEach(t => t.slots.forEach(sl => sl.forEach(x => inTeams[x] = (inTeams[x] || 0) + 1)));
+  const roster = DB.agents.filter(a => inTeams[a.slug])
+    .sort((x, y) => (inTeams[y.slug] - inTeams[x.slug]) || x.ru.localeCompare(y.ru, 'ru'));
+
+  $('filters').innerHTML = '<span class="fcnt">' +
+    (pick.length ? 'выбрано ' + pick.length + ' · ' : '') +
+    blocks.reduce((n, b) => n + b.list.length, 0) + ' составов</span>';
+
+  $('body').innerHTML =
+    '<div class="roster">' + roster.map(a =>
+      '<button class="rost' + (pick.indexOf(a.slug) >= 0 ? ' on' : '') + '" data-pick="' +
+        esc(a.slug) + '" title="' + esc(a.ru) + ' · в ' + inTeams[a.slug] + ' составах">' +
+        '<img src="' + portrait(a) + '" alt="" loading="lazy"><span>' + esc(a.ru) + '</span>' +
+      '</button>').join('') +
+      (pick.length ? '<button class="rost clr" data-pick="">сбросить</button>' : '') +
+    '</div>' +
+    (blocks.length
+      ? blocks.map(b => (b.t ? '<div class="cap"><b>' + esc(b.t) + '</b><span></span><em>' +
+          esc(b.n) + '</em></div>' : '') +
+          '<div class="list">' + teamsHtml(b.list.map(t =>
+            Object.assign({}, t, { note: t.src })), true) + '</div>').join('')
+      : '<div class="empty">Составов с этими эсперами нет. Сними кого-нибудь из выбранных.</div>');
+
+  $('body').querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    const slug = b.dataset.pick;
+    if (!slug) { teamPickSave([]); draw(); return; }
+    const cur = teamPick();
+    const i = cur.indexOf(slug);
+    if (i >= 0) cur.splice(i, 1); else cur.push(slug);
+    teamPickSave(cur); draw();
   });
-  const els = [...new Set(DB.agents.map(a => a.el).filter(Boolean))].sort();
-  $('filters').innerHTML = fgroup('стихия', 'el', els, elIcon, EL_RU) +
-    '<span class="fcnt">' + list.length + ' составов</span>';
-  bindFilters();
-  $('body').innerHTML = list.length
-    ? '<div class="list">' + teamsHtml(list.map(t =>
-        Object.assign({}, t, { note: t.src })), true) + '</div>'
-    : '<div class="empty">Составов нет — прогони nte-pryd.js.</div>';
   bindTeamClicks();
   foot('Составы с prydwen: место — из тир-листа команд, остальные из гайдов эсперов. ' +
-       'Несколько портретов в одной ячейке — взаимозаменяемые эсперы. Клик по портрету открывает карточку.');
+       'Нажми портреты сверху — покажу составы с ними; если выбрано несколько, ' +
+       'сначала идут те, где они играют вместе.');
 }
 function bindTeamClicks() {
   $('body').querySelectorAll('.alt').forEach(c => c.onclick = () => open(c.dataset.slug));
@@ -1883,93 +2122,111 @@ function bindTeamClicks() {
 // ── город: транспорт и жильё ───────────────────────────────────────────────
 // Не боёвка, но в NTE это половина игры: машину надо купить и обвесить,
 // квартиру — купить и обставить. Данные из таблиц игры, файл отдельный.
-const CUR_RU = { Fons: 'фонсов', Annulith: 'аннулита', gold: 'монет',
-                 RobbankCoin: 'жетонов Robbank', Beetle: 'монет' };
+const CUR_ICO = { Fons: 'Icon_Fonizie.png', Annulith: 'Icon_Ringstone.png',
+                  gold: 'item_Coin_Beetle.png', Beetle: 'item_Coin_Beetle.png' };
+const CUR_RU  = { Fons: 'фонсы', Annulith: 'аннулит', gold: 'монеты',
+                  RobbankCoin: 'жетоны Robbank', Beetle: 'монеты' };
+// Цену показываем значком валюты, а не словом: в игре её тоже узнают по
+// картинке, и строка «4 000 000 фонсов» занимает полкарточки.
 function money(n, cur) {
-  return num(n) + ' ' + (CUR_RU[cur] || cur || '');
-}
-function carCard(c) {
-  const types = Object.keys(c.modTypes || {});
-  return '<div class="cart">' +
-    (c.icon ? '<img class="cart-ic car-ic" src="img/cars/' + esc(c.icon) + '" alt="" loading="lazy">' : '') +
-    '<div class="item-b">' +
-      '<b style="font-size:14px;color:var(--gold)" title="' + esc(c.en || '') + '">' + esc(c.ru) + '</b>' +
-      rarPill(c.rar) +
-      (c.brand ? '<span class="brand">' + esc(c.brand) + '</span>' : '') +
-      '<div class="geo">' +
-        (c.price ? '<span class="gsh">' + money(c.price, c.cur) + '</span>'
-                 : '<span class="gsh">' + esc(carSrc(c.src)) + '</span>') +
-        (c.mods ? '<span class="gsh">' + c.mods + ' деталей тюнинга</span>' : '') +
-        (c.skins && c.skins.length ? '<span class="gsh">' + c.skins.length + ' раскрасок</span>' : '') +
-      '</div>' +
-      (types.length ? '<div class="hint" style="margin:6px 0 0">Тюнинг: ' +
-        esc(types.map(t => t + ' ×' + c.modTypes[t]).join(', ')) + '</div>' : '') +
-      (c.desc ? '<div class="hint">' + esc(c.desc) + '</div>' : '') +
-    '</div>' +
-  '</div>';
+  const ic = CUR_ICO[cur];
+  const t = CUR_RU[cur] || cur || '';
+  return '<span class="cash" title="' + esc(t) + '">' +
+    (ic ? '<img src="img/items/' + esc(ic) + '" alt="" loading="lazy">' : '') +
+    '<b>' + num(n) + '</b>' + (ic ? '' : ' ' + esc(t)) + '</span>';
 }
 const CAR_SRC = { Shop: 'покупается в салоне', Quest: 'за задание', Activity: 'за событие',
                   Gift: 'подарок', Default: 'выдаётся сразу' };
 function carSrc(s) { return CAR_SRC[s] || (s ? 'источник: ' + s : 'источник неизвестен'); }
-function flatCard(f) {
-  const pic = f.pic ? 'img/flats/' + esc(f.pic) : '';
-  return '<div class="flat">' +
-    (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy">' : '') +
-    '<div class="flat-b">' +
-      '<b>' + esc(f.ru) + '</b><span class="brand">' + esc(f.type) + '</span>' +
-      (f.addr ? '<div class="hint" style="margin:4px 0 0">' + esc(f.addr) + '</div>' : '') +
-      '<div class="geo">' +
-        (f.price ? '<span class="gsh">' + money(f.price, f.cur) + '</span>' : '') +
-        (f.park ? '<span class="gsh">парковка на ' + f.park + '</span>' : '') +
-        (f.load ? '<span class="gsh">мебели на ' + num(f.load) + '</span>' : '') +
-        (f.sale && f.sale !== 'OnSale' ? '<span class="gsh">не продаётся</span>' : '') +
+// Узел тюнинга: сколько вариантов, почём и что меняют.
+function partsHtml(parts) {
+  const keys = Object.keys(parts || {});
+  if (!keys.length) return '<div class="hint">Тюнинга у этой машины нет.</div>';
+  return keys.map(t => {
+    const list = parts[t] || [];
+    return '<details class="node"><summary><b>' + esc(t) + '</b>' +
+      '<em>' + list.length + '</em></summary>' +
+      '<div class="node-in">' + list.map(m =>
+        '<div class="tune' + (m.def ? ' std' : '') + '">' +
+          '<div class="tune-t"><b>' + esc(m.ru || m.id) + '</b>' +
+            (m.def ? '<span class="gsh">заводская</span>' : '') +
+            (m.price ? money(m.price, m.cur) : '<span class="gsh">бесплатно</span>') +
+          '</div>' +
+          ((m.sc || []).length ? '<div class="tune-s">' + m.sc.map(x =>
+            '<span class="gsh">' + esc(x.k) + ' <b>' + x.v + '</b></span>').join('') + '</div>' : '') +
+          (m.desc ? '<div class="hint" style="margin:4px 0 0">' + esc(m.desc) + '</div>' : '') +
+        '</div>').join('') + '</div></details>';
+  }).join('');
+}
+function carCard(c) {
+  const skins = c.skins || [];
+  return '<details class="suit">' +
+    '<summary>' +
+      (c.icon ? '<img class="cart-ic car-ic" src="img/cars/' + esc(c.icon) + '" alt="" loading="lazy">' : '') +
+      '<div class="item-b">' +
+        '<b style="font-size:14px;color:var(--gold)">' + esc(c.ru) + '</b>' + rarPill(c.rar) +
+        (c.brand ? '<span class="brand">' + esc(c.brand) + '</span>' : '') +
+        '<div class="geo">' +
+          (c.price ? '<span class="gsh">' + money(c.price, c.cur) + '</span>'
+                   : '<span class="gsh">' + esc(carSrc(c.src)) + '</span>') +
+          (c.mods ? '<span class="gsh">' + c.mods + ' деталей тюнинга</span>' : '') +
+          (skins.length ? '<span class="gsh">' + skins.length + ' раскрасок</span>' : '') +
+        '</div>' +
       '</div>' +
-      (f.slog ? '<div class="hint">' + esc(f.slog) + '</div>' : '') +
+    '</summary>' +
+    '<div class="suit-in">' +
+      (c.desc ? '<div class="hint">' + esc(c.desc) + '</div>' : '') +
+      (c.modGold ? '<div class="hint">Полный комплект деталей, без косметики: ' +
+        money(c.modGold, 'Fons') + '</div>' : '') +
+      cap2('Тюнинг', 'по узлам') + partsHtml(c.parts) +
+      (skins.length ? cap2('Раскраски', skins.length + ' шт.') +
+        '<div class="parts">' + skins.map(sk =>
+          '<div class="part">' +
+            (sk.icon ? '<img src="img/cars/' + esc(String(sk.icon).split('/').pop()) +
+              '" alt="" loading="lazy">' : '') +
+            '<div class="part-b"><b>' + esc(sk.ru || sk.id) + '</b>' +
+              (sk.desc ? '<div class="hint" style="margin:3px 0 0">' + esc(sk.desc) + '</div>' : '') +
+            '</div></div>').join('') + '</div>' : '') +
     '</div>' +
-  '</div>';
+  '</details>';
 }
-// Скины — чистая косметика, но их много и они привязаны к эсперам, поэтому
-// показываем сеткой с портретами и фильтром по эсперу.
-function drawSkins(head, q) {
-  const all = (CITY.skins || []).filter(x => !x.def);
-  const list = all.filter(x => !q ||
-    ((x.ru || '') + ' ' + (x.en || '') + ' ' +
-     ((agentBy(x.slug) || {}).ru || '')).toLowerCase().indexOf(q) >= 0);
-  $('filters').innerHTML = head + '<span class="fcnt">' + list.length + ' из ' + all.length + '</span>';
-  bindViews();
-  $('body').innerHTML = '<div class="skins">' + list.map(x => {
-    const a = x.slug ? agentBy(x.slug) : null;
-    const pic = x.pic ? 'img/skins/' + String(x.pic).split('/').pop() : '';
-    return '<div class="skin"' + (a ? ' data-slug="' + esc(a.slug) + '"' : '') + '>' +
-      (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy">' : '<div class="skin-no"></div>') +
-      '<div class="skin-b"><b>' + esc(x.ru) + '</b>' + rarPill(x.rar) +
-        '<i>' + esc(a ? a.ru : (x.kind === 'Glide' ? 'планер' : '—')) + '</i>' +
-        (x.src ? '<div class="hint" style="margin:4px 0 0">' + esc(x.src) + '</div>' : '') +
-      '</div></div>';
-  }).join('') + '</div>';
-  $('body').querySelectorAll('[data-slug]').forEach(c => c.onclick = () => open(c.dataset.slug));
-  foot('Скины из файлов игры: имя, редкость и способ получения. На стати не влияют. ' +
-       'Клик по карточке открывает эспера.');
+function flatCard(f, anom) {
+  const pic = f.pic ? 'img/flats/' + f.pic : '';
+  return '<details class="suit">' +
+    '<summary>' +
+      (pic ? '<img class="cart-ic flat-ic" src="' + esc(pic) + '" alt="" loading="lazy">' : '') +
+      '<div class="item-b">' +
+        '<b style="font-size:14px;color:var(--gold)">' + esc(f.ru) + '</b>' +
+        '<span class="brand">' + esc(f.type) + '</span>' +
+        (f.addr ? '<div class="hint" style="margin:4px 0 0">' + esc(f.addr) + '</div>' : '') +
+        '<div class="geo">' +
+          (f.price ? '<span class="gsh">' + money(f.price, f.cur) + '</span>' : '') +
+          (f.park ? '<span class="gsh">парковка на ' + f.park + '</span>' : '') +
+          (f.load ? '<span class="gsh">мебели на ' + num(f.load) + '</span>' : '') +
+          (f.sale && f.sale !== 'OnSale' ? '<span class="gsh">не продаётся</span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</summary>' +
+    '<div class="suit-in">' +
+      (f.slog ? '<div class="hint">' + esc(f.slog) + '</div>' : '') +
+      (f.desc ? '<div class="hint">' + esc(f.desc) + '</div>' : '') +
+      (pic ? cap2('Как выглядит', '') + '<img class="flat-big" src="' + esc(pic) + '" alt="">' : '') +
+      (anom && anom.length ? cap2('Аномальная мебель', anom.length + ' предметов') +
+        '<div class="hint" style="margin:0 0 8px">Ставится в любое купленное жильё — ' +
+        'привязки к конкретному дому в файлах игры нет.</div>' +
+        anom.map(anomCard).join('') : '') +
+    '</div>' +
+  '</details>';
 }
-// Аномальная мебель — то, ради чего покупают жильё: снять розыск, телепорт,
-// прибавки к характеристикам. Уровни — ступени прокачки предмета.
-function drawAnom(head, q) {
-  const all = CITY.anom || [];
-  const list = all.filter(x => !q ||
-    ((x.ru || '') + ' ' + (x.desc || '')).toLowerCase().indexOf(q) >= 0);
-  $('filters').innerHTML = head + '<span class="fcnt">' + list.length + ' предметов</span>';
-  bindViews();
-  $('body').innerHTML = list.length ? '<div class="list">' + list.map(x =>
-    '<div class="cart"><div class="item-b">' +
-      '<b style="font-size:14px;color:var(--gold)">' + esc(x.ru) + '</b>' +
-      (x.desc ? '<div class="set-b">' + esc(x.desc) + '</div>' : '') +
-      (x.lv && x.lv.length ? '<details class="mfold" style="margin-top:8px"><summary><b>' +
-        x.lv.length + ' ступеней прокачки</b></summary><div class="mfold-in">' +
-        '<ol style="margin:8px 0 0;padding-left:20px;color:var(--tx2);font-size:12px;line-height:1.6">' +
-        x.lv.map(v => '<li>' + esc(v) + '</li>').join('') + '</ol></div></details>' : '') +
-    '</div></div>').join('') + '</div>'
-    : '<div class="empty">Данных нет — прогони build-nte-db.ps1.</div>';
-  foot('Аномальная мебель ставится в купленное жильё. Тексты и ступени — из файлов игры.');
+function anomCard(x) {
+  return '<div class="cart" style="margin-bottom:7px"><div class="item-b">' +
+    '<b style="font-size:13px;color:var(--gold)">' + esc(x.ru) + '</b>' +
+    (x.desc ? '<div class="set-b">' + esc(x.desc) + '</div>' : '') +
+    (x.lv && x.lv.length ? '<details class="mfold" style="margin-top:7px">' +
+      '<summary><b>' + x.lv.length + ' ступеней прокачки</b></summary><div class="mfold-in">' +
+      '<ol style="margin:8px 0 0;padding-left:20px;color:var(--tx2);font-size:11.5px;line-height:1.6">' +
+      x.lv.map(v => '<li>' + esc(v) + '</li>').join('') + '</ol></div></details>' : '') +
+  '</div></div>';
 }
 function drawCity() {
   if (!CITY) {
@@ -1980,18 +2237,17 @@ function drawCity() {
   }
   const q = state.q.trim().toLowerCase();
   const view = state.tview || 'cars';
-  const head = vgroup('раздел', 'tview',
-    [['cars', 'Транспорт'], ['flats', 'Недвижимость'], ['skins', 'Скины'], ['anom', 'Аномалии']]);
-  if (view === 'skins') return drawSkins(head, q);
-  if (view === 'anom')  return drawAnom(head, q);
+  const head = vgroup('раздел', 'tview', [['cars', 'Транспорт'], ['flats', 'Недвижимость']]);
+
   if (view === 'flats') {
     const list = (CITY.flats || []).filter(f => !q ||
       ((f.ru || '') + ' ' + (f.addr || '') + ' ' + (f.type || '')).toLowerCase().indexOf(q) >= 0);
     $('filters').innerHTML = head + '<span class="fcnt">' + list.length + ' объектов</span>';
     bindViews();
-    $('body').innerHTML = '<div class="flats">' + list.map(flatCard).join('') + '</div>';
+    $('body').innerHTML = '<div class="list">' +
+      list.map(f => flatCard(f, CITY.anom || [])).join('') + '</div>';
     foot('Недвижимость: цена, парковка и предел по мебели — из таблиц игры. ' +
-         'Купленная квартира открывает свои занятия и место под мебель с бонусами.');
+         'Раскрой объект — увидишь вид и аномальную мебель, ради которой жильё и покупают.');
     return;
   }
   let list = (CITY.cars || []).filter(c => !q ||
@@ -2003,23 +2259,24 @@ function drawCity() {
   bindFilters(); bindViews();
   $('body').innerHTML = '<div class="list">' + list.map(carCard).join('') + '</div>';
   foot('Транспорт: цена из салона, тюнинг и раскраски — из таблиц игры. ' +
-       'Машины без цены выдают за задания и события.');
+       'Раскрой машину — увидишь узлы: сколько вариантов, почём и что меняют.');
 }
 
 // ── карта города ───────────────────────────────────────────────────────────
 // Точки и подложка — из файлов игры (build-nte-db.ps1), чужие карты не
 // копируем. Плитки лежат сеткой n×n; всё рисуем в долях от размера карты,
-// поэтому зум — это просто масштаб контейнера, без пересчёта координат.
+// поэтому масштаб — это просто transform контейнера.
 //
-// Привязка мировых координат к картинке в файлах игры не записана, поэтому
-// вписываем облако точек в карту и даём подстройку: сдвиг и масштаб
-// сохраняются в браузере, один раз подогнал — и дальше всё на местах.
+// Управление как у любой интерактивной карты: тянешь мышью, колесо приближает
+// к курсору. Прокрутка страницы при этом не срабатывает — колесо над картой
+// принадлежит карте.
 const MAP_GRP = { tp: 'переходы', shop: 'магазины', locker: 'хранение', place: 'места' };
 const MAP_COL = { tp: '#4ade80', shop: '#ffb800', locker: '#6fc0ff', place: '#b98bff' };
+let mapView = { z: 1, x: 0, y: 0 };      // масштаб и сдвиг контейнера
 function mapCal() {
-  try { return Object.assign({ dx: 0, dy: 0, k: 1, z: 4 },
+  try { return Object.assign({ dx: 0, dy: 0, k: 1, lay: 3 },
     JSON.parse(localStorage.getItem('nte-map-cal')) || {}); }
-  catch (e) { return { dx: 0, dy: 0, k: 1, z: 4 }; }
+  catch (e) { return { dx: 0, dy: 0, k: 1, lay: 3 }; }
 }
 function mapCalSave(v) {
   try { localStorage.setItem('nte-map-cal', JSON.stringify(v)); } catch (e) {}
@@ -2033,17 +2290,39 @@ function mapFoundToggle(id) {
   if (f[id]) delete f[id]; else f[id] = 1;
   try { localStorage.setItem('nte-map-found', JSON.stringify(f)); } catch (e) {}
 }
-// Облако точек → доли 0..1. Поле в 6 % по краям: у самых крайних точек
-// маркер иначе наполовину уезжает за картинку.
+// какие категории скрыты
+function mapOff() {
+  try { return JSON.parse(localStorage.getItem('nte-map-off')) || {}; }
+  catch (e) { return {}; }
+}
+function mapOffSave(v) {
+  try { localStorage.setItem('nte-map-off', JSON.stringify(v)); } catch (e) {}
+}
+// Облако точек → доли 0..1. Поле в 12 % подобрано наложением на плитки: при
+// нём улицы и магазины совпадают, при меньшем город уезжает за край.
 function mapBox(pts) {
   const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   const y0 = Math.min(...ys), y1 = Math.max(...ys);
   const w = (x1 - x0) || 1, h = (y1 - y0) || 1;
-  // 12 % — подобрано наложением точек на плитки карты: при нём улицы и
-  // магазины совпадают, при 6 % город уезжает за край.
   const pad = 0.12, side = Math.max(w, h) / (1 - 2 * pad);
   return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, side: side };
+}
+// Категория точки — это её название: «Аптека «Бамбук»», «Башня Вертхаймера».
+// Группа (магазины/переходы) остаётся для цвета.
+function mapCats(pts) {
+  const by = {};
+  pts.forEach(p => {
+    const k = p.t || 'без названия';
+    if (!by[k]) by[k] = { name: k, g: p.g, ic: p.ic || '', n: 0 };
+    by[k].n++;
+  });
+  return Object.values(by).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ru'));
+}
+function mapApply() {
+  const el = $('mapIn');
+  if (!el) return;
+  el.style.transform = 'translate(' + mapView.x + 'px,' + mapView.y + 'px) scale(' + mapView.z + ')';
 }
 function drawMap() {
   const M = (CITY && CITY.map) || null;
@@ -2053,57 +2332,94 @@ function drawMap() {
     foot('');
     return;
   }
-  const cal = mapCal(), found = mapFound();
+  const cal = mapCal(), found = mapFound(), off = mapOff();
   const q = state.q.trim().toLowerCase();
-  const grps = [...new Set(M.pts.map(p => p.g))];
-  const shown = M.pts.filter(p => (!state.el || p.g === state.el) &&
+  const cats = mapCats(M.pts);
+  const shown = M.pts.filter(p => !off[p.t || 'без названия'] &&
     (!q || ((p.t || '') + ' ' + (p.ru || '')).toLowerCase().indexOf(q) >= 0));
   const box = mapBox(M.pts);
-  const tiles = M.tiles || {}, n = tiles[String(cal.z)] || 6;
+  const tiles = M.tiles || {}, n = tiles[String(cal.lay)] || 6;
 
-  $('filters').innerHTML =
-    fgroup('слой', 'el', grps, null, MAP_GRP) +
-    '<span class="fcnt">' + shown.length + ' точек · отмечено ' +
-      Object.keys(found).length + '</span>';
-  bindFilters();
+  $('filters').innerHTML = '<span class="fcnt">показано ' + shown.length + ' из ' + M.pts.length +
+    ' · отмечено ' + Object.keys(found).length + '</span>';
 
   const marks = shown.map(p => {
     const fx = 0.5 + (p.x - box.cx) / box.side, fy = 0.5 - (p.y - box.cy) / box.side;
     const left = ((fx - 0.5) * cal.k + 0.5) * 100 + cal.dx;
     const top  = ((fy - 0.5) * cal.k + 0.5) * 100 + cal.dy;
     if (left < -5 || left > 105 || top < -5 || top > 105) return '';
-    return '<i class="mp' + (found[p.id] ? ' on' : '') + '" data-p="' + esc(p.id) + '"' +
+    const ic = p.ic ? '<img src="img/mapicon/' + esc(p.ic) + '" alt="" loading="lazy">' : '';
+    return '<i class="mp' + (found[p.id] ? ' on' : '') + (ic ? ' pic' : '') +
+      '" data-p="' + esc(p.id) + '"' +
       ' style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%;' +
       '--c:' + (MAP_COL[p.g] || '#fff') + '" title="' + esc((p.t || '') +
-      (p.ru ? ' — ' + p.ru : '')) + '"></i>';
+      (p.ru ? ' — ' + p.ru : '')) + '">' + ic + '</i>';
   }).join('');
 
   const grid = [];
   for (let i = 1; i <= n * n; i++) {
-    grid.push('<img src="img/map/z' + cal.z + '/map_bigworld_1' +
-      String(i).padStart(4, '0') + '.png" alt="" loading="lazy">');
+    grid.push('<img src="img/map/z' + cal.lay + '/map_bigworld_1' +
+      String(i).padStart(4, '0') + '.png" alt="" draggable="false" loading="lazy">');
   }
   $('body').innerHTML =
-    '<div class="mapwrap"><div class="mapin" id="mapIn">' +
-      '<div class="maptiles" style="grid-template-columns:repeat(' + n + ',1fr)">' +
-        grid.join('') + '</div>' +
-      marks +
-    '</div></div>' +
-    '<div class="mapbar">' +
-      '<button data-mz="3">подробнее</button><button data-mz="4">обзор</button>' +
-      '<span class="hint" style="margin:0">подстройка:</span>' +
-      '<label>вбок<input type="number" step="0.5" value="' + cal.dx + '" data-cal="dx"></label>' +
-      '<label>вверх<input type="number" step="0.5" value="' + cal.dy + '" data-cal="dy"></label>' +
-      '<label>масштаб<input type="number" step="0.02" value="' + cal.k + '" data-cal="k"></label>' +
-      '<button data-mreset>сбросить отметки</button>' +
+    '<div class="maprow">' +
+      '<div class="mapwrap" id="mapWrap"><div class="mapin" id="mapIn">' +
+        '<div class="maptiles" style="grid-template-columns:repeat(' + n + ',1fr)">' +
+          grid.join('') + '</div>' +
+        marks +
+      '</div>' +
+      '<div class="mapzoom">' +
+        '<button data-mz="+">+</button><button data-mz="-">−</button>' +
+        '<button data-mz="0" title="вернуть как было">⟲</button>' +
+      '</div></div>' +
+      '<aside class="mapside">' +
+        '<div class="mapside-h"><b>Что показывать</b>' +
+          '<span><button data-mall="1">все</button><button data-mall="0">снять</button></span>' +
+        '</div>' +
+        '<div class="mapcats">' + cats.map(c =>
+          '<label class="mcat' + (off[c.name] ? ' off' : '') + '" title="' + esc(c.name) + '">' +
+            '<input type="checkbox" data-cat="' + esc(c.name) + '"' + (off[c.name] ? '' : ' checked') + '>' +
+            (c.ic ? '<img src="img/mapicon/' + esc(c.ic) + '" alt="" loading="lazy">'
+                  : '<i style="--c:' + (MAP_COL[c.g] || '#fff') + '"></i>') +
+            '<span>' + esc(c.name) + '</span><em>' + c.n + '</em>' +
+          '</label>').join('') + '</div>' +
+        '<div class="mapbar">' +
+          '<button data-mlay="3">подробнее</button><button data-mlay="4">обзор</button>' +
+          '<button data-mreset>сбросить отметки</button>' +
+        '</div>' +
+        '<details class="mfold" style="margin-top:9px"><summary><b>Подстройка привязки</b></summary>' +
+          '<div class="mfold-in"><div class="mapbar" style="margin-top:8px">' +
+            '<label>вбок<input type="number" step="0.5" value="' + cal.dx + '" data-cal="dx"></label>' +
+            '<label>вверх<input type="number" step="0.5" value="' + cal.dy + '" data-cal="dy"></label>' +
+            '<label>масштаб<input type="number" step="0.02" value="' + cal.k + '" data-cal="k"></label>' +
+          '</div>' +
+          '<div class="hint">Если значки не совпали с картой — подвинь их тут. ' +
+          'В файлах игры привязки мировых координат к картинке нет, поэтому она подобрана на глаз.</div>' +
+          '</div></details>' +
+      '</aside>' +
     '</div>';
 
-  $('body').querySelectorAll('.mp').forEach(el => el.onclick = () => {
+  mapView = { z: 1, x: 0, y: 0 };
+  mapApply();
+  bindMapDrag();
+
+  $('body').querySelectorAll('.mp').forEach(el => el.onclick = e => {
+    e.stopPropagation();
     mapFoundToggle(el.dataset.p);
     el.classList.toggle('on');
   });
-  $('body').querySelectorAll('[data-mz]').forEach(b => b.onclick = () => {
-    const c = mapCal(); c.z = +b.dataset.mz; mapCalSave(c); draw();
+  $('body').querySelectorAll('input[data-cat]').forEach(inp => inp.onchange = () => {
+    const o = mapOff();
+    if (inp.checked) delete o[inp.dataset.cat]; else o[inp.dataset.cat] = 1;
+    mapOffSave(o); draw();
+  });
+  $('body').querySelectorAll('[data-mall]').forEach(b => b.onclick = () => {
+    if (b.dataset.mall === '1') { mapOffSave({}); }
+    else { const o = {}; cats.forEach(c => o[c.name] = 1); mapOffSave(o); }
+    draw();
+  });
+  $('body').querySelectorAll('[data-mlay]').forEach(b => b.onclick = () => {
+    const c = mapCal(); c.lay = +b.dataset.mlay; mapCalSave(c); draw();
   });
   $('body').querySelectorAll('input[data-cal]').forEach(inp => inp.onchange = () => {
     const c = mapCal(); c[inp.dataset.cal] = +inp.value || 0;
@@ -2115,9 +2431,54 @@ function drawMap() {
     try { localStorage.removeItem('nte-map-found'); } catch (e) {}
     draw();
   };
-  foot('Карта из файлов игры: ' + M.pts.length + ' точек — переходы, магазины, службы и камеры хранения. ' +
-       'Клик по точке отмечает её как пройденную, отметки хранит браузер. ' +
-       'Если точки не совпали с подложкой, подстрой сдвиг и масштаб внизу.');
+  foot('Карта из файлов игры: ' + M.pts.length + ' точек. Тяни мышью, колесо приближает. ' +
+       'Клик по значку отмечает место как пройденное, отметки хранит браузер.');
+}
+// Перетаскивание и зум. Колесо над картой не должно прокручивать страницу,
+// поэтому слушатель ставим неленивым (passive: false) и гасим событие.
+function bindMapDrag() {
+  const wrap = $('mapWrap');
+  if (!wrap) return;
+  let drag = null;
+  wrap.onmousedown = e => {
+    if (e.button !== 0) return;
+    drag = { sx: e.clientX, sy: e.clientY, x: mapView.x, y: mapView.y };
+    wrap.classList.add('grab');
+  };
+  window.addEventListener('mousemove', e => {
+    if (!drag) return;
+    mapView.x = drag.x + (e.clientX - drag.sx);
+    mapView.y = drag.y + (e.clientY - drag.sy);
+    mapApply();
+  });
+  window.addEventListener('mouseup', () => {
+    if (!drag) return;
+    drag = null;
+    wrap.classList.remove('grab');
+  });
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = wrap.getBoundingClientRect();
+    // точка под курсором должна остаться на месте
+    const cx = e.clientX - r.left, cy = e.clientY - r.top;
+    const k = e.deltaY < 0 ? 1.2 : 1 / 1.2;
+    const z2 = Math.min(12, Math.max(1, mapView.z * k));
+    const real = z2 / mapView.z;
+    mapView.x = cx - (cx - mapView.x) * real;
+    mapView.y = cy - (cy - mapView.y) * real;
+    mapView.z = z2;
+    mapApply();
+  }, { passive: false });
+  $('body').querySelectorAll('[data-mz]').forEach(b => b.onclick = () => {
+    const r = wrap.getBoundingClientRect(), cx = r.width / 2, cy = r.height / 2;
+    if (b.dataset.mz === '0') { mapView = { z: 1, x: 0, y: 0 }; mapApply(); return; }
+    const k = b.dataset.mz === '+' ? 1.4 : 1 / 1.4;
+    const z2 = Math.min(12, Math.max(1, mapView.z * k)), real = z2 / mapView.z;
+    mapView.x = cx - (cx - mapView.x) * real;
+    mapView.y = cy - (cy - mapView.y) * real;
+    mapView.z = z2;
+    mapApply();
+  });
 }
 
 // ── коды активации ─────────────────────────────────────────────────────────
@@ -2185,18 +2546,24 @@ function drawCodes() {
       (when ? '<div class="hint">Список актуален на ' + esc(when) + '.</div>' : '') +
     '</div>' +
     (list.length
-      ? '<div class="list">' + list.map(c =>
-          '<div class="code' + (used[c.code] ? ' done-c' : '') + '">' +
-            '<label class="ck" title="отметить, что уже ввёл">' +
-              '<input type="checkbox" data-u="' + esc(c.code) + '"' +
-              (used[c.code] ? ' checked' : '') + '><span></span></label>' +
-            '<b>' + esc(c.code) + '</b>' +
-            '<i>' + rewHtml(c.rew || '') +
-              (c.note ? ' <em>· ' + esc(codeNote(c.note)) + '</em>' : '') +
-              (c.date ? ' <em>· с ' + esc(ruDate(c.date)) + '</em>' : '') +
-              (c.until ? ' <em>· до ' + esc(ruDate(c.until)) + '</em>' : '') + '</i>' +
-            '<button data-c="' + esc(c.code) + '">копировать</button>' +
-          '</div>').join('') + '</div>'
+      ? '<div class="codes">' + list.map(c => {
+          const rew = rewHtml(c.rew || '');
+          const when2 = [c.date ? 'с ' + ruDate(c.date) : '',
+                         c.until ? 'до ' + ruDate(c.until) : '',
+                         c.note ? codeNote(c.note) : ''].filter(Boolean).join(' · ');
+          return '<div class="code' + (used[c.code] ? ' done-c' : '') + '">' +
+            '<div class="code-t">' +
+              '<label class="ck" title="отметить, что уже ввёл">' +
+                '<input type="checkbox" data-u="' + esc(c.code) + '"' +
+                (used[c.code] ? ' checked' : '') + '><span></span></label>' +
+              '<b>' + esc(c.code) + '</b>' +
+              '<button data-c="' + esc(c.code) + '">копировать</button>' +
+            '</div>' +
+            (rew ? '<div class="code-r">' + rew + '</div>'
+                 : '<div class="hint" style="margin:0">Состав награды не указан.</div>') +
+            (when2 ? '<div class="code-d">' + esc(when2) + '</div>' : '') +
+          '</div>';
+        }).join('') + '</div>'
       : '<div class="empty">Кодов нет.</div>') +
     '<div class="hint">Коды не бессрочные: часть из них рано или поздно закроют. ' +
     'Если игра пишет, что код недействителен — значит, срок вышел.</div>';
@@ -2554,6 +2921,7 @@ let shTab = 'guide';
 let shSlug = '';
 
 function open(slug) {
+  lookIdx = 0;
   const a = agentBy(slug);
   if (!a) return;
   if (shSlug !== slug) shTab = 'guide';
@@ -2573,7 +2941,7 @@ function open(slug) {
 
   $('sheetIn').innerHTML =
     '<div class="sh-head" style="' + elStyle(a.el) + ';--capc:var(--' + esc(a.el) + ')">' +
-      '<div class="sh-art"><img src="' + artOf(a) + '" alt="' + esc(a.ru) + '"></div>' +
+      '<div class="sh-art">' + lookHtml(a) + '</div>' +
       '<div class="sh-body">' +
         '<div class="sh-title">' +
           '<h2>' + esc(a.ru) + '<i>' + esc(a.en) + '</i>' +
@@ -2598,6 +2966,7 @@ function open(slug) {
   $('sheet').scrollTop = 0;
   document.body.style.overflow = 'hidden';
   if ($('close')) $('close').onclick = close;
+  bindLooks(a);
   $('sheetIn').querySelectorAll('.htab').forEach(b => b.onclick = () => {
     shTab = b.dataset.h;
     $('sheetIn').querySelectorAll('.htab').forEach(x => x.classList.toggle('on', x.dataset.h === shTab));
@@ -2615,6 +2984,38 @@ function bindShBody() {
     c.onclick = () => open(c.dataset.slug));
 }
 
+// Арт с переключением обликов: стрелки по краям и ряд миниатюр справа
+// сверху — как на ntebuild. Если скинов нет, ни стрелок, ни миниатюр.
+function lookHtml(a) {
+  const all = looks(a);
+  if (lookIdx >= all.length) lookIdx = 0;
+  const cur = all[lookIdx];
+  return '<img src="' + esc(cur.pic) + '" alt="' + esc(a.ru) + '" id="lookImg">' +
+    (all.length > 1
+      ? '<button class="lk-a l" data-look="-1" title="предыдущий облик">‹</button>' +
+        '<button class="lk-a r" data-look="1" title="следующий облик">›</button>' +
+        '<div class="lk-row">' + all.map((x, i) =>
+          '<button class="lk' + (i === lookIdx ? ' on' : '') + '" data-lookto="' + i + '"' +
+            ' title="' + esc(x.ru) + '"><img src="' + esc(x.pic) + '" alt="" loading="lazy"></button>'
+        ).join('') + '</div>' +
+        '<div class="lk-name">' + esc(cur.ru) + (cur.rar ? ' ' + rarPill(cur.rar) : '') +
+          (cur.src ? '<i>' + esc(cur.src) + '</i>' : '') + '</div>'
+      : '');
+}
+function bindLooks(a) {
+  const box = $('sheetIn') && $('sheetIn').querySelector('.sh-art');
+  if (!box) return;
+  const all = looks(a);
+  const go = i => {
+    lookIdx = (i + all.length) % all.length;
+    box.innerHTML = lookHtml(a);
+    bindLooks(a);
+  };
+  box.querySelectorAll('[data-look]').forEach(b2 =>
+    b2.onclick = () => go(lookIdx + (+b2.dataset.look)));
+  box.querySelectorAll('[data-lookto]').forEach(b2 =>
+    b2.onclick = () => go(+b2.dataset.lookto));
+}
 function shBody(slug, g, a) {
   // margin-top тут не сбрасываем: раньше inline-стиль стоял на каждом заголовке
   // и перебивал отступ из CSS, поэтому разделы шли впритык друг к другу.
@@ -2657,7 +3058,7 @@ function shBody(slug, g, a) {
         (g.set.b2 ? '<div class="set-b"><i>2</i>' + esc(tr(g.set.b2)) + '</div>' : '') +
         (g.set.b4 ? '<div class="set-b"><i>4</i>' + esc(tr(g.set.b4)) + '</div>' : '') +
         (g.pieces && g.pieces.length ?
-          '<div class="pieces"><span class="hint" style="margin:0">нужны детали:</span>' +
+          '<div class="pieces"><span class="hint" style="margin:0">нужны модули:</span>' +
           g.pieces.map(x => '<span class="pc">' + esc(x) + '</span>').join('') + '</div>' : '') +
         (g.trait ? '<div class="trait"><i>бонус эспера за модули</i>' + esc(tr(g.trait)) + '</div>' : '') +
       '</div>' : '') +
