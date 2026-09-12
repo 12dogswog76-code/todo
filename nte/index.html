@@ -2200,7 +2200,9 @@ function partsHtml(parts) {
   }).join('');
 }
 function carCard(c) {
-  const skins = c.skins || [];
+  // filter(Boolean) — страховка от пустых элементов в данных: одна такая
+  // дырка роняла отрисовку всего списка машин, и вкладка не открывалась
+  const skins = (c.skins || []).filter(Boolean);
   return '<details class="suit">' +
     '<summary>' +
       (c.icon ? '<img class="cart-ic car-ic" src="img/cars/' + esc(c.icon) + '" alt="" loading="lazy">' : '') +
