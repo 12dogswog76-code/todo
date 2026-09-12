@@ -838,6 +838,9 @@
   .sec.full{grid-column:1/-1}
   .wide{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
     gap:9px;align-items:start}
+  /* мебель и прочие карточки-описания: узкие колонки, чтобы вставало
+     по три-четыре в ряд, а не по две широких */
+  .sec.full .wide{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
   /* характеристики машины: значение со стока и потолок с тюнингом */
   .vstats{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
   .vst{padding:8px 11px;border-radius:11px;background:var(--pan);border:1px solid var(--line-soft)}
@@ -1034,7 +1037,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v37';
+const APP_VER = 'v38';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -2557,7 +2560,9 @@ function flatCard(f, anom) {
       (() => { const ps = flatPics(f); return ps.length
         ? '<div class="sec">' + cap2('Как выглядит', ps.length + ' фото') +
           galHtml(ps, f.id) + '</div>' : ''; })() +
-      (anom && anom.length ? '<div class="sec">' +
+      // мебель — на всю ширину: восемнадцать предметов в одной колонке это
+      // простыня на два экрана, а в четыре колонки они видны целиком
+      (anom && anom.length ? '<div class="sec full">' +
         cap2('Аномальная мебель', anom.length + ' предметов') +
         '<div class="hint" style="margin:0 0 8px">Ставится в любое купленное жильё — ' +
         'привязки к конкретному дому в файлах игры нет.</div>' +
@@ -2794,6 +2799,10 @@ function mapSideHtml(cats, off, cal) {
           : '<div class="hint" style="margin:4px 0">Пока пусто. Сундуков и ресурсов в ' +
             'таблицах игры нет — их собирают руками. <b>Shift + клик</b> по карте ставит ' +
             'свою точку, правая кнопка по ней убирает.</div>') +
+        '<div class="mapbar" style="margin-top:6px">' +
+          '<button data-mineout title="сохранить свои точки файлом">выгрузить</button>' +
+          '<button data-minein title="добавить точки из файла">загрузить</button>' +
+        '</div>' +
         '</div></details>';
     })() +
     '<div class="mapbar">' +
@@ -2931,6 +2940,55 @@ function drawMap() {
     if (inp.dataset.cal === 'k' && !c.k) c.k = 1;
     mapCalSave(c); draw();
   });
+  // Выгрузка и загрузка своих точек файлом. Нужна, чтобы наполнять карту не в
+  // одиночку: точки можно собрать на разных аккаунтах и свести вместе, а сама
+  // выгрузка — обычный json, его же принимает загрузка. Совпадения по
+  // координатам не дублируются.
+  const mo = $('body').querySelector('[data-mineout]');
+  if (mo) mo.onclick = () => {
+    const blob = new Blob([JSON.stringify({ note: 'свои точки карты NTE', pts: mapMine() }, null, 1)],
+      { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'nte-мои-точки.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  };
+  const mi = $('body').querySelector('[data-minein]');
+  if (mi) mi.onclick = () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.json,application/json';
+    inp.onchange = () => {
+      const f = inp.files[0];
+      if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => {
+        let add = [];
+        try {
+          const j = JSON.parse(rd.result);
+          add = Array.isArray(j) ? j : (j.pts || []);
+        } catch (e) { alert('Файл не разобрался — это должен быть json со своими точками.'); return; }
+        const all = mapMine();
+        const seen = {};
+        all.forEach(m => seen[m.fx.toFixed(4) + ':' + m.fy.toFixed(4)] = 1);
+        let n = 0;
+        add.forEach(m => {
+          const fx = +m.fx, fy = +m.fy;
+          if (!isFinite(fx) || !isFinite(fy) || fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
+          const key = fx.toFixed(4) + ':' + fy.toFixed(4);
+          if (seen[key]) return;
+          seen[key] = 1; n++;
+          all.push({ id: (Date.now() + n).toString(36), t: String(m.t || 'точка').slice(0, 80),
+                     kind: String(m.kind || 'другое').slice(0, 30), fx: fx, fy: fy });
+        });
+        mapMineSave(all);
+        alert('Добавлено точек: ' + n + (add.length - n ? ', пропущено повторов: ' + (add.length - n) : ''));
+        draw();
+      };
+      rd.readAsText(f);
+    };
+    inp.click();
+  };
   // сброс ручной подгонки: базовая привязка приезжает из сборки, и если
   // значки двигали раньше, поверх новой она будет мешать
   const cr = $('body').querySelector('[data-calreset]');
