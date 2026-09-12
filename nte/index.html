@@ -392,16 +392,20 @@
   /* Плашка с артом: картинка уходит фоном вправо и растворяется к левому
      краю, чтобы текст поверх читался. Высота фиксированная — иначе соседние
      карточки в ряду получаются разной высоты и ряд «пляшет». */
-  .bc.bc-art{position:relative;overflow:hidden;min-height:132px;
-    padding-right:42%;isolation:isolate}
-  .bc.bc-art::before{content:'';position:absolute;inset:0;z-index:-2;
-    background-image:var(--bg);background-size:auto 215%;
-    background-position:right 2% top -30%;background-repeat:no-repeat}
-  .bc.bc-art::after{content:'';position:absolute;inset:0;z-index:-1;
-    background:linear-gradient(90deg,rgba(10,11,14,.97) 30%,rgba(10,11,14,.70) 58%,
-      rgba(10,11,14,.22) 100%)}
-  .bc.bc-art.live::after{background:linear-gradient(90deg,
-    rgba(10,22,16,.96) 30%,rgba(10,20,15,.68) 58%,rgba(10,18,14,.20) 100%)}
+  /* Арт не фоном, а полноценной картинкой справа: во всю высоту плашки, с
+     головой на месте и без размытия. Фоном он смотрелся обрезанным куском
+     непонятно чего — арты вертикальные, в полосу 130 пикселей попадал живот.
+     Слева от картинки — мягкая растушёвка в цвет плашки, чтобы стык не резал
+     глаз. */
+  .bc.bc-art{position:relative;overflow:hidden;min-height:150px;padding-right:0}
+  .bc-art-i{position:absolute;right:0;top:0;bottom:0;width:46%;z-index:0;
+    pointer-events:none;
+    background-image:var(--bg);background-size:contain;background-repeat:no-repeat;
+    background-position:right bottom;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 34%,#000 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 34%,#000 100%)}
+  .bc.bc-art>img,.bc.bc-art>.bc-b{position:relative;z-index:1}
+  .bc.bc-art>.bc-b{max-width:60%}
   /* плашки без арта не должны быть заметно ниже соседних в ряду */
   .bc{min-height:104px}
   .bc.live{border-color:hsla(140,70%,60%,.5);
@@ -870,6 +874,11 @@
     color:var(--acc);border:1px solid hsla(140,70%,60%,.4);border-radius:999px;padding:2px 8px}
   /* ступень, которую советуют брать первой */
   .awk-h .m.top{color:var(--gold);border-color:hsla(41,100%,50%,.45)}
+  /* умения эспера: ярлык вида «Пассивная способность» и текст описания */
+  .kit-k{font-style:normal;text-decoration:none;font-size:8.5px;font-weight:900;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--tx3);
+    border:1px solid var(--line);border-radius:999px;padding:2px 8px;flex:none}
+  .kit-d{font-size:12.5px;line-height:1.7;color:var(--tx2)}
   .awk.want{border-color:hsla(41,100%,50%,.3)}
   .awk-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .awk-h img{width:38px;height:38px;object-fit:contain;flex:none;border-radius:9px;
@@ -1134,7 +1143,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v54';
+const APP_VER = 'v55';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1158,6 +1167,8 @@ let SDB = null;
 let NB = {};
 // крупные арты скинов: имя мелкой картинки → имя крупной в img/artbig
 let ART = {};
+// описания навыков и пассивок из локализации игры: слаг → список умений
+let SKL = {};
 
 // ── перевод текстов с prydwen ──────────────────────────────────────────────
 // Сами тексты приезжают с сайта по-английски и при каждом новом прогоне
@@ -1314,9 +1325,15 @@ const artOf = a => 'img/art/' + a.slug + '.png';
 // Список собирает build-nte-db.ps1 из файлов игры; здесь просто складываем
 // в один ряд, чтобы листать стрелками у арта, как в игровом гардеробе.
 function looks(a) {
+  const skins = ((CITY && CITY.skins) || []).filter(x => x.slug === a.slug && x.pic);
+  // Обычный вид в таблице внешности иногда записан дважды: один раз с
+  // пометкой «по умолчанию», второй без неё. У Даффодил из-за этого в списке
+  // облика два одинаковых «Отражения в зеркале». Отсеиваем по картинке.
+  const defPics = {};
+  skins.forEach(x => { if (x.def) defPics[String(x.pic).split('/').pop()] = 1; });
   const out = [{ ru: 'Обычный вид', pic: artOf(a), def: true }];
-  ((CITY && CITY.skins) || [])
-    .filter(x => x.slug === a.slug && !x.def && x.pic)
+  skins
+    .filter(x => !x.def && !defPics[String(x.pic).split('/').pop()])
     .sort((x, y) => String(x.ru).localeCompare(String(y.ru), 'ru'))
     .forEach(x => {
       const nm = String(x.pic).split('/').pop();
@@ -1339,17 +1356,18 @@ async function load() {
   // (опыт, материалы прокачки) на странице просто не появляются.
   const grab = (f, opt) => fetch(f + '?v=' + APP_VER).then(r => r.json())
     .catch(() => opt ? null : Promise.reject(new Error(f)));
-  const [db, guide, dict, gear, i18n, city, awk, sdb, nb, art] = await Promise.all([
+  const [db, guide, dict, gear, i18n, city, awk, sdb, nb, art, sk] = await Promise.all([
     grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1),
     grab('nte-gear.json', 1), grab('nte-i18n.json', 1), grab('nte-city.json', 1),
     grab('nte-awaken.json', 1), grab('nte-map.json', 1), grab('nte-build.json', 1),
-    grab('nte-art.json', 1)
+    grab('nte-art.json', 1), grab('nte-skills.json', 1)
   ]);
   DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n; CITY = city;
   AWK = (awk && awk.awaken) || {};
   SDB = sdb || null;
   NB = (nb && nb.a) || {};
   ART = (art && art.a) || {};
+  SKL = (sk && sk.a) || {};
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
   $('cloudBtn').onclick = showSync;
@@ -2263,8 +2281,8 @@ function drawBanners() {
         const bg = a ? bannerArt(a) : '';
         return '<div class="bc' + (isLive(g) ? ' live' : '') + (b.top ? ' bc-main' : '') +
             (bg ? ' bc-art' : '') + '"' +
-            (bg ? ' style="--bg:url(\'' + bg + '\')"' : '') +
             go + ' title="открыть' + (a ? ' карточку эспера' : ' оружие') + '">' +
+          (bg ? '<div class="bc-art-i" style="--bg:url(\'' + bg + '\')"></div>' : '') +
           (pic ? '<img src="' + pic + '" alt="" loading="lazy">' : '') +
           '<div class="bc-b">' +
             '<b><span class="bc-k' + (b.kind === 'arc' ? ' arc' : '') + '">' +
@@ -4327,8 +4345,8 @@ function picksHtml(list, kind, g) {
 // Раньше всё лежало одной простынёй: сборка, составы, синергии, сетка и
 // калькулятор подряд — до сетки нужно было пролистать метр текста. Разложено
 // так же, как в трекере ZZZ.
-const SH_TABS = [['guide','Гайд'], ['awk','Пробуждения'], ['now','Сейчас'],
-                 ['team','Команды'], ['con','Консоль']];
+const SH_TABS = [['guide','Гайд'], ['kit','Что умеет'], ['awk','Пробуждения'],
+                 ['now','Сейчас'], ['team','Команды'], ['con','Консоль']];
 let shTab = 'guide';
 let shSlug = '';
 
@@ -4400,7 +4418,8 @@ function open(slug) {
   // свежих эсперов список ступеней строится по названиям из разбора.
   const hasAwk = (AWK[slug] || []).length || ((NB[slug] || {}).nodes || []).length;
   const shown = SH_TABS.filter(t => (t[0] !== 'con' || gridOf(slug)) &&
-                                    (t[0] !== 'awk' || hasAwk));
+                                    (t[0] !== 'awk' || hasAwk) &&
+                                    (t[0] !== 'kit' || (SKL[slug] || []).length));
   const facts = factsHtml(g);
 
   $('sheetIn').innerHTML =
@@ -4486,6 +4505,7 @@ function shBody(slug, g, a) {
   const has = g.arcs && g.arcs.length;
 
   if (shTab === 'con') return planHtml(slug);
+  if (shTab === 'kit') return kitHtml(slug, cap);
   if (shTab === 'awk') return awkHtml(slug, g, cap);
 
   if (shTab === 'team') {
@@ -4540,6 +4560,34 @@ function awkHave(slug) {
 function awkSave(slug, obj) {
   const list = Object.keys(obj).filter(k => obj[k]).sort();
   try { localStorage.setItem('nte-awk-' + slug, list.join(',')); } catch (e) {}
+}
+// ── что умеет эспер ────────────────────────────────────────────────────────
+// Ответ на «зачем он в команде» лежит не в цифрах сборки, а в его умениях:
+// кто-то снимает защиту с цели, кто-то раздаёт щиты, кто-то просто бьёт.
+// Тексты — из локализации игры, то есть ровно те, что видно в самой игре.
+// Пассивки идут первыми: именно в них обычно написано, что эспер даёт
+// остальным, а не себе.
+function kitHtml(slug, cap) {
+  const list = SKL[slug] || [];
+  if (!list.length) return '<div class="empty">Описаний умений для этого эспера ' +
+    'в локализации игры пока нет.</div>';
+  const pas = list.filter(x => x.pas), act = list.filter(x => !x.pas);
+  const card = x =>
+    '<details class="node"><summary>' +
+      (x.kind ? '<u class="kit-k">' + esc(x.kind) + '</u>' : '') +
+      '<b>' + esc(x.ru) + '</b><em>подробнее</em></summary>' +
+      '<div class="node-in"><div class="kit-d">' +
+        esc(x.desc).replace(/\n/g, '<br>') + '</div></div></details>';
+  return (pas.length
+      ? cap('Что даёт команде', 'пассивные способности') +
+        '<div class="wide">' + pas.map(card).join('') + '</div>'
+      : '') +
+    (act.length
+      ? cap('Умения', act.length + ' штук') +
+        '<div class="wide">' + act.map(card).join('') + '</div>'
+      : '') +
+    '<div class="hint">Тексты — из локализации игры, как на экране умений. ' +
+    'Числа в них даны для первого уровня умения.</div>';
 }
 function awkHtml(slug, g, cap) {
   let list = AWK[slug] || [];
