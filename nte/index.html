@@ -686,26 +686,17 @@
      что попали в окно. На слое 25×25 это 15-20 картинок вместо 625. */
   .maptiles{position:absolute;inset:0}
   .maptiles img{position:absolute;display:block;user-select:none}
-  /* Значок точки: картинка из игры, а если её нет — цветная метка.
-     Обратное масштабирование (--mz) больше не нужно: полотно меняет размер, а
-     не масштаб, поэтому значок и так остаётся 20 пикселей на любом зуме.
-     margin убран — центрирование делает translate. */
-  .mp{position:absolute;width:20px;height:20px;border-radius:50%;
-    transform:translate(-50%,-50%);transform-origin:center;
-    background:var(--c);border:1.5px solid rgba(0,0,0,.7);cursor:pointer;
-    box-shadow:0 0 6px var(--c);transition:none;display:flex;
-    align-items:center;justify-content:center}
-  .mp.pic{background:rgba(8,10,14,.82);box-shadow:0 0 0 1.5px var(--c),0 2px 6px #000a;
-    border-color:transparent}
-  .mp img{width:16px;height:16px;object-fit:contain;pointer-events:none}
-  .mp:hover{transform:translate(-50%,-50%) scale(1.45);z-index:5}
-  .mp.on{opacity:.35;filter:grayscale(1)}
-  /* точка вне окна: из отрисовки её убирает скрипт, иначе браузер считает
-     тени и картинки всем трём с половиной тысячам разом */
-  .mp.hid{display:none}
-  /* своя точка: звёздочка, чтобы не путать с игровыми значками */
-  .mp.mine{background:rgba(8,10,14,.85);border:1.5px solid var(--c);color:var(--c);
-    font-size:13px;font-style:normal;line-height:1;box-shadow:0 0 8px var(--c)}
+  /* Точки рисуются на холсте поверх подложки — узлов у них больше нет.
+     Три с половиной тысячи отдельных элементов браузер честно раскладывал и
+     перекрашивал при каждом движении карты, и на этом всё вставало. Холст
+     живёт в экранных координатах: перерисовать пару сотен кружков дешевле,
+     чем заставить браузер двигать тысячи элементов.
+     Мышь холст не ловит — события висят на самом окне карты. */
+  .mapcv{position:absolute;inset:0;pointer-events:none;z-index:3}
+  .maptip{position:absolute;display:none;z-index:7;pointer-events:none;
+    max-width:280px;background:rgba(10,12,16,.94);border:1px solid var(--line-hard);
+    border-radius:8px;padding:5px 9px;font-size:11.5px;color:var(--tx);
+    box-shadow:0 4px 14px #0009}
   .mapzoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:5px;z-index:6}
   .mapzoom button{width:32px;height:32px;border-radius:9px;background:rgba(12,14,18,.85);
     border:1px solid var(--line);color:var(--tx);cursor:pointer;font-size:15px;line-height:1}
@@ -1109,7 +1100,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v47';
+const APP_VER = 'v48';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -2941,8 +2932,9 @@ function mapApply() {
   el.style.height = s + 'px';
   el.style.transform = 'translate(' + Math.round(mapView.x) + 'px,' +
                                       Math.round(mapView.y) + 'px)';
+  mapDots();
   if (mapRaf) return;
-  mapRaf = requestAnimationFrame(() => { mapRaf = 0; mapTilesSwap(); mapCull(); });
+  mapRaf = requestAnimationFrame(() => { mapRaf = 0; mapTilesSwap(); });
 }
 // Исходный вид: карта целиком, по центру окна. Полотно квадратное, а окно
 // теперь шире — поэтому нулевой сдвиг уже не центр, его надо посчитать.
@@ -2967,40 +2959,211 @@ function mapSeen(pad) {
     y1: (wrap.clientHeight - mapView.y) / side + p
   };
 }
-// Точки вне окна убираем из отрисовки. Их три с половиной тысячи, у каждой
-// тень и картинка; когда все включены, браузер на каждом кадре пересчитывает
-// весь список, и карта дёргается. Сами узлы остаются в DOM — они нужны, чтобы
-// не пересобирать разметку при каждом сдвиге, — но display:none их выключает.
-// Доли лежат в mapMarks: читать style у каждой точки заново слишком дорого.
-let mapMarks = [];
-function mapMarksIndex() {
-  mapMarks = [];
-  const list = document.querySelectorAll('#mapIn > .mp');
-  for (const el of list) {
-    mapMarks.push({ el: el, x: parseFloat(el.style.left) / 100, y: parseFloat(el.style.top) / 100 });
+// ── точки на холсте ────────────────────────────────────────────────────────
+//
+// Раньше каждая точка была отдельным узлом разметки. Пока их было четыреста,
+// это работало; со StarDB стало три с половиной тысячи, и браузер начал
+// захлёбываться: на каждое движение карты он пересчитывал положение, цвет,
+// тень и картинку у всего списка. Никакой отсев невидимых не спасал — узлы
+// всё равно оставались в документе.
+//
+// Теперь все точки рисуются на одном холсте, поверх подложки. Холст живёт в
+// экранных координатах, а не внутри полотна: перерисовать пару сотен кружков
+// дешевле, чем заставить браузер двигать тысячи элементов. Наведение и клики
+// работают через поиск ближайшей точки по координатам курсора.
+let mapPts = [];        // все показанные точки: доли, цвет, значок, подпись
+let mapIcons = {};      // кэш картинок значков: адрес → Image
+let mapHot = null;      // точка под курсором
+let mapVis = [];        // попавшие в кадр: по ним ищем, что под курсором
+const MAP_R = 10;       // радиус значка на экране
+
+// Значки подгружаем по мере надобности. Пока картинка не пришла — рисуем
+// цветной кружок, когда пришла — холст перерисовывается сам.
+function mapIcon(src) {
+  if (!src) return null;
+  let im = mapIcons[src];
+  if (im === undefined) {
+    im = new Image();
+    im.onload = () => { im.ok = 1; mapDotsSoon(); };
+    im.onerror = () => { im.ok = 0; };
+    im.src = src;
+    mapIcons[src] = im;
   }
+  return im && im.ok ? im : null;
 }
-function mapCull() {
-  const s = mapSeen(0.06);
-  if (!s) return;
-  for (let i = 0; i < mapMarks.length; i++) {
-    const m = mapMarks[i];
-    const off = m.x < s.x0 || m.x > s.x1 || m.y < s.y0 || m.y > s.y1;
-    if (off !== m.off) { m.off = off; m.el.classList.toggle('hid', off); }
+let mapDotsRaf = 0;
+function mapDotsSoon() {
+  if (mapDotsRaf) return;
+  mapDotsRaf = requestAnimationFrame(() => { mapDotsRaf = 0; mapDots(); });
+}
+function mapDots() {
+  const cv = $('mapCv'), wrap = $('mapWrap');
+  if (!cv || !wrap) return;
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    cv.style.width = W + 'px'; cv.style.height = H + 'px';
   }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const side = mapSide0() * mapView.z;
+  const ox = mapView.x, oy = mapView.y;
+  // Сначала считаем, сколько точек попадёт в окно. Если их много, рисуем
+  // упрощённо — без картинок и обводок: на отдалении значок всё равно меньше
+  // собственной рамки, зато кадр остаётся быстрым.
+  const vis = [];
+  for (let i = 0; i < mapPts.length; i++) {
+    const p = mapPts[i];
+    const x = ox + p.fx * side, y = oy + p.fy * side;
+    if (x < -MAP_R || x > W + MAP_R || y < -MAP_R || y > H + MAP_R) continue;
+    p.sx = x; p.sy = y;
+    vis.push(p);
+  }
+  mapVis = vis;
+  // Три уровня подробности. Когда карту отдалили, точки всё равно налезают
+  // друг на друга, и рисовать каждой подложку с обводкой смысла нет — а стоит
+  // это дорого. Поэтому чем больше точек в кадре, тем проще вид:
+  //   до 1200 — как было: тёмный кружок, цветная рамка, значок;
+  //   до 3000 — только значок, без подложки и обводки;
+  //   дальше — цветные точки.
+  const mode = vis.length > 3000 ? 2 : (vis.length > 1200 ? 1 : 0);
+  const R = mode ? 4 : MAP_R;
+
+  for (let i = 0; i < vis.length; i++) {
+    const p = vis[i];
+    ctx.globalAlpha = p.on ? 0.32 : 1;
+    if (mode === 2) {
+      ctx.fillStyle = p.on ? '#8a8a8a' : p.col;
+      ctx.fillRect(p.sx - 2.5, p.sy - 2.5, 5, 5);
+      continue;
+    }
+    const im = p.ic ? mapIcon(p.ic) : null;
+    if (im && mode === 1) {
+      ctx.drawImage(im, p.sx - 7, p.sy - 7, 14, 14);
+      continue;
+    }
+    if (im) {
+      ctx.fillStyle = 'rgba(8,10,14,.82)';
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, MAP_R, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = p.on ? '#8a8a8a' : p.col; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.drawImage(im, p.sx - 8, p.sy - 8, 16, 16);
+      continue;
+    }
+    ctx.fillStyle = p.on ? '#8a8a8a' : p.col;
+    ctx.beginPath(); ctx.arc(p.sx, p.sy, R, 0, 6.2832); ctx.fill();
+    if (!mode) {
+      ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1.5; ctx.stroke();
+      if (p.mine) {     // своя точка — звёздочка, чтобы не путать с игровыми
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#1a0d14'; ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('✦', p.sx, p.sy + 0.5);
+      }
+    }
+  }
+  // точка под курсором — поверх всех и с подсветкой
+  if (mapHot && mapHot.sx != null) {
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(mapHot.sx, mapHot.sy, MAP_R + 3, 0, 6.2832); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 }
-// Сдвиг значков во время подгонки привязки. Полная перерисовка на каждое
-// движение мыши тормозила бы: точек четыреста, и каждая — свой узел. Поэтому
-// двигаем уже нарисованные, а исходные доли держим в data-атрибутах.
-function mapMarksMove(c) {
-  document.querySelectorAll('.mp').forEach(el => {
-    const fx = +el.dataset.fx, fy = +el.dataset.fy;
-    if (!isFinite(fx)) return;
-    el.style.left = (((fx - 0.5) * c.k + 0.5) * 100 + c.dx).toFixed(3) + '%';
-    el.style.top  = (((fy - 0.5) * c.k + 0.5) * 100 + c.dy).toFixed(3) + '%';
+// Наведение, отметки и свои точки. Узлов у точек больше нет, поэтому события
+// висят на самом окне карты, а нужная точка ищется по координатам курсора.
+function bindMapDots() {
+  const wrap = $('mapWrap'), tip = $('mapTip');
+  if (!wrap || !tip) return;
+  let moved = 0;
+
+  wrap.addEventListener('mousedown', () => { moved = 0; });
+  wrap.addEventListener('mousemove', e => {
+    moved++;
+    const p = mapHit(e.clientX, e.clientY);
+    if (p !== mapHot) {
+      mapHot = p;
+      wrap.style.cursor = p ? 'pointer' : '';
+      mapDots();
+    }
+    if (p) {
+      // подсказку держим в пределах окна: у правого края она уезжала за экран
+      const r = wrap.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      tip.textContent = p.t;
+      tip.style.display = 'block';
+      tip.style.left = Math.min(x + 14, wrap.clientWidth - tip.offsetWidth - 8) + 'px';
+      tip.style.top = Math.max(4, y - tip.offsetHeight - 12) + 'px';
+    } else {
+      tip.style.display = 'none';
+    }
   });
-  mapMarksIndex();   // доли поехали — заново переснять их для отсева
-  mapCull();
+  wrap.addEventListener('mouseleave', () => {
+    tip.style.display = 'none';
+    if (mapHot) { mapHot = null; mapDots(); }
+  });
+
+  wrap.addEventListener('click', e => {
+    if (moved > 3) return;               // это было перетаскивание, а не клик
+    const p = mapHit(e.clientX, e.clientY);
+    // Shift + клик по пустому месту — поставить свою точку
+    if (e.shiftKey && !p) {
+      const side = mapSide0() * mapView.z;
+      const r = wrap.getBoundingClientRect();
+      const fx = (e.clientX - r.left - mapView.x) / side;
+      const fy = (e.clientY - r.top - mapView.y) / side;
+      if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
+      const t = prompt('Что здесь? Например: «сундук у моста»');
+      if (!t) return;
+      const kind = (prompt('Тип: ' + MINE_KINDS.join(' / '), MINE_KINDS[0]) || 'другое').trim();
+      const all = mapMine();
+      all.push({ id: Date.now().toString(36), t: t.trim(), kind: kind, fx: fx, fy: fy });
+      mapMineSave(all);
+      draw();
+      return;
+    }
+    if (!p) return;
+    mapFoundToggle(p.id);
+    p.on = !p.on;
+    mapDots();
+  });
+
+  // свою точку убирает правая кнопка — чужие не трогаем
+  wrap.addEventListener('contextmenu', e => {
+    const p = mapHit(e.clientX, e.clientY);
+    if (!p || !p.mine) return;
+    e.preventDefault();
+    mapMineSave(mapMine().filter(m => String(m.id) !== p.mine));
+    draw();
+  });
+}
+// Что под курсором. Ищем только среди попавших в кадр — их сотни, а не тысячи,
+// и экранные координаты у них уже посчитаны отрисовкой.
+function mapHit(cx, cy) {
+  const wrap = $('mapWrap');
+  if (!wrap) return null;
+  const r = wrap.getBoundingClientRect();
+  const x = cx - r.left, y = cy - r.top;
+  let best = null, bd = (MAP_R + 2) * (MAP_R + 2);
+  for (let i = mapVis.length - 1; i >= 0; i--) {
+    const p = mapVis[i];
+    const dx = p.sx - x, dy = p.sy - y, d = dx * dx + dy * dy;
+    if (d <= bd) { bd = d; best = p; }
+  }
+  return best;
+}
+// Подгонка привязки: доли пересчитываются из исходных (bx, by) и холст
+// перерисовывается. Раньше для этого двигали каждый узел по отдельности.
+function mapMarksMove(c) {
+  for (let i = 0; i < mapPts.length; i++) {
+    const p = mapPts[i];
+    if (p.bx == null) continue;      // свои точки привязка не трогает
+    p.fx = ((p.bx - 0.5) * c.k + 0.5) + c.dx / 100;
+    p.fy = ((p.by - 0.5) * c.k + 0.5) + c.dy / 100;
+  }
+  mapDots();
 }
 // Подложка. Рисуем не всю сетку, а только плитки, попавшие в окно: на слое
 // 25×25 это полтора-два десятка картинок вместо 625, и переключение уровня
@@ -3186,38 +3349,37 @@ function drawMap() {
   const cnt = '<div class="mapcnt">показано ' + shown.length + ' из ' + all.length +
     ' · отмечено ' + Object.keys(found).length + '<i id="mapNfo"></i></div>';
 
-  const marks = shown.map(p => {
-    const [fx, fy] = mapXY(p, box);
-    const left = ((fx - 0.5) * cal.k + 0.5) * 100 + cal.dx;
-    const top  = ((fy - 0.5) * cal.k + 0.5) * 100 + cal.dy;
-    // за краем карты значок не прячем: при подгонке привязки его надо видеть,
-    // иначе тянешь пустоту. Уходящие совсем далеко всё же отсекаем
-    if (left < -60 || left > 160 || top < -60 || top > 160) return '';
-    // Если картинки значка нет на диске, точка не должна превращаться в
-    // «сломанное изображение»: убираем картинку и возвращаем цветной кружок.
-    // Так же страхуемся от значков, которые сборщик не смог докачать.
-    // значки из игры лежат в img/mapicon, чужие — в подпапке sd
-    const dir = p.sd ? 'img/mapicon/sd/' : 'img/mapicon/';
-    const ic = p.ic ? '<img src="' + dir + esc(p.ic) + '" alt="" loading="lazy"' +
-      ' onerror="this.parentElement.classList.remove(\'pic\');this.remove()">' : '';
-    const col = p.sd ? (SDB_COL[String(p.g).slice(3)] || '#fff') : (MAP_COL[p.g] || '#fff');
-    return '<i class="mp' + (found[p.id] ? ' on' : '') + (ic ? ' pic' : '') +
-      '" data-p="' + esc(p.id) + '" data-fx="' + fx.toFixed(5) + '" data-fy="' + fy.toFixed(5) + '"' +
-      ' style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%;' +
-      '--c:' + col + '" title="' + esc((p.t || '') +
-      (p.ru && p.ru !== p.t ? ' — ' + p.ru : '')) + '">' + ic + '</i>';
-  }).join('');
-
+  // Точки — в массив, а не в разметку. Три с половиной тысячи отдельных узлов
+  // браузер честно раскладывал, красил и перерисовывал при каждом движении
+  // карты; на этом всё и вставало. Теперь они рисуются на одном холсте.
+  mapPts = [];
+  for (const p of shown) {
+    const [fx0, fy0] = mapXY(p, box);
+    const fx = ((fx0 - 0.5) * cal.k + 0.5) + cal.dx / 100;
+    const fy = ((fy0 - 0.5) * cal.k + 0.5) + cal.dy / 100;
+    // далеко за краем карты точку не держим, но ближний вылет оставляем: при
+    // подгонке привязки её надо видеть, иначе тянешь пустоту
+    if (fx < -0.6 || fx > 1.6 || fy < -0.6 || fy > 1.6) continue;
+    mapPts.push({
+      id: p.id, fx: fx, fy: fy, bx: fx0, by: fy0,
+      col: p.sd ? (SDB_COL[String(p.g).slice(3)] || '#fff') : (MAP_COL[p.g] || '#fff'),
+      ic: p.ic ? (p.sd ? 'img/mapicon/sd/' : 'img/mapicon/') + p.ic : '',
+      t: (p.t || '') + (p.ru && p.ru !== p.t ? ' — ' + p.ru : ''),
+      on: !!found[p.id]
+    });
+  }
   // свои точки поверх игровых: их доли уже в координатах картинки, привязка
   // к ним не применяется — их ставил человек по самой карте
   const mine = mapMine().filter(m => !off['мои: ' + m.kind] &&
     (!q || ((m.t || '') + ' ' + (m.kind || '')).toLowerCase().indexOf(q) >= 0));
-  const mineMarks = mine.map(m =>
-    '<i class="mp mine' + (found['mine-' + m.id] ? ' on' : '') + '" data-p="mine-' +
-      esc(m.id) + '" data-mine="' + esc(m.id) + '"' +
-      ' style="left:' + (m.fx * 100).toFixed(3) + '%;top:' + (m.fy * 100).toFixed(3) + '%;' +
-      '--c:#ff7ab6" title="' + esc(m.t + ' · ' + m.kind + ' · своя точка, ПКМ — убрать') +
-      '">✦</i>').join('');
+  for (const m of mine) {
+    mapPts.push({
+      id: 'mine-' + m.id, mine: String(m.id), fx: m.fx, fy: m.fy,
+      col: '#ff7ab6', ic: '',
+      t: m.t + ' · ' + m.kind + ' · своя точка, ПКМ — убрать',
+      on: !!found['mine-' + m.id]
+    });
+  }
 
   // подложку рисует mapTilesSwap: уровень зависит от текущего масштаба
   $('body').innerHTML =
@@ -3225,8 +3387,9 @@ function drawMap() {
       '<aside class="mapside">' + mapSideHtml(cats, off, cal) + '</aside>' +
       '<div class="mapwrap" id="mapWrap"><div class="mapin" id="mapIn">' +
         '<div class="maptiles" id="mapTiles" data-lay="0"></div>' +
-        marks + mineMarks +
       '</div>' +
+      '<canvas class="mapcv" id="mapCv"></canvas>' +
+      '<div class="maptip" id="mapTip"></div>' +
       cnt +
       '<div class="mapzoom">' +
         '<button data-mz="+">+</button><button data-mz="-">−</button>' +
@@ -3236,15 +3399,15 @@ function drawMap() {
     '</div>';
 
   mapHome();
-  mapMarksIndex();
   mapApply();
   // Первую отрисовку делаем сразу, а не ждём кадра: requestAnimationFrame не
   // срабатывает, пока вкладка браузера в фоне, и подложка оставалась пустой
   // до первого движения мышью. Открыл карту в соседней вкладке — вернулся к
   // чёрному прямоугольнику.
   mapTilesSwap();
-  mapCull();
+  mapDots();
   bindMapDrag();
+  bindMapDots();
   // окно карты тянется по высоте экрана: при развороте браузера или входе в
   // полный экран квадрат надо заново поставить по центру
   if (!window.__mapResize) {
@@ -3254,36 +3417,6 @@ function drawMap() {
     document.addEventListener('fullscreenchange', again);
   }
 
-  $('body').querySelectorAll('.mp').forEach(el => {
-    el.onclick = e => {
-      e.stopPropagation();
-      mapFoundToggle(el.dataset.p);
-      el.classList.toggle('on');
-    };
-    // свою точку можно убрать правой кнопкой — чужие не трогаем
-    if (el.dataset.mine) el.oncontextmenu = e => {
-      e.preventDefault(); e.stopPropagation();
-      mapMineSave(mapMine().filter(m => String(m.id) !== el.dataset.mine));
-      draw();
-    };
-  });
-  // Shift + клик по карте — поставить свою точку там, куда ткнул
-  const wrapEl = $('mapWrap');
-  if (wrapEl) wrapEl.addEventListener('click', e => {
-    if (!e.shiftKey || e.target.classList.contains('mp')) return;
-    const inEl = $('mapIn');
-    const r = inEl.getBoundingClientRect();
-    // делим на текущий масштаб: прямоугольник уже растянут трансформацией
-    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
-    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
-    const t = prompt('Что здесь? Например: «сундук у моста»');
-    if (!t) return;
-    const kind = (prompt('Тип: ' + MINE_KINDS.join(' / '), MINE_KINDS[0]) || 'другое').trim();
-    const all = mapMine();
-    all.push({ id: Date.now().toString(36), t: t.trim(), kind: kind, fx: fx, fy: fy });
-    mapMineSave(all);
-    draw();
-  });
   $('body').querySelectorAll('input[data-cat]').forEach(inp => inp.onchange = () => {
     const o = mapOff();
     if (inp.checked) delete o[inp.dataset.cat]; else o[inp.dataset.cat] = 1;
