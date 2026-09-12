@@ -784,7 +784,13 @@
   .node>summary b{color:var(--tx);font-size:12.5px}
   .node>summary em{margin-left:auto;font-style:normal;font-size:10px;color:var(--tx3);
     font-family:var(--mono),monospace}
-  .node-in{padding:0 12px 10px;display:grid;gap:6px}
+  /* Варианты внутри узла — в несколько колонок. У Грифона в одном узле два
+     десятка деталей, и лентой вниз раскрытая машина уезжала на три экрана.
+     Раскрытый узел при этом занимает всю ширину блока, иначе колонки негде
+     разложить. */
+  .node-in{padding:0 12px 10px;display:grid;gap:6px;
+    grid-template-columns:repeat(auto-fill,minmax(210px,1fr));align-items:start}
+  .wide>.node[open]{grid-column:1/-1}
   .tune{padding:8px 10px;border-radius:10px;background:var(--pan2);border:1px solid var(--line-soft)}
   .tune.std{border-color:hsla(140,70%,60%,.28)}
   .tune-t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -834,13 +840,16 @@
   .code-d{margin-top:6px;font-size:10.5px;color:var(--tx3)}
 
   /* пробуждения: ступени A1…A6 и резонансы */
-  .awk-pick{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 4px}
+  /* карточка ступени нажимается: отмечаешь то, что выбрал себе в игре */
+  .awk[data-awk]{cursor:pointer}
+  .awk[data-awk]:hover{border-color:var(--line-hard)}
   .awks{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}
   .awk{padding:11px 13px;border-radius:14px;background:var(--pan);
     border:1px solid var(--line-soft);opacity:.55;transition:.15s}
   .awk.on{opacity:1;border-color:hsla(140,70%,60%,.35);
     background:linear-gradient(135deg,hsla(140,70%,60%,.07),var(--pan))}
-  .awk.want{border-color:hsla(41,100%,50%,.45)}
+  .awk-h .m{font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--acc);border:1px solid hsla(140,70%,60%,.4);border-radius:999px;padding:2px 8px}
   .awk-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .awk-h img{width:38px;height:38px;object-fit:contain;flex:none;border-radius:9px;
     background:#0d0f14;border:1px solid var(--line);padding:2px}
@@ -1104,7 +1113,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v51';
+const APP_VER = 'v52';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -4435,51 +4444,70 @@ function shBody(slug, g, a) {
 // Тексты из таблиц игры, сколько у тебя открыто — хранит браузер. Плюс отметка,
 // до какого пробуждения эспера имеет смысл вести: её берём из оценки prydwen
 // («A6», «A1»), это подсказка, а не приговор.
+// В этой игре пробуждения не идут по порядку, как созвездия в соседних играх.
+// Каждый дубликат эспера даёт одну ступень на выбор: выбил первую повторку —
+// можешь взять хоть A1, хоть A6. Выбил вторую — берёшь вторую из оставшихся.
+// Поэтому храним не «докуда дошёл», а список того, что выбрано.
 function awkHave(slug) {
-  const v = parseInt(localStorage.getItem('nte-awk-' + slug), 10);
-  return isFinite(v) ? Math.max(0, Math.min(6, v)) : 0;
+  const raw = localStorage.getItem('nte-awk-' + slug) || '';
+  // старый формат — просто число «докуда открыто»; разворачиваем в список
+  if (/^\d$/.test(raw)) {
+    const n = +raw, out = {};
+    for (let i = 1; i <= n; i++) out[i] = 1;
+    return out;
+  }
+  const out = {};
+  raw.split(',').forEach(s => { const n = parseInt(s, 10); if (n >= 1 && n <= 6) out[n] = 1; });
+  return out;
 }
-function awkSave(slug, n) {
-  try { localStorage.setItem('nte-awk-' + slug, String(n)); } catch (e) {}
+function awkSave(slug, obj) {
+  const list = Object.keys(obj).filter(k => obj[k]).sort();
+  try { localStorage.setItem('nte-awk-' + slug, list.join(',')); } catch (e) {}
 }
 function awkHtml(slug, g, cap) {
   const list = AWK[slug] || [];
   if (!list.length) return '<div class="empty">Для этого эспера таблицы пробуждений ' +
     'в игре ещё нет.</div>';
   const have = awkHave(slug);
+  const n = Object.keys(have).length;
   const want = ((g.ratings || {}).awk || '').replace(/[^\d]/g, '');
   const eff = list.filter(x => !x.res), res = list.filter(x => x.res);
   const card = x =>
-    '<div class="awk' + (x.n <= have ? ' on' : '') +
-      (want && +want === x.n ? ' want' : '') + '">' +
+    '<div class="awk' + (!x.res && have[x.n] ? ' on' : '') +
+      (x.res && n >= x.n ? ' on' : '') + '"' +
+      (x.res ? '' : ' data-awk="' + x.n + '" title="нажми, если оно у тебя выбрано"') + '>' +
       '<div class="awk-h">' +
         (x.pic ? '<img src="img/awk/' + esc(x.pic) + '" alt="" loading="lazy">' : '') +
         '<u>' + (x.res ? 'резонанс ' : 'A') + x.n + '</u>' +
         '<b>' + esc(x.ru || x.en || '') + '</b>' +
-        (want && +want === x.n ? '<span class="m">цель по гайду</span>' : '') +
+        (!x.res && have[x.n] ? '<span class="m">выбрано</span>' : '') +
       '</div>' +
       (x.desc ? '<div class="awk-d">' + esc(x.desc).replace(/\n/g, '<br>') + '</div>' : '') +
     '</div>';
-  return cap('Сколько у тебя', have ? 'открыто A' + have : 'пока ни одного') +
-    '<div class="awk-pick">' +
-      [0, 1, 2, 3, 4, 5, 6].map(n =>
-        '<button class="fb' + (n === have ? ' on' : '') + '" data-awk="' + n + '">' +
-        (n ? 'A' + n : 'нет') + '</button>').join('') +
-    '</div>' +
-    (want ? '<div class="hint">По гайду prydwen эспер заметно прибавляет к <b>A' +
-      esc(want) + '</b> — ниже это отмечено.</div>' : '') +
-    cap('Пробуждения', eff.length + ' ступеней') +
+  return cap('Сколько у тебя', n ? 'выбрано ' + n + ' из 6' : 'пока ни одного') +
+    '<div class="hint">Пробуждения тут не идут по порядку, как созвездия в ' +
+    'соседних играх. Каждый дубликат эспера даёт <b>одну ступень на выбор</b>: с ' +
+    'первой повторки можно взять хоть A1, хоть A6. Отмечай ниже те, что взял ' +
+    'себе — карточки нажимаются.' +
+    (want ? ' По оценке prydwen эспер заметно прибавляет, когда ступеней ' +
+      'набирается <b>' + esc(want) + '</b>.' : '') + '</div>' +
+    cap('Пробуждения', eff.length + ' ступеней на выбор') +
     '<div class="awks">' + eff.map(card).join('') + '</div>' +
-    (res.length ? cap('Резонансы', 'дают вместе с 3-м и 6-м') +
-      '<div class="awks">' + res.map(card).join('') + '</div>' : '') +
-    '<div class="hint">Тексты — из таблиц игры. Сколько у тебя открыто, ' +
-    'помнит этот браузер.</div>';
+    (res.length ? cap('Резонансы', 'за количество, а не за номер') +
+      '<div class="awks">' + res.map(card).join('') + '</div>' +
+      '<div class="hint">Резонанс даётся за <b>число</b> открытых ступеней, а не ' +
+      'за конкретные: первый — когда их три, второй — когда все шесть. Какие ' +
+      'именно выбраны, тут не важно.</div>' : '') +
+    '<div class="hint">Тексты — из таблиц игры. Что ты выбрал, помнит этот ' +
+    'браузер.</div>';
 }
 function bindAwk(slug) {
   const box = $('shBody');
   if (!box) return;
   box.querySelectorAll('[data-awk]').forEach(b => b.onclick = () => {
-    awkSave(slug, +b.dataset.awk);
+    const have = awkHave(slug), k = b.dataset.awk;
+    if (have[k]) delete have[k]; else have[k] = 1;
+    awkSave(slug, have);
     const g = (GUIDE.agents || {})[slug] || {};
     box.innerHTML = awkHtml(slug, g, (t, note) =>
       '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
@@ -4687,13 +4715,36 @@ function myHtml(slug, g) {
   '<details class="mfold" style="margin-top:8px"><summary><b>Читать на своём компьютере</b>' +
   '</summary><div class="mfold-in"><div class="hint">' +
   'Распознавание через сервер иногда не дочитывает нижние строки. В Windows есть ' +
-  'свой распознаватель — локальный, без лимитов и точнее на мелких цифрах. ' +
-  'Скрипт <b>nte-ocr.ps1</b> лежит в папке сайта.<br><br>' +
-  '1. В игре открой экран характеристик, сними область: <b>Win+Shift+S</b>.<br>' +
-  '2. В <b>Windows PowerShell</b> (именно 5.1, не pwsh): ' +
-  '<code>cd "F:\\Claude cowork\\сайт\\nte"</code>, затем <code>.\\nte-ocr.ps1</code><br>' +
-  '3. Скрипт положит в буфер строку — вернись сюда и нажми <b>Ctrl+V</b>.' +
-  '</div></div></details>';
+  'свой распознаватель — локальный, без лимитов и точнее на мелких цифрах.<br><br>' +
+  '1. Скачай скрипт и положи куда удобно.<br>' +
+  '2. В игре открой экран характеристик, сними область: <b>Win+Shift+S</b>.<br>' +
+  '3. Правой кнопкой по файлу → <b>«Выполнить с помощью PowerShell»</b>. Если ' +
+  'запускаешь из консоли — только <b>Windows PowerShell</b>, не pwsh: ' +
+  'команда ниже это учитывает.<br>' +
+  '4. Скрипт положит в буфер строку — вернись сюда и нажми <b>Ctrl+V</b>.' +
+  '</div>' +
+  '<div class="mapbar" style="margin-top:8px">' +
+    '<a class="fb" href="nte-ocr.ps1" download>скачать nte-ocr.ps1</a>' +
+    '<button class="fb" data-ocrcmd>скопировать команду запуска</button>' +
+  '</div>' +
+  '<div class="hint" style="margin-top:6px">Команда сама найдёт скрипт в папке ' +
+  '«Загрузки» — если положил его туда, больше ничего править не надо.</div>' +
+  '</div></details>';
+}
+// Команда запуска. Путь не вписан жёстко: у другого человека папки сайта нет
+// вовсе, а скачанный скрипт почти всегда лежит в «Загрузках». Поэтому команда
+// ищет файл там, и запускает именно Windows PowerShell — в pwsh нет проекции
+// WinRT, без которой распознаватель Windows не доступен.
+const OCR_CMD = 'powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\Downloads\\nte-ocr.ps1"';
+function bindOcrCmd(box) {
+  const b = box && box.querySelector('[data-ocrcmd]');
+  if (!b) return;
+  b.onclick = () => {
+    navigator.clipboard.writeText(OCR_CMD).then(() => {
+      b.textContent = 'скопировано';
+      setTimeout(() => { b.textContent = 'скопировать команду запуска'; }, 1800);
+    }).catch(() => { b.textContent = 'не вышло — скопируй вручную'; });
+  };
 }
 
 // «Сейчас» — что с эспером сегодня: баннер, место в мете, твои характеристики
@@ -4769,7 +4820,9 @@ function nowHtml(slug, g, a, cap) {
       (a.tier ? '<div class="st"><b>' + esc(a.tier) + '</b>место в тир-листе</div>' : '') +
       (rat.awk ? '<div class="st"><b>' + esc(rat.awk) + '</b>оценка при пробуждениях</div>' : '') +
       '<div class="st' + (inTeams.length ? ' ok' : '') + '"><b>' + inTeams.length + '</b>мета-составов</div>' +
-      (asCore ? '<div class="st"><b>' + asCore + '</b>из них он ядро</div>' : '') +
+      (asCore ? '<div class="st" title="Составы, где он стоит первым номером: вся команда ' +
+        'работает на него, остальные подают ресурс и баффы">' +
+        '<b>' + asCore + '</b>из них он главный</div>' : '') +
     '</div>';
   const banner = live
     ? '<div class="verdict">Баннер <b>идёт прямо сейчас</b>: ' + esc(banDates(live)) +
@@ -4795,6 +4848,7 @@ function nowHtml(slug, g, a, cap) {
 function bindMy(slug) {
   const box = $('shBody');
   if (!box) return;
+  bindOcrCmd(box);
   const say = (t, bad) => {
     const el = $('ocrSay');
     if (el) { el.textContent = t; el.style.color = bad ? '#fbbf24' : 'var(--acc)'; }
