@@ -798,6 +798,19 @@
   .code-r{margin-top:8px;display:flex;flex-wrap:wrap;gap:0}
   .code-d{margin-top:6px;font-size:10.5px;color:var(--tx3)}
 
+  /* события патча: идут сейчас, скоро, постоянные */
+  .evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:9px}
+  .ev{padding:10px 12px;border-radius:13px;background:var(--pan);
+    border:1px solid var(--line-soft)}
+  .ev.on{border-color:hsla(140,70%,60%,.35);
+    background:linear-gradient(135deg,hsla(140,70%,60%,.08),var(--pan))}
+  .ev.soon{border-color:hsla(41,100%,50%,.3)}
+  .ev b{display:block;font-size:13px;color:var(--tx)}
+  .ev i{display:block;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--tx3);margin-top:3px}
+  .ev-d{margin-top:6px;font-size:11.5px;color:var(--tx2)}
+  .ev.on .ev-d{color:var(--acc)}
+
   /* полоса портретов на вкладке «Команды» */
   .roster{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
   .rost{display:flex;flex-direction:column;align-items:center;gap:3px;width:62px;padding:5px 3px;
@@ -1037,7 +1050,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v38';
+const APP_VER = 'v39';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -2123,8 +2136,74 @@ function drawBanners() {
     state.tab = 'arcs'; state.q = c.dataset.banArc; state.rar = '';
     $('q').value = state.q; drawTabs(); draw();
   });
+  // события дорисовываются под баннерами, когда приедут с воркера
+  $('body').insertAdjacentHTML('beforeend', '<div id="evBox"></div>');
+  evDraw();
   startBanTick();
-  foot('Расписание баннеров с prydwen. Даты по серверу EU.');
+  foot('Расписание баннеров с prydwen, календарь событий с ntebuild. Даты по серверу EU.');
+}
+
+// ── события патча ──────────────────────────────────────────────────────────
+// Календаря событий в файлах игры нет: даты активностей приходят с сервера
+// игры и в таблицы не попадают. Поэтому список тянет воркер со сводного
+// календаря ntebuild, а страница показывает, что идёт сейчас и что скоро.
+const EV_API = API_BASES.map(b => b + '/api/nte/events');
+let evLive = null;
+const EV_KIND = {
+  'In-Game Event': 'событие', 'Ongoing Activity': 'постоянная активность',
+  'Beyond the Rails': 'За рельсами', 'Character Banner': 'баннер эспера',
+  'Arc Banner': 'баннер оружия', 'Major Update': 'обновление',
+  'Livestream': 'стрим'
+};
+// Названия событий не переводим: они всплывают в игре по-английски, и русский
+// вариант только мешает искать. А вот награды — те же предметы, что в кодах,
+// и у них перевод уже есть.
+function evRew(s) {
+  return String(s || '').split(/\s{2,}|·/).map(x => x.trim()).filter(Boolean)
+    .map(x => '<span class="gsh">' + esc(rewName(x)) + '</span>').join('');
+}
+function evDays(e) {
+  if (e.perm) return 'постоянно';
+  if (!e.to) return e.from ? 'с ' + ruDate(e.from) : '';
+  const left = Math.ceil((new Date(e.to + 'T23:59:59Z') - Date.now()) / 86400000);
+  if (left < 0) return 'закончилось';
+  return ruDate(e.from) + ' — ' + ruDate(e.to) +
+    (left <= 7 ? ' · осталось ' + left + ' дн.' : '');
+}
+function evDraw() {
+  const box = $('evBox');
+  if (!box) return;
+  if (!evLive) { evRefresh(); return; }
+  const all = evLive.list || [];
+  const now = all.filter(e => e.live), soon = all.filter(e => e.soon && !e.live);
+  const perm = all.filter(e => e.perm && !e.live && !e.soon);
+  const card = e =>
+    '<div class="ev' + (e.live ? ' on' : '') + (e.soon ? ' soon' : '') + '">' +
+      '<b>' + esc(e.name) + '</b>' +
+      '<i>' + esc(EV_KIND[e.kind] || e.kind || '') + '</i>' +
+      '<div class="ev-d">' + esc(evDays(e)) + '</div>' +
+      (e.rew ? '<div class="geo">' + evRew(e.rew) + '</div>' : '') +
+    '</div>';
+  const part = (t, list, note) => list.length
+    ? '<div class="cap"><b>' + esc(t) + '</b><span></span><em>' + list.length + '</em></div>' +
+      (note ? '<div class="hint" style="margin:0 0 8px">' + note + '</div>' : '') +
+      '<div class="evs">' + list.map(card).join('') + '</div>'
+    : '';
+  box.innerHTML =
+    (evLive.ver ? '<div class="cap"><b>События патча ' + esc(evLive.ver) + '</b>' +
+      '<span></span><em>' + all.length + '</em></div>' : '') +
+    part('Идут сейчас', now) +
+    part('Скоро начнутся', soon) +
+    part('Постоянные', perm, 'Доступны всегда — заходить можно в любой момент.');
+}
+async function evRefresh(force) {
+  const one = u => fetch(u + (force ? '?fresh=1' : ''), { cache: 'no-store' })
+    .then(r => r.json())
+    .then(j => (j && j.list && j.list.length) ? j : Promise.reject(new Error('пусто')));
+  try {
+    evLive = await Promise.any(EV_API.map(one));
+    if (state.tab === 'ban') evDraw();
+  } catch (e) { evLive = null; }
 }
 // ── обратный отсчёт ────────────────────────────────────────────────────────
 // Дни округлённо — мало: под конец фазы важно, сколько именно часов осталось
@@ -2850,7 +2929,11 @@ function drawMap() {
     // за краем карты значок не прячем: при подгонке привязки его надо видеть,
     // иначе тянешь пустоту. Уходящие совсем далеко всё же отсекаем
     if (left < -60 || left > 160 || top < -60 || top > 160) return '';
-    const ic = p.ic ? '<img src="img/mapicon/' + esc(p.ic) + '" alt="" loading="lazy">' : '';
+    // Если картинки значка нет на диске, точка не должна превращаться в
+    // «сломанное изображение»: убираем картинку и возвращаем цветной кружок.
+    // Так же страхуемся от значков, которые сборщик не смог докачать.
+    const ic = p.ic ? '<img src="img/mapicon/' + esc(p.ic) + '" alt="" loading="lazy"' +
+      ' onerror="this.parentElement.classList.remove(\'pic\');this.remove()">' : '';
     return '<i class="mp' + (found[p.id] ? ' on' : '') + (ic ? ' pic' : '') +
       '" data-p="' + esc(p.id) + '" data-fx="' + fx.toFixed(5) + '" data-fy="' + fy.toFixed(5) + '"' +
       ' style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%;' +
@@ -3371,6 +3454,37 @@ function drawMech() {
       'Пока собираешь одну реакцию, предыдущая успевает свалиться, и в итоге не работает ' +
       'ни одна. Состав собирается вокруг одной-двух реакций, а не «побольше разных».</li>' +
     '</ul>') +
+    // Раздел появился из вопроса «что такое ментальная картина»: в игре есть
+    // «Ментальная карта», и найти её в интерфейсе непросто — это одно из
+    // шести испытаний внутри «Кроличьей норы», а не отдельная система.
+    mfold('Подземелья и «Ментальная карта»', false,
+    '<p>Подземелья в NTE называются <b>клонами</b> и делятся по тому, что с них падает. ' +
+    'Из таблицы <code>DT_CloneOverviewRow</code>:</p>' +
+    '<table class="tbl"><thead><tr><th>Режим</th><th>Что даёт</th></tr></thead><tbody>' +
+      '<tr><td>EXP &amp; Beetle Coins</td><td>опыт эсперов и монеты</td></tr>' +
+      '<tr><td>Ability Upgrade</td><td>материалы на способности</td></tr>' +
+      '<tr><td>Arc Ascension</td><td>материалы на прорывы оружия</td></tr>' +
+      '<tr><td>Console</td><td>картриджи и модули на сетку</td></tr>' +
+      '<tr><td>Anomaly Pilgrimage</td><td>еженедельные боссы, высшие материалы</td></tr>' +
+      '<tr><td>Beyond the Rails</td><td>материалы на пробуждение эсперов</td></tr>' +
+      '<tr><td>Anomaly Hunt</td><td>мировые боссы</td></tr>' +
+    '</tbody></table>' +
+    '<div class="box" style="margin-top:10px"><b>«Кроличья нора»</b>' +
+    '<div class="hint" style="margin:6px 0 0">Подземелье на снаряжение из DLC. Внутри ' +
+    'шесть испытаний, у каждого шесть уровней сложности и свой именной сундук в награду:</div>' +
+    '<ol style="margin:8px 0 0;padding-left:20px;color:var(--tx2);font-size:12px;line-height:1.7">' +
+      '<li>Фокусы с часами <i style="color:var(--tx3)">— Clock Tricks</i></li>' +
+      '<li>Галерея скульптур <i style="color:var(--tx3)">— Sculpture Gallery</i></li>' +
+      '<li>Ткацкий станок широты <i style="color:var(--tx3)">— Latitude Loom</i></li>' +
+      '<li>Защита редиса <i style="color:var(--tx3)">— Defend the Radish</i></li>' +
+      '<li><b style="color:var(--gold)">Ментальная карта</b> ' +
+        '<i style="color:var(--tx3)">— Mental Map</i></li>' +
+      '<li>Ночь на рельсах <i style="color:var(--tx3)">— Night of the Rails</i></li>' +
+    '</ol>' +
+    '<div class="hint" style="margin:8px 0 0">Про «Ментальную карту» в игре сказано так: ' +
+    '«Пиксели загораются по очереди. На краю реальности проступает силуэт кролика…». ' +
+    'Сундук с неё называется «Сундук «Ментальная карта» (сложность 1–6)» — по нему её ' +
+    'проще всего опознать в инвентаре.</div></div>') +
   '</div>';
   $('body').querySelectorAll('.mfold').forEach(d => d.ontoggle = () => {
     const st = mfoldOpen(); st[d.dataset.m] = d.open;
