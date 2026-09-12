@@ -639,9 +639,13 @@
      Была наоборот и уже 300 пикселей — карта занимала меньше половины
      экрана, и разглядывать на ней было нечего. */
   .maprow{display:grid;grid-template-columns:270px minmax(0,1fr);gap:12px;align-items:start}
-  /* карта во всю высоту окна, но не выше квадрата: плитки квадратные */
-  .mapwrap{position:relative;width:100%;height:calc(100vh - 150px);min-height:420px;
-    overflow:hidden;
+  /* Карта — строго квадрат: плитки нарезаны квадратами, и доли точек считаются
+     от квадрата. Когда её растянули на всю ширину окна (height вместо
+     пропорции), подложка поехала по горизонтали, а значки перестали совпадать
+     с улицами — это и выглядело как «всё смещено». Держим квадрат по меньшей
+     из сторон: ширине колонки и высоте экрана. */
+  .mapwrap{position:relative;width:min(100%, calc(100vh - 150px));aspect-ratio:1;
+    min-height:420px;margin:0 auto;overflow:hidden;
     border:1px solid var(--line);border-radius:16px;background:#0b0d10;cursor:grab}
   .mapwrap.grab{cursor:grabbing}
   .mapin{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
@@ -811,6 +815,10 @@
   /* набор картриджей: карточка раскрывается */
   .suit{border:1px solid var(--line-soft);border-radius:16px;overflow:hidden;
     background:linear-gradient(135deg,hsla(0,0%,100%,.03),rgba(10,10,10,.8));transition:.2s}
+  /* Раскрытая карточка занимает всю ширину списка. Без этого она оставалась в
+     своей колонке шириной 330 пикселей, и «в ширину» раскрываться было просто
+     некуда: внутренняя сетка складывалась в одну колонку и всё уезжало вниз. */
+  .list>.suit[open]{grid-column:1/-1}
   .suit[open]{border-color:var(--line);background:var(--pan2)}
   .suit>summary{display:flex;gap:12px;padding:12px 14px;cursor:pointer;list-style:none;
     align-items:flex-start}
@@ -1026,7 +1034,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v36';
+const APP_VER = 'v37';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -1075,8 +1083,26 @@ function prioRu(s) {
 const RATE_RU = { Damage:'Урон', Support:'Поддержка', Hybrid:'Гибрид',
                   Survival:'Выживание', Buff:'Поддержка', 'Endgame PVE':'эндгейм PVE' };
 // Награды за коды: валюты оставляем как в игре, служебные слова переводим.
+// Часть предметов в игровых таблицах не находится — это мелочь вроде еды и
+// кубиков, значка у них нет, но название всё равно должно быть по-русски.
+const REW_RU = {
+  'blue dice': 'Синий кубик',
+  'clicky fries': 'Хрустящая картошка',
+  'dynamik': 'Треугольник DynamiK',
+  'materials': 'материалы',
+  'celebration fireworks avatar frame': 'рамка профиля «Праздничный салют»',
+  'puka chocoa ellie tour special': 'Пука Чокоа: тур Элли',
+  'lacrimosa launch rewards': 'награды за выход Лакримозы',
+  'annulith': 'Аннулит', 'fons': 'Фонс', 'beetle coin': 'Жук-монета',
+  'beetle coins': 'Жук-монета'
+};
+function rewName(s) {
+  const t = String(s || '').trim();
+  const k = t.toLowerCase().replace(/s$/, '');
+  return REW_RU[t.toLowerCase()] || REW_RU[k] || t;
+}
 function rewRu(s) {
-  return String(s || '').replace(/\bMaterials\b/g, 'материалы').replace(/\bx(\d+)/g, '×$1');
+  return String(s || '').replace(/\bMaterials\b/gi, 'материалы').replace(/\bx(\d+)/g, '×$1');
 }
 // Награда приходит строкой вида «Annulith x100 + Materials». Разбираем её на
 // части и подставляем значки предметов из игры: список наград собирает
@@ -1103,7 +1129,11 @@ function rewHtml(s) {
     }
     cnt = cnt.replace(/[,\s]/g, '');
     const it = rewFind(name);
-    if (!it || !it.icon) return '<span class="rw">' + esc(rewRu(t)) + '</span>';
+    // Предмета нет в таблицах игры — значка не будет, но имя переводим и
+    // количество показываем так же, как у остальных: иначе в карточке
+    // посреди русского списка торчало «1 Blue Dice».
+    if (!it || !it.icon) return '<span class="rw">' + esc(rewName(rewRu(name))) +
+      (cnt ? '<b>×' + esc(num(+cnt)) + '</b>' : '') + '</span>';
     return '<span class="rw"><img src="img/items/' + esc(it.icon) + '" alt="" loading="lazy">' +
       esc(it.ru || name) + (cnt ? '<b>×' + esc(num(+cnt)) + '</b>' : '') + '</span>';
   }).join('');
@@ -2635,7 +2665,14 @@ function mapOffSave(v) {
 }
 // Облако точек → доли 0..1. Поле в 12 % подобрано наложением на плитки: при
 // нём улицы и магазины совпадают, при меньшем город уезжает за край.
+// Привязку считает сборщик и кладёт в map.box: какой кусок мира попадает на
+// картинку. Раньше её выводили прямо тут — вписывали облако точек в квадрат по
+// габаритам. Способ негодный: точки стоят только в городе, а карта захватывает
+// воду, острова и горы, поэтому всё облако растягивалось на весь лист и значки
+// уезжали. Запасной путь оставлен на случай старого json.
 function mapBox(pts) {
+  const b = CITY && CITY.map && CITY.map.box;
+  if (b && b.side) return { cx: +b.cx || 0, cy: +b.cy || 0, side: +b.side };
   const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   const y0 = Math.min(...ys), y1 = Math.max(...ys);
@@ -2660,7 +2697,7 @@ function mapCats(pts) {
 // сторона сетки, 6×6 для обзора и 25×25 для разглядывания вывесок.
 // Порядок в списке от грубого к точному; берём самый точный, который
 // собран сборщиком (в tiles лежит только то, что реально скачано).
-const MAP_LAYERS = [[0, 4], [1.8, 3], [3.5, 2], [7, 1]];
+const MAP_LAYERS = [[0, 4], [1.4, 3], [2.6, 2], [6, 1]];
 function mapLayer(z, tiles) {
   let lay = 4;
   for (const [from, l] of MAP_LAYERS) {
@@ -2768,6 +2805,8 @@ function mapSideHtml(cats, off, cal) {
         '<label>вверх<input type="number" step="0.5" value="' + cal.dy + '" data-cal="dy"></label>' +
         '<label>масштаб<input type="number" step="0.02" value="' + cal.k + '" data-cal="k"></label>' +
       '</div>' +
+      '<div class="mapbar" style="margin-top:6px">' +
+        '<button data-calreset>вернуть как в сборке</button></div>' +
       '<div class="hint">Быстрее всего — <b>зажать Alt и потянуть прямо по карте</b>: ' +
       'поедут только значки, карта останется на месте. <b>Alt + колесо</b> растягивает ' +
       'расстановку. Числа тут — то же самое, только вручную.<br><br>' +
@@ -2892,6 +2931,14 @@ function drawMap() {
     if (inp.dataset.cal === 'k' && !c.k) c.k = 1;
     mapCalSave(c); draw();
   });
+  // сброс ручной подгонки: базовая привязка приезжает из сборки, и если
+  // значки двигали раньше, поверх новой она будет мешать
+  const cr = $('body').querySelector('[data-calreset]');
+  if (cr) cr.onclick = () => {
+    try { localStorage.removeItem('nte-map-cal'); } catch (e) {}
+    mapView = { z: 1, x: 0, y: 0 };
+    draw();
+  };
   const rs = $('body').querySelector('[data-mreset]');
   if (rs) rs.onclick = () => {
     try { localStorage.removeItem('nte-map-found'); } catch (e) {}
