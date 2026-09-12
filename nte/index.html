@@ -1100,7 +1100,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v49';
+const APP_VER = 'v50';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -2985,7 +2985,24 @@ let mapR = 10;          // радиус значка сейчас — завис
 // мелком значке оставалась каша. Здесь уменьшение идёт ступенями и с хорошим
 // сглаживанием, один раз на значок. Второй — скорость: рисовать две тысячи
 // картинок из маленькой копии заметно дешевле, чем из большой.
-const MAP_IC = 48;
+// Готовим лесенку копий: 64, 32 и 16 пикселей. Смысл в том, чтобы рисовать
+// значок из копии, которая лишь немного крупнее нужного размера. Когда
+// браузер ужимает картинку больше чем вдвое за один проход, он берёт грубый
+// фильтр — именно от этого на значке оставалась каша, и никакое «high quality»
+// не помогало. А уменьшение в полтора-два раза он делает честно.
+//
+// Исходники разные: у игровых значков 64 пикселя, у StarDB встречаются и 411.
+// Крупные ужимаются половинками, шаг за шагом, один раз на значок.
+const MAP_MIPS = [64, 32, 16];
+function mapShrink(from, fw, fh, size) {
+  const k = Math.min(size / fw, size / fh);   // у части значков картинка не квадратная
+  const cv = document.createElement('canvas');
+  cv.width = size; cv.height = size;
+  const cx = cv.getContext('2d');
+  cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+  cx.drawImage(from, (size - fw * k) / 2, (size - fh * k) / 2, fw * k, fh * k);
+  return cv;
+}
 function mapIcon(src) {
   if (!src) return null;
   let im = mapIcons[src];
@@ -2993,26 +3010,24 @@ function mapIcon(src) {
     im = new Image();
     im.onload = () => {
       try {
-        let cv = document.createElement('canvas');
-        let w = im.naturalWidth || MAP_IC, h = im.naturalHeight || MAP_IC;
-        // ступенями по половине, пока не подберёмся к нужному размеру
-        let src2 = im;
-        while (w > MAP_IC * 2) {
-          w = Math.max(MAP_IC, Math.round(w / 2));
-          h = Math.max(MAP_IC, Math.round(h / 2));
-          const step = document.createElement('canvas');
-          step.width = w; step.height = h;
-          const sx = step.getContext('2d');
-          sx.imageSmoothingEnabled = true; sx.imageSmoothingQuality = 'high';
-          sx.drawImage(src2, 0, 0, w, h);
-          src2 = step;
+        let from = im, fw = im.naturalWidth || 64, fh = im.naturalHeight || 64;
+        // крупный исходник ужимаем половинками, пока не станет вдвое больше
+        // верхней ступени — дальше доводит mapShrink
+        while (fw > MAP_MIPS[0] * 2) {
+          const nw = Math.round(fw / 2), nh = Math.round(fh / 2);
+          const c = document.createElement('canvas');
+          c.width = nw; c.height = nh;
+          const cx = c.getContext('2d');
+          cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+          cx.drawImage(from, 0, 0, nw, nh);
+          from = c; fw = nw; fh = nh;
         }
-        cv.width = MAP_IC; cv.height = MAP_IC;
-        const cx = cv.getContext('2d');
-        cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
-        cx.drawImage(src2, 0, 0, MAP_IC, MAP_IC);
-        im.mip = cv;
-      } catch (e) { im.mip = im; }
+        // каждую следующую ступень строим из предыдущей — так резче
+        const m0 = mapShrink(from, fw, fh, MAP_MIPS[0]);
+        const m1 = mapShrink(m0, MAP_MIPS[0], MAP_MIPS[0], MAP_MIPS[1]);
+        const m2 = mapShrink(m1, MAP_MIPS[1], MAP_MIPS[1], MAP_MIPS[2]);
+        im.mips = [m0, m1, m2];
+      } catch (e) { im.mips = null; }
       im.ok = 1;
       mapDotsSoon();
     };
@@ -3020,7 +3035,16 @@ function mapIcon(src) {
     im.src = src;
     mapIcons[src] = im;
   }
-  return im && im.ok ? (im.mip || im) : null;
+  if (!im || !im.ok) return null;
+  return im;
+}
+// Копия под нужный размер: самая мелкая из тех, что не меньше него.
+function mapMip(im, need) {
+  if (!im.mips) return im;
+  for (let i = MAP_MIPS.length - 1; i >= 0; i--) {
+    if (MAP_MIPS[i] >= need) return im.mips[i];
+  }
+  return im.mips[0];
 }
 let mapDotsRaf = 0;
 function mapDotsSoon() {
@@ -3108,15 +3132,17 @@ function mapDots() {
     ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.stroke(path);
   });
 
-  // Сами картинки — из подготовленных копий 48×48 (см. mapIcon).
+  // Сами картинки — из подготовленной копии подходящего размера (см. mapIcon).
+  // Нужный размер один на весь кадр, поэтому ступень выбираем один раз.
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
+  const need = IC * dpr;
   for (let i = 0; i < vis.length; i++) {
     const p = vis[i];
     const im = p.ic ? mapIcon(p.ic) : null;
     if (!im) continue;
     ctx.globalAlpha = p.on ? 0.32 : 1;
-    ctx.drawImage(im, p.sx - IC / 2, p.sy - IC / 2, IC, IC);
+    ctx.drawImage(mapMip(im, need), p.sx - IC / 2, p.sy - IC / 2, IC, IC);
   }
   // своя точка — звёздочка, чтобы не путать с игровыми значками
   ctx.globalAlpha = 1;
@@ -3211,15 +3237,21 @@ function bindMapDots() {
 function mapHit(cx, cy) {
   const wrap = $('mapWrap');
   if (!wrap) return null;
+  // clientLeft — это рамка окна карты. Холст лежит внутри неё, а прямоугольник
+  // меряется снаружи; без поправки всё смещалось на пиксель.
   const r = wrap.getBoundingClientRect();
-  const x = cx - r.left, y = cy - r.top;
-  let best = null, bd = (mapR + 3) * (mapR + 3);
+  const x = cx - r.left - wrap.clientLeft, y = cy - r.top - wrap.clientTop;
+  // Берём не ближайшую точку, а верхнюю — ту, что нарисована последней.
+  // Значки перекрываются, и когда курсор стоит на краю одного значка, центр
+  // соседнего бывает ближе: подсвечивалось не то, на что смотришь. Идём с
+  // конца списка, то есть сверху вниз, и берём первую, в чей кружок попали.
+  const rr = (mapR + 2) * (mapR + 2);
   for (let i = mapVis.length - 1; i >= 0; i--) {
     const p = mapVis[i];
-    const dx = p.sx - x, dy = p.sy - y, d = dx * dx + dy * dy;
-    if (d <= bd) { bd = d; best = p; }
+    const dx = p.sx - x, dy = p.sy - y;
+    if (dx * dx + dy * dy <= rr) return p;
   }
-  return best;
+  return null;
 }
 // Подгонка привязки: доли пересчитываются из исходных (bx, by) и холст
 // перерисовывается. Раньше для этого двигали каждый узел по отдельности.
