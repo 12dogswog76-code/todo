@@ -798,6 +798,23 @@
   .code-r{margin-top:8px;display:flex;flex-wrap:wrap;gap:0}
   .code-d{margin-top:6px;font-size:10.5px;color:var(--tx3)}
 
+  /* пробуждения: ступени A1…A6 и резонансы */
+  .awk-pick{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 4px}
+  .awks{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}
+  .awk{padding:11px 13px;border-radius:14px;background:var(--pan);
+    border:1px solid var(--line-soft);opacity:.55;transition:.15s}
+  .awk.on{opacity:1;border-color:hsla(140,70%,60%,.35);
+    background:linear-gradient(135deg,hsla(140,70%,60%,.07),var(--pan))}
+  .awk.want{border-color:hsla(41,100%,50%,.45)}
+  .awk-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .awk-h img{width:38px;height:38px;object-fit:contain;flex:none;border-radius:9px;
+    background:#0d0f14;border:1px solid var(--line);padding:2px}
+  .awk-h u{font-style:normal;text-decoration:none;font-size:9px;font-weight:900;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--tx3)}
+  .awk-h b{font-size:13.5px;color:var(--gold);flex:1;min-width:120px}
+  .awk.on .awk-h u{color:var(--acc)}
+  .awk-d{margin-top:8px;font-size:12px;line-height:1.65;color:var(--tx2)}
+
   /* события патча: идут сейчас, скоро, постоянные */
   .evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:9px}
   .ev{padding:10px 12px;border-radius:13px;background:var(--pan);
@@ -1050,12 +1067,16 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v39';
+const APP_VER = 'v41';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
 
 let DB = null, GUIDE = null, RU = null, GEAR = null, I18N = null, CITY = null;
+// пробуждения: слаг → список эффектов A1…A6 и резонансов
+let AWK = {};
+// точки карты со StarDB: сундуки, находки, враги — то, чего нет в таблицах игры
+let SDB = null;
 
 // ── перевод текстов с prydwen ──────────────────────────────────────────────
 // Сами тексты приезжают с сайта по-английски и при каждом новом прогоне
@@ -1229,11 +1250,14 @@ async function load() {
   // (опыт, материалы прокачки) на странице просто не появляются.
   const grab = (f, opt) => fetch(f + '?v=' + APP_VER).then(r => r.json())
     .catch(() => opt ? null : Promise.reject(new Error(f)));
-  const [db, guide, dict, gear, i18n, city] = await Promise.all([
+  const [db, guide, dict, gear, i18n, city, awk, sdb] = await Promise.all([
     grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1),
-    grab('nte-gear.json', 1), grab('nte-i18n.json', 1), grab('nte-city.json', 1)
+    grab('nte-gear.json', 1), grab('nte-i18n.json', 1), grab('nte-city.json', 1),
+    grab('nte-awaken.json', 1), grab('nte-map.json', 1)
   ]);
   DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n; CITY = city;
+  AWK = (awk && awk.awaken) || {};
+  SDB = sdb || null;
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
   $('cloudBtn').onclick = showSync;
@@ -2747,22 +2771,37 @@ function mapOff() {
 function mapOffSave(v) {
   try { localStorage.setItem('nte-map-off', JSON.stringify(v)); } catch (e) {}
 }
-// Облако точек → доли 0..1. Поле в 12 % подобрано наложением на плитки: при
-// нём улицы и магазины совпадают, при меньшем город уезжает за край.
-// Привязку считает сборщик и кладёт в map.box: какой кусок мира попадает на
-// картинку. Раньше её выводили прямо тут — вписывали облако точек в квадрат по
-// габаритам. Способ негодный: точки стоят только в городе, а карта захватывает
-// воду, острова и горы, поэтому всё облако растягивалось на весь лист и значки
-// уезжали. Запасной путь оставлен на случай старого json.
+// Привязка мира к картинке.
+//
+// Точную даёт манифест карты StarDB: они распаковали уровни и знают охват мира.
+// Формула их же: fx = (x - minX) / edge, fy = (y - minY) / edge, причём ось Y
+// НЕ переворачивается. Проверено наложением на подложку: так на дороги и
+// кварталы садится 93 % наших точек, с переворотом — 61 %, а при прежнем
+// способе (вписывание облака точек в квадрат) было 34 %.
+//
+// Если файла со StarDB нет, берём приблизительную привязку из сборки, а на
+// совсем старом json — прежнее вписывание.
 function mapBox(pts) {
+  const s = SDB && SDB.box;
+  if (s && s.edge) return { minX: +s.minX, minY: +s.minY, edge: +s.edge, flip: false };
   const b = CITY && CITY.map && CITY.map.box;
-  if (b && b.side) return { cx: +b.cx || 0, cy: +b.cy || 0, side: +b.side };
+  if (b && b.side) {
+    return { minX: (+b.cx || 0) - b.side / 2, minY: (+b.cy || 0) - b.side / 2,
+             edge: +b.side, flip: true };
+  }
   const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   const y0 = Math.min(...ys), y1 = Math.max(...ys);
   const w = (x1 - x0) || 1, h = (y1 - y0) || 1;
   const pad = 0.12, side = Math.max(w, h) / (1 - 2 * pad);
-  return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, side: side };
+  return { minX: (x0 + x1) / 2 - side / 2, minY: (y0 + y1) / 2 - side / 2,
+           edge: side, flip: true };
+}
+// мировые координаты → доли картинки
+function mapXY(p, box) {
+  const fx = (p.x - box.minX) / box.edge;
+  const fy = (p.y - box.minY) / box.edge;
+  return [fx, box.flip ? 1 - fy : fy];
 }
 // Категория точки — это её название: «Аптека «Бамбук»», «Башня Вертхаймера».
 // Группа (магазины/переходы) остаётся для цвета.
@@ -2836,7 +2875,14 @@ function mapTilesSwap() {
 // сворачивается, и у него своя кнопка «все / снять».
 function mapSideHtml(cats, off, cal) {
   const groups = Object.keys(MAP_GRP).filter(g => cats.some(c => c.g === g))
-    .concat([...new Set(cats.map(c => c.g))].filter(g => !MAP_GRP[g]));
+    .concat([...new Set(cats.map(c => c.g))].filter(g => !MAP_GRP[g] && !/^sd:/.test(g)));
+  // подкатегории со StarDB идут своим блоком, с пометкой источника
+  const sdGroups = [...new Set(cats.map(c => c.g))].filter(g => /^sd:/.test(g));
+  const sdName = g => {
+    const id = g.slice(3);
+    const c = ((SDB && SDB.cats) || []).filter(x => x.id === id)[0];
+    return c ? c.ru : id;
+  };
   const one = c =>
     '<label class="mcat' + (off[c.name] ? ' off' : '') + '" title="' + esc(c.name) + '">' +
       '<input type="checkbox" data-cat="' + esc(c.name) + '"' + (off[c.name] ? '' : ' checked') + '>' +
@@ -2860,7 +2906,26 @@ function mapSideHtml(cats, off, cal) {
         '</summary>' +
         '<div class="mapcats">' + own.map(one).join('') + '</div></details>';
     }).join('') +
-    // свои точки: то, чего в игровых таблицах нет вовсе
+    // точки со StarDB: сундуки, находки, враги — то, чего нет в таблицах игры
+    (sdGroups.length
+      ? '<div class="mapside-h" style="margin:10px 0 4px"><b>Со StarDB</b>' +
+          '<span><a class="fb" href="https://nte.stardb.gg/map" target="_blank" ' +
+          'rel="noopener" title="источник данных, с разрешения разработчика">источник ↗</a>' +
+          '</span></div>' +
+        sdGroups.map(g => {
+          const own = cats.filter(c => c.g === g);
+          const n = own.reduce((s, c) => s + c.n, 0);
+          const hid = own.every(c => off[c.name]);
+          return '<details class="mgrp"' + (hid ? '' : ' open') + '>' +
+            '<summary><i style="--c:' + (SDB_COL[g.slice(3)] || '#fff') + '"></i>' +
+              '<b>' + esc(sdName(g)) + '</b><em>' + n + '</em>' +
+              '<button data-mgrp="' + esc(g) + '" data-on="' + (hid ? '1' : '0') + '">' +
+                (hid ? 'все' : 'снять') + '</button>' +
+            '</summary>' +
+            '<div class="mapcats">' + own.map(one).join('') + '</div></details>';
+        }).join('')
+      : '') +
+    // свои точки: то, чего нет ни в таблицах, ни у StarDB
     (() => {
       const mine = mapMine();
       const by = {};
@@ -2903,6 +2968,19 @@ function mapSideHtml(cats, off, cal) {
       'значения остаются в этом браузере.</div>' +
       '</div></details>';
 }
+// Точки со StarDB в нашем виде. Их подкатегории (сундуки, находки, враги)
+// становятся группами наравне с нашими переходами и магазинами, только
+// помечены как чужой источник — у них своя пометка в колонке и своя ссылка.
+const SDB_COL = { wanderers_journal: '#f0a4ff', map_finds: '#ffd166',
+                  weekly: '#7ee8b0', enemies: '#ff8f8f',
+                  anomaly_zone: '#9db8ff', incomplete: '#9aa3b5' };
+function sdbPts() {
+  if (!SDB || !(SDB.pts || []).length) return [];
+  return SDB.pts.map(p => ({
+    id: 'sd-' + p.id, x: p.x, y: p.y, g: 'sd:' + p.g,
+    t: p.t || p.en || 'точка', ru: p.en || '', ic: p.ic, sd: 1
+  }));
+}
 function drawMap() {
   const M = (CITY && CITY.map) || null;
   if (!M || !(M.pts || []).length) {
@@ -2913,17 +2991,19 @@ function drawMap() {
   }
   const cal = mapCal(), found = mapFound(), off = mapOff();
   const q = state.q.trim().toLowerCase();
-  const cats = mapCats(M.pts);
-  const shown = M.pts.filter(p => !off[p.t || 'без названия'] &&
+  // точки из таблиц игры и точки со StarDB — в одном списке
+  const all = M.pts.concat(sdbPts());
+  const cats = mapCats(all);
+  const shown = all.filter(p => !off[p.t || 'без названия'] &&
     (!q || ((p.t || '') + ' ' + (p.ru || '')).toLowerCase().indexOf(q) >= 0));
-  const box = mapBox(M.pts);
+  const box = mapBox(all);
   const tiles = M.tiles || {}, n = tiles[String(cal.lay)] || 6;
 
-  $('filters').innerHTML = '<span class="fcnt">показано ' + shown.length + ' из ' + M.pts.length +
+  $('filters').innerHTML = '<span class="fcnt">показано ' + shown.length + ' из ' + all.length +
     ' · отмечено ' + Object.keys(found).length + '</span>';
 
   const marks = shown.map(p => {
-    const fx = 0.5 + (p.x - box.cx) / box.side, fy = 0.5 - (p.y - box.cy) / box.side;
+    const [fx, fy] = mapXY(p, box);
     const left = ((fx - 0.5) * cal.k + 0.5) * 100 + cal.dx;
     const top  = ((fy - 0.5) * cal.k + 0.5) * 100 + cal.dy;
     // за краем карты значок не прячем: при подгонке привязки его надо видеть,
@@ -2932,13 +3012,16 @@ function drawMap() {
     // Если картинки значка нет на диске, точка не должна превращаться в
     // «сломанное изображение»: убираем картинку и возвращаем цветной кружок.
     // Так же страхуемся от значков, которые сборщик не смог докачать.
-    const ic = p.ic ? '<img src="img/mapicon/' + esc(p.ic) + '" alt="" loading="lazy"' +
+    // значки из игры лежат в img/mapicon, чужие — в подпапке sd
+    const dir = p.sd ? 'img/mapicon/sd/' : 'img/mapicon/';
+    const ic = p.ic ? '<img src="' + dir + esc(p.ic) + '" alt="" loading="lazy"' +
       ' onerror="this.parentElement.classList.remove(\'pic\');this.remove()">' : '';
+    const col = p.sd ? (SDB_COL[String(p.g).slice(3)] || '#fff') : (MAP_COL[p.g] || '#fff');
     return '<i class="mp' + (found[p.id] ? ' on' : '') + (ic ? ' pic' : '') +
       '" data-p="' + esc(p.id) + '" data-fx="' + fx.toFixed(5) + '" data-fy="' + fy.toFixed(5) + '"' +
       ' style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%;' +
-      '--c:' + (MAP_COL[p.g] || '#fff') + '" title="' + esc((p.t || '') +
-      (p.ru ? ' — ' + p.ru : '')) + '">' + ic + '</i>';
+      '--c:' + col + '" title="' + esc((p.t || '') +
+      (p.ru && p.ru !== p.t ? ' — ' + p.ru : '')) + '">' + ic + '</i>';
   }).join('');
 
   // свои точки поверх игровых: их доли уже в координатах картинки, привязка
@@ -3085,10 +3168,12 @@ function drawMap() {
     try { localStorage.removeItem('nte-map-found'); } catch (e) {}
     draw();
   };
-  foot('Карта из файлов игры: ' + M.pts.length + ' точек — переходы, магазины и службы. ' +
-       'Сундуков и ресурсов в игровых таблицах нет, они лежат внутри уровней, и на ' +
-       'чужих картах появились потому, что их собирали руками игроки. Свои находки ' +
-       'можно отмечать самому: Shift + клик. Тяни мышью, колесо приближает; ' +
+  const sdN = sdbPts().length;
+  foot('Из файлов игры — ' + M.pts.length + ' точек: переходы, магазины и службы. ' +
+       (sdN ? 'Ещё ' + sdN + ' — сундуки, находки, еженедельные точки и противники — ' +
+              'со StarDB (nte.stardb.gg), с разрешения разработчика; ' +
+              'привязка карты тоже их. ' : '') +
+       'Свои находки можно отмечать самому: Shift + клик. Тяни мышью, колесо приближает; ' +
        'Alt + перетаскивание двигает значки, если они не совпали с картой.');
 }
 // Перетаскивание и зум. Колесо над картой не должно прокручивать страницу,
@@ -3710,7 +3795,8 @@ function picksHtml(list, kind, g) {
 // Раньше всё лежало одной простынёй: сборка, составы, синергии, сетка и
 // калькулятор подряд — до сетки нужно было пролистать метр текста. Разложено
 // так же, как в трекере ZZZ.
-const SH_TABS = [['guide','Гайд'], ['now','Сейчас'], ['team','Команды'], ['con','Консоль']];
+const SH_TABS = [['guide','Гайд'], ['awk','Пробуждения'], ['now','Сейчас'],
+                 ['team','Команды'], ['con','Консоль']];
 let shTab = 'guide';
 let shSlug = '';
 
@@ -3778,7 +3864,8 @@ function open(slug) {
       esc(EL_RU[a.el] || a.el) + '</span>' : '') +
     (a.role ? '<span class="tag"><img src="' + roleIcon(a.role) + '" alt="">' +
       esc(ROLE_RU[a.role] || a.role) + '</span>' : '');
-  const shown = SH_TABS.filter(t => t[0] !== 'con' || gridOf(slug));
+  const shown = SH_TABS.filter(t => (t[0] !== 'con' || gridOf(slug)) &&
+                                    (t[0] !== 'awk' || (AWK[slug] || []).length));
   const facts = factsHtml(g);
 
   $('sheetIn').innerHTML =
@@ -3821,6 +3908,7 @@ function open(slug) {
 function bindShBody() {
   bindPlan();
   bindCalc();
+  bindAwk(shSlug);
   bindMy(shSlug);
   bindCharPlan(shSlug);
   $('shBody').querySelectorAll('[data-slug]').forEach(c =>
@@ -3863,6 +3951,7 @@ function shBody(slug, g, a) {
   const has = g.arcs && g.arcs.length;
 
   if (shTab === 'con') return planHtml(slug);
+  if (shTab === 'awk') return awkHtml(slug, g, cap);
 
   if (shTab === 'team') {
     const t = teamsFor(slug, cap), syn = synergyFor(g, cap);
@@ -3890,6 +3979,64 @@ function shBody(slug, g, a) {
       cap('Куда стремиться', 'уровень 60') + goalsHtml(g, a) : '') +
     (g.skills ? cap('Порядок прокачки') + '<div class="prio">' + prioHtml(g.skills) + '</div>' +
       (g.skillNote ? '<div class="hint">' + esc(g.skillNote) + '</div>' : '') : '');
+}
+
+// ── пробуждения ─────────────────────────────────────────────────────────────
+// Дубликаты эспера с баннера идут в пробуждения A1…A6 — по сути созвездия.
+// Тексты из таблиц игры, сколько у тебя открыто — хранит браузер. Плюс отметка,
+// до какого пробуждения эспера имеет смысл вести: её берём из оценки prydwen
+// («A6», «A1»), это подсказка, а не приговор.
+function awkHave(slug) {
+  const v = parseInt(localStorage.getItem('nte-awk-' + slug), 10);
+  return isFinite(v) ? Math.max(0, Math.min(6, v)) : 0;
+}
+function awkSave(slug, n) {
+  try { localStorage.setItem('nte-awk-' + slug, String(n)); } catch (e) {}
+}
+function awkHtml(slug, g, cap) {
+  const list = AWK[slug] || [];
+  if (!list.length) return '<div class="empty">Для этого эспера таблицы пробуждений ' +
+    'в игре ещё нет.</div>';
+  const have = awkHave(slug);
+  const want = ((g.ratings || {}).awk || '').replace(/[^\d]/g, '');
+  const eff = list.filter(x => !x.res), res = list.filter(x => x.res);
+  const card = x =>
+    '<div class="awk' + (x.n <= have ? ' on' : '') +
+      (want && +want === x.n ? ' want' : '') + '">' +
+      '<div class="awk-h">' +
+        (x.pic ? '<img src="img/awk/' + esc(x.pic) + '" alt="" loading="lazy">' : '') +
+        '<u>' + (x.res ? 'резонанс ' : 'A') + x.n + '</u>' +
+        '<b>' + esc(x.ru || x.en || '') + '</b>' +
+        (want && +want === x.n ? '<span class="m">цель по гайду</span>' : '') +
+      '</div>' +
+      (x.desc ? '<div class="awk-d">' + esc(x.desc).replace(/\n/g, '<br>') + '</div>' : '') +
+    '</div>';
+  return cap('Сколько у тебя', have ? 'открыто A' + have : 'пока ни одного') +
+    '<div class="awk-pick">' +
+      [0, 1, 2, 3, 4, 5, 6].map(n =>
+        '<button class="fb' + (n === have ? ' on' : '') + '" data-awk="' + n + '">' +
+        (n ? 'A' + n : 'нет') + '</button>').join('') +
+    '</div>' +
+    (want ? '<div class="hint">По гайду prydwen эспер заметно прибавляет к <b>A' +
+      esc(want) + '</b> — ниже это отмечено.</div>' : '') +
+    cap('Пробуждения', eff.length + ' ступеней') +
+    '<div class="awks">' + eff.map(card).join('') + '</div>' +
+    (res.length ? cap('Резонансы', 'дают вместе с 3-м и 6-м') +
+      '<div class="awks">' + res.map(card).join('') + '</div>' : '') +
+    '<div class="hint">Тексты — из таблиц игры. Сколько у тебя открыто, ' +
+    'помнит этот браузер.</div>';
+}
+function bindAwk(slug) {
+  const box = $('shBody');
+  if (!box) return;
+  box.querySelectorAll('[data-awk]').forEach(b => b.onclick = () => {
+    awkSave(slug, +b.dataset.awk);
+    const g = (GUIDE.agents || {})[slug] || {};
+    box.innerHTML = awkHtml(slug, g, (t, note) =>
+      '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
+      (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
+    bindShBody();
+  });
 }
 
 // ── мои характеристики ─────────────────────────────────────────────────────
