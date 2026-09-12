@@ -137,6 +137,7 @@
   body.mapmode .srch{padding:6px 12px}
   body.mapmode #filters{display:none}
   body.mapmode #foot{margin-top:8px}
+  .mapcnt i{font-style:normal;color:hsla(0,0%,100%,.3)}
   .mapcnt{position:absolute;left:12px;top:10px;z-index:6;pointer-events:none;
     background:rgba(10,12,16,.78);border:1px solid var(--line);border-radius:9px;
     padding:5px 10px;font-size:9px;font-weight:800;letter-spacing:.22em;
@@ -1106,7 +1107,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v45';
+const APP_VER = 'v46';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -2888,8 +2889,18 @@ function mapTileSrc(lay, n, r, c) {
   return 'img/map/z' + lay + '/map_bigworld_1' +
          String(r * n + c + 1).padStart(4, '0') + '.png';
 }
+// Запас качества. Считать «пиксель исходника на пиксель экрана» мало: ровно
+// на границе 1:1 браузер всё равно размазывает, потому что попадания пикселя
+// в пиксель не бывает — карту двигают и масштабируют дробно. Полтора пикселя
+// исходника на экранный дают уже честную резкость, а лишний вес не страшен:
+// слои различаются вдвое, так что запас просто сдвигает переключение раньше.
+const MAP_SHARP = 1.5;
+// Потолок приближения. Раньше стоял 12 — под слой 25×25, дальше которого
+// всё равно шло мыло. С подробным слоем (26112 пикселей по стороне) чётко
+// остаётся примерно до шестнадцатикратного.
+const MAP_ZMAX = 16;
 function mapLayer(z, tiles, side) {
-  const need = (side || 900) * z * Math.min(2, window.devicePixelRatio || 1);
+  const need = (side || 900) * z * Math.min(2, window.devicePixelRatio || 1) * MAP_SHARP;
   const lays = Object.keys(tiles).map(Number).sort((a, b) => b - a);  // 4, 3, 2, 1
   let lay = lays.length ? lays[0] : 4;
   for (const l of lays) {
@@ -2989,6 +3000,11 @@ function mapTilesSwap() {
   const n = tiles[String(lay)] || 6;
   if (+host.dataset.lay !== lay) { host.innerHTML = ''; mapTileEls = {}; host.dataset.lay = lay; }
 
+  const nfo = $('mapNfo');
+  if (nfo) {
+    nfo.textContent = ' · слой ' + (tiles[String(lay)] || 6) + '×' +
+      (tiles[String(lay)] || 6) + ', ' + mapView.z.toFixed(1) + '×';
+  }
   const c0 = Math.max(0, Math.floor(s.x0 * n)), c1 = Math.min(n - 1, Math.ceil(s.x1 * n));
   const r0 = Math.max(0, Math.floor(s.y0 * n)), r1 = Math.min(n - 1, Math.ceil(s.y1 * n));
   const st = 100 / n, keep = {};
@@ -3146,8 +3162,10 @@ function drawMap() {
   const box = mapBox(all);
 
   $('filters').innerHTML = '';
+  // Слой и кратность дописываются на лету: по ним сразу видно, чего не хватает,
+  // если карта вдруг замылилась, — не нужно лезть в консоль.
   const cnt = '<div class="mapcnt">показано ' + shown.length + ' из ' + all.length +
-    ' · отмечено ' + Object.keys(found).length + '</div>';
+    ' · отмечено ' + Object.keys(found).length + '<i id="mapNfo"></i></div>';
 
   const marks = shown.map(p => {
     const [fx, fy] = mapXY(p, box);
@@ -3398,7 +3416,7 @@ function bindMapDrag() {
     // точка под курсором должна остаться на месте
     const cx = e.clientX - r.left, cy = e.clientY - r.top;
     const k = e.deltaY < 0 ? 1.2 : 1 / 1.2;
-    const z2 = Math.min(12, Math.max(1, mapView.z * k));
+    const z2 = Math.min(MAP_ZMAX, Math.max(1, mapView.z * k));
     const real = z2 / mapView.z;
     mapView.x = cx - (cx - mapView.x) * real;
     mapView.y = cy - (cy - mapView.y) * real;
@@ -3414,7 +3432,7 @@ function bindMapDrag() {
     }
     if (b.dataset.mz === '0') { mapHome(); mapApply(); return; }
     const k = b.dataset.mz === '+' ? 1.4 : 1 / 1.4;
-    const z2 = Math.min(12, Math.max(1, mapView.z * k)), real = z2 / mapView.z;
+    const z2 = Math.min(MAP_ZMAX, Math.max(1, mapView.z * k)), real = z2 / mapView.z;
     mapView.x = cx - (cx - mapView.x) * real;
     mapView.y = cy - (cy - mapView.y) * real;
     mapView.z = z2;
