@@ -178,14 +178,32 @@
     position:absolute;inset:0}
   .sh-art:after{content:'';position:absolute;inset:auto 0 0 0;height:26%;
     background:linear-gradient(180deg,#0d0f1400,#0d0f14e6)}
-  /* имя, латиница и «тир · стихия · роль» — в теле карточки, а не на арте */
-  .sh-title{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+  /* имя, латиница и «тир · стихия · роль» — в теле карточки, а не на арте.
+     Шапка лежит на подложке в цвет стихии и тянется во всю ширину тела:
+     до этого она висела на голом фоне и карточка начиналась ничем. */
+  .sh-title{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;
+    margin:-18px -20px 12px;padding:18px 20px 14px;
+    background:linear-gradient(180deg,
+      color-mix(in srgb,var(--el,#666) 22%,transparent) 0%,
+      color-mix(in srgb,var(--el,#666) 6%,transparent) 60%, transparent 100%);
+    border-bottom:1px solid color-mix(in srgb,var(--el,#666) 22%,var(--line))}
   .sh-title h2{margin:0;font-family:var(--disp);font-size:32px;font-weight:600;
     letter-spacing:.01em;line-height:.95;text-transform:uppercase}
   .sh-title h2 i{display:block;font-family:var(--body);font-style:normal;font-size:9px;
     font-weight:800;letter-spacing:.32em;text-transform:uppercase;
     color:var(--el-c,var(--tx2));margin-top:5px}
   .sh-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  /* самое нужное сразу под именем: лучшее оружие, набор и главная
+     характеристика. Раньше за этим приходилось лезть во вкладку «Гайд». */
+  .sh-facts{display:flex;gap:7px;flex-wrap:wrap;width:100%;margin:12px 0 0}
+  .fact{display:flex;align-items:center;gap:8px;padding:6px 11px 6px 7px;
+    border-radius:11px;background:#00000055;border:1px solid var(--line-soft);
+    font-size:11.5px;color:var(--tx2);max-width:100%}
+  .fact img{width:26px;height:26px;object-fit:contain;flex:none}
+  .fact i{font-style:normal;font-size:8.5px;font-weight:800;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--tx3);display:block}
+  .fact b{color:var(--tx);font-weight:700;display:block;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:210px}
   .tag{display:inline-flex;align-items:center;gap:6px;font-size:9px;font-weight:800;
     letter-spacing:.18em;text-transform:uppercase;padding:5px 10px;border-radius:999px;
     background:var(--pan);border:1px solid var(--line-soft);color:var(--tx)}
@@ -680,6 +698,17 @@
   .flat-ic{width:96px;height:62px;object-fit:cover}
   .flat-big{width:100%;border-radius:12px;display:block;margin:4px 0 2px}
 
+  /* фотографии интерьера: крупный кадр и лента миниатюр под ним */
+  .gal{margin:4px 0 2px}
+  .gal-big{width:100%;border-radius:12px;display:block;background:#0c0d10}
+  .gal-cap{margin:6px 0 0;font-size:11.5px;color:var(--tx2)}
+  .gal-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0}
+  .gal-t{padding:0;border:1px solid var(--brd);border-radius:8px;overflow:hidden;
+         background:none;cursor:pointer;line-height:0;opacity:.55;transition:.15s}
+  .gal-t:hover{opacity:.85}
+  .gal-t.on{opacity:1;border-color:var(--gold)}
+  .gal-t img{width:74px;height:48px;object-fit:cover;display:block}
+
   /* коды: сверху сам код и кнопка, снизу награда и срок */
   .codes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:9px}
   .code{display:block;padding:11px 13px;border-radius:14px;background:var(--pan);
@@ -847,6 +876,9 @@
     .sh-art{width:100%;height:46vh;max-height:360px;border-radius:18px 18px 0 0}
     .sh-art img{object-position:center 6%}
     .sh-body{padding:14px 14px 20px}
+    /* шапка тянется во всю ширину тела, поэтому отступы под мобильные */
+    .sh-title{margin:-14px -14px 10px;padding:14px 14px 12px}
+    .fact b{max-width:150px}
     /* на телефоне колонка категорий уходит под карту */
     .maprow{grid-template-columns:minmax(0,1fr)}
     .mapside{max-height:none}
@@ -903,7 +935,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v33';
+const APP_VER = 'v34';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -964,16 +996,25 @@ function rewFind(name) {
   return ((GEAR && GEAR.rew) || []).filter(r =>
     n.indexOf(String(r.en).toLowerCase()) === 0)[0] || null;
 }
+// Разделитель зависит от источника: prydwen пишет «A x100 + B», ntebuild —
+// «100 A · 5 B». Число тоже стоит по-разному, поэтому проверяем оба порядка.
 function rewHtml(s) {
-  const parts = String(s || '').split(/\s*\+\s*/).filter(Boolean);
+  const parts = String(s || '').split(/\s*[+·•]\s*|\s*·\s*/).filter(Boolean);
   if (!parts.length) return '';
   return parts.map(p => {
-    const m = /^(.*?)\s*[x×]\s*([\d,\s]+)$/i.exec(p.trim());
-    const name = m ? m[1] : p.trim(), cnt = m ? m[2].replace(/[,\s]/g, '') : '';
+    const t = p.trim();
+    let name = t, cnt = '';
+    let m = /^(.*?)\s*[x×]\s*([\d,\s]+)$/i.exec(t);          // «Annulith x100»
+    if (m) { name = m[1]; cnt = m[2]; }
+    else {
+      m = /^[x×]?\s*([\d][\d,\s]*)\s+(.+)$/.exec(t);          // «100 Annulith»
+      if (m) { cnt = m[1]; name = m[2]; }
+    }
+    cnt = cnt.replace(/[,\s]/g, '');
     const it = rewFind(name);
-    if (!it || !it.icon) return '<span class="rw">' + esc(rewRu(p.trim())) + '</span>';
+    if (!it || !it.icon) return '<span class="rw">' + esc(rewRu(t)) + '</span>';
     return '<span class="rw"><img src="img/items/' + esc(it.icon) + '" alt="" loading="lazy">' +
-      esc(it.ru || name) + (cnt ? '<b>×' + esc(cnt) + '</b>' : '') + '</span>';
+      esc(it.ru || name) + (cnt ? '<b>×' + esc(num(+cnt)) + '</b>' : '') + '</span>';
   }).join('');
 }
 const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan: 'mint', tview: 'cars' };
@@ -2190,6 +2231,40 @@ function carCard(c) {
     '</div>' +
   '</details>';
 }
+// Кадры интерьера в том порядке, в каком их показывает игра: сначала здание
+// снаружи, потом вид жилья целиком, потом шесть фотографий комнат.
+function flatPics(f) {
+  const out = [];
+  if (f.top)  out.push({ pic: 'img/flats/' + f.top,  ru: 'Здание' });
+  if (f.plan) out.push({ pic: 'img/flats/' + f.plan, ru: 'Жильё целиком' });
+  (f.rooms || []).forEach((p, i) => out.push({ pic: 'img/flats/' + p, ru: 'Фото ' + (i + 1) }));
+  if (!out.length && f.pic) out.push({ pic: 'img/flats/' + f.pic, ru: '' });
+  return out;
+}
+function galHtml(pics, id) {
+  if (!pics.length) return '';
+  return '<div class="gal" data-gal="' + esc(id) + '">' +
+    '<img class="gal-big" id="gal-' + esc(id) + '" src="' + esc(pics[0].pic) + '" alt="">' +
+    (pics[0].ru ? '<div class="gal-cap" id="galc-' + esc(id) + '">' + esc(pics[0].ru) + '</div>' : '') +
+    (pics.length > 1 ? '<div class="gal-row">' + pics.map((p, i) =>
+      '<button class="gal-t' + (i ? '' : ' on') + '" data-gi="' + i + '" title="' + esc(p.ru) + '">' +
+      '<img src="' + esc(p.pic) + '" alt="" loading="lazy"></button>').join('') + '</div>' : '') +
+  '</div>';
+}
+// Переключение кадров — одним обработчиком на весь список: карточек домов
+// семь, а кнопок под полсотни, вешать на каждую отдельный смысла нет.
+function bindGal(pack) {
+  document.querySelectorAll('.gal').forEach(box => {
+    const id = box.dataset.gal, pics = pack[id] || [];
+    box.querySelectorAll('[data-gi]').forEach(b2 => b2.onclick = () => {
+      const i = +b2.dataset.gi, p = pics[i]; if (!p) return;
+      const big = $('gal-' + id); if (big) big.src = p.pic;
+      const cap = $('galc-' + id); if (cap) cap.textContent = p.ru || '';
+      box.querySelectorAll('.gal-t').forEach(t => t.classList.remove('on'));
+      b2.classList.add('on');
+    });
+  });
+}
 function flatCard(f, anom) {
   const pic = f.pic ? 'img/flats/' + f.pic : '';
   return '<details class="suit">' +
@@ -2210,7 +2285,8 @@ function flatCard(f, anom) {
     '<div class="suit-in">' +
       (f.slog ? '<div class="hint">' + esc(f.slog) + '</div>' : '') +
       (f.desc ? '<div class="hint">' + esc(f.desc) + '</div>' : '') +
-      (pic ? cap2('Как выглядит', '') + '<img class="flat-big" src="' + esc(pic) + '" alt="">' : '') +
+      (() => { const ps = flatPics(f); return ps.length
+        ? cap2('Как выглядит', ps.length + ' фото') + galHtml(ps, f.id) : ''; })() +
       (anom && anom.length ? cap2('Аномальная мебель', anom.length + ' предметов') +
         '<div class="hint" style="margin:0 0 8px">Ставится в любое купленное жильё — ' +
         'привязки к конкретному дому в файлах игры нет.</div>' +
@@ -2246,8 +2322,11 @@ function drawCity() {
     bindViews();
     $('body').innerHTML = '<div class="list">' +
       list.map(f => flatCard(f, CITY.anom || [])).join('') + '</div>';
+    const pack = {}; list.forEach(f => pack[f.id] = flatPics(f));
+    bindGal(pack);
     foot('Недвижимость: цена, парковка и предел по мебели — из таблиц игры. ' +
-         'Раскрой объект — увидишь вид и аномальную мебель, ради которой жильё и покупают.');
+         'Раскрой объект — увидишь фотографии комнат и аномальную мебель, ' +
+         'ради которой жильё и покупают.');
     return;
   }
   let list = (CITY.cars || []).filter(c => !q ||
@@ -2494,8 +2573,19 @@ let codesLive = null;
 
 // Пометка приходит по-английски и коротким набором — переводим знакомые.
 const CODE_NOTE = { 'Launch code':'код запуска', 'Stream code':'со стрима',
-                    'VTuber code':'VTuber-акция', 'Anniversary code':'к годовщине' };
-function codeNote(s) { return CODE_NOTE[s] || s; }
+                    'VTuber code':'VTuber-акция', 'Anniversary code':'к годовщине',
+                    'still works':'срок вышел, но код ещё работает' };
+// Повод к коду с ntebuild приходит по-английски: «Zankou banner (Version 1.3)»,
+// «Version 1.1 preview livestream». Переводим знакомые куски, остальное как есть.
+function codeWhy(s) {
+  return String(s || '')
+    .replace(/\bpreview livestream\b/gi, 'стрим-превью')
+    .replace(/\blivestream\b/gi, 'стрим')
+    .replace(/\bbanner\b/gi, 'баннер')
+    .replace(/\bVersion\b/gi, 'версия')
+    .replace(/\blaunch\b/gi, 'запуск');
+}
+function codeNote(s) { return CODE_NOTE[s] || codeWhy(s); }
 // Даты в кодах приходят в ISO, а на странице «18/May/2026» — трогаем только ISO.
 function ruDate(s) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
@@ -2581,7 +2671,12 @@ function drawCodes() {
       document.body.removeChild(el);
     }
   });
-  foot('Коды с prydwen, обновление тянет воркер alextask.');
+  // источник приходит вместе со списком: воркер сначала пробует ntebuild
+  // (там состав награды расписан по предметам), при осечке — prydwen
+  const from = (codesLive && codesLive.src || '').indexOf('ntebuild') >= 0
+    ? 'ntebuild.com' : (codesLive ? 'prydwen.gg' : 'запасной список в файле');
+  foot('Коды с ' + from + ', обновление тянет воркер alextask. ' +
+       'Отметки «уже ввёл» хранятся в этом браузере.');
   if (!codesLive) refreshCodes();
 }
 // Версия воркера — рядом с версией страницы: без неё непонятно, залит ли
@@ -2920,6 +3015,53 @@ const SH_TABS = [['guide','Гайд'], ['now','Сейчас'], ['team','Кома
 let shTab = 'guide';
 let shSlug = '';
 
+// Три быстрых факта в шапке: с чем ходить и что качать. Всё это есть во
+// вкладке «Гайд», но там до них надо долистать, а вопрос при открытии
+// карточки почти всегда один и тот же.
+// Оружие ищем по английскому имени с prydwen: в таблицах игры оно лежит
+// в поле en, русское — рядом.
+function arcOf(name) {
+  if (!GEAR || !name) return null;
+  const n = String(name).toLowerCase();
+  return (GEAR.arcs || []).filter(x => String(x.en || '').toLowerCase() === n ||
+                                       String(x.ru || '').toLowerCase() === n)[0] || null;
+}
+// Главная характеристика приходит строкой вроде «DEF % > DEF > Break Intensity».
+// Берём первую и подбираем к ней родной игровой значок.
+const MAIN_ICO = [
+  [/crit\s*d/i, 'cd'], [/crit/i, 'cr'], [/break/i, 'brk'], [/cycle/i, 'cyc'],
+  [/heal/i, 'heal'], [/energy|charge/i, 'er'], [/\batk|attack/i, 'atk'],
+  [/\bdef/i, 'def'], [/\bhp|health/i, 'hp'], [/dmg|damage/i, 'dmg']
+];
+function factsHtml(g) {
+  const out = [];
+  const arc = (g.arcs || [])[0];
+  if (arc && arc.n) {
+    const it = arcOf(arc.n);
+    out.push(fact(it && it.icon ? 'img/arcs/' + it.icon : '', 'оружие',
+      ruName('arcs', arc.n), arc.m || ''));
+  }
+  if (g.set && g.set.n) {
+    const st = suitOf(g.set.n);
+    out.push(fact(st && st.icon ? 'img/suits/' + st.icon : '', 'набор',
+      ruName('carts', g.set.n), ''));
+  }
+  const main = String(g.main || '').split(/\s*(?:>>|>|=)\s*/)[0].trim();
+  if (main) {
+    const hit = MAIN_ICO.filter(x => x[0].test(main))[0];
+    const k = hit ? hit[1] : '';
+    out.push(fact(k && STAT_ICON[k] ? 'img/stat/' + STAT_ICON[k] : '', 'главная',
+      prioRu(main), ''));
+  }
+  return out.length ? '<div class="sh-facts">' + out.join('') + '</div>' : '';
+}
+function fact(pic, cap, name, note) {
+  return '<div class="fact" title="' + esc(name) + '">' +
+    (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy">' : '') +
+    '<span><i>' + esc(cap) + '</i><b>' + esc(name) +
+      (note ? ' <span style="color:var(--tx3)">' + esc(note) + '</span>' : '') + '</b></span>' +
+  '</div>';
+}
 function open(slug) {
   lookIdx = 0;
   const a = agentBy(slug);
@@ -2938,6 +3080,7 @@ function open(slug) {
     (a.role ? '<span class="tag"><img src="' + roleIcon(a.role) + '" alt="">' +
       esc(ROLE_RU[a.role] || a.role) + '</span>' : '');
   const shown = SH_TABS.filter(t => t[0] !== 'con' || gridOf(slug));
+  const facts = factsHtml(g);
 
   $('sheetIn').innerHTML =
     '<div class="sh-head" style="' + elStyle(a.el) + ';--capc:var(--' + esc(a.el) + ')">' +
@@ -2954,6 +3097,7 @@ function open(slug) {
               'style="text-decoration:none">гайд на prydwen ↗</a>' +
             '<button class="x" id="close">✕ закрыть</button>' +
           '</div>' +
+          facts +
         '</div>' +
         '<div class="htabs">' + shown.map(t =>
           '<button class="htab' + (shTab === t[0] ? ' on' : '') + '" data-h="' + t[0] + '">' +
@@ -3144,6 +3288,36 @@ function shrink(file) {
     img.src = URL.createObjectURL(file);
   });
 }
+// Результат локального распознавания: строка «NTE:{"cr":31.2,"cd":128.9}».
+// Принимаем только известные ключи и только числа — вставить в поле можно что
+// угодно, а сохраняется это в браузер и потом идёт в расчёты.
+const OCR_KEYS = ['cr', 'cd', 'cyc', 'brk', 'hp', 'atk', 'def', 'dmg'];
+function ocrPaste(txt, slug, say) {
+  let o = null;
+  try { o = JSON.parse(String(txt).replace(/^\s*NTE:\s*/, '')); } catch (e) {}
+  if (!o || typeof o !== 'object') { say('строка не разобралась — скопируй её заново', 1); return; }
+  const got = {};
+  OCR_KEYS.forEach(k => {
+    const v = parseFloat(o[k]);
+    if (isFinite(v) && v > 0) got[k] = Math.round(v * 10) / 10;
+  });
+  const n = Object.keys(got).length;
+  if (!n) { say('в строке нет знакомых характеристик', 1); return; }
+  const my = myStats(slug);
+  Object.keys(got).forEach(k => { my[k] = got[k]; });
+  myStatsSave(slug, my);
+  say('принято значений: ' + n + ' (распознано на твоём компьютере)');
+  calcFill(slug);
+  const g = (GUIDE.agents || {})[slug] || {};
+  const a = agentBy(slug);
+  const box = $('shBody');
+  if (box) {
+    box.innerHTML = nowHtml(slug, g, a, (t, note) =>
+      '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
+      (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
+    bindShBody();
+  }
+}
 async function ocrShot(file, slug, say) {
   say('сжимаю картинку…');
   let blob;
@@ -3234,7 +3408,17 @@ function myHtml(slug, g) {
   '</div>' +
   '<div class="hint">Числа лежат в этом браузере. Витрины профиля и API у NTE нет, ' +
   'поэтому сами они не подтянутся: либо вписать руками, либо распознать со скриншота ' +
-  'экрана персонажа.</div>';
+  'экрана персонажа.</div>' +
+  '<details class="mfold" style="margin-top:8px"><summary><b>Читать на своём компьютере</b>' +
+  '</summary><div class="mfold-in"><div class="hint">' +
+  'Распознавание через сервер иногда не дочитывает нижние строки. В Windows есть ' +
+  'свой распознаватель — локальный, без лимитов и точнее на мелких цифрах. ' +
+  'Скрипт <b>nte-ocr.ps1</b> лежит в папке сайта.<br><br>' +
+  '1. В игре открой экран характеристик, сними область: <b>Win+Shift+S</b>.<br>' +
+  '2. В <b>Windows PowerShell</b> (именно 5.1, не pwsh): ' +
+  '<code>cd "F:\\Claude cowork\\сайт\\nte"</code>, затем <code>.\\nte-ocr.ps1</code><br>' +
+  '3. Скрипт положит в буфер строку — вернись сюда и нажми <b>Ctrl+V</b>.' +
+  '</div></div></details>';
 }
 
 // «Сейчас» — что с эспером сегодня: баннер, место в мете, твои характеристики
@@ -3343,9 +3527,17 @@ function bindMy(slug) {
   if ($('ocrPick')) {
     $('ocrPick').onclick = () => $('ocrFile').click();
     $('ocrFile').onchange = e => { const f = e.target.files[0]; if (f) ocrShot(f, slug, say); };
-    // вставка скрина из буфера — самый быстрый путь: Win+Shift+S и сразу Ctrl+V
+    // Вставка из буфера, два случая.
+    // Картинка — старый путь: Win+Shift+S и сразу Ctrl+V, распознаёт воркер.
+    // Текст «NTE:{...}» — новый: его кладёт nte-ocr.ps1, который читает
+    // скриншот встроенным распознавателем Windows. Локально, без интернета
+    // и без лимитов, и на мелких цифрах вернее модели зрения.
     box.onpaste = e => {
-      const it = [...(e.clipboardData ? e.clipboardData.items : [])]
+      const cd = e.clipboardData;
+      if (!cd) return;
+      const txt = (cd.getData ? cd.getData('text/plain') : '') || '';
+      if (/^\s*NTE:\s*\{/.test(txt)) { e.preventDefault(); ocrPaste(txt, slug, say); return; }
+      const it = [...(cd.items || [])]
         .filter(x => x.type && x.type.indexOf('image') === 0)[0];
       if (!it) return;
       e.preventDefault();
