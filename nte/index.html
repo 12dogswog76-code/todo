@@ -770,7 +770,11 @@
   .mapwrap{position:relative;width:100%;
     height:min(1600px, max(calc(100vh - 124px), 62vw));
     min-height:460px;overflow:hidden;contain:layout paint;
-    border:1px solid var(--line);border-radius:16px;background:#0b0d10;cursor:grab}
+    border:1px solid var(--line);border-radius:16px;background:#0b0d10;
+    /* Перекрестие, а не «рука»: у руки не видно, какой именно точкой она
+       указывает, и на плотной карте непонятно, куда наводишь. У crosshair
+       центр чёткий. При перетаскивании переключается на кулак. */
+    cursor:crosshair}
   .mapwrap:fullscreen{height:100vh;border:0;border-radius:0}
   .mapwrap.grab{cursor:grabbing}
   /* Ширину и высоту ставит скрипт: сторона окна × приближение. Масштабировать
@@ -902,9 +906,15 @@
 
   /* фотографии интерьера: крупный кадр и лента миниатюр под ним */
   .gal{margin:4px 0 2px}
-  /* Кадр меняется плавно: резкая подмена при автолистании дёргала глаз. */
-  .gal-big{width:100%;border-radius:12px;display:block;background:#0c0d10;
-    transition:opacity .25s}
+  /* Рамка у фотографий квартир нарисована прямо в картинке: чёрное поле со
+     скруглёнными углами по краю кадра. Убрать её из файла нельзя — она часть
+     ассета, — поэтому обрезаем показом: кадр в окне с overflow, картинка чуть
+     крупнее окна. Восемь процентов хватает, чтобы рамка ушла за край. */
+  .gal-win{position:relative;width:100%;overflow:hidden;border-radius:12px;
+    background:#0c0d10;aspect-ratio:1}
+  .gal-big{position:absolute;inset:-4.5%;width:109%;height:109%;display:block;
+    object-fit:cover;transition:opacity .45s ease}
+  .gal-big.fade{opacity:0}
   .gal-cap{margin:6px 0 0;font-size:11.5px;color:var(--tx2)}
   .gal-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0}
   .gal-t{padding:0;border:1px solid var(--brd);border-radius:8px;overflow:hidden;
@@ -1226,7 +1236,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v58';
+const APP_VER = 'v59';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -2877,7 +2887,8 @@ function flatPics(f) {
 function galHtml(pics, id) {
   if (!pics.length) return '';
   return '<div class="gal" data-gal="' + esc(id) + '">' +
-    '<img class="gal-big" id="gal-' + esc(id) + '" src="' + esc(pics[0].pic) + '" alt="">' +
+    '<div class="gal-win"><img class="gal-big" id="gal-' + esc(id) + '" src="' +
+      esc(pics[0].pic) + '" alt=""></div>' +
     (pics[0].ru ? '<div class="gal-cap" id="galc-' + esc(id) + '">' + esc(pics[0].ru) + '</div>' : '') +
     (pics.length > 1 ? '<div class="gal-row">' + pics.map((p, i) =>
       '<button class="gal-t' + (i ? '' : ' on') + '" data-gi="' + i + '" title="' + esc(p.ru) + '">' +
@@ -2892,16 +2903,29 @@ function bindGal(pack) {
   const boxes = [];
   document.querySelectorAll('.gal').forEach(box => {
     const id = box.dataset.gal, pics = pack[id] || [];
-    const show = i => {
+    // Кадр меняется через затухание: сначала гасим, подменяем на невидимом,
+    // потом проявляем. Резкая подмена при автолистании дёргала глаз.
+    const show = (i, fast) => {
       const p = pics[i]; if (!p) return;
-      const big = $('gal-' + id); if (big) big.src = p.pic;
-      const cap = $('galc-' + id); if (cap) cap.textContent = p.ru || '';
+      const big = $('gal-' + id), cap = $('galc-' + id);
+      const put = () => {
+        if (big) big.src = p.pic;
+        if (cap) cap.textContent = p.ru || '';
+      };
+      if (big && !fast) {
+        const pre = new Image();          // ждём загрузку, иначе мигнёт пустотой
+        pre.onload = pre.onerror = () => {
+          big.classList.add('fade');
+          setTimeout(() => { put(); big.classList.remove('fade'); }, 260);
+        };
+        pre.src = p.pic;
+      } else { put(); }
       box.querySelectorAll('.gal-t').forEach(t =>
         t.classList.toggle('on', +t.dataset.gi === i));
       box.dataset.gi = i;
     };
     box.querySelectorAll('[data-gi]').forEach(b2 => b2.onclick = () => {
-      show(+b2.dataset.gi);
+      show(+b2.dataset.gi, true);    // по клику — сразу, без затухания
       box.dataset.hold = '1';        // ткнул руками — дальше не листаем сами
     });
     if (pics.length > 1) boxes.push({ box: box, pics: pics, show: show });
@@ -3225,6 +3249,10 @@ let mapPts = [];        // все показанные точки: доли, ц�
 let mapIcons = {};      // кэш картинок значков: адрес → Image
 let mapHot = null;      // точка под курсором
 let mapHotAll = [];     // и все её соседи, попавшие под тот же курсор
+// Где сейчас курсор внутри карты. Нужно, чтобы нарисовать собственную метку:
+// системный указатель на тёмной плотной карте теряется, и непонятно, на что
+// целишься.
+let mapCur = null;
 let mapVis = [];        // попавшие в кадр: по ним ищем, что под курсором
 let mapR = 10;          // радиус значка сейчас — зависит от приближения
 
@@ -3407,6 +3435,21 @@ function mapDots() {
 }
 // Точка под курсором — поверх всех и с белым ободком.
 function mapDotsHot(ctx) {
+  // Собственная метка курсора: тонкое перекрестие. Рисуется всегда, пока мышь
+  // над картой, — по нему видно, куда именно целишься, даже когда под ним
+  // десяток слипшихся точек.
+  if (mapCur) {
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    ctx.lineWidth = 1;
+    const x = Math.round(mapCur.x) + 0.5, y = Math.round(mapCur.y) + 0.5, a = 9, b = 3;
+    ctx.beginPath();
+    ctx.moveTo(x - a, y); ctx.lineTo(x - b, y);
+    ctx.moveTo(x + b, y); ctx.lineTo(x + a, y);
+    ctx.moveTo(x, y - a); ctx.lineTo(x, y - b);
+    ctx.moveTo(x, y + b); ctx.lineTo(x, y + a);
+    ctx.stroke();
+  }
   if (!mapHot || mapHot.sx == null) return;
   ctx.globalAlpha = 1;
   ctx.lineWidth = 2;
@@ -3430,8 +3473,12 @@ function bindMapDots() {
   wrap.addEventListener('mousedown', () => { moved = 0; });
   wrap.addEventListener('mousemove', e => {
     moved++;
+    const r0 = wrap.getBoundingClientRect();
+    mapCur = { x: e.clientX - r0.left - wrap.clientLeft,
+               y: e.clientY - r0.top - wrap.clientTop };
     const all = mapHitAll(e.clientX, e.clientY);
     const p = all[0] || null;
+    mapDotsSoon();                 // перерисовать метку курсора
     if (p !== mapHot) {
       mapHot = p;
       mapHotAll = all;
@@ -3468,7 +3515,9 @@ function bindMapDots() {
   });
   wrap.addEventListener('mouseleave', () => {
     tip.classList.remove('on');
-    if (mapHot) { mapHot = null; mapDots(); }
+    mapCur = null;
+    mapHot = null; mapHotAll = [];
+    mapDots();
   });
 
   wrap.addEventListener('click', e => {
