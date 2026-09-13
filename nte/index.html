@@ -1237,7 +1237,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v61';
+const APP_VER = 'v62';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -4974,7 +4974,51 @@ function shrink(file) {
 // Принимаем только известные ключи и только числа — вставить в поле можно что
 // угодно, а сохраняется это в браузер и потом идёт в расчёты.
 const OCR_KEYS = ['cr', 'cd', 'cyc', 'brk', 'hp', 'atk', 'def', 'dmg'];
+// Числа одного эспера: только знакомые ключи и только положительные числа.
+function ocrPick(o) {
+  const got = {};
+  if (!o || typeof o !== 'object') return got;
+  OCR_KEYS.forEach(k => {
+    const v = parseFloat(o[k]);
+    if (isFinite(v) && v > 0) got[k] = Math.round(v * 10) / 10;
+  });
+  return got;
+}
+// Строка на всех сразу: «NTEALL:{"linko":{…},"zankou":{…}}». Её кладёт
+// nte-ocr.ps1, когда ему скормили папку со скринами — по снимку на эспера.
+// Вставлять можно в карточке любого из них, числа разойдутся по своим.
+function ocrPasteAll(txt, slug, say) {
+  let o = null;
+  try { o = JSON.parse(String(txt).replace(/^\s*NTEALL:\s*/, '')); } catch (e) {}
+  if (!o || typeof o !== 'object') { say('строка не разобралась — скопируй её заново', 1); return; }
+  let людей = 0, чисел = 0, чужих = 0;
+  Object.keys(o).forEach(sl => {
+    if (!agentBy(sl)) { чужих++; return; }
+    const got = ocrPick(o[sl]);
+    const n = Object.keys(got).length;
+    if (!n) return;
+    const my = myStats(sl);
+    Object.keys(got).forEach(k => { my[k] = got[k]; });
+    myStatsSave(sl, my);
+    людей++; чисел += n;
+  });
+  if (!людей) { say('в строке нет знакомых эсперов', 1); return; }
+  say('принято: ' + людей + ' ' + plural(людей, 'эспер', 'эспера', 'эсперов') +
+      ', ' + чисел + ' ' + plural(чисел, 'значение', 'значения', 'значений') +
+      (чужих ? ' (незнакомых пропущено: ' + чужих + ')' : ''));
+  calcFill(slug);
+  const g = (GUIDE.agents || {})[slug] || {};
+  const a = agentBy(slug);
+  const box = $('shBody');
+  if (box) {
+    box.innerHTML = nowHtml(slug, g, a, (t, note) =>
+      '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
+      (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
+    bindMy(slug); bindCharPlan(slug); bindCalc(slug);
+  }
+}
 function ocrPaste(txt, slug, say) {
+  if (/^\s*NTEALL:/.test(String(txt))) return ocrPasteAll(txt, slug, say);
   let o = null;
   try { o = JSON.parse(String(txt).replace(/^\s*NTE:\s*/, '')); } catch (e) {}
   if (!o || typeof o !== 'object') { say('строка не разобралась — скопируй её заново', 1); return; }
@@ -5101,10 +5145,17 @@ function myHtml(slug, g) {
   'запускаешь из консоли — только <b>Windows PowerShell</b>, не pwsh: ' +
   'команда ниже это учитывает.<br>' +
   '4. Скрипт положит в буфер строку — вернись сюда и нажми <b>Ctrl+V</b>.' +
+  '<br><br><b>Все эсперы за раз.</b> Сделай по скрину на каждого, назови файлы ' +
+  'их именами («Линко.png», «zankou.png») и сложи в одну папку. Тогда вместо ' +
+  'команды выше:<br><code>powershell -ExecutionPolicy Bypass -File ' +
+  '"$env:USERPROFILE\\Downloads\\nte-ocr.ps1" -Folder "$env:USERPROFILE\\Pictures\\NTE"</code>' +
+  '<br>Скрипт разберёт всю папку и положит в буфер одну строку на всех — ' +
+  'вставляй её в любой карточке, числа разойдутся по своим.' +
   '</div>' +
   '<div class="mapbar" style="margin-top:8px">' +
     '<a class="fb" href="nte-ocr.ps1" download>скачать nte-ocr.ps1</a>' +
-    '<button class="fb" data-ocrcmd>скопировать команду запуска</button>' +
+    '<button class="fb" data-ocrcmd>команда на один скрин</button>' +
+    '<button class="fb" data-ocrall>команда на папку</button>' +
   '</div>' +
   '<div class="hint" style="margin-top:6px">Команда сама найдёт скрипт в папке ' +
   '«Загрузки» — если положил его туда, больше ничего править не надо.</div>' +
@@ -5115,15 +5166,23 @@ function myHtml(slug, g) {
 // ищет файл там, и запускает именно Windows PowerShell — в pwsh нет проекции
 // WinRT, без которой распознаватель Windows не доступен.
 const OCR_CMD = 'powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\Downloads\\nte-ocr.ps1"';
+// Папочный режим: скрины на всех эсперов разом. Папка по умолчанию —
+// «Изображения\\NTE», её же проще всего назначить для снимков экрана.
+const OCR_CMD_ALL = OCR_CMD + ' -Folder "$env:USERPROFILE\\Pictures\\NTE"';
 function bindOcrCmd(box) {
-  const b = box && box.querySelector('[data-ocrcmd]');
-  if (!b) return;
-  b.onclick = () => {
-    navigator.clipboard.writeText(OCR_CMD).then(() => {
-      b.textContent = 'скопировано';
-      setTimeout(() => { b.textContent = 'скопировать команду запуска'; }, 1800);
-    }).catch(() => { b.textContent = 'не вышло — скопируй вручную'; });
+  if (!box) return;
+  const кнопка = (sel, текст, строка) => {
+    const b = box.querySelector(sel);
+    if (!b) return;
+    b.onclick = () => {
+      navigator.clipboard.writeText(строка).then(() => {
+        b.textContent = 'скопировано';
+        setTimeout(() => { b.textContent = текст; }, 1800);
+      }).catch(() => { b.textContent = 'не вышло — скопируй вручную'; });
+    };
   };
+  кнопка('[data-ocrcmd]', 'команда на один скрин', OCR_CMD);
+  кнопка('[data-ocrall]', 'команда на папку', OCR_CMD_ALL);
 }
 
 // «Сейчас» — что с эспером сегодня: баннер, место в мете, твои характеристики
@@ -5287,7 +5346,8 @@ function bindMy(slug) {
       const cd = e.clipboardData;
       if (!cd) return;
       const txt = (cd.getData ? cd.getData('text/plain') : '') || '';
-      if (/^\s*NTE:\s*\{/.test(txt)) { e.preventDefault(); ocrPaste(txt, slug, say); return; }
+      // NTE:{…} — один эспер, NTEALL:{…} — все сразу из папочного разбора
+      if (/^\s*NTE(ALL)?:\s*\{/.test(txt)) { e.preventDefault(); ocrPaste(txt, slug, say); return; }
       const it = [...(cd.items || [])]
         .filter(x => x.type && x.type.indexOf('image') === 0)[0];
       if (!it) return;
