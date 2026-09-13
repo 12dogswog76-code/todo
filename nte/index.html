@@ -469,6 +469,15 @@
   .bc.bc-art>.bc-b{max-width:60%}
   /* плашки без арта не должны быть заметно ниже соседних в ряду */
   .bc{min-height:104px}
+  /* Заливка цветом стихии. У плашки эспера — его собственной, у оружия —
+     того эспера, с которым оно выходит: пары видно по порядку в расписании. */
+  .bc.bc-el{background:linear-gradient(115deg,
+    color-mix(in srgb, var(--el) 22%, rgba(10,10,12,.92)) 0,
+    rgba(10,10,12,.92) 62%);
+    border-color:color-mix(in srgb, var(--el) 38%, var(--line-soft))}
+  .bc.bc-el.live{box-shadow:0 0 28px color-mix(in srgb, var(--el) 22%, transparent),
+    inset 0 0 40px color-mix(in srgb, var(--el) 8%, transparent)}
+  .bc.bc-el .bc-k{border-color:color-mix(in srgb, var(--el) 45%, var(--line))}
   .bc.live{border-color:hsla(140,70%,60%,.5);
     background:linear-gradient(135deg,hsla(140,70%,60%,.10),rgba(10,10,10,.8));
     box-shadow:0 0 28px hsla(140,70%,60%,.15),inset 0 0 40px hsla(140,70%,60%,.04)}
@@ -658,12 +667,15 @@
     letter-spacing:.08em;color:hsla(0,0%,100%,.28);padding-top:5px}
   .ticks span:before{content:'';position:absolute;top:0;left:50%;width:1px;height:4px;
     background:hsla(0,0%,100%,.2)}
-  .mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px}
+  /* Плитка материала: название в две строки и число рядом. Узкие 150 пикселей
+     ломали «10 500 000» на три строки. */
+  .mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:7px}
   .mat{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;
     background:var(--pan);border:1px solid var(--line-soft);font-size:11px}
   .mat img{width:32px;height:32px;object-fit:contain;flex:none}
   .mat span{flex:1;color:var(--tx2);line-height:1.3}
-  .mat b{font-family:var(--disp);font-size:15px;color:var(--tx)}
+  .mat b{font-family:var(--disp);font-size:15px;color:var(--tx);flex:none;
+    white-space:nowrap}
   .mat.rS{border-color:hsla(41,100%,50%,.35)} .mat.rA{border-color:hsla(266,29%,51%,.35)}
 
   /* ── картриджи ── */
@@ -784,6 +796,8 @@
   .maptip img{width:44px;height:44px;object-fit:contain;flex:0 0 auto;
     background:#ffffff08;border-radius:8px;padding:3px}
   .maptip span{min-width:0}
+  .maptip .tip-more{display:block;margin-top:3px;font-style:normal;font-size:10.5px;
+    color:var(--tx3);line-height:1.4}
   .mapzoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:5px;z-index:6}
   .mapzoom button{width:32px;height:32px;border-radius:9px;background:rgba(12,14,18,.85);
     border:1px solid var(--line);color:var(--tx);cursor:pointer;font-size:15px;line-height:1}
@@ -888,7 +902,9 @@
 
   /* фотографии интерьера: крупный кадр и лента миниатюр под ним */
   .gal{margin:4px 0 2px}
-  .gal-big{width:100%;border-radius:12px;display:block;background:#0c0d10}
+  /* Кадр меняется плавно: резкая подмена при автолистании дёргала глаз. */
+  .gal-big{width:100%;border-radius:12px;display:block;background:#0c0d10;
+    transition:opacity .25s}
   .gal-cap{margin:6px 0 0;font-size:11.5px;color:var(--tx2)}
   .gal-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0}
   .gal-t{padding:0;border:1px solid var(--brd);border-radius:8px;overflow:hidden;
@@ -1210,7 +1226,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v57';
+const APP_VER = 'v58';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -2307,6 +2323,24 @@ function banName(b) {
   if (who) return 'оружие ' + who.ru;
   return b.name;
 }
+// Чей это баннер. У плашки оружия в расписании нет ссылки на эспера, хотя
+// выходят они парой: первое оружие — к первому эсперу, второе ко второму.
+// Пользуемся этим: ищем группу-пару («Оружие — идёт сейчас» ↔ «Идут сейчас»)
+// и берём из неё баннер с тем же номером по счёту. Для объявленных заранее
+// проще: там в названии прямо стоит имя эспера.
+function banOwner(b, all) {
+  if (b.slug) return agentBy(b.slug);
+  if (b.kind !== 'arc') return null;
+  const byName = (DB.agents || []).filter(x =>
+    String(x.en).toLowerCase() === String(b.name).toLowerCase() ||
+    String(x.slug).toLowerCase() === String(b.name).toLowerCase())[0];
+  if (byName) return byName;
+  const pair = String(b.key || '').replace('weapon', 'character');
+  const mine = all.filter(x => x.key === b.key);
+  const theirs = all.filter(x => x.key === pair);
+  const i = mine.indexOf(b);
+  return i >= 0 && theirs[i] ? agentBy(theirs[i].slug) : null;
+}
 function bannerArt(a) {
   const def = ((CITY && CITY.skins) || []).filter(x => x.slug === a.slug && x.def && x.pic)[0];
   if (def) {
@@ -2341,6 +2375,9 @@ function drawBanners() {
         '<em>' + g.items.length + '</em></div>' +
       '<div class="bcards">' + g.items.map(b => {
         const a = DB.agents.filter(x => x.slug === b.slug)[0];
+        // плашка красится цветом стихии: у эспера своей, у оружия — того,
+        // с кем оно выходит
+        const own = a || banOwner(b, list);
         // у оружия своего слага нет — ищем иконку по названию в игровой базе
         const pic = a ? portrait(a) : arcPic(b.name);
         const go = a ? ' data-ban-slug="' + esc(a.slug) + '"'
@@ -2351,7 +2388,8 @@ function drawBanners() {
         // нет (оружие, новый эспер) — плашка остаётся обычной.
         const bg = a ? bannerArt(a) : '';
         return '<div class="bc' + (isLive(g) ? ' live' : '') + (b.top ? ' bc-main' : '') +
-            (bg ? ' bc-art' : '') + '"' +
+            (bg ? ' bc-art' : '') + (own && own.el ? ' bc-el' : '') + '"' +
+            (own && own.el ? ' style="' + elStyle(own.el) + '"' : '') +
             go + ' title="открыть' + (a ? ' карточку эспера' : ' оружие') + '">' +
           (bg ? '<div class="bc-art-i" style="--bg:url(\'' + bg + '\')"></div>' : '') +
           (pic ? '<img src="' + pic + '" alt="" loading="lazy">' : '') +
@@ -2848,17 +2886,38 @@ function galHtml(pics, id) {
 }
 // Переключение кадров — одним обработчиком на весь список: карточек домов
 // семь, а кнопок под полсотни, вешать на каждую отдельный смысла нет.
+let galTimer = null;
 function bindGal(pack) {
+  if (galTimer) { clearInterval(galTimer); galTimer = null; }
+  const boxes = [];
   document.querySelectorAll('.gal').forEach(box => {
     const id = box.dataset.gal, pics = pack[id] || [];
-    box.querySelectorAll('[data-gi]').forEach(b2 => b2.onclick = () => {
-      const i = +b2.dataset.gi, p = pics[i]; if (!p) return;
+    const show = i => {
+      const p = pics[i]; if (!p) return;
       const big = $('gal-' + id); if (big) big.src = p.pic;
       const cap = $('galc-' + id); if (cap) cap.textContent = p.ru || '';
-      box.querySelectorAll('.gal-t').forEach(t => t.classList.remove('on'));
-      b2.classList.add('on');
+      box.querySelectorAll('.gal-t').forEach(t =>
+        t.classList.toggle('on', +t.dataset.gi === i));
+      box.dataset.gi = i;
+    };
+    box.querySelectorAll('[data-gi]').forEach(b2 => b2.onclick = () => {
+      show(+b2.dataset.gi);
+      box.dataset.hold = '1';        // ткнул руками — дальше не листаем сами
     });
+    if (pics.length > 1) boxes.push({ box: box, pics: pics, show: show });
   });
+  // Кадры перелистываются сами раз в пять секунд: у дома их восемь, и щёлкать
+  // по всем, чтобы просто посмотреть квартиру, утомительно. Как только ткнул
+  // мышью — автолистание для этого дома выключается, чтобы не перебивало.
+  if (!boxes.length) return;
+  galTimer = setInterval(() => {
+    boxes.forEach(g => {
+      if (g.box.dataset.hold === '1') return;
+      if (!g.box.closest('details[open]')) return;   // закрытую карточку не листаем
+      const i = (+g.box.dataset.gi || 0) + 1;
+      g.show(i >= g.pics.length ? 0 : i);
+    });
+  }, 5000);
 }
 function flatCard(f, anom) {
   const pic = f.pic ? 'img/flats/' + f.pic : '';
@@ -3041,7 +3100,11 @@ function mapCats(pts) {
   const by = {};
   pts.forEach(p => {
     const k = p.t || 'без названия';
-    if (!by[k]) by[k] = { name: k, g: p.g, ic: p.ic || '', n: 0 };
+    // Путь к значку нужен полный: у точек из таблиц игры картинки лежат в
+    // img/mapicon, у точек StarDB — в подпапке sd. В списке категорий раньше
+    // ко всем подставлялась первая папка, и половина значков была битой.
+    if (!by[k]) by[k] = { name: k, g: p.g, n: 0,
+      ic: p.ic ? (p.sd ? 'img/mapicon/sd/' : 'img/mapicon/') + p.ic : '' };
     by[k].n++;
   });
   return Object.values(by).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ru'));
@@ -3161,6 +3224,7 @@ function mapSeen(pad) {
 let mapPts = [];        // все показанные точки: доли, цвет, значок, подпись
 let mapIcons = {};      // кэш картинок значков: адрес → Image
 let mapHot = null;      // точка под курсором
+let mapHotAll = [];     // и все её соседи, попавшие под тот же курсор
 let mapVis = [];        // попавшие в кадр: по ним ищем, что под курсором
 let mapR = 10;          // радиус значка сейчас — зависит от приближения
 
@@ -3345,7 +3409,15 @@ function mapDots() {
 function mapDotsHot(ctx) {
   if (!mapHot || mapHot.sx == null) return;
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.lineWidth = 2;
+  // соседей обводим тускло, ту, что первой в списке, — ярко
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  for (let i = 1; i < mapHotAll.length; i++) {
+    const q = mapHotAll[i];
+    if (q.sx == null) continue;
+    ctx.beginPath(); ctx.arc(q.sx, q.sy, mapR + 3, 0, 6.2832); ctx.stroke();
+  }
+  ctx.strokeStyle = '#fff';
   ctx.beginPath(); ctx.arc(mapHot.sx, mapHot.sy, mapR + 3, 0, 6.2832); ctx.stroke();
 }
 // Наведение, отметки и свои точки. Узлов у точек больше нет, поэтому события
@@ -3358,9 +3430,11 @@ function bindMapDots() {
   wrap.addEventListener('mousedown', () => { moved = 0; });
   wrap.addEventListener('mousemove', e => {
     moved++;
-    const p = mapHit(e.clientX, e.clientY);
+    const all = mapHitAll(e.clientX, e.clientY);
+    const p = all[0] || null;
     if (p !== mapHot) {
       mapHot = p;
+      mapHotAll = all;
       wrap.style.cursor = p ? 'pointer' : '';
       mapDots();
     }
@@ -3372,8 +3446,14 @@ function bindMapDots() {
       // тридцать пикселей, и больше делать нельзя, точек тысячи и они
       // слипнутся. А разглядеть, что именно там лежит, всё равно надо: здесь
       // та же картинка идёт в полный рост.
+      // если под курсором несколько точек — перечисляем их все
+      const rest = mapHotAll.slice(1);
       tip.innerHTML = (p.ic ? '<img src="' + esc(p.ic) + '" alt="">' : '') +
-                      '<span>' + esc(p.t) + '</span>';
+        '<span>' + esc(p.t) +
+        (rest.length ? '<i class="tip-more">и рядом: ' +
+          rest.slice(0, 4).map(x => esc(x.t)).join(', ') +
+          (rest.length > 4 ? ' и ещё ' + (rest.length - 4) : '') + '</i>' : '') +
+        '</span>';
       tip.classList.add('on');
       const w = tip.offsetWidth, h = tip.offsetHeight;
       let x = p.sx - w / 2;
@@ -3427,25 +3507,31 @@ function bindMapDots() {
 }
 // Что под курсором. Ищем только среди попавших в кадр — их сотни, а не тысячи,
 // и экранные координаты у них уже посчитаны отрисовкой.
-function mapHit(cx, cy) {
+// Что под курсором. Возвращаем не одну точку, а все, что попали под него.
+//
+// Так вышло не от хорошей жизни: в городе точки лежат кучами. Проверено
+// замером — под курсором в радиусе трёх пикселей бывает по двенадцать штук.
+// Какую из них ни выбери «главной», пользователь смотрит на другую и видит,
+// что подсветилась не та. Поэтому показываем весь список: подсвечиваем все и
+// перечисляем их в подсказке.
+function mapHitAll(cx, cy) {
   const wrap = $('mapWrap');
-  if (!wrap) return null;
+  if (!wrap) return [];
   // clientLeft — это рамка окна карты. Холст лежит внутри неё, а прямоугольник
   // меряется снаружи; без поправки всё смещалось на пиксель.
   const r = wrap.getBoundingClientRect();
   const x = cx - r.left - wrap.clientLeft, y = cy - r.top - wrap.clientTop;
-  // Берём не ближайшую точку, а верхнюю — ту, что нарисована последней.
-  // Значки перекрываются, и когда курсор стоит на краю одного значка, центр
-  // соседнего бывает ближе: подсвечивалось не то, на что смотришь. Идём с
-  // конца списка, то есть сверху вниз, и берём первую, в чей кружок попали.
   const rr = (mapR + 2) * (mapR + 2);
+  const out = [];
   for (let i = mapVis.length - 1; i >= 0; i--) {
     const p = mapVis[i];
     const dx = p.sx - x, dy = p.sy - y;
-    if (dx * dx + dy * dy <= rr) return p;
+    if (dx * dx + dy * dy <= rr) out.push(p);
+    if (out.length >= 8) break;
   }
-  return null;
+  return out;
 }
+function mapHit(cx, cy) { return mapHitAll(cx, cy)[0] || null; }
 // Подгонка привязки: доли пересчитываются из исходных (bx, by) и холст
 // перерисовывается. Раньше для этого двигали каждый узел по отдельности.
 function mapMarksMove(c) {
@@ -3523,7 +3609,8 @@ function mapSideHtml(cats, off, cal) {
   const one = c =>
     '<label class="mcat' + (off[c.name] ? ' off' : '') + '" title="' + esc(c.name) + '">' +
       '<input type="checkbox" data-cat="' + esc(c.name) + '"' + (off[c.name] ? '' : ' checked') + '>' +
-      (c.ic ? '<img src="img/mapicon/' + esc(c.ic) + '" alt="" loading="lazy">'
+      (c.ic ? '<img src="' + esc(c.ic) + '" alt="" loading="lazy" ' +
+              'onerror="this.remove()">'
             : '<i style="--c:' + (MAP_COL[c.g] || '#fff') + '"></i>') +
       '<span>' + esc(c.name) + '</span><em>' + c.n + '</em>' +
     '</label>';
