@@ -1237,7 +1237,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v60';
+const APP_VER = 'v61';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3465,9 +3465,9 @@ function bindMapDots() {
   wrap.addEventListener('mousedown', () => { moved = 0; });
   wrap.addEventListener('mousemove', e => {
     moved++;
-    const r0 = wrap.getBoundingClientRect();
-    mapCur = { x: e.clientX - r0.left - wrap.clientLeft,
-               y: e.clientY - r0.top - wrap.clientTop };
+    const m0 = mapScale(wrap);
+    mapCur = { x: (e.clientX - m0.r.left) / m0.kx - wrap.clientLeft,
+               y: (e.clientY - m0.r.top) / m0.ky - wrap.clientTop };
     const all = mapHitAll(e.clientX, e.clientY);
     const p = all[0] || null;
     if (p !== mapHot) {
@@ -3517,9 +3517,9 @@ function bindMapDots() {
     // Shift + клик по пустому месту — поставить свою точку
     if (e.shiftKey && !p) {
       const side = mapSide0() * mapView.z;
-      const r = wrap.getBoundingClientRect();
-      const fx = (e.clientX - r.left - mapView.x) / side;
-      const fy = (e.clientY - r.top - mapView.y) / side;
+      const m = mapScale(wrap);
+      const fx = ((e.clientX - m.r.left) / m.kx - mapView.x) / side;
+      const fy = ((e.clientY - m.r.top) / m.ky - mapView.y) / side;
       if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
       const t = prompt('Что здесь? Например: «сундук у моста»');
       if (!t) return;
@@ -3554,13 +3554,32 @@ function bindMapDots() {
 // Какую из них ни выбери «главной», пользователь смотрит на другую и видит,
 // что подсветилась не та. Поэтому показываем весь список: подсвечиваем все и
 // перечисляем их в подсказке.
+// Перевод координат мыши в координаты карты.
+//
+// Здесь была ошибка, из-за которой курсор «попадал не туда». Я вычитал из
+// clientX левый край прямоугольника элемента — и это неверно, когда у
+// страницы есть масштаб. getBoundingClientRect отдаёт размеры уже
+// отмасштабированными, а clientX и внутренние размеры элемента — нет. На
+// экране с масштабом сто процентов прямоугольник у нас 1531 пиксель шириной
+// при внутренней ширине 1223: всё, что дальше от левого края, уезжало тем
+// сильнее, чем правее. Отсюда и «работает только на 175 %» — там числа
+// случайно сходились.
+//
+// Считаем поправку явно: во сколько раз нарисованное отличается от
+// разметочного. Без масштаба это единица, и ничего не меняется.
+function mapScale(el) {
+  const r = el.getBoundingClientRect();
+  const w = el.clientWidth || 1, h = el.clientHeight || 1;
+  return { r: r, kx: (r.width / w) || 1, ky: (r.height / h) || 1 };
+}
 function mapHitAll(cx, cy) {
   const wrap = $('mapWrap');
   if (!wrap) return [];
   // clientLeft — это рамка окна карты. Холст лежит внутри неё, а прямоугольник
   // меряется снаружи; без поправки всё смещалось на пиксель.
-  const r = wrap.getBoundingClientRect();
-  const x = cx - r.left - wrap.clientLeft, y = cy - r.top - wrap.clientTop;
+  const m = mapScale(wrap), r = m.r;
+  const x = (cx - r.left) / m.kx - wrap.clientLeft;
+  const y = (cy - r.top) / m.ky - wrap.clientTop;
   // Радиус попадания заметно больше самой точки: на отдалении она рисуется
   // пятью пикселями, и попасть в неё мышью нереально. Четырнадцать пикселей —
   // это примерно палец на экране, целиться становится легко.
@@ -3967,7 +3986,7 @@ function bindMapDrag() {
     if (e.altKey) {
       const c = mapCal();
       drag = { alt: 1, sx: e.clientX, sy: e.clientY, dx: c.dx, dy: c.dy,
-               w: wrap.getBoundingClientRect().width };
+               w: wrap.clientWidth };
       wrap.classList.add('grab');
       return;
     }
@@ -4007,9 +4026,10 @@ function bindMapDrag() {
       draw();
       return;
     }
-    const r = wrap.getBoundingClientRect();
-    // точка под курсором должна остаться на месте
-    const cx = e.clientX - r.left, cy = e.clientY - r.top;
+    // точка под курсором должна остаться на месте — с той же поправкой на
+    // масштаб страницы, иначе при зуме карта уползает в сторону
+    const m = mapScale(wrap);
+    const cx = (e.clientX - m.r.left) / m.kx, cy = (e.clientY - m.r.top) / m.ky;
     const k = e.deltaY < 0 ? 1.2 : 1 / 1.2;
     const z2 = Math.min(MAP_ZMAX, Math.max(1, mapView.z * k));
     const real = z2 / mapView.z;
@@ -4019,7 +4039,7 @@ function bindMapDrag() {
     mapApply();
   }, { passive: false });
   $('body').querySelectorAll('[data-mz]').forEach(b => b.onclick = () => {
-    const r = wrap.getBoundingClientRect(), cx = r.width / 2, cy = r.height / 2;
+    const cx = wrap.clientWidth / 2, cy = wrap.clientHeight / 2;
     if (b.dataset.mz === 'f') {
       if (document.fullscreenElement) document.exitFullscreen();
       else if (wrap.requestFullscreen) wrap.requestFullscreen();
