@@ -1088,19 +1088,6 @@
   .awk.on .awk-h u{color:var(--acc)}
   .awk-d{margin-top:8px;font-size:12px;line-height:1.65;color:var(--tx2)}
 
-  /* события патча: идут сейчас, скоро, постоянные */
-  .evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:9px}
-  .ev{padding:10px 12px;border-radius:13px;background:var(--pan);
-    border:1px solid var(--line-soft)}
-  .ev.on{border-color:hsla(140,70%,60%,.35);
-    background:linear-gradient(135deg,hsla(140,70%,60%,.08),var(--pan))}
-  .ev.soon{border-color:hsla(41,100%,50%,.3)}
-  .ev b{display:block;font-size:13px;color:var(--tx)}
-  .ev i{display:block;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--tx3);margin-top:3px}
-  .ev-d{margin-top:6px;font-size:11.5px;color:var(--tx2)}
-  .ev.on .ev-d{color:var(--acc)}
-
   /* полоса портретов на вкладке «Команды» */
   .roster{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
   .rost{display:flex;flex-direction:column;align-items:center;gap:3px;width:62px;padding:5px 3px;
@@ -1392,7 +1379,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v69';
+const APP_VER = 'v70';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1526,8 +1513,8 @@ const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan:
 // эспера: сами по себе, в отрыве от конкретного персонажа, они бесполезны.
 const TABS = [
   ['espers', 'Эсперы'], ['arcs', 'Оружие'], ['carts', 'Картриджи'],
-  ['tier', 'Тир-лист'], ['teams', 'Команды'], ['ban', 'Баннеры'],
-  ['ev', 'События'], ['codes', 'Коды'], ['city', 'Город'], ['map', 'Карта'],
+  ['tier', 'Тир-лист'], ['teams', 'Команды'], ['ban', 'События'],
+  ['codes', 'Коды'], ['city', 'Город'], ['map', 'Карта'],
   ['mech', 'Механики']
 ];
 
@@ -1662,7 +1649,7 @@ function draw() {
   const one = {
     espers: drawEspers, arcs: drawArcs, carts: drawCarts, tier: drawTier,
     teams: drawTeams, ban: drawBanners, codes: drawCodes, city: drawCity,
-    map: drawMap, mech: drawMech, ev: drawEvents
+    map: drawMap, mech: drawMech
   }[t];
   if (!one) return;
   try { return one(); }
@@ -2587,11 +2574,23 @@ function drawBanners() {
     const q = state.q.trim().toLowerCase();
     return !q || (b.name + ' ' + b.patch).toLowerCase().indexOf(q) >= 0;
   });
-  $('filters').innerHTML = '<span class="fcnt">' + list.length + ' баннеров</span>';
+  // Счётчик на двоих: вкладка теперь и про баннеры, и про события.
+  const ев = (evLive && evLive.list) || [];
+  $('filters').innerHTML = '<span class="fcnt">' + list.length + ' ' +
+    plural(list.length, 'баннер', 'баннера', 'баннеров') +
+    (ев.length ? ' · ' + ев.filter(e => e.live && !e.perm).length + ' событий идёт' : '') +
+    '</span>';
+  // Пустой список баннеров календарь не отменяет: при поиске «Rails» баннеров
+  // не найдётся, а события есть, и уходить со страницы ни с чем неправильно.
   if (!list.length) {
-    $('body').innerHTML = '<div class="empty">Расписания пока нет — оно приезжает вместе ' +
-      'со сборками, прогони nte-pryd.js версии 1.3 или новее.</div>';
-    foot('');
+    $('body').innerHTML = '<div class="hint">' +
+      (state.q.trim()
+        ? 'Среди баннеров по запросу ничего нет.'
+        : 'Расписания баннеров пока нет — оно приезжает вместе со сборками, ' +
+          'прогони nte-pryd.js версии 1.3 или новее.') + '</div>' +
+      '<div id="evBox"></div>';
+    evDraw();
+    foot('Календарь событий с ntebuild. Даты по серверу EU.');
     return;
   }
   const groups = [];
@@ -2646,7 +2645,11 @@ function drawBanners() {
     state.tab = 'arcs'; state.q = c.dataset.banArc; state.rar = '';
     $('q').value = state.q; drawTabs(); draw();
   });
-  // события дорисовываются под баннерами, когда приедут с воркера
+  // Календарь событий идёт следом за баннерами, на той же вкладке. Раньше это
+  // были две вкладки, и события показывались дважды: коротким блоком тут и
+  // полным списком там. Данные при этом разные — баннеры приезжают с prydwen,
+  // календарь с ntebuild, — поэтому их не разделили, а сложили в одну ленту:
+  // сначала что крутится в баннерах, потом чем занят сам патч.
   $('body').insertAdjacentHTML('beforeend', '<div id="evBox"></div>');
   evDraw();
   startBanTick();
@@ -2669,78 +2672,52 @@ const EV_KIND = {
 // Названия событий не переводим: они всплывают в игре по-английски, и русский
 // вариант только мешает искать. А вот награды — те же предметы, что в кодах,
 // и у них перевод уже есть.
+// Названия и награды приходят с чужой страницы в сыром виде: «Hunter&#x27;s
+// Crucible», «&quot;Tide&quot; watercraft». Раскрываем сущности до показа —
+// иначе на плашке так и висит «&#x27;». Раскрываем только сами сущности,
+// разметку не трогаем: дальше строка всё равно уходит через esc().
+function unent(s) {
+  return String(s == null ? '' : s)
+    .replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (m, d) => String.fromCodePoint(+d))
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
 function evRew(s) {
-  return String(s || '').split(/\s{2,}|·/).map(x => x.trim()).filter(Boolean)
+  return unent(s).split(/\s{2,}|·/).map(x => x.trim()).filter(Boolean)
     .map(x => '<span class="gsh">' + esc(rewName(x)) + '</span>').join('');
+}
+// Сколько осталось — единственная формула на всю страницу. Раньше их было
+// две: одна считала до полуночи, другая до конца последнего дня, и на плашке
+// выходило «осталось 2 дн. · ещё 1 день».
+function evLeft(e) {
+  if (!e || e.perm || !e.to) return null;
+  const end = Date.parse(e.to + 'T23:59:59Z');
+  if (!isFinite(end)) return null;
+  return Math.ceil((end - Date.now()) / 86400000);
 }
 function evDays(e) {
   if (e.perm) return 'постоянно';
   if (!e.to) return e.from ? 'с ' + ruDate(e.from) : '';
-  const left = Math.ceil((new Date(e.to + 'T23:59:59Z') - Date.now()) / 86400000);
-  if (left < 0) return 'закончилось';
-  return ruDate(e.from) + ' — ' + ruDate(e.to) +
-    (left <= 7 ? ' · осталось ' + left + ' дн.' : '');
+  const left = evLeft(e);
+  if (left != null && left < 0) return 'закончилось ' + ruDate(e.to);
+  return ruDate(e.from) + ' — ' + ruDate(e.to);
+}
+// Номер патча воркер не отдаёт — в календаре ntebuild его нет отдельным полем.
+// Зато он есть в названиях: «Circle Bounty — Version 1.3». Берём оттуда.
+function evVer() {
+  if (evLive && evLive.ver) return evLive.ver;
+  const m = ((evLive && evLive.list) || [])
+    .map(e => /version\s+([\d.]+)/i.exec(e.name || ''))
+    .filter(Boolean)[0];
+  return m ? m[1] : '';
 }
 function evDraw() {
   const box = $('evBox');
   if (!box) return;
-  if (!evLive) { evRefresh(); return; }
-  const all = evLive.list || [];
-  const now = all.filter(e => e.live), soon = all.filter(e => e.soon && !e.live);
-  const perm = all.filter(e => e.perm && !e.live && !e.soon);
-  const card = e =>
-    '<div class="ev' + (e.live ? ' on' : '') + (e.soon ? ' soon' : '') + '">' +
-      '<b>' + esc(e.name) + '</b>' +
-      '<i>' + esc(EV_KIND[e.kind] || e.kind || '') + '</i>' +
-      '<div class="ev-d">' + esc(evDays(e)) + '</div>' +
-      (e.rew ? '<div class="geo">' + evRew(e.rew) + '</div>' : '') +
-    '</div>';
-  const part = (t, list, note) => list.length
-    ? '<div class="cap"><b>' + esc(t) + '</b><span></span><em>' + list.length + '</em></div>' +
-      (note ? '<div class="hint" style="margin:0 0 8px">' + note + '</div>' : '') +
-      '<div class="evs">' + list.map(card).join('') + '</div>'
-    : '';
-  box.innerHTML =
-    (evLive.ver ? '<div class="cap"><b>События патча ' + esc(evLive.ver) + '</b>' +
-      '<span></span><em>' + all.length + '</em></div>' : '') +
-    part('Идут сейчас', now) +
-    part('Скоро начнутся', soon) +
-    part('Постоянные', perm, 'Доступны всегда — заходить можно в любой момент.');
-}
-// ── вкладка «События» ──────────────────────────────────────────────────────
-// Раньше события дорисовывались мелким блоком под баннерами — как приложение
-// к ним. На деле это отдельная жизнь: два десятка активностей, у каждой свой
-// срок и свои награды, и смотреть на них надо не мимоходом.
-function evSort(a, b) {
-  // сначала то, что вот-вот кончится
-  const ta = Date.parse(a.to) || Infinity, tb = Date.parse(b.to) || Infinity;
-  return ta - tb || String(a.name).localeCompare(String(b.name), 'ru');
-}
-function evCard(e) {
-  const кон = Date.parse(e.to), now = Date.now();
-  const дней = isFinite(кон) ? Math.ceil((кон - now) / 86400000) : null;
-  const горит = дней != null && дней >= 0 && дней <= 3;
-  return '<div class="evc' + (e.live ? ' on' : '') + (e.soon ? ' soon' : '') +
-      (e.perm ? ' perm' : '') + (горит ? ' hot' : '') + '">' +
-    '<div class="evc-h">' +
-      '<b>' + esc(e.name) + '</b>' +
-      (e.kind ? '<u>' + esc(EV_KIND[e.kind] || e.kind) + '</u>' : '') +
-    '</div>' +
-    '<div class="evc-d">' + esc(evDays(e)) +
-      (дней != null && дней >= 0 && !e.perm
-        ? ' · ' + (дней === 0 ? 'последний день'
-                  : 'ещё ' + дней + ' ' + plural(дней, 'день', 'дня', 'дней'))
-        : '') +
-    '</div>' +
-    (e.rew ? '<div class="evc-r">' + evRew(e.rew) + '</div>' : '') +
-  '</div>';
-}
-function drawEvents() {
-  if (!evLive) {
-    $('filters').innerHTML = '';
-    $('body').innerHTML = '<div class="empty">Календарь ещё едет с воркера…</div>';
-    if (!evAsked) { evAsked = 1; evRefresh(); }
-    foot('');
+  if (!evLive) { if (!evAsked) { evAsked = 1; evRefresh(); } 
+    box.innerHTML = '<div class="cap"><b>События патча</b><span></span>' +
+      '<em>едут с воркера…</em></div>';
     return;
   }
   const q = state.q.trim().toLowerCase();
@@ -2751,17 +2728,14 @@ function drawEvents() {
   const пост = all.filter(e => e.perm && !e.live && !e.soon)
                   .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ru'));
   const прошли = all.filter(e => !e.live && !e.soon && !e.perm).sort(evSort).reverse();
-
-  $('filters').innerHTML =
-    '<span class="fcnt">' + идут.length + ' идут · ' + скоро.length + ' скоро · ' +
-    пост.length + ' постоянных</span>';
-
   const блок = (t, list, note) => list.length
     ? '<div class="cap"><b>' + esc(t) + '</b><span></span><em>' + list.length + '</em></div>' +
       (note ? '<div class="hint" style="margin:0 0 8px">' + note + '</div>' : '') +
       '<div class="evcs">' + list.map(evCard).join('') + '</div>'
     : '';
-  $('body').innerHTML =
+  box.innerHTML =
+    '<div class="cap"><b>События' + (evVer() ? ' патча ' + esc(evVer()) : '') + '</b>' +
+      '<span></span><em>' + идут.length + ' идут · ' + скоро.length + ' скоро</em></div>' +
     блок('Идут сейчас', идут) +
     блок('Скоро начнутся', скоро) +
     блок('Постоянные', пост, 'Доступны всегда — заходить можно в любой момент.') +
@@ -2771,10 +2745,41 @@ function drawEvents() {
         '<div class="evcs" style="margin-top:10px">' + прошли.slice(0, 24).map(evCard).join('') +
         '</div></div></details>'
       : '') +
-    (!идут.length && !скоро.length && !пост.length
-      ? '<div class="empty">По запросу ничего не нашлось.</div>' : '');
-  foot('Календарь событий с ntebuild' + (evLive.ver ? ' · версия ' + esc(evLive.ver) : '') +
-       '. Даты по серверу EU.');
+    (q && !идут.length && !скоро.length && !пост.length && !прошли.length
+      ? '<div class="hint">По запросу среди событий ничего не нашлось.</div>' : '');
+}
+// ── карточки событий ───────────────────────────────────────────────────────
+function evSort(a, b) {
+  // сначала то, что вот-вот кончится
+  const ta = Date.parse(a.to) || Infinity, tb = Date.parse(b.to) || Infinity;
+  return ta - tb || String(a.name).localeCompare(String(b.name), 'ru');
+}
+// Хвост строки со сроком. У того, что ещё не началось, считать «сколько
+// осталось» нельзя: выходило «Fons Rush · ещё 16 дней» у события, которое
+// стартует через неделю. Для таких — сколько ждать старта.
+function evTail(e, дней) {
+  if (!e || e.perm) return '';
+  const старт = Date.parse((e.from || '') + 'T00:00:00Z');
+  if (isFinite(старт) && старт > Date.now()) {
+    const ч = Math.ceil((старт - Date.now()) / 86400000);
+    return ' · старт через ' + ч + ' ' + plural(ч, 'день', 'дня', 'дней');
+  }
+  if (дней == null || дней < 0) return '';
+  return ' · ' + (дней <= 1 ? 'последний день'
+                : 'ещё ' + дней + ' ' + plural(дней, 'день', 'дня', 'дней'));
+}
+function evCard(e) {
+  const дней = evLeft(e);
+  const горит = дней != null && дней >= 0 && дней <= 3;
+  return '<div class="evc' + (e.live ? ' on' : '') + (e.soon ? ' soon' : '') +
+      (e.perm ? ' perm' : '') + (горит ? ' hot' : '') + '">' +
+    '<div class="evc-h">' +
+      '<b>' + esc(unent(e.name)) + '</b>' +
+      (e.kind ? '<u>' + esc(EV_KIND[e.kind] || e.kind) + '</u>' : '') +
+    '</div>' +
+    '<div class="evc-d">' + esc(evDays(e)) + esc(evTail(e, дней)) + '</div>' +
+    (e.rew ? '<div class="evc-r">' + evRew(e.rew) + '</div>' : '') +
+  '</div>';
 }
 async function evRefresh(force) {
   const one = u => fetch(u + (force ? '?fresh=1' : ''), { cache: 'no-store' })
@@ -2783,8 +2788,8 @@ async function evRefresh(force) {
   try {
     evLive = await Promise.any(EV_API.map(one));
     if (state.tab === 'ban') evDraw();
-    // на своей вкладке и на главной события рисуются сразу, как приедут
-    if (state.tab === 'ev' || state.tab === 'espers') draw();
+    // на главной события идут в блок «что горит» — там нужна полная перерисовка
+    if (state.tab === 'espers') draw();
   } catch (e) { evLive = null; }
 }
 // ── обратный отсчёт ────────────────────────────────────────────────────────
