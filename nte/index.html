@@ -5,7 +5,7 @@
 <!-- Политика безопасности содержимого. Внешних скриптов на странице нет —
      весь код лежит здесь же, поэтому чужие подключить нельзя вообще.
      object-src и base-uri закрыты наглухо: это классические лазейки. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; object-src 'none'; base-uri 'none'; frame-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; object-src 'none'; base-uri 'none'; frame-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#08090c">
@@ -1201,6 +1201,40 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   .ocr{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 4px}
+
+  /* Скрины скопом: зона броска и карточки разобранных снимков. Карточки —
+     один уровень, несколько колонок, выровнены между собой; распознанный
+     текст раскрывается не под карточкой, а в широкой полосе справа от сетки,
+     чтобы список не прыгал. */
+  .drop{border:1.5px dashed var(--line);border-radius:14px;padding:26px 16px;
+    text-align:center;background:var(--pan2);cursor:pointer;transition:.15s}
+  .drop:hover,.drop.over{border-color:var(--acc);background:#191919}
+  .drop b{display:block;font-size:13px;margin-bottom:4px}
+  .drop span{color:var(--tx2);font-size:11px}
+  .ocrwrap{display:grid;grid-template-columns:1fr;gap:12px}
+  .ocrwrap.with-txt{grid-template-columns:minmax(0,1fr) minmax(280px,420px)}
+  .ocrg{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:9px;align-items:start}
+  .ocrc{background:var(--pan2);border:1px solid var(--line);border-radius:13px;
+    padding:9px;display:grid;grid-template-rows:auto auto auto;gap:7px}
+  .ocrc.bad{border-color:#fbbf2455}
+  .ocrc.work{opacity:.6}
+  .ocrc img{width:100%;height:74px;object-fit:cover;object-position:top;
+    border-radius:9px;background:#0d0f14;display:block}
+  .ocrc select{width:100%}
+  .ocrc .st{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;
+    font-family:var(--mono);font-size:11px}
+  .ocrc .st i{font-style:normal;color:var(--tx3)}
+  .ocrc .st b{font-weight:600;text-align:right}
+  .ocrc .row{display:flex;gap:6px;align-items:center;justify-content:space-between}
+  .ocrc .row em{font-style:normal;font-size:10px;color:var(--tx3)}
+  .ocrtxt{background:var(--pan2);border:1px solid var(--line);border-radius:13px;
+    padding:10px;font-family:var(--mono);font-size:11px;line-height:1.5;
+    white-space:pre-wrap;max-height:70vh;overflow:auto}
+  .ocrbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+  .ocrpb{height:4px;border-radius:3px;background:var(--line);overflow:hidden;flex:1;min-width:120px}
+  .ocrpb i{display:block;height:100%;background:var(--acc);width:0;transition:width .2s}
+  @media(max-width:820px){ .ocrwrap.with-txt{grid-template-columns:1fr} }
   .pieces-row{display:flex;gap:8px;flex-wrap:wrap}
   .pcs{background:var(--pan2);border:1px solid var(--line);border-radius:11px;
     padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:64px}
@@ -1289,6 +1323,7 @@
   <button class="cloudb" id="cloudBtn" title="Синхронизация отметок между устройствами">облако</button>
   <button class="cloudb" id="planBtn" title="Сколько всего материалов нужно на тех, кого качаешь">план</button>
   <button class="cloudb" id="cmpBtn" title="Сравнить двух эсперов: кого качать первым">сравнить</button>
+  <button class="cloudb" id="statBtn" title="Кинуть пачку скриншотов и разобрать характеристики всех эсперов сразу">скрины</button>
   <div class="tabs" id="tabs"></div>
   <div class="top-sp"></div>
   <!-- Поиск убран из шапки: на широком экране он уезжал вниз отдельной
@@ -1305,7 +1340,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v65';
+const APP_VER = 'v66';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1543,6 +1578,7 @@ async function load() {
   $('cloudBtn').onclick = showSync;
   $('planBtn').onclick = showPlan;
   $('cmpBtn').onclick = showCmp;
+  $('statBtn').onclick = showOcrBulk;
   $('cloudBtn').classList.toggle('on', !!syncCfg().np);
   workerVer();
   drawTabs();
@@ -5337,25 +5373,29 @@ function myHtml(slug, g) {
   }).join('') + '</div>' +
   '<div class="ocr">' +
     '<button class="fb" id="ocrPick">📷 прочитать со скриншота</button>' +
+    '<button class="fb" id="ocrBulkBtn">скрины скопом — на всех сразу</button>' +
     '<input type="file" id="ocrFile" accept="image/*" style="display:none">' +
     '<span class="hint" id="ocrSay" style="margin:0">или вставь скрин из буфера — Ctrl+V</span>' +
   '</div>' +
   '<div class="hint">Числа лежат в этом браузере. Витрины профиля и API у NTE нет, ' +
   'поэтому сами они не подтянутся: либо вписать руками, либо распознать со скриншота ' +
-  'экрана персонажа.</div>' +
-  '<details class="mfold" style="margin-top:8px"><summary><b>Читать на своём компьютере</b>' +
+  'экрана персонажа.<br><b>Скрины скопом</b> — самый короткий путь: кидаешь пачку ' +
+  'снимков в окно, имена файлов и папка значения не имеют, эспер определяется ' +
+  'по имени на самом скрине.</div>' +
+  '<details class="mfold" style="margin-top:8px"><summary><b>Читать скриптом Windows</b>' +
   '</summary><div class="mfold-in"><div class="hint">' +
-  'Распознавание через сервер иногда не дочитывает нижние строки. В Windows есть ' +
-  'свой распознаватель — локальный, без лимитов и точнее на мелких цифрах.<br><br>' +
+  'Запасной путь на случай, если распознавание в браузере читает криво. ' +
+  'В Windows есть свой распознаватель — на мелких цифрах он точнее, но ради ' +
+  'него придётся возиться с файлами и командой.<br><br>' +
   '1. Скачай скрипт и положи куда удобно.<br>' +
   '2. В игре открой экран характеристик, сними область: <b>Win+Shift+S</b>.<br>' +
   '3. Правой кнопкой по файлу → <b>«Выполнить с помощью PowerShell»</b>. Если ' +
   'запускаешь из консоли — только <b>Windows PowerShell</b>, не pwsh: ' +
   'команда ниже это учитывает.<br>' +
   '4. Скрипт положит в буфер строку — вернись сюда и нажми <b>Ctrl+V</b>.' +
-  '<br><br><b>Все эсперы за раз.</b> Сделай по скрину на каждого, назови файлы ' +
-  'их именами («Линко.png», «zankou.png») и сложи в одну папку. Дальше — ' +
-  'кнопка «команда на папку» ниже.' +
+  '<br><br><b>Все эсперы за раз.</b> Тут скрипт узнаёт эспера только по имени ' +
+  'файла: сделай по скрину на каждого, назови файлы их именами («Линко.png», ' +
+  '«zankou.png»), сложи в одну папку — и жми «команду на папку».' +
   '<br><br>В командах стоят пути по умолчанию: скрипт в «Загрузках», скрины в ' +
   '«Изображения\\NTE». Если у тебя иначе — <b>подставь свои</b>. Путь к папке ' +
   'со скринами проще всего взять так: открой её в проводнике, щёлкни по ' +
@@ -5401,6 +5441,413 @@ function bindOcrCmd(box) {
   кнопка('[data-ocrcmd]', 'команда на один скрин', OCR_CMD);
   кнопка('[data-ocrall]', 'команда на папку', OCR_CMD_ALL);
   кнопка('[data-ocrhere]', 'команда, если скрипт не скачан', OCR_CMD_HERE);
+}
+
+// ── скрины скопом: распознавание прямо в браузере ───────────────────────────
+// Скрипт на PowerShell читает точнее всех, но до него надо дойти: скачать файл,
+// завести отдельную папку, переименовать в ней каждый скрин именем эспера,
+// вписать верный путь в команду. Ради восьми чисел на эспера — перебор.
+//
+// Поэтому то же самое делает сама страница: кидаешь пачку снимков в окно, и
+// они разбираются на месте. Движок распознавания — Tesseract, собранный в
+// wasm; лежит в папке ocr рядом со страницей, никуда ничего не уходит.
+// Первый заход тянет 6,6 МБ (ядро и русская модель), дальше браузер берёт их
+// из своего кэша.
+//
+// Кто на скрине, определяем сами: сперва ищем имя эспера в распознанном
+// тексте — на экране характеристик оно есть, — потом по имени файла. Если не
+// вышло, у карточки остаётся выпадающий список: ткнуть мышью быстрее, чем
+// переименовывать файлы.
+const OCR_DIR  = new URL('ocr/', location.href).href;
+// Проверка на wasm SIMD: без неё браузер молча получит 404 на другое ядро.
+// Байты — минимальный модуль с инструкцией v128, обычная проба на эту фичу.
+const OCR_SIMD_TEST = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123,
+  3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]);
+let ocrEng = null, ocrEngWait = null, ocrJobs = [], ocrBusy = false, ocrShow = -1;
+
+function ocrSimdOk() {
+  try { return WebAssembly.validate(OCR_SIMD_TEST); } catch (e) { return false; }
+}
+function scriptOnce(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector('script[data-once="' + src + '"]')) return res();
+    const s = document.createElement('script');
+    s.src = src; s.dataset.once = src;
+    s.onload = () => res();
+    s.onerror = () => rej(new Error('не загрузился ' + src));
+    document.head.appendChild(s);
+  });
+}
+const OCR_STEPS = {
+  'loading tesseract core': 'загружаю движок',
+  'initializing tesseract': 'завожу движок',
+  'loading language traineddata': 'загружаю русскую модель',
+  'initializing api': 'готовлю распознавание',
+  'recognizing text': 'читаю'
+};
+// Движок один на страницу: каждый новый — это ещё сотня мегабайт памяти и
+// заново прочитанная модель.
+async function ocrEngine(say) {
+  if (ocrEng) return ocrEng;
+  if (!ocrEngWait) ocrEngWait = (async () => {
+    if (!ocrSimdOk()) throw new Error('браузер не умеет wasm simd — тут распознавание не пойдёт');
+    await scriptOnce(OCR_DIR + 'tesseract.min.js');
+    if (typeof Tesseract === 'undefined') throw new Error('движок не загрузился');
+    const w = await Tesseract.createWorker('rus', 1, {
+      workerPath: OCR_DIR + 'worker.min.js',
+      corePath:   OCR_DIR + 'tesseract-core-simd-lstm.wasm.js',
+      langPath:   OCR_DIR,
+      workerBlobURL: false,        // свой worker по адресу — не через blob, так спокойнее с CSP
+      gzip: true,
+      logger: m => {
+        if (!say || !m || !m.status) return;
+        const t = OCR_STEPS[m.status];
+        if (t) say(t + (m.progress ? ' ' + Math.round(m.progress * 100) + '%' : '…'));
+      }
+    });
+    ocrEng = w;
+    return w;
+  })();
+  try { return await ocrEngWait; }
+  catch (e) { ocrEngWait = null; throw e; }
+}
+
+// Подготовка снимка — та же, что в nte-ocr.ps1: серый с растяжкой контраста.
+// Тонкие светлые цифры на полупрозрачной подложке читаются заметно вернее,
+// а блики и рамки уходят в чёрное. Размер держим в разумных пределах: на
+// снимке 2K распознавание идёт втрое дольше без выигрыша в точности.
+function ocrPrep(img) {
+  const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+  // Уменьшать полноэкранный снимок нельзя: подписи в игре и так мелкие, после
+  // сжатия они рассыпаются. Поэтому крупное оставляем как есть, обрезанные
+  // кусочки, наоборот, увеличиваем — распознавателю нужна высота буквы
+  // хотя бы пикселей двадцать.
+  let k = 1;
+  if (w0 < 1100) k = Math.min(2, 1100 / w0);
+  if (w0 * k > 2600) k = 2600 / w0;
+  const cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.round(w0 * k));
+  cv.height = Math.max(1, Math.round(h0 * k));
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  cx.imageSmoothingEnabled = true;
+  cx.imageSmoothingQuality = 'high';
+  cx.drawImage(img, 0, 0, cv.width, cv.height);
+  const d = cx.getImageData(0, 0, cv.width, cv.height), p = d.data;
+  for (let i = 0; i < p.length; i += 4) {
+    let v = (0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2]) | 0;
+    v = v < 60 ? 0 : (v > 190 ? 255 : (((v - 60) * 255 / 130) | 0));
+    p[i] = p[i + 1] = p[i + 2] = v; p[i + 3] = 255;
+  }
+  cx.putImageData(d, 0, 0);
+  return cv;
+}
+function ocrThumb(img) {
+  const k = 260 / Math.max(1, img.naturalWidth || img.width);
+  const cv = document.createElement('canvas');
+  cv.width = 260; cv.height = Math.max(1, Math.round((img.naturalHeight || img.height) * k));
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  try { return cv.toDataURL('image/jpeg', 0.6); } catch (e) { return ''; }
+}
+
+// Подписи и разбор строк — те же правила, что в скрипте и в воркере. Порядок
+// важен: «Крит. урон» должен проверяться раньше «Урона», иначе первое
+// совпадёт со вторым.
+const OCR_FIELDS = [
+  ['cr',  /(шанс\s*крит|crit\s*rate)/i],
+  ['cd',  /(крит\.?\s*урон|crit\s*d[mм]g)/i],
+  ['cyc', /(интенсивност\S*\s*цик|cycle\s*intens)/i],
+  ['brk', /(интенсивност\S*\s*разр|break\s*intens)/i],
+  ['hp',  /(^|[\s|])([оo0][зz3]|hp|health|очки\s*здоров)([\s|:]|$)/i],
+  ['atk', /(^|[\s|])(атака|attack|atk)([\s|:]|$)/i],
+  ['def', /(^|[\s|])(защита|def(ense)?)([\s|:]|$)/i],
+  ['dmg', /(бонус\s*к\s*урону|universal\s*d[mм]g|d[mм]g\s*bonus)/i]
+];
+// Правдоподобные границы. Нужны не для придирок, а против мусора: у
+// распознавателя «2 480» иногда превращается в «2 48», а строка описания
+// подсовывает свои проценты. Всё, что не лезет в эти рамки, — не та строка.
+const OCR_SANE = { hp: [3000, 300000], atk: [300, 30000], def: [100, 20000],
+  cr: [3, 100], cd: [40, 900], dmg: [0.5, 400], cyc: [1, 2000], brk: [1, 2000] };
+function ocrSane(k, v) {
+  const r = OCR_SANE[k];
+  return !r || (v >= r[0] && v <= r[1]);
+}
+// «11418 + 6028» — база и прибавка со снаряжения показаны в игре раздельно, а
+// нужен итог. Пробелы внутри числа — разделитель тысяч.
+function ocrLineValue(line) {
+  const tail = String(line).replace(/^[^:]*:/, '');
+  const nums = [];
+  (tail.match(/\d[\d\s.,]*/g) || []).forEach(t => {
+    const s = t.replace(/\s/g, '').replace(/,(\d{3})\b/g, '$1').replace(',', '.').replace(/[.,]+$/, '');
+    const v = parseFloat(s);
+    if (isFinite(v) && v > 0) nums.push(v);
+  });
+  if (!nums.length) return null;
+  if (nums.length === 2 && /\+/.test(tail)) return Math.round((nums[0] + nums[1]) * 10) / 10;
+  return Math.round(nums[0] * 10) / 10;
+}
+function ocrStatsFromText(text) {
+  const out = {}, flat = [];
+  String(text || '').split(/\r?\n/).forEach(l => {
+    flat.push(l);
+    // две колонки в строке («Атака 2 480    Защита 940») — режем по большим пробелам
+    if (/\d.*\S.*\d/.test(l)) Array.prototype.push.apply(flat, l.split(/\s{3,}/));
+  });
+  let первыйПлюс = null;
+  flat.forEach(raw => {
+    const line = String(raw).trim();
+    if (!line || !/\d/.test(line)) return;
+    const head = line.split(':')[0];      // подпись слева от числа, иначе «до 6 стаков» уедет в ОЗ
+    let попал = false;
+    OCR_FIELDS.forEach(f => {
+      if (out[f[0]] != null) return;
+      const m = head.match(f[1]);
+      // Подпись должна открывать строку. На полном снимке экрана в кадр
+      // попадают и описания умений («…увеличивает атаку на 30%»), и они
+      // подставляли в характеристики свои проценты. В таблице подпись всегда
+      // первая, максимум со значком перед ней.
+      if (!m || m.index > 4) return;
+      const v = ocrLineValue(line);
+      if (v == null || !ocrSane(f[0], v)) return;
+      out[f[0]] = v; попал = true;
+    });
+    // «ОЗ» — две буквы, и на них распознаватель спотыкается чаще всего:
+    // выходит то «О3», то вовсе мусор. Зато строка узнаётся по виду: она
+    // первая сверху с прибавкой через плюс и с самым большим числом на
+    // экране. Берём её, только если подпись ни с чем не совпала.
+    if (!попал && первыйПлюс === null && /\+/.test(line)) {
+      const v = ocrLineValue(line);
+      if (v != null && v >= 3000) первыйПлюс = v;
+    }
+  });
+  if (out.hp == null && первыйПлюс != null) out.hp = первыйПлюс;
+  return out;
+}
+function ocrPlain(s) {
+  return String(s == null ? '' : s).toLowerCase().replace(/[^\p{L}\p{Nd}]/gu, '');
+}
+// Кто на снимке. Сперва ищем имя в самом тексте — на экране характеристик оно
+// написано, и это надёжнее любых договорённостей об именах файлов. Короткие
+// куски не берём: «ноль» встретится и в описании умения.
+function ocrWho(text, fileName) {
+  const list = DB.agents || [];
+  const t = ocrPlain(text);
+  let best = null, len = 0;
+  list.forEach(a => {
+    [a.ru, a.en, a.slug].forEach(n => {
+      const p = ocrPlain(n);
+      if (p.length >= 4 && p.length > len && t.indexOf(p) >= 0) { best = a; len = p.length; }
+    });
+  });
+  if (best) return { a: best, how: 'имя на скрине' };
+  const f = ocrPlain(String(fileName || '').replace(/\.[a-z0-9]+$/i, ''));
+  if (f) {
+    for (const точно of [true, false]) {
+      for (const a of list) {
+        for (const n of [a.slug, a.ru, a.en]) {
+          const p = ocrPlain(n);
+          if (!p) continue;
+          if (точно ? (f === p) : (f.indexOf(p) === 0 || p.indexOf(f) === 0))
+            return { a: a, how: 'имя файла' };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function ocrBulkHtml() {
+  const список = (DB.agents || []).slice().sort((a, b) => a.ru.localeCompare(b.ru, 'ru'));
+  const выбор = (j, i) => '<select data-who="' + i + '">' +
+    '<option value="">— чей это скрин? —</option>' +
+    список.map(a => '<option value="' + esc(a.slug) + '"' +
+      (a.slug === j.slug ? ' selected' : '') + '>' + esc(a.ru) + '</option>').join('') +
+    '</select>';
+  const числа = j => {
+    const k = Object.keys(j.stats || {});
+    if (!k.length) return '<div class="hint" style="margin:0">ничего не прочиталось</div>';
+    return '<div class="st">' + MY_KEYS.filter(m => j.stats[m[0]] != null).map(m =>
+      '<i>' + esc(m[1].replace(', %', '')) + '</i><b>' + j.stats[m[0]] + '</b>').join('') + '</div>';
+  };
+  const карточки = ocrJobs.map((j, i) =>
+    '<div class="ocrc' + (j.work ? ' work' : '') +
+      (!j.work && (!j.slug || !Object.keys(j.stats || {}).length) ? ' bad' : '') + '" data-i="' + i + '">' +
+      (j.thumb ? '<img src="' + j.thumb + '" alt="">' : '') +
+      выбор(j, i) +
+      числа(j) +
+      '<div class="row"><em>' + esc(j.work ? (j.step || 'в очереди') :
+        (j.how || 'выбери вручную')) + '</em>' +
+        '<button class="fb" data-txt="' + i + '">текст</button></div>' +
+    '</div>').join('');
+  const готовых = ocrJobs.filter(j => !j.work && j.slug && Object.keys(j.stats || {}).length).length;
+  const текст = ocrShow >= 0 && ocrJobs[ocrShow]
+    ? '<div class="ocrtxt">' + esc(ocrJobs[ocrShow].name) + '\n\n' +
+      esc(ocrJobs[ocrShow].text || 'пусто') + '</div>' : '';
+  return '<div class="sh-body">' +
+    '<div class="sh-title"><h2>Скрины скопом<i>распознаю прямо здесь</i></h2>' +
+      '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
+    '</div>' +
+    '<div class="drop" id="ocrDrop"><b>Перетащи сюда скриншоты</b>' +
+      '<span>или нажми и выбери файлы · можно вставить из буфера, Ctrl+V</span></div>' +
+    '<input type="file" id="ocrFiles" accept="image/*" multiple style="display:none">' +
+    '<div class="ocrbar">' +
+      '<span class="hint" id="ocrBulkSay" style="margin:0">' +
+        (ocrJobs.length ? 'разобрано: ' + готовых + ' из ' + ocrJobs.length : 'файлы никуда не уходят — всё считается в браузере') +
+      '</span>' +
+      '<div class="ocrpb"><i id="ocrBulkPb"></i></div>' +
+      '<button class="fb" id="ocrApply"' + (готовых ? '' : ' disabled') + '>записать всем</button>' +
+      (ocrJobs.length ? '<button class="fb" id="ocrClear">очистить</button>' : '') +
+    '</div>' +
+    (ocrJobs.length
+      ? '<div class="ocrwrap' + (текст ? ' with-txt' : '') + '">' +
+          '<div class="ocrg">' + карточки + '</div>' + текст + '</div>'
+      : '') +
+    '<div class="hint">Имена файлов и папка значения не имеют: эспер определяется ' +
+    'по имени на самом скрине, а если не вышло — ставь его выпадающим списком. ' +
+    'Снимай экран характеристик целиком, вместе с именем эспера.<br>' +
+    'Первый заход подгружает движок распознавания — 6,6 МБ, дальше он берётся ' +
+    'из кэша браузера. Всё считается на твоём компьютере, снимки никуда не отправляются.<br>' +
+    'Если числа прочитались криво — рядом остался прежний путь: скрипт ' +
+    'nte-ocr.ps1 на встроенном распознавателе Windows, он точнее.</div>' +
+  '</div>';
+}
+function ocrBulkDraw() {
+  const s = $('sheetIn');
+  if (!s || !s.querySelector('#ocrDrop')) return;   // панель закрыли — рисовать некуда
+  s.innerHTML = ocrBulkHtml();
+  bindOcrBulk();
+}
+function showOcrBulk() {
+  $('sheetIn').innerHTML = ocrBulkHtml();
+  $('sheet').classList.add('on');
+  bindOcrBulk();
+}
+function bindOcrBulk() {
+  const c = $('close');
+  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  const drop = $('ocrDrop'), inp = $('ocrFiles');
+  if (drop && inp) {
+    drop.onclick = () => inp.click();
+    inp.onchange = () => { ocrAdd(Array.from(inp.files || [])); inp.value = ''; };
+    ['dragenter', 'dragover'].forEach(e => drop.addEventListener(e, ev => {
+      ev.preventDefault(); drop.classList.add('over');
+    }));
+    ['dragleave', 'drop'].forEach(e => drop.addEventListener(e, ev => {
+      ev.preventDefault(); drop.classList.remove('over');
+    }));
+    drop.addEventListener('drop', ev => {
+      const fs = Array.from((ev.dataTransfer && ev.dataTransfer.files) || [])
+        .filter(f => /^image\//.test(f.type));
+      if (fs.length) ocrAdd(fs);
+    });
+  }
+  $('sheetIn').querySelectorAll('[data-who]').forEach(sel => sel.onchange = () => {
+    const j = ocrJobs[+sel.dataset.who];
+    if (j) j.slug = sel.value;
+    ocrBulkDraw();
+  });
+  $('sheetIn').querySelectorAll('[data-txt]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.txt;
+    ocrShow = (ocrShow === i ? -1 : i);
+    ocrBulkDraw();
+  });
+  // Ctrl+V прямо в панели: Win+Shift+S кладёт снимок в буфер, и его не надо
+  // никуда сохранять. Обработчик один на документ, ставим его однажды.
+  if (!window.__ocrPaste) {
+    window.__ocrPaste = e => {
+      if (!$('ocrDrop')) return;                 // панель закрыта — не мешаем
+      const cd = e.clipboardData;
+      if (!cd) return;
+      const fs = [...(cd.items || [])]
+        .filter(x => x.type && x.type.indexOf('image') === 0)
+        .map(x => x.getAsFile()).filter(Boolean);
+      if (!fs.length) return;
+      e.preventDefault();
+      ocrAdd(fs);
+    };
+    document.addEventListener('paste', window.__ocrPaste);
+  }
+  const ap = $('ocrApply');
+  if (ap) ap.onclick = ocrApplyAll;
+  const cl = $('ocrClear');
+  if (cl) cl.onclick = () => { ocrJobs = []; ocrShow = -1; ocrBulkDraw(); };
+}
+function ocrSayBulk(t) {
+  const el = $('ocrBulkSay');
+  if (el) el.textContent = t;
+}
+function ocrPb(v) {
+  const el = $('ocrBulkPb');
+  if (el) el.style.width = Math.max(0, Math.min(100, v)) + '%';
+}
+function ocrAdd(files) {
+  const свежие = files.filter(f => /^image\//.test(f.type));
+  if (!свежие.length) return;
+  свежие.forEach(f => ocrJobs.push({ name: f.name || 'из буфера', file: f, work: true, stats: {}, text: '' }));
+  ocrBulkDraw();
+  ocrRun();
+}
+// Разбираем по одному: движок всё равно однопоточный, а несколько сразу —
+// это несколько копий модели в памяти.
+async function ocrRun() {
+  if (ocrBusy) return;
+  ocrBusy = true;
+  try {
+    let eng;
+    try { eng = await ocrEngine(t => ocrSayBulk(t)); }
+    catch (e) { ocrSayBulk('не вышло: ' + e.message); ocrJobs.forEach(j => { j.work = false; }); ocrBulkDraw(); return; }
+    for (;;) {
+      const i = ocrJobs.findIndex(j => j.work);
+      if (i < 0) break;
+      const j = ocrJobs[i];
+      const всего = ocrJobs.length, номер = i + 1;
+      ocrSayBulk('читаю ' + номер + ' из ' + всего + ': ' + j.name);
+      try {
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = () => rej(new Error('не картинка'));
+          im.src = URL.createObjectURL(j.file);
+        });
+        j.thumb = ocrThumb(img);
+        const cv = ocrPrep(img);
+        URL.revokeObjectURL(img.src);
+        const r = await eng.recognize(cv);
+        j.text = (r && r.data && r.data.text) || '';
+        j.stats = ocrStatsFromText(j.text);
+        const кто = ocrWho(j.text, j.name);
+        if (кто) { j.slug = кто.a.slug; j.how = кто.how; }
+      } catch (e) {
+        j.text = 'сбой: ' + e.message;
+      }
+      j.work = false; j.file = null;
+      ocrPb(номер * 100 / всего);
+      ocrBulkDraw();
+    }
+    const готовых = ocrJobs.filter(j => j.slug && Object.keys(j.stats || {}).length).length;
+    ocrSayBulk('готово: ' + готовых + ' из ' + ocrJobs.length +
+      (готовых < ocrJobs.length ? ' — остальным поставь эспера вручную' : ''));
+    ocrPb(100);
+  } finally { ocrBusy = false; }
+}
+function ocrApplyAll() {
+  let людей = 0, чисел = 0;
+  ocrJobs.forEach(j => {
+    if (!j.slug || !agentBy(j.slug)) return;
+    const got = ocrPick(j.stats);
+    const n = Object.keys(got).length;
+    if (!n) return;
+    const my = myStats(j.slug);
+    Object.keys(got).forEach(k => { my[k] = got[k]; });
+    myStatsSave(j.slug, my);
+    людей++; чисел += n;
+  });
+  if (!людей) { ocrSayBulk('записывать нечего'); return; }
+  ocrSayBulk('записано: ' + людей + ' ' + plural(людей, 'эспер', 'эспера', 'эсперов') +
+    ', ' + чисел + ' ' + plural(чисел, 'значение', 'значения', 'значений') +
+    ' — проверь числа глазами');
+  // Карточку эспера перерисовывать не нужно: она живёт в этой же панели и
+  // сейчас закрыта нами. Числа лежат в localStorage — карточка возьмёт их,
+  // когда откроется снова.
 }
 
 // «Сейчас» — что с эспером сегодня: баннер, место в мете, твои характеристики
@@ -5552,6 +5999,7 @@ function bindMy(slug) {
     const el = $('ocrSay');
     if (el) { el.textContent = t; el.style.color = bad ? '#fbbf24' : 'var(--acc)'; }
   };
+  if ($('ocrBulkBtn')) $('ocrBulkBtn').onclick = showOcrBulk;
   if ($('ocrPick')) {
     $('ocrPick').onclick = () => $('ocrFile').click();
     $('ocrFile').onchange = e => { const f = e.target.files[0]; if (f) ocrShot(f, slug, say); };
