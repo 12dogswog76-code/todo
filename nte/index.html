@@ -815,6 +815,25 @@
     text-transform:uppercase;letter-spacing:.08em}
   .cloudb:hover{border-color:var(--acc);color:var(--tx)}
   .cloudb.on{color:var(--acc);border-color:hsla(140,70%,60%,.4)}
+  /* моя готовность: карточки одного уровня, в несколько колонок */
+  .rdyg{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:9px;
+    margin-top:10px}
+  .rdy{display:grid;grid-template-columns:58px 1fr;gap:10px;padding:9px;cursor:pointer;
+    background:var(--pan);border:1px solid var(--line);border-radius:13px;transition:.15s}
+  .rdy:hover{border-color:var(--line-hard);background:var(--pan2)}
+  .rdy.pale{opacity:.55}
+  .rdy img{width:58px;height:58px;border-radius:11px;object-fit:cover;background:#0d0f14}
+  .rdy-t{display:flex;align-items:center;gap:7px}
+  .rdy-t b{font-size:13px}
+  .rdy-t u{text-decoration:none;font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;
+    color:var(--tier,var(--tx2));border:1px solid currentColor}
+  .rdy-t i{margin-left:auto;font-style:normal;font-family:var(--mono);font-size:12px;font-weight:700}
+  .rdy-p{height:4px;border-radius:3px;background:var(--line);overflow:hidden;margin:6px 0 5px}
+  .rdy-p i{display:block;height:100%}
+  .rdy-s{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:11px;color:var(--tx2)}
+  .rdy-s span{display:flex;align-items:center;gap:3px}
+  .rdy-s b{color:#f87171;font-family:var(--mono);font-weight:600}
+  .rdy-s.ok span{color:var(--ok)}
   .tools{position:relative}
   .toolsm{position:absolute;right:0;top:calc(100% + 7px);min-width:230px;z-index:40;
     background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:5px;
@@ -1343,6 +1362,7 @@
       <button data-tool="cloud" id="cloudBtn">облако<i>синхронизация между устройствами</i></button>
       <button data-tool="plan">план<i>материалы на всех, кого качаешь</i></button>
       <button data-tool="cmp">сравнить<i>кого качать первым</i></button>
+      <button data-tool="ready">готовность<i>все эсперы против целей гайда</i></button>
       <button data-tool="stat">скрины<i>характеристики из снимков экрана</i></button>
     </div>
   </div>
@@ -1360,7 +1380,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v67';
+const APP_VER = 'v68';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -4756,6 +4776,110 @@ function bindCalc() {
   });
 }
 
+// ── что даст замена ────────────────────────────────────────────────────────
+// Вопрос, который встаёт каждый раз, когда с подземелья падает картридж:
+// ставить или оставить старый. На глаз не решается — крит-урон и атака
+// складываются по-разному, и «+20% крит. урона» у одного эспера сильнее
+// «+12,5% атаки», а у другого слабее.
+//
+// Считаем по той же модели, что и калькулятор отдачи выше:
+//     урон = ATK × (1 + CR×CD) × (1 + сумма процентов урона)
+// Берём твои числа как «сейчас», прикладываем прибавку — и смотрим отношение.
+// Это прикидка по множителям, а не точный урон: коэффициенты умений, реакции
+// стихий и защита цели сюда не входят. Зато для выбора «этот или тот» их и не
+// нужно — они одинаково умножают оба варианта и в отношении сокращаются.
+function dmgOf(s) {
+  const cr = Math.min(100, Math.max(0, +s.cr || 0)) / 100;
+  const cd = Math.max(0, +s.cd || 0) / 100;
+  const dm = Math.max(0, +s.dmg || 0) / 100;
+  return Math.max(1, +s.atk || 1) * (1 + cr * cd) * (1 + dm);
+}
+// Готовые прибавки: строки главного стата и наборы сабстатов S-картриджа.
+// Числа те же, что в SUB_S, — один источник на оба калькулятора.
+const SWAP_PRESETS = [
+  { n: 'крит. шанс +' + SUB_S.cr + '%',  d: { cr: SUB_S.cr } },
+  { n: 'крит. урон +' + SUB_S.cd + '%',  d: { cd: SUB_S.cd } },
+  { n: 'атака +' + SUB_S.atkp + '%',     d: { atkp: SUB_S.atkp } },
+  { n: 'урон стихии +' + SUB_S.dmg + '%',d: { dmg: SUB_S.dmg } },
+  { n: 'атака +' + SUB_S.atk,            d: { atk: SUB_S.atk } }
+];
+const swap = { atk: 0, cr: 0, cd: 0, dmg: 0, atkp: 0 };
+function swapNow(slug) {
+  const my = myStats(slug);
+  const G = ((GUIDE.agents || {})[slug] || {}).goals || {};
+  const v = (k, g) => (my[k] != null ? my[k] : (G[g] ? G[g][0] : 0));
+  return { atk: v('atk', 'atk') || 2000, cr: v('cr', 'cr') || 50,
+           cd: v('cd', 'cd') || 100,
+           dmg: (my.dmg != null ? my.dmg : ((G.elem ? G.elem[0] : 0) + (G.dmg ? G.dmg[0] : 0))) || 0,
+           mine: my.atk != null || my.cr != null || my.cd != null };
+}
+// Проценты атаки считаем от базовой — от неё же их считает игра. Базовую
+// берём как половину итоговой: у собранного эспера это близко к правде, а
+// спрашивать лишнее число ради прикидки незачем.
+function swapAfter(now) {
+  const base = Math.max(500, Math.round(now.atk * 0.5));
+  return { atk: now.atk + (+swap.atk || 0) + base * (+swap.atkp || 0) / 100,
+           cr:  now.cr + (+swap.cr || 0),
+           cd:  now.cd + (+swap.cd || 0),
+           dmg: now.dmg + (+swap.dmg || 0) };
+}
+function swapHtml(slug) {
+  const now = swapNow(slug), after = swapAfter(now);
+  const было = dmgOf(now), стало = dmgOf(after);
+  const рост = (стало / было - 1) * 100;
+  const поле = (k, n, шаг) => '<div><label>' + esc(n) + '</label>' +
+    '<input type="number" step="' + шаг + '" data-sw="' + k + '" value="' + swap[k] + '"></div>';
+  const потолок = now.cr + (+swap.cr || 0) > 100
+    ? '<div class="hint" style="color:#fbbf24;margin-top:6px">Крит-шанс перевалил за 100% — ' +
+      'лишнее в расчёт не идёт и в игре пропадает.</div>' : '';
+  return '<div class="hint" style="margin:0 0 8px">' +
+      (now.mine ? 'Сейчас: атака ' + Math.round(now.atk) + ', крит ' + now.cr + '% / ' + now.cd +
+                  '%, урон +' + Math.round(now.dmg) + '%.'
+                : 'Своих чисел нет — считаю от целей гайда. Вставь скрин выше, и пойдёт по твоим.') +
+    '</div>' +
+    '<div class="mapbar">' + SWAP_PRESETS.map((p, i) =>
+      '<button class="fb" data-swp="' + i + '">+ ' + esc(p.n) + '</button>').join('') +
+      '<button class="fb" data-swclr>сбросить</button>' +
+    '</div>' +
+    '<div class="inp" style="margin-top:9px">' +
+      поле('atk', 'атака, плоская', '1') + поле('atkp', 'атака, %', '0.1') +
+      поле('cr', 'шанс крита, %', '0.1') + поле('cd', 'крит. урон, %', '0.1') +
+      поле('dmg', 'урон стихии, %', '0.1') +
+    '</div>' +
+    '<div class="verdict" id="swVerdict">' + swapVerdict(рост, now, after) + '</div>' + потолок +
+    '<div class="hint">Прикидка по множителям: атака × крит × проценты урона. ' +
+    'Коэффициенты умений и защита цели одинаково умножают оба варианта, поэтому ' +
+    'на сравнение не влияют. Минус ставь со знаком «−», если старый картридж ' +
+    'что-то отдаёт: тогда увидишь итог замены целиком.</div>';
+}
+function swapVerdict(рост, now, after) {
+  if (!рост) return 'Ничего не добавлено — выбери прибавку кнопкой или впиши числа.';
+  const знак = рост > 0 ? '+' : '';
+  return 'Урон <b>' + знак + рост.toFixed(1) + '%</b> · атака ' + Math.round(now.atk) +
+    ' → <b>' + Math.round(after.atk) + '</b> · крит ' + now.cr + '/' + now.cd +
+    ' → <b>' + Math.round(after.cr * 10) / 10 + '/' + Math.round(after.cd * 10) / 10 + '</b>';
+}
+function bindSwap(slug) {
+  const box = $('swapBox');
+  if (!box) return;
+  const пере = () => { box.innerHTML = swapHtml(slug); bindSwap(slug); };
+  box.querySelectorAll('[data-swp]').forEach(b => b.onclick = () => {
+    const d = SWAP_PRESETS[+b.dataset.swp].d;
+    Object.keys(d).forEach(k => { swap[k] = Math.round((swap[k] + d[k]) * 10) / 10; });
+    пере();
+  });
+  const clr = box.querySelector('[data-swclr]');
+  if (clr) clr.onclick = () => { Object.keys(swap).forEach(k => { swap[k] = 0; }); пере(); };
+  box.querySelectorAll('input[data-sw]').forEach(inp => inp.oninput = () => {
+    const v = parseFloat(inp.value);
+    swap[inp.dataset.sw] = isFinite(v) ? v : 0;
+    // перерисовываем только вывод — иначе поле теряет фокус на каждой цифре
+    const now = swapNow(slug), after = swapAfter(now);
+    const el = box.querySelector('#swVerdict');
+    if (el) el.innerHTML = swapVerdict((dmgOf(after) / dmgOf(now) - 1) * 100, now, after);
+  });
+}
+
 // ── карточка эспера ────────────────────────────────────────────────────────
 function prioHtml(s) {
   if (!s) return '';
@@ -4975,6 +5099,7 @@ function open(slug) {
 function bindShBody() {
   bindPlan();
   bindCalc();
+  bindSwap(shSlug);
   bindAwk(shSlug);
   bindMy(shSlug);
   bindCharPlan(shSlug);
@@ -5789,7 +5914,8 @@ function nowHtml(slug, g, a, cap) {
         (next.patch ? ' · ' + esc(next.patch) : '') + '</div>'
       : '<div class="hint">Баннера в расписании нет — либо он уже прошёл, либо ещё не объявлен.</div>';
   const cal = (g.goals && (g.goals.cr || g.goals.cd))
-    ? cap('Что качать дальше', 'отдача одного сабстата') + '<div id="calcBox">' + calcHtml() + '</div>'
+    ? cap('Что качать дальше', 'отдача одного сабстата') + '<div id="calcBox">' + calcHtml() + '</div>' +
+      cap('Что даст замена', 'прикидка прироста урона') + '<div id="swapBox">' + swapHtml(slug) + '</div>'
     : '';
   const plan = ((GEAR && GEAR.charUp) || {})[slug]
     ? cap('Во что обойдётся прокачка', 'книги, монеты, материалы прорывов') +
@@ -6113,10 +6239,118 @@ function bindTools() {
     if (t === 'cloud') showSync();
     else if (t === 'plan') showPlan();
     else if (t === 'cmp') showCmp();
+    else if (t === 'ready') showReady();
     else if (t === 'stat') showOcrBulk();
   });
   document.addEventListener('click', e => { if (!box.contains(e.target)) закрыть(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') закрыть(); });
+}
+// ── моя готовность ─────────────────────────────────────────────────────────
+// Пока характеристики вписывались руками, смотреть их можно было только по
+// одному — в карточке. Теперь они заливаются пачкой, и появляется вопрос
+// покрупнее: кто из двадцати четырёх дотянут до целей гайда, а кто просел и
+// на сколько. Одна таблица отвечает на него целиком.
+let readyAll = false;      // показывать ли тех, по кому чисел ещё нет
+function readyOne(slug) {
+  const G = ((GUIDE.agents || {})[slug] || {}).goals || {};
+  const my = myStats(slug);
+  const rows = [];
+  MY_KEYS.forEach(k => {
+    const цель = G[k[2]] ? G[k[2]][0] : null;
+    if (цель == null || !цель) return;
+    const есть = my[k[0]];
+    rows.push({ k: k[0], n: k[1].replace(', %', ''), pct: !!k[3], цель: цель, есть: есть,
+                доля: есть == null ? null : Math.min(1, есть / цель) });
+  });
+  const счит = rows.filter(r => r.доля != null);
+  return { slug: slug, rows: rows, знаем: счит.length, всего: rows.length,
+           // готовность — среднее по тем целям, для которых число известно;
+           // недостающие не портят картину, но и не засчитываются: сколько
+           // заполнено, видно рядом отдельной подписью
+           готов: счит.length ? счит.reduce((n, r) => n + r.доля, 0) / счит.length : null };
+}
+function readyHtml() {
+  const список = (DB.agents || []).map(a => {
+    const r = readyOne(a.slug);
+    r.a = a;
+    return r;
+  }).filter(r => r.всего);                 // без целей гайда сравнивать не с чем
+  const свои = список.filter(r => r.готов != null);
+  const пусто = список.filter(r => r.готов == null);
+  // Сверху то, что дальше всего от цели: именно туда идут следующие картриджи.
+  свои.sort((x, y) => x.готов - y.готов);
+  const цвет = д => д >= 1 ? 'var(--ok)' : (д >= 0.9 ? 'var(--gold)' : '#f87171');
+  const карточка = r => {
+    const отстают = r.rows.filter(x => x.доля != null && x.доля < 1)
+      .sort((x, y) => x.доля - y.доля).slice(0, 4);
+    const нет = r.rows.filter(x => x.доля == null).length;
+    return '<div class="rdy" data-slug="' + esc(r.slug) + '">' +
+      '<img src="' + portrait(r.a) + '" alt="" loading="lazy">' +
+      '<div class="rdy-b">' +
+        '<div class="rdy-t"><b>' + esc(r.a.ru) + '</b>' +
+          (r.a.tier ? '<u style="' + tierStyle(r.a.tier) + '">' + esc(r.a.tier) + '</u>' : '') +
+          '<i style="color:' + цвет(r.готов) + '">' + Math.round(r.готов * 100) + '%</i></div>' +
+        '<div class="rdy-p"><i style="width:' + Math.round(r.готов * 100) + '%;' +
+          'background:' + цвет(r.готов) + '"></i></div>' +
+        (отстают.length
+          ? '<div class="rdy-s">' + отстают.map(x =>
+              '<span>' + statIco(x.k) + esc(x.n) + ' <b>' +
+              (Math.round((x.цель - x.есть) * 10) / 10) + (x.pct ? '%' : '') + '</b></span>').join('') +
+            '</div>'
+          : '<div class="rdy-s ok"><span>все цели закрыты</span></div>') +
+        '<div class="hint" style="margin:4px 0 0">знаем ' + r.знаем + ' из ' + r.всего +
+          ' целей' + (нет ? ' · нет чисел: ' + нет : '') + '</div>' +
+      '</div>' +
+    '</div>';
+  };
+  const средне = свои.length
+    ? Math.round(свои.reduce((n, r) => n + r.готов, 0) / свои.length * 100) : 0;
+  return '<div class="sh-body">' +
+    '<div class="sh-title"><h2>Моя готовность<i>твои числа против целей гайда</i></h2>' +
+      '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
+    '</div>' +
+    (свои.length
+      ? '<div class="stat">' +
+          '<div class="st"><b>' + свои.length + '</b>' +
+            plural(свои.length, 'эспер заполнен', 'эспера заполнено', 'эсперов заполнено') + '</div>' +
+          (() => { const n = свои.filter(r => r.готов >= 1).length;
+            return '<div class="st' + (n ? ' ok' : '') + '"><b>' + n + '</b>' +
+              plural(n, 'дотянут до целей', 'дотянуты до целей', 'дотянуто до целей') + '</div>'; })() +
+          '<div class="st"><b>' + средне + '%</b>средняя готовность</div>' +
+        '</div>' +
+        '<div class="rdyg">' + свои.map(карточка).join('') + '</div>'
+      : '<div class="box"><div class="hint" style="margin:0">Чисел пока нет ни по кому. ' +
+        'Открой «инструменты → скрины» и кинь туда снимки экрана характеристик — ' +
+        'дальше эта страница заполнится сама.</div></div>') +
+    (пусто.length
+      ? '<div class="cap"><b>Без чисел</b><span></span><em>' + пусто.length + '</em></div>' +
+        (readyAll
+          ? '<div class="rdyg">' + пусто.map(r =>
+              '<div class="rdy pale" data-slug="' + esc(r.slug) + '">' +
+                '<img src="' + portrait(r.a) + '" alt="" loading="lazy">' +
+                '<div class="rdy-b"><div class="rdy-t"><b>' + esc(r.a.ru) + '</b></div>' +
+                '<div class="hint" style="margin:4px 0 0">характеристики не вписаны</div></div>' +
+              '</div>').join('') + '</div>'
+          : '') +
+        '<div class="mapbar" style="margin-top:8px">' +
+          '<button class="fb" id="rdyAll">' + (readyAll ? 'спрятать' : 'показать список') + '</button>' +
+        '</div>'
+      : '') +
+    '<div class="hint">Готовность — среднее по тем целям гайда, для которых число ' +
+    'известно. Цель «закрыта», когда значение дотянуло до нижней границы из ' +
+    'карточки эспера. Проценты перевыполнения не учитываются: 200% крит. урона ' +
+    'при цели 180 считаются как 100%, иначе один стат прятал бы провал остальных.</div>' +
+  '</div>';
+}
+function showReady() {
+  $('sheetIn').innerHTML = readyHtml();
+  $('sheet').classList.add('on');
+  const c = $('close');
+  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  const b = $('rdyAll');
+  if (b) b.onclick = () => { readyAll = !readyAll; showReady(); };
+  $('sheetIn').querySelectorAll('.rdy[data-slug]').forEach(el =>
+    el.onclick = () => open(el.dataset.slug));
 }
 function showFresh() {
   const codes = (codesLive && codesLive.updated) || (GUIDE && GUIDE.codes && GUIDE.codes.updated) || '';
