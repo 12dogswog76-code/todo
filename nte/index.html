@@ -139,6 +139,54 @@
   body.mapmode #foot{margin-top:8px}
   .mapcnt i{font-style:normal;color:hsla(0,0%,100%,.3)}
 
+  /* ── «что горит» на главной ──
+     Узкие плашки со сроками: баннеры, события, неактивированные коды. */
+  .tds{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+    gap:7px;margin-bottom:14px}
+  .td{padding:9px 12px;border-radius:12px;background:var(--pan);
+    border:1px solid var(--line-soft);cursor:pointer;transition:.15s}
+  .td:hover{border-color:var(--line-hard);transform:translateY(-1px)}
+  .td b{display:block;font-size:13px;color:var(--tx);line-height:1.25}
+  .td i{display:block;margin-top:3px;font-style:normal;font-size:10.5px;
+    color:var(--tx3)}
+  /* горит сильнее: три дня и меньше */
+  .td.hot{border-color:hsla(41,100%,50%,.45);
+    background:linear-gradient(135deg,hsla(41,100%,50%,.10),var(--pan))}
+  .td.hot i{color:var(--gold)}
+
+  /* ── что изменилось с прошлого прогона сборщика ── */
+  .chgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:5px}
+  .chg{font-size:11.5px;line-height:1.45;color:var(--tx2);padding:5px 9px;
+    border-radius:9px;background:var(--pan2);border:1px solid var(--line-soft);
+    border-left-width:3px}
+  .chg.add{border-left-color:var(--acc);color:var(--tx)}
+  .chg.gone{border-left-color:hsla(0,70%,60%,.6)}
+
+  /* ── сравнение двух эсперов ── */
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .cmp-h{display:flex;align-items:center;gap:10px;background:var(--pan);
+    border:1px solid var(--line-soft);border-radius:14px;padding:10px 12px}
+  .cmp-h img{width:52px;height:52px;border-radius:12px;object-fit:cover;flex:none;
+    background:#0d0f14;border:1px solid var(--line)}
+  .cmp-h select{flex:1;min-width:0;background:#00000066;border:1px solid var(--line-soft);
+    border-radius:10px;color:var(--tx);padding:8px 10px;font-family:var(--body);
+    font-size:13px}
+  .cmp-h select:focus{outline:none;border-color:hsla(140,70%,60%,.4)}
+  .cmp-t{display:grid;gap:4px;margin-bottom:12px}
+  .cmp-r{display:grid;grid-template-columns:200px 1fr 1fr;gap:8px;align-items:center;
+    padding:7px 12px;border-radius:10px;background:var(--pan);
+    border:1px solid var(--line-soft)}
+  .cmp-r u{font-style:normal;text-decoration:none;font-size:10px;font-weight:800;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)}
+  .cmp-r b{font-size:13px;color:var(--tx2);font-weight:600}
+  .cmp-r b.win{color:var(--acc);font-weight:800}
+  .cmp2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .cmp2 ul{margin:0;padding-left:17px;font-size:12px;line-height:1.6;color:var(--tx2)}
+  @media (max-width:760px){
+    .cmp,.cmp2{grid-template-columns:1fr}
+    .cmp-r{grid-template-columns:1fr;gap:2px}
+  }
+
   /* ── планировщик: строка эспера ──
      Портрет, имя, «1 → 80» и число прорывов в одну линию. Раньше это были
      блоки-таблетки в три ряда на каждого, и двадцать эсперов занимали
@@ -1221,6 +1269,7 @@
   <div class="logo">NTE<b>·</b><i id="ver"></i></div>
   <button class="cloudb" id="cloudBtn" title="Синхронизация отметок между устройствами">облако</button>
   <button class="cloudb" id="planBtn" title="Сколько всего материалов нужно на тех, кого качаешь">план</button>
+  <button class="cloudb" id="cmpBtn" title="Сравнить двух эсперов: кого качать первым">сравнить</button>
   <div class="tabs" id="tabs"></div>
   <div class="top-sp"></div>
   <!-- Поиск убран из шапки: на широком экране он уезжал вниз отдельной
@@ -1237,7 +1286,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v62';
+const APP_VER = 'v64';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1265,6 +1314,8 @@ let ART = {};
 let SKL = {};
 // короткая выжимка «что даёт команде»: слаг → две-три строки
 let BRIEF = {};
+// что изменилось в данных с прошлого прогона сборщика
+let CHANGES = null;
 
 // ── перевод текстов с prydwen ──────────────────────────────────────────────
 // Сами тексты приезжают с сайта по-английски и при каждом новом прогоне
@@ -1452,11 +1503,12 @@ async function load() {
   // (опыт, материалы прокачки) на странице просто не появляются.
   const grab = (f, opt) => fetch(f + '?v=' + APP_VER).then(r => r.json())
     .catch(() => opt ? null : Promise.reject(new Error(f)));
-  const [db, guide, dict, gear, i18n, city, awk, sdb, nb, art, sk] = await Promise.all([
+  const [db, guide, dict, gear, i18n, city, awk, sdb, nb, art, sk, ch] = await Promise.all([
     grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1),
     grab('nte-gear.json', 1), grab('nte-i18n.json', 1), grab('nte-city.json', 1),
     grab('nte-awaken.json', 1), grab('nte-map.json', 1), grab('nte-build.json', 1),
-    grab('nte-art.json', 1), grab('nte-skills.json', 1)
+    grab('nte-art.json', 1), grab('nte-skills.json', 1),
+    grab('nte-changes.json', 1)
   ]);
   DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n; CITY = city;
   AWK = (awk && awk.awaken) || {};
@@ -1465,10 +1517,12 @@ async function load() {
   ART = (art && art.a) || {};
   SKL = (sk && sk.a) || {};
   BRIEF = (sk && sk.brief) || {};
+  CHANGES = ch || null;
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
   $('cloudBtn').onclick = showSync;
   $('planBtn').onclick = showPlan;
+  $('cmpBtn').onclick = showCmp;
   $('cloudBtn').classList.toggle('on', !!syncCfg().np);
   workerVer();
   drawTabs();
@@ -1548,6 +1602,62 @@ function espersShown() {
     return (t(x) - t(y)) || x.ru.localeCompare(y.ru, 'ru');
   });
 }
+// ── что делать сегодня ─────────────────────────────────────────────────────
+// Сводка на главной. Всё это есть на своих вкладках, но чтобы понять «что
+// горит», приходилось обойти три: баннеры, коды и события. Здесь собрано то,
+// у чего есть срок и что можно потерять.
+function todayHtml() {
+  const now = Date.now(), день = 86400000;
+  const дней = t => Math.ceil((Date.parse(t) - now) / день);
+  const карточка = (цвет, что, когда, куда) =>
+    '<div class="td' + (цвет ? ' ' + цвет : '') + '"' +
+      (куда ? ' data-td="' + куда + '" title="перейти"' : '') + '>' +
+      '<b>' + что + '</b><i>' + когда + '</i></div>';
+
+  const пункты = [];
+
+  // баннеры, которые вот-вот кончатся
+  ((GUIDE && GUIDE.banners) || []).forEach(b => {
+    if (!b.to || !/current|сейчас/i.test(b.key + ' ' + b.group)) return;
+    const д = дней(b.to);
+    if (!isFinite(д) || д < 0 || д > 10) return;
+    const кто = b.slug ? (agentBy(b.slug) || {}).ru : banName(b);
+    пункты.push({ д: д, html: карточка(д <= 3 ? 'hot' : '',
+      esc(кто || b.name), 'баннер — ' + (д <= 0 ? 'последний день' :
+      'ещё ' + д + ' ' + plural(д, 'день', 'дня', 'дней')), 'ban') });
+  });
+
+  // события: что заканчивается в ближайшую неделю
+  ((evLive && evLive.list) || []).forEach(e => {
+    if (!e.to || e.perm) return;
+    const д = дней(e.to);
+    if (!isFinite(д) || д < 0 || д > 7) return;
+    пункты.push({ д: д, html: карточка(д <= 2 ? 'hot' : '',
+      esc(e.name), 'событие — ' + (д <= 0 ? 'последний день' :
+      'ещё ' + д + ' ' + plural(д, 'день', 'дня', 'дней')), 'ban') });
+  });
+
+  // коды, которые ещё не активированы
+  const коды = ((codesLive && codesLive.list) || (GUIDE && GUIDE.codes && GUIDE.codes.list) || []);
+  const было = codesUsed();
+  const свежие = коды.filter(c => c && c.code && !было[c.code] && !/expired|срок вышел/i.test(c.note || ''));
+  if (свежие.length) {
+    пункты.push({ д: 99, html: карточка('', свежие.length + ' ' +
+      plural(свежие.length, 'код не активирован', 'кода не активированы', 'кодов не активировано'),
+      'награды сгорают со временем', 'codes') });
+  }
+
+  if (!пункты.length) return '';
+  пункты.sort((a, b) => a.д - b.д);
+  return '<div class="cap" style="margin-top:0"><b>Что горит</b><span></span>' +
+    '<em>сроки заканчиваются</em></div>' +
+    '<div class="tds">' + пункты.map(x => x.html).join('') + '</div>';
+}
+function bindToday() {
+  $('body').querySelectorAll('[data-td]').forEach(el => el.onclick = () => {
+    state.tab = el.dataset.td; state.q = ''; drawTabs(); draw();
+  });
+}
 function drawEspers() {
   const els = [...new Set(DB.agents.map(a => a.el).filter(Boolean))].sort();
   const roles = [...new Set(DB.agents.map(a => a.role).filter(Boolean))];
@@ -1559,7 +1669,8 @@ function drawEspers() {
     fgroup('тир', 'tier', tiers, null, null) +
     '<span class="fcnt">' + list.length + ' из ' + DB.agents.length + '</span>';
   bindFilters();
-  $('body').innerHTML = list.length ? '<div class="grid">' + list.map(a =>
+  const сегодня = todayHtml();
+  $('body').innerHTML = (сегодня || '') + (list.length ? '<div class="grid">' + list.map(a =>
     '<div class="card" data-slug="' + a.slug + '" style="' + elStyle(a.el) + ';' +
       tierStyle(a.tier) + '">' +
       '<div class="card-p">' +
@@ -1571,8 +1682,13 @@ function drawEspers() {
         '</span>' +
         '<div class="card-n"><b>' + esc(a.ru) + '</b><i>' + esc(a.en) + '</i></div>' +
       '</div></div>').join('') + '</div>'
-    : '<div class="empty">Никого не нашлось — сними фильтры или почисти поиск.</div>';
+    : '<div class="empty">Никого не нашлось — сними фильтры или почисти поиск.</div>');
   $('body').querySelectorAll('.card').forEach(c => c.onclick = () => open(c.dataset.slug));
+  bindToday();
+  // События приезжают с воркера позже страницы: как приедут — сводку
+  // перерисовываем, иначе «что горит» останется без них. Просим один раз:
+  // иначе отрисовка звала бы загрузку, а та — отрисовку, и так по кругу.
+  if (!evLive && !evAsked) { evAsked = 1; evRefresh(); }
   foot('Имена — из локализации игры, картинки — с вики, сборки — prydwen.');
 }
 
@@ -2437,6 +2553,7 @@ function drawBanners() {
 // календаря ntebuild, а страница показывает, что идёт сейчас и что скоро.
 const EV_API = API_BASES.map(b => b + '/api/nte/events');
 let evLive = null;
+let evAsked = 0;       // запрос на события уже отправлен — второй раз не нужно
 const EV_KIND = {
   'In-Game Event': 'событие', 'Ongoing Activity': 'постоянная активность',
   'Beyond the Rails': 'За рельсами', 'Character Banner': 'баннер эспера',
@@ -2491,6 +2608,8 @@ async function evRefresh(force) {
   try {
     evLive = await Promise.any(EV_API.map(one));
     if (state.tab === 'ban') evDraw();
+    // на главной события участвуют в сводке «что горит» — обновляем и её
+    if (state.tab === 'espers') draw();
   } catch (e) { evLive = null; }
 }
 // ── обратный отсчёт ────────────────────────────────────────────────────────
@@ -5515,6 +5634,97 @@ function planPanelHtml() {
     'они только складываются.</div>' +
   '</div>';
 }
+// ── сравнение двух эсперов ─────────────────────────────────────────────────
+// Вопрос «кого качать первым» встаёт, когда оба S+ и оба хороши. Ответ — в
+// цифрах, которые уже собраны: место в тир-листе, роль, во что обойдётся
+// прокачка, сколько мета-составов, что даёт команде. Просто раньше их надо
+// было держать в двух вкладках одновременно.
+let cmpA = '', cmpB = '';
+function cmpVal(slug) {
+  const a = agentBy(slug) || {};
+  const g = (GUIDE.agents || {})[slug] || {};
+  const r = g.ratings || {};
+  const teams = (GUIDE.teams || []).filter(t => t.slots.some(x => x.indexOf(slug) >= 0));
+  const core = teams.filter(t => (t.slots[0] || []).indexOf(slug) >= 0).length;
+  const v = charLv(slug);
+  const c = ((GEAR.charUp || {})[slug] || []).length ? charCost(slug, v.from, v.to) : null;
+  const nb = NB[slug] || {};
+  return {
+    a: a, g: g,
+    tier: a.tier || '—',
+    el: EL_RU[a.el] || a.el || '—',
+    role: nb.role ? roleRu(nb.role) : (ROLE_RU[a.role] || a.role || '—'),
+    awk: r.awk || '—',
+    teams: teams.length, core: core,
+    arc: (g.arcs && g.arcs[0] && (ruName('arcs', g.arcs[0].n || g.arcs[0]) || g.arcs[0].n)) || '—',
+    lv: v.from + ' → ' + v.to,
+    gold: c ? c.gold : 0,
+    brief: BRIEF[slug] || []
+  };
+}
+function cmpRows(x, y) {
+  // Строка сравнения: слева одно, справа другое, лучшее подсвечено. «Лучшее»
+  // считаем только там, где это объективно — тир, число составов, цена.
+  const R = [
+    ['Место в тир-листе', x.tier, y.tier, TIERS.indexOf(y.tier) - TIERS.indexOf(x.tier)],
+    ['Стихия', x.el, y.el, 0],
+    ['Роль в команде', x.role, y.role, 0],
+    ['Мета-составов', x.teams, y.teams, x.teams - y.teams],
+    ['Из них главный', x.core, y.core, x.core - y.core],
+    ['Лучшее оружие', x.arc, y.arc, 0],
+    ['Прибавка к', x.awk, y.awk, 0],
+    ['Уровень сейчас', x.lv, y.lv, 0],
+    ['Прокачка обойдётся', x.gold ? num(x.gold) + ' монет' : '—',
+                          y.gold ? num(y.gold) + ' монет' : '—',
+                          (y.gold || 0) - (x.gold || 0)]
+  ];
+  return R.map(r => {
+    const л = r[3] > 0 ? ' win' : '', п = r[3] < 0 ? ' win' : '';
+    return '<div class="cmp-r"><u>' + esc(r[0]) + '</u>' +
+      '<b class="' + л.trim() + '">' + esc(String(r[1])) + '</b>' +
+      '<b class="' + п.trim() + '">' + esc(String(r[2])) + '</b></div>';
+  }).join('');
+}
+function cmpHtml() {
+  const список = (DB.agents || []).slice().sort((a, b) => a.ru.localeCompare(b.ru, 'ru'));
+  if (!cmpA) cmpA = (список[0] || {}).slug || '';
+  if (!cmpB) cmpB = (список[1] || {}).slug || '';
+  const выбор = (кто, знач) => '<select data-cmp="' + кто + '">' +
+    список.map(a => '<option value="' + esc(a.slug) + '"' +
+      (a.slug === знач ? ' selected' : '') + '>' + esc(a.ru) + '</option>').join('') +
+    '</select>';
+  const x = cmpVal(cmpA), y = cmpVal(cmpB);
+  const голова = (v, кто) =>
+    '<div class="cmp-h">' +
+      '<img src="' + portrait(v.a) + '" alt="" loading="lazy">' +
+      выбор(кто, кто === 'a' ? cmpA : cmpB) +
+    '</div>';
+  const даёт = v => v.brief.length
+    ? '<ul>' + v.brief.slice(0, 2).map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>'
+    : '<div class="hint" style="margin:0">данных пока нет</div>';
+  return '<div class="sh-body">' +
+    '<div class="sh-title"><h2>Кого качать первым<i>два эспера рядом</i></h2>' +
+      '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
+    '</div>' +
+    '<div class="cmp">' + голова(x, 'a') + голова(y, 'b') + '</div>' +
+    '<div class="cmp-t">' + cmpRows(x, y) + '</div>' +
+    '<div class="cap"><b>Что даёт команде</b><span></span><em>из умений в игре</em></div>' +
+    '<div class="cmp2"><div class="box">' + даёт(x) + '</div>' +
+      '<div class="box">' + даёт(y) + '</div></div>' +
+    '<div class="hint">Подсвечено то, что объективно больше: место в тир-листе, ' +
+    'число составов и цена прокачки. Остальное — на твой вкус.</div>' +
+  '</div>';
+}
+function showCmp() {
+  $('sheetIn').innerHTML = cmpHtml();
+  $('sheet').classList.add('on');
+  const c = $('close');
+  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  $('sheetIn').querySelectorAll('[data-cmp]').forEach(sel => sel.onchange = () => {
+    if (sel.dataset.cmp === 'a') cmpA = sel.value; else cmpB = sel.value;
+    showCmp();
+  });
+}
 function showPlan() {
   $('sheetIn').innerHTML = planPanelHtml();
   $('sheet').classList.add('on');
@@ -5522,6 +5732,26 @@ function showPlan() {
   if (c) c.onclick = () => $('sheet').classList.remove('on');
   $('sheetIn').querySelectorAll('[data-plan-slug]').forEach(el =>
     el.onclick = () => open(el.dataset.planSlug));
+}
+// Что приехало с прошлого прогона сборщика. Список готовит build-nte-db.ps1:
+// он сравнивает свежие данные со снимком прошлого раза. После патча это первый
+// вопрос — что нового, — и раньше на него приходилось отвечать глазами.
+function changesHtml() {
+  const c = CHANGES;
+  if (!c || !(c.list || []).length) return '';
+  const цвет = t => t.charAt(0) === '+' ? 'add' : (t.charAt(0) === '-' ? 'gone' : '');
+  const строка = t => '<div class="chg ' + цвет(t) + '">' +
+    esc(t.replace(/^[+~-]\s*/, '')) + '</div>';
+  const список = c.list;
+  return '<div class="cap"><b>Что приехало в прошлый прогон</b><span></span>' +
+      '<em>' + список.length + ' ' +
+      plural(список.length, 'изменение', 'изменения', 'изменений') + '</em></div>' +
+    '<div class="box" style="padding-top:10px">' +
+      '<div class="chgs">' + список.slice(0, 60).map(строка).join('') + '</div>' +
+      (список.length > 60 ? '<div class="hint">…и ещё ' + (список.length - 60) + '</div>' : '') +
+      '<div class="hint" style="margin-top:8px">Сравнение с прошлым прогоном ' +
+      'сборщика' + (c.built ? ' · собрано ' + esc(c.built) : '') + '.</div>' +
+    '</div>';
 }
 function showFresh() {
   const codes = (codesLive && codesLive.updated) || (GUIDE && GUIDE.codes && GUIDE.codes.updated) || '';
@@ -5539,9 +5769,11 @@ function showFresh() {
       freshRow('Коды', codes, codesLive ? 'сам, через воркер' : 'воркер не ответил', 'список кодов') +
       '</tbody></table></div>' +
       '<div class="hint">Автоматически обновляются только коды. Всё остальное — ровно то, ' +
-      'что собрано в последний прогон: после патча прогони build-nte-db.ps1 в папке nte, ' +
-      'а nte-pryd.js вставь в консоль браузера на странице prydwen.</div>' +
-    '</div></div>';
+      'что собрано в последний прогон: после патча запусти <b>обновить-nte.ps1</b> ' +
+      'в папке сайта — он прогонит все сборщики и выложит результат.</div>' +
+    '</div>' +
+    changesHtml() +
+    '</div>';
   $('sheet').classList.add('on');
   $('sheet').scrollTop = 0;
   document.body.style.overflow = 'hidden';
