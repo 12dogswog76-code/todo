@@ -771,10 +771,11 @@
     height:min(1600px, max(calc(100vh - 124px), 62vw));
     min-height:460px;overflow:hidden;contain:layout paint;
     border:1px solid var(--line);border-radius:16px;background:#0b0d10;
-    /* Перекрестие, а не «рука»: у руки не видно, какой именно точкой она
-       указывает, и на плотной карте непонятно, куда наводишь. У crosshair
-       центр чёткий. При перетаскивании переключается на кулак. */
-    cursor:crosshair}
+    /* Обычная стрелка. Ни «рука», ни перекрестие себя не оправдали: в
+       системной теме курсоров они могут выглядеть как угодно, а стрелка
+       узнаётся всегда. Над точкой становится указателем, при перетаскивании
+       карты — кулаком. */
+    cursor:default}
   .mapwrap:fullscreen{height:100vh;border:0;border-radius:0}
   .mapwrap.grab{cursor:grabbing}
   /* Ширину и высоту ставит скрипт: сторона окна × приближение. Масштабировать
@@ -1236,7 +1237,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v59';
+const APP_VER = 'v60';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3434,25 +3435,14 @@ function mapDots() {
   return mapDotsHot(ctx);
 }
 // Точка под курсором — поверх всех и с белым ободком.
+// Своя метка курсора тут была и убрана. Замер показал, что она встаёт ровно
+// под системным указателем — промах ноль пикселей, — но на экране с
+// масштабированием Windows выглядит вторым курсором и только сбивает. Вместо
+// неё сделано главное: широкий радиус попадания, чтобы наводиться было легко.
 function mapDotsHot(ctx) {
-  // Собственная метка курсора: тонкое перекрестие. Рисуется всегда, пока мышь
-  // над картой, — по нему видно, куда именно целишься, даже когда под ним
-  // десяток слипшихся точек.
-  if (mapCur) {
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = 'rgba(255,255,255,.55)';
-    ctx.lineWidth = 1;
-    const x = Math.round(mapCur.x) + 0.5, y = Math.round(mapCur.y) + 0.5, a = 9, b = 3;
-    ctx.beginPath();
-    ctx.moveTo(x - a, y); ctx.lineTo(x - b, y);
-    ctx.moveTo(x + b, y); ctx.lineTo(x + a, y);
-    ctx.moveTo(x, y - a); ctx.lineTo(x, y - b);
-    ctx.moveTo(x, y + b); ctx.lineTo(x, y + a);
-    ctx.stroke();
-  }
   if (!mapHot || mapHot.sx == null) return;
   ctx.globalAlpha = 1;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   // соседей обводим тускло, ту, что первой в списке, — ярко
   ctx.strokeStyle = 'rgba(255,255,255,.35)';
   for (let i = 1; i < mapHotAll.length; i++) {
@@ -3461,7 +3451,9 @@ function mapDotsHot(ctx) {
     ctx.beginPath(); ctx.arc(q.sx, q.sy, mapR + 3, 0, 6.2832); ctx.stroke();
   }
   ctx.strokeStyle = '#fff';
-  ctx.beginPath(); ctx.arc(mapHot.sx, mapHot.sy, mapR + 3, 0, 6.2832); ctx.stroke();
+  ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = 4;
+  ctx.beginPath(); ctx.arc(mapHot.sx, mapHot.sy, mapR + 4, 0, 6.2832); ctx.stroke();
+  ctx.shadowBlur = 0;
 }
 // Наведение, отметки и свои точки. Узлов у точек больше нет, поэтому события
 // висят на самом окне карты, а нужная точка ищется по координатам курсора.
@@ -3478,7 +3470,6 @@ function bindMapDots() {
                y: e.clientY - r0.top - wrap.clientTop };
     const all = mapHitAll(e.clientX, e.clientY);
     const p = all[0] || null;
-    mapDotsSoon();                 // перерисовать метку курсора
     if (p !== mapHot) {
       mapHot = p;
       mapHotAll = all;
@@ -3570,7 +3561,11 @@ function mapHitAll(cx, cy) {
   // меряется снаружи; без поправки всё смещалось на пиксель.
   const r = wrap.getBoundingClientRect();
   const x = cx - r.left - wrap.clientLeft, y = cy - r.top - wrap.clientTop;
-  const rr = (mapR + 2) * (mapR + 2);
+  // Радиус попадания заметно больше самой точки: на отдалении она рисуется
+  // пятью пикселями, и попасть в неё мышью нереально. Четырнадцать пикселей —
+  // это примерно палец на экране, целиться становится легко.
+  const rad = Math.max(14, mapR + 3);
+  const rr = rad * rad;
   const out = [];
   for (let i = mapVis.length - 1; i >= 0; i--) {
     const p = mapVis[i];
