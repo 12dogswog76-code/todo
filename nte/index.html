@@ -162,6 +162,25 @@
   .chg.add{border-left-color:var(--acc);color:var(--tx)}
   .chg.gone{border-left-color:hsla(0,70%,60%,.6)}
 
+  /* ── вкладка «События» ── */
+  .evcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:9px}
+  .evc{padding:12px 14px;border-radius:15px;background:var(--pan);
+    border:1px solid var(--line-soft)}
+  .evc.on{border-color:hsla(140,70%,60%,.35);
+    background:linear-gradient(135deg,hsla(140,70%,60%,.08),var(--pan))}
+  .evc.soon{border-color:hsla(200,80%,60%,.3)}
+  .evc.perm{opacity:.85}
+  .evc.hot{border-color:hsla(41,100%,50%,.5);
+    background:linear-gradient(135deg,hsla(41,100%,50%,.10),var(--pan))}
+  .evc-h{display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap}
+  .evc-h b{font-size:14px;color:var(--tx);flex:1;min-width:140px;line-height:1.3}
+  .evc-h u{font-style:normal;text-decoration:none;font-size:8.5px;font-weight:900;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--tx3);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px;flex:none}
+  .evc-d{margin-top:7px;font-size:11.5px;color:var(--tx2)}
+  .evc.hot .evc-d{color:var(--gold)}
+  .evc-r{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+
   /* ── сравнение двух эсперов ── */
   .cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
   .cmp-h{display:flex;align-items:center;gap:10px;background:var(--pan);
@@ -1286,7 +1305,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v64';
+const APP_VER = 'v65';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1421,7 +1440,8 @@ const state = { tab: 'espers', q: '', el: '', role: '', tier: '', rar: '', plan:
 const TABS = [
   ['espers', 'Эсперы'], ['arcs', 'Оружие'], ['carts', 'Картриджи'],
   ['tier', 'Тир-лист'], ['teams', 'Команды'], ['ban', 'Баннеры'],
-  ['codes', 'Коды'], ['city', 'Город'], ['map', 'Карта'], ['mech', 'Механики']
+  ['ev', 'События'], ['codes', 'Коды'], ['city', 'Город'], ['map', 'Карта'],
+  ['mech', 'Механики']
 ];
 
 const EL_RU = { Anima:'Анима', Chaos:'Хаос', Cosmos:'Космос',
@@ -1556,7 +1576,7 @@ function draw() {
   const one = {
     espers: drawEspers, arcs: drawArcs, carts: drawCarts, tier: drawTier,
     teams: drawTeams, ban: drawBanners, codes: drawCodes, city: drawCity,
-    map: drawMap, mech: drawMech
+    map: drawMap, mech: drawMech, ev: drawEvents
   }[t];
   if (!one) return;
   try { return one(); }
@@ -2601,6 +2621,75 @@ function evDraw() {
     part('Скоро начнутся', soon) +
     part('Постоянные', perm, 'Доступны всегда — заходить можно в любой момент.');
 }
+// ── вкладка «События» ──────────────────────────────────────────────────────
+// Раньше события дорисовывались мелким блоком под баннерами — как приложение
+// к ним. На деле это отдельная жизнь: два десятка активностей, у каждой свой
+// срок и свои награды, и смотреть на них надо не мимоходом.
+function evSort(a, b) {
+  // сначала то, что вот-вот кончится
+  const ta = Date.parse(a.to) || Infinity, tb = Date.parse(b.to) || Infinity;
+  return ta - tb || String(a.name).localeCompare(String(b.name), 'ru');
+}
+function evCard(e) {
+  const кон = Date.parse(e.to), now = Date.now();
+  const дней = isFinite(кон) ? Math.ceil((кон - now) / 86400000) : null;
+  const горит = дней != null && дней >= 0 && дней <= 3;
+  return '<div class="evc' + (e.live ? ' on' : '') + (e.soon ? ' soon' : '') +
+      (e.perm ? ' perm' : '') + (горит ? ' hot' : '') + '">' +
+    '<div class="evc-h">' +
+      '<b>' + esc(e.name) + '</b>' +
+      (e.kind ? '<u>' + esc(EV_KIND[e.kind] || e.kind) + '</u>' : '') +
+    '</div>' +
+    '<div class="evc-d">' + esc(evDays(e)) +
+      (дней != null && дней >= 0 && !e.perm
+        ? ' · ' + (дней === 0 ? 'последний день'
+                  : 'ещё ' + дней + ' ' + plural(дней, 'день', 'дня', 'дней'))
+        : '') +
+    '</div>' +
+    (e.rew ? '<div class="evc-r">' + evRew(e.rew) + '</div>' : '') +
+  '</div>';
+}
+function drawEvents() {
+  if (!evLive) {
+    $('filters').innerHTML = '';
+    $('body').innerHTML = '<div class="empty">Календарь ещё едет с воркера…</div>';
+    if (!evAsked) { evAsked = 1; evRefresh(); }
+    foot('');
+    return;
+  }
+  const q = state.q.trim().toLowerCase();
+  const all = (evLive.list || []).filter(e =>
+    !q || ((e.name || '') + ' ' + (e.rew || '')).toLowerCase().indexOf(q) >= 0);
+  const идут = all.filter(e => e.live && !e.perm).sort(evSort);
+  const скоро = all.filter(e => e.soon && !e.live).sort(evSort);
+  const пост = all.filter(e => e.perm && !e.live && !e.soon)
+                  .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ru'));
+  const прошли = all.filter(e => !e.live && !e.soon && !e.perm).sort(evSort).reverse();
+
+  $('filters').innerHTML =
+    '<span class="fcnt">' + идут.length + ' идут · ' + скоро.length + ' скоро · ' +
+    пост.length + ' постоянных</span>';
+
+  const блок = (t, list, note) => list.length
+    ? '<div class="cap"><b>' + esc(t) + '</b><span></span><em>' + list.length + '</em></div>' +
+      (note ? '<div class="hint" style="margin:0 0 8px">' + note + '</div>' : '') +
+      '<div class="evcs">' + list.map(evCard).join('') + '</div>'
+    : '';
+  $('body').innerHTML =
+    блок('Идут сейчас', идут) +
+    блок('Скоро начнутся', скоро) +
+    блок('Постоянные', пост, 'Доступны всегда — заходить можно в любой момент.') +
+    (прошли.length
+      ? '<details class="mfold" style="margin-top:12px"><summary><b>Уже закончились</b> · ' +
+        прошли.length + '</summary><div class="mfold-in">' +
+        '<div class="evcs" style="margin-top:10px">' + прошли.slice(0, 24).map(evCard).join('') +
+        '</div></div></details>'
+      : '') +
+    (!идут.length && !скоро.length && !пост.length
+      ? '<div class="empty">По запросу ничего не нашлось.</div>' : '');
+  foot('Календарь событий с ntebuild' + (evLive.ver ? ' · версия ' + esc(evLive.ver) : '') +
+       '. Даты по серверу EU.');
+}
 async function evRefresh(force) {
   const one = u => fetch(u + (force ? '?fresh=1' : ''), { cache: 'no-store' })
     .then(r => r.json())
@@ -2608,8 +2697,8 @@ async function evRefresh(force) {
   try {
     evLive = await Promise.any(EV_API.map(one));
     if (state.tab === 'ban') evDraw();
-    // на главной события участвуют в сводке «что горит» — обновляем и её
-    if (state.tab === 'espers') draw();
+    // на своей вкладке и на главной события рисуются сразу, как приедут
+    if (state.tab === 'ev' || state.tab === 'espers') draw();
   } catch (e) { evLive = null; }
 }
 // ── обратный отсчёт ────────────────────────────────────────────────────────
@@ -5265,16 +5354,19 @@ function myHtml(slug, g) {
   'команда ниже это учитывает.<br>' +
   '4. Скрипт положит в буфер строку — вернись сюда и нажми <b>Ctrl+V</b>.' +
   '<br><br><b>Все эсперы за раз.</b> Сделай по скрину на каждого, назови файлы ' +
-  'их именами («Линко.png», «zankou.png») и сложи в одну папку. Тогда вместо ' +
-  'команды выше:<br><code>powershell -ExecutionPolicy Bypass -File ' +
-  '"$env:USERPROFILE\\Downloads\\nte-ocr.ps1" -Folder "$env:USERPROFILE\\Pictures\\NTE"</code>' +
-  '<br>Скрипт разберёт всю папку и положит в буфер одну строку на всех — ' +
-  'вставляй её в любой карточке, числа разойдутся по своим.' +
+  'их именами («Линко.png», «zankou.png») и сложи в одну папку. Дальше — ' +
+  'кнопка «команда на папку» ниже.' +
+  '<br><br>В командах стоят пути по умолчанию: скрипт в «Загрузках», скрины в ' +
+  '«Изображения\\NTE». Если у тебя иначе — <b>подставь свои</b>. Путь к папке ' +
+  'со скринами проще всего взять так: открой её в проводнике, щёлкни по ' +
+  'адресной строке и скопируй. Путь к самому скрипту — правой кнопкой по файлу ' +
+  '→ «Копировать как путь».' +
   '</div>' +
   '<div class="mapbar" style="margin-top:8px">' +
     '<a class="fb" href="nte-ocr.ps1" download>скачать nte-ocr.ps1</a>' +
     '<button class="fb" data-ocrcmd>команда на один скрин</button>' +
     '<button class="fb" data-ocrall>команда на папку</button>' +
+    '<button class="fb" data-ocrhere>команда, если скрипт не скачан</button>' +
   '</div>' +
   '<div class="hint" style="margin-top:6px">Команда сама найдёт скрипт в папке ' +
   '«Загрузки» — если положил его туда, больше ничего править не надо.</div>' +
@@ -5288,6 +5380,12 @@ const OCR_CMD = 'powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\Dow
 // Папочный режим: скрины на всех эсперов разом. Папка по умолчанию —
 // «Изображения\\NTE», её же проще всего назначить для снимков экрана.
 const OCR_CMD_ALL = OCR_CMD + ' -Folder "$env:USERPROFILE\\Pictures\\NTE"';
+// Файл можно и не скачивать: у того, кто собирает сайт, он лежит рядом с
+// исходниками. Первая же попытка запустить «из Загрузок» без скачивания даёт
+// «файл не существует» — эта кнопка избавляет от такого сюрприза.
+const OCR_CMD_HERE = 'powershell -ExecutionPolicy Bypass -File ' +
+  '"F:\\Claude cowork\\сайт\\nte\\nte-ocr.ps1" -Folder ' +
+  '"$env:USERPROFILE\\Documents\\ShareX\\Screenshots\\nte"';
 function bindOcrCmd(box) {
   if (!box) return;
   const кнопка = (sel, текст, строка) => {
@@ -5302,6 +5400,7 @@ function bindOcrCmd(box) {
   };
   кнопка('[data-ocrcmd]', 'команда на один скрин', OCR_CMD);
   кнопка('[data-ocrall]', 'команда на папку', OCR_CMD_ALL);
+  кнопка('[data-ocrhere]', 'команда, если скрипт не скачан', OCR_CMD_HERE);
 }
 
 // «Сейчас» — что с эспером сегодня: баннер, место в мете, твои характеристики
