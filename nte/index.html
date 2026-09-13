@@ -1363,6 +1363,8 @@
       <button data-tool="plan">план<i>материалы на всех, кого качаешь</i></button>
       <button data-tool="cmp">сравнить<i>кого качать первым</i></button>
       <button data-tool="ready">готовность<i>все эсперы против целей гайда</i></button>
+      <button data-tool="pulls">крутки<i>сколько до гаранта и хватит ли</i></button>
+      <button data-tool="bak">мои данные<i>сохранить файлом и восстановить</i></button>
       <button data-tool="stat">скрины<i>характеристики из снимков экрана</i></button>
     </div>
   </div>
@@ -1380,7 +1382,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v71';
+const APP_VER = 'v72';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -6367,11 +6369,277 @@ function bindTools() {
     else if (t === 'plan') showPlan();
     else if (t === 'cmp') showCmp();
     else if (t === 'ready') showReady();
+    else if (t === 'pulls') showPulls();
+    else if (t === 'bak') showBak();
     else if (t === 'stat') showOcrBulk();
   });
   document.addEventListener('click', e => { if (!box.contains(e.target)) закрыть(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') закрыть(); });
 }
+// ── бэкап своих данных ─────────────────────────────────────────────────────
+// Всё, что ты вписал — характеристики, уровни, отметки кодов и найденные точки
+// карты, — живёт в localStorage этого браузера. Облако его возит между
+// устройствами, но не спасает от двух вещей: чистки данных сайта (частая
+// операция «почистить кэш» стирает и это) и от самого облака, если в нём
+// что-то перетёрлось. Поэтому файл: один клик — и всё лежит у тебя.
+const BAK_MARK = 'alextask-nte-backup';
+function bakCollect() {
+  const out = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || k.indexOf('nte-') !== 0) continue;
+    // ключ облака не выгружаем: это адрес хранилища, то есть ключ доступа.
+    // Файл может уйти куда угодно — в переписку, в облачный диск, — и тащить
+    // в нём доступ к своим данным незачем.
+    if (k === 'nte-sync') continue;
+    try { out[k] = JSON.parse(localStorage.getItem(k)); }
+    catch (e) { out[k] = localStorage.getItem(k); }
+  }
+  return out;
+}
+function bakStats(data) {
+  const k = Object.keys(data || {});
+  return {
+    эсперов: k.filter(x => x.indexOf('nte-my-') === 0).length,
+    уровней: k.filter(x => x.indexOf('nte-lv-') === 0).length,
+    кодов: Object.keys(data['nte-codes-used'] || {}).length,
+    точек: Object.keys(data['nte-map-found'] || {}).length,
+    всего: k.length
+  };
+}
+function bakSave(say) {
+  const data = bakCollect();
+  const файл = { mark: BAK_MARK, ver: APP_VER, at: new Date().toISOString(), data: data };
+  const blob = new Blob([JSON.stringify(файл, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const d = new Date();
+  const p2 = n => (n < 10 ? '0' : '') + n;
+  a.download = 'nte-мои-данные-' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' +
+    p2(d.getDate()) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  const st = bakStats(data);
+  say('сохранено: ' + st.эсперов + ' с характеристиками, ' + st.точек + ' точек карты, ' +
+      st.кодов + ' отмеченных кодов');
+}
+// Восстановление дописывает, а не стирает: чужой файл не должен выносить то,
+// что уже есть. Отметки кодов и точек складываются, остальное перезаписывается
+// из файла — там значения, а не наборы.
+function bakLoad(file, say, режим) {
+  const rd = new FileReader();
+  rd.onload = () => {
+    let j = null;
+    try { j = JSON.parse(rd.result); } catch (e) {}
+    if (!j || j.mark !== BAK_MARK || !j.data) {
+      say('это не файл с данными NTE — нужен тот, что скачан кнопкой выше', 1);
+      return;
+    }
+    const data = j.data;
+    let взято = 0;
+    Object.keys(data).forEach(k => {
+      if (k.indexOf('nte-') !== 0 || k === 'nte-sync') return;
+      let v = data[k];
+      if (режим === 'merge' && SYNC_MERGE.indexOf(k) >= 0 && typeof v === 'object') {
+        let было = {};
+        try { было = JSON.parse(localStorage.getItem(k)) || {}; } catch (e) {}
+        v = Object.assign({}, v, было);
+      }
+      try { localStorage.setItem(k, JSON.stringify(v)); взято++; } catch (e) {}
+    });
+    const st = bakStats(data);
+    say('принято записей: ' + взято + ' · эсперов с характеристиками ' + st.эсперов +
+        ', точек карты ' + st.точек + '. Обнови страницу, чтобы увидеть.');
+  };
+  rd.onerror = () => say('файл не прочитался', 1);
+  rd.readAsText(file);
+}
+function bakHtml() {
+  const st = bakStats(bakCollect());
+  return '<div class="sh-body">' +
+    '<div class="sh-title"><h2>Мои данные<i>сохранить файлом и восстановить</i></h2>' +
+      '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
+    '</div>' +
+    '<div class="stat">' +
+      '<div class="st"><b>' + st.эсперов + '</b>' +
+        plural(st.эсперов, 'эспер с характеристиками', 'эспера с характеристиками',
+               'эсперов с характеристиками') + '</div>' +
+      '<div class="st"><b>' + st.точек + '</b>отмечено точек карты</div>' +
+      '<div class="st"><b>' + st.кодов + '</b>отмечено кодов</div>' +
+      '<div class="st"><b>' + st.уровней + '</b>уровней в планировщике</div>' +
+    '</div>' +
+    '<div class="mapbar" style="margin-top:10px">' +
+      '<button class="fb" id="bakSave">скачать файлом</button>' +
+      '<button class="fb" id="bakPick">восстановить из файла</button>' +
+      '<input type="file" id="bakFile" accept="application/json,.json" style="display:none">' +
+    '</div>' +
+    '<div class="hint" id="bakSay" style="min-height:16px"></div>' +
+    '<div class="hint">В файл идёт всё, что ты вписал сам: характеристики, уровни ' +
+    'прокачки, отметки кодов и точек карты, счётчик круток. <b>Адрес облачного ' +
+    'хранилища не идёт</b> — это ключ доступа к твоим данным, ему в пересылаемом ' +
+    'файле не место.<br>При восстановлении отметки кодов и точек складываются с тем, ' +
+    'что уже есть, остальное перезаписывается из файла. Чужой файл ничего не сотрёт ' +
+    'молча: если это не бэкап NTE, страница так и скажет.</div>' +
+  '</div>';
+}
+function showBak() {
+  $('sheetIn').innerHTML = bakHtml();
+  $('sheet').classList.add('on');
+  const c = $('close');
+  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  const say = (t, bad) => {
+    const el = $('bakSay');
+    if (el) { el.textContent = t; el.style.color = bad ? '#fbbf24' : 'var(--acc)'; }
+  };
+  if ($('bakSave')) $('bakSave').onclick = () => bakSave(say);
+  if ($('bakPick')) $('bakPick').onclick = () => $('bakFile').click();
+  if ($('bakFile')) $('bakFile').onchange = e => {
+    const f = e.target.files[0];
+    if (f) bakLoad(f, say, 'merge');
+    e.target.value = '';
+  };
+}
+
+// ── крутки и гарант ────────────────────────────────────────────────────────
+// Числа не выдуманные и не с гайдов: они лежат в локализации самой игры
+// (Localization/ru/game.json, раздел правил лотереи), и это тот же текст,
+// который открывается в игре по кнопке «вероятности».
+//
+// Устройство гачи в NTE отличается от привычного: бросок двигает фигуру по
+// доске, и «доска» бывает двух состояний. Пока она базовая, шанс достать
+// текущего эксклюзивного эспера — 0,99% за бросок. Если за 70 бросков подряд
+// он не выпал, доска становится модифицированной, и шанс поднимается до
+// 19,59%. На девяностом броске эспер выдаётся без всякого броска. Среднее по
+// всей этой конструкции — 1,87% за бросок, ровно как написано в игре.
+//
+// Важное отличие от ZZZ: здесь нет 50/50. Гарантируется не «какой-нибудь
+// S-ранг», а именно текущий баннерный эспер, поэтому считать нечего —
+// девяносто бросков закрывают вопрос.
+const PULL = {
+  base: 0.0099,     // шанс на базовой доске
+  up:   0.1959,     // шанс после 70 бросков без эспера
+  soft: 70,         // с какого броска доска становится модифицированной
+  hard: 90,         // на каком броске эспера выдают без розыгрыша
+  // Оружие («дуги») считается иначе: розыгрыш — это выпуск из десяти дуг.
+  arcS: 0.03,       // базовый шанс дуги S-класса
+  arcLim: 0.0168,   // из них на текущую ограниченную
+  arcAny: 6,        // выпусков до гарантированной дуги S-класса
+  arcHard: 8        // выпусков до гарантированной текущей ограниченной
+};
+function pullsCfg() {
+  let v = {};
+  try { v = JSON.parse(localStorage.getItem('nte-pulls')) || {}; } catch (e) {}
+  return Object.assign({ done: 0, dice: 0, ann: 0, rate: 160, plan: 0, warc: 0 }, v);
+}
+function pullsSave(v) {
+  try { localStorage.setItem('nte-pulls', JSON.stringify(v)); } catch (e) {}
+}
+// Шанс достать эспера за n бросков, если уже сделано done. Считаем по шагам:
+// у каждого броска свой шанс, и «не выпало ни разу» перемножается.
+function pullChance(done, n) {
+  let alive = 1;
+  for (let i = done + 1; i <= done + n; i++) {
+    const p = i >= PULL.hard ? 1 : (i > PULL.soft ? PULL.up : PULL.base);
+    alive *= (1 - p);
+    if (alive <= 0) return 1;
+  }
+  return 1 - alive;
+}
+function pullsHtml() {
+  const c = pullsCfg();
+  const done = Math.max(0, Math.min(PULL.hard - 1, +c.done || 0));
+  const изАнн = Math.floor(Math.max(0, +c.ann || 0) / Math.max(1, +c.rate || 160));
+  const есть = Math.max(0, +c.dice || 0) + изАнн + Math.max(0, +c.plan || 0);
+  const доГаранта = PULL.hard - done;
+  const доРазгона = Math.max(0, PULL.soft - done);
+  const шанс = pullChance(done, есть);
+  const хватает = есть >= доГаранта;
+  // Ближайший срок: до конца текущего баннера эспера
+  const live = (GUIDE.banners || []).filter(b =>
+    b.slug && b.to && /current|сейчас/i.test(b.key + ' ' + b.group))[0];
+  const дней = live ? Math.ceil((Date.parse(live.to + 'T23:59:59Z') - Date.now()) / 86400000) : null;
+  const поле = (k, n, подпись) => '<div><label>' + esc(n) + '</label>' +
+    '<input type="number" min="0" step="1" data-pull="' + k + '" value="' + (+c[k] || 0) + '">' +
+    (подпись ? '<div class="hint" style="margin:3px 0 0">' + подпись + '</div>' : '') + '</div>';
+  // Шкалу показываем целиком: строки выше гаранта тоже полезны — по ним
+  // видно, на каком броске шанс становится стопроцентным.
+  const шкала = [10, 20, 30, 50, 70, 90].map(n => {
+      const p = pullChance(done, n);
+      return '<tr' + (n === есть ? ' class="top"' : '') + '><td>' + n + '</td>' +
+        '<td class="num">' + (p * 100).toFixed(1) + '%</td>' +
+        '<td><div class="bar"><i style="width:' + Math.round(p * 100) + '%"></i></div></td></tr>';
+    }).join('');
+  return '<div class="sh-body">' +
+    '<div class="sh-title"><h2>Крутки<i>сколько до гаранта и хватит ли</i></h2>' +
+      '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
+    '</div>' +
+    '<div class="stat">' +
+      '<div class="st"><b>' + done + '</b>бросков с прошлого эспера</div>' +
+      '<div class="st"><b>' + доГаранта + '</b>до гаранта</div>' +
+      '<div class="st' + (хватает ? ' ok' : '') + '"><b>' + есть + '</b>бросков на руках</div>' +
+      '<div class="st"><b>' + Math.round(шанс * 100) + '%</b>шанс достать эспера</div>' +
+    '</div>' +
+    '<div class="verdict">' +
+      (хватает
+        ? 'Гарант закрыт: ' + есть + ' ' + plural(есть, 'бросок', 'броска', 'бросков') +
+          ' при ' + доГаранта + ' до предела — эспер твой при любом раскладе.'
+        : 'Шанс достать эспера этими бросками — <b>' + Math.round(шанс * 100) + '%</b>. ' +
+          'До гаранта не хватает <b>' + (доГаранта - есть) + '</b> ' +
+          plural(доГаранта - есть, 'броска', 'бросков', 'бросков') + ' — это ' +
+          num((доГаранта - есть) * Math.max(1, +c.rate || 160)) + ' аннулита.') +
+      (дней != null && дней >= 0
+        ? ' Текущий баннер закрывается через ' + дней + ' ' +
+          plural(дней, 'день', 'дня', 'дней') + '.' : '') +
+    '</div>' +
+    '<div class="inp" style="margin-top:10px">' +
+      поле('done', 'бросков с прошлого эспера', 'счётчик в игре, 0–89') +
+      поле('dice', 'кубиков на руках', '') +
+      поле('ann', 'аннулита на руках', '') +
+      поле('rate', 'аннулита за бросок', 'проверь в игре, обычно 160') +
+      поле('plan', 'ещё накопится', 'события, коды, пропуск — прикинь сам') +
+    '</div>' +
+    (доРазгона
+      ? '<div class="hint">До <b>разгона</b> ещё ' + доРазгона + ' ' +
+        plural(доРазгона, 'бросок', 'броска', 'бросков') + ': пока доска базовая, ' +
+        'шанс 0,99% за бросок. После 70-го он поднимается до 19,59% — там эспер ' +
+        'выпадает быстро.</div>'
+      : '<div class="hint" style="color:var(--acc)">Доска уже разогнана: шанс 19,59% ' +
+        'за бросок вместо 0,99%.</div>') +
+    '<div class="cap"><b>Шанс по числу бросков</b><span></span><em>от текущего счётчика</em></div>' +
+    '<table class="tbl"><tr><th>бросков</th><th>шанс</th><th></th></tr>' + шкала + '</table>' +
+    '<div class="cap"><b>Оружие</b><span></span><em>другие правила</em></div>' +
+    '<div class="box">' +
+      '<div class="inp"><div><label>выпусков с прошлой ограниченной дуги</label>' +
+        '<input type="number" min="0" step="1" data-pull="warc" value="' + (+c.warc || 0) + '"></div></div>' +
+      '<div class="hint">Розыгрыш на оружейном баннере — это выпуск сразу из десяти дуг. ' +
+      'Шанс дуги S-класса — 3% за штуку, из них 1,68% приходится на текущую ограниченную. ' +
+      'Любая дуга S-класса гарантирована за <b>' + PULL.arcAny + '</b> ' +
+      plural(PULL.arcAny, 'выпуск', 'выпуска', 'выпусков') + ', текущая ограниченная — за <b>' +
+      PULL.arcHard + '</b>. Счётчик не сбрасывается между баннерами: осталось <b>' +
+      Math.max(0, PULL.arcHard - Math.max(0, +c.warc || 0)) + '</b> ' +
+      plural(Math.max(0, PULL.arcHard - Math.max(0, +c.warc || 0)), 'выпуск', 'выпуска', 'выпусков') +
+      '.</div>' +
+    '</div>' +
+    '<div class="hint">Все числа — из правил лотереи в самой игре (те же, что в игре ' +
+    'по кнопке «вероятности»), а не из гайдов. <b>50/50 тут нет</b>: гарантируется не ' +
+    '«какой-нибудь S-ранг», а именно баннерный эспер, поэтому девяносто бросков ' +
+    'закрывают вопрос полностью. Что вписал — лежит в браузере и едет через облако.</div>' +
+  '</div>';
+}
+function showPulls() {
+  $('sheetIn').innerHTML = pullsHtml();
+  $('sheet').classList.add('on');
+  const c = $('close');
+  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  $('sheetIn').querySelectorAll('input[data-pull]').forEach(inp => inp.onchange = () => {
+    const cfg = pullsCfg();
+    const v = parseInt(inp.value, 10);
+    cfg[inp.dataset.pull] = isFinite(v) && v > 0 ? v : 0;
+    pullsSave(cfg);
+    showPulls();
+  });
+}
+
 // ── моя готовность ─────────────────────────────────────────────────────────
 // Пока характеристики вписывались руками, смотреть их можно было только по
 // одному — в карточке. Теперь они заливаются пачкой, и появляется вопрос
