@@ -1129,6 +1129,7 @@
 <div class="top"><div class="wrap top-in">
   <div class="logo">NTE<b>·</b><i id="ver"></i></div>
   <button class="cloudb" id="cloudBtn" title="Синхронизация отметок между устройствами">облако</button>
+  <button class="cloudb" id="planBtn" title="Сколько всего материалов нужно на тех, кого качаешь">план</button>
   <div class="tabs" id="tabs"></div>
   <div class="top-sp"></div>
   <input class="srch" id="q" type="search" placeholder="поиск" autocomplete="off">
@@ -1143,7 +1144,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v55';
+const APP_VER = 'v56';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1371,6 +1372,7 @@ async function load() {
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
   $('cloudBtn').onclick = showSync;
+  $('planBtn').onclick = showPlan;
   $('cloudBtn').classList.toggle('on', !!syncCfg().np);
   workerVer();
   drawTabs();
@@ -5157,6 +5159,82 @@ function freshRow(name, built, how, note) {
     '<td><span class="fdot' + cls + '"></span>' + esc(when) +
       (built ? '<i>' + esc(String(built)) + '</i>' : '') + '</td>' +
     '<td>' + esc(how) + '</td></tr>';
+}
+// ── сводный планировщик прокачки ───────────────────────────────────────────
+// В карточке видно, во что обойдётся один эспер. Но качают обычно не одного:
+// на баннере набрали троих, у каждого свой уровень и своя цель, а фармить
+// приходится общим списком. Здесь всё это складывается: сколько монет, книг
+// и материалов прорыва нужно суммарно и у кого именно.
+//
+// Уровни берутся те же, что стоят в карточках (nte-lv-<слаг>), так что
+// планировщик не требует вводить их заново и сам обновляется, когда правишь
+// уровень в карточке.
+function planTotal() {
+  const rows = [];
+  const items = {};
+  let gold = 0, exp = 0, steps = 0;
+  const add = list => (list || []).forEach(it => {
+    if (!items[it.id]) items[it.id] = { ru: it.ru, icon: it.icon, rar: it.rar, n: 0 };
+    items[it.id].n += it.n;
+  });
+  ((DB && DB.agents) || []).forEach(a => {
+    if (!((GEAR.charUp || {})[a.slug] || []).length) return;
+    const v = charLv(a.slug);
+    if (!(v.to > v.from)) return;          // цель не задана или уже достигнута
+    const c = charCost(a.slug, v.from, v.to);
+    gold += c.gold; exp += c.exp; steps += c.steps;
+    add(c.items);
+    rows.push({ a: a, from: v.from, to: v.to, steps: c.steps });
+  });
+  return { rows: rows, gold: gold, exp: exp, steps: steps, items: Object.values(items) };
+}
+function planPanelHtml() {
+  const t = planTotal();
+  const head =
+    '<div class="sh-title"><h2>Планировщик прокачки<i>по всем, у кого задана цель</i></h2>' +
+      '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
+    '</div>';
+  if (!t.rows.length) {
+    return '<div class="sh-body">' + head +
+      '<div class="box"><b>Пока пусто</b>Открой карточку эспера, вкладку ' +
+      '«Сейчас», и в блоке «Во что обойдётся прокачка» поставь текущий уровень ' +
+      'и цель. Все, у кого цель выше текущего уровня, соберутся здесь общим ' +
+      'списком.</div></div>';
+  }
+  const mats = goldMat(t.gold).concat(expMats(t.exp, GEAR.expChar)).concat(t.items);
+  return '<div class="sh-body">' + head +
+    '<div class="stat">' +
+      '<div class="st"><b>' + t.rows.length + '</b>' +
+        plural(t.rows.length, 'эспер в плане', 'эспера в плане', 'эсперов в плане') + '</div>' +
+      '<div class="st"><b>' + t.steps + '</b>' +
+        plural(t.steps, 'прорыв', 'прорыва', 'прорывов') + '</div>' +
+      '<div class="st"><b>' + num(t.gold) + '</b>монет</div>' +
+    '</div>' +
+    '<div class="cap"><b>Кого качаем</b><span></span><em>уровни из карточек</em></div>' +
+    '<div class="wide">' + t.rows.map(r =>
+      '<div class="pick" style="cursor:pointer" data-plan-slug="' + esc(r.a.slug) + '">' +
+        '<img src="' + portrait(r.a) + '" alt="" loading="lazy" ' +
+          'style="width:34px;height:34px;border-radius:9px;object-fit:cover">' +
+        '<b>' + esc(r.a.ru) + '</b>' +
+        '<span class="gsh">' + r.from + ' → ' + r.to + '</span>' +
+        (r.steps ? '<span class="gsh">' + r.steps + ' ' +
+          plural(r.steps, 'прорыв', 'прорыва', 'прорывов') + '</span>' : '') +
+      '</div>').join('') + '</div>' +
+    '<div class="cap"><b>Что понадобится всего</b><span></span>' +
+      '<em>книги, монеты, материалы прорывов</em></div>' +
+    matHtml(mats) +
+    '<div class="hint">Оружие и умения сюда не входят: их стоимость считается ' +
+    'в карточке отдельно, у каждого своя цель. Уровни правятся там же — здесь ' +
+    'они только складываются.</div>' +
+  '</div>';
+}
+function showPlan() {
+  $('sheetIn').innerHTML = planPanelHtml();
+  $('sheet').classList.add('on');
+  const c = $('close');
+  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  $('sheetIn').querySelectorAll('[data-plan-slug]').forEach(el =>
+    el.onclick = () => open(el.dataset.planSlug));
 }
 function showFresh() {
   const codes = (codesLive && codesLive.updated) || (GUIDE && GUIDE.codes && GUIDE.codes.updated) || '';
