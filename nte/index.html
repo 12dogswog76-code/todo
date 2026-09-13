@@ -138,6 +138,63 @@
   body.mapmode #filters{display:none}
   body.mapmode #foot{margin-top:8px}
   .mapcnt i{font-style:normal;color:hsla(0,0%,100%,.3)}
+
+  /* ── планировщик: строка эспера ──
+     Портрет, имя, «1 → 80» и число прорывов в одну линию. Раньше это были
+     блоки-таблетки в три ряда на каждого, и двадцать эсперов занимали
+     полтора экрана. */
+  .plrows{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}
+  .plrow{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:11px;
+    background:var(--pan);border:1px solid var(--line-soft);cursor:pointer;transition:.15s}
+  .plrow:hover{border-color:var(--line-hard)}
+  .plrow img{width:30px;height:30px;border-radius:8px;object-fit:cover;flex:none;
+    background:#0d0f14}
+  .plrow b{font-size:13px;color:var(--tx);flex:1;min-width:0;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .plrow u,.plrow em{font-style:normal;text-decoration:none;font-family:var(--mono),monospace;
+    font-size:11.5px;color:var(--tx2);flex:none}
+  .plrow u i,.plrow em i{font-style:normal;color:var(--tx3);margin:0 3px;font-size:10px}
+  .plrow em{color:var(--gold)}
+
+  /* ── аномальная мебель ──
+     Общее правило раскладки: блоки одной высоты, в несколько колонок,
+     выровнены друг по другу; то, что раскрывается, раскрывается в ширину, а
+     не вниз — на экран иначе не помещается. */
+  .anoms{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+    gap:9px;align-items:start}
+  .anom{background:var(--pan);border:1px solid var(--line-soft);border-radius:14px;
+    padding:11px 13px;overflow:hidden}
+  details.anom>summary{list-style:none;cursor:pointer;display:block}
+  details.anom>summary::-webkit-details-marker{display:none}
+  details.anom[open]{grid-column:1/-1;border-color:var(--line)}
+  .anom-h{display:flex;gap:10px;align-items:flex-start}
+  .anom-h img{width:46px;height:46px;flex:none;object-fit:contain;border-radius:10px;
+    background:#0d0f14;border:1px solid var(--line);padding:3px}
+  .anom-h b{display:block;font-size:13px;color:var(--gold);line-height:1.3}
+  .anom-h span{display:block;margin-top:4px;font-size:11.5px;line-height:1.55;
+    color:var(--tx2)}
+  details.anom>summary em{display:inline-block;margin-top:9px;font-style:normal;
+    font-size:9px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--tx3);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  details.anom[open]>summary em{border-color:var(--acc);color:var(--acc)}
+  .anom-lv{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+    gap:6px;margin-top:10px}
+  .anom-s{display:flex;gap:8px;align-items:flex-start;background:var(--pan2);
+    border:1px solid var(--line-soft);border-radius:10px;padding:7px 9px}
+  .anom-s u{font-style:normal;text-decoration:none;font-family:var(--mono),monospace;
+    font-size:10px;color:var(--tx3);flex:none;min-width:14px}
+  .anom-s span{font-size:11.5px;line-height:1.55;color:var(--tx2)}
+
+  /* «Зачем он в команде»: роль строкой, под ней два-три пункта из пассивок */
+  .why{background:linear-gradient(135deg,hsla(140,70%,60%,.07),var(--pan));
+    border:1px solid hsla(140,70%,60%,.25);border-radius:14px;padding:12px 14px;
+    margin-bottom:10px}
+  .why b{display:block;font-family:var(--disp);font-size:15px;color:var(--acc);
+    margin-bottom:7px}
+  .why ul{margin:0;padding-left:17px;color:var(--tx2);font-size:12.5px;line-height:1.65}
+  .why li{margin:2px 0}
+  .why i{display:block;margin-top:8px;font-style:normal;font-size:9px;font-weight:800;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--tx3)}
   .mapcnt{position:absolute;left:12px;top:10px;z-index:6;pointer-events:none;
     background:rgba(10,12,16,.78);border:1px solid var(--line);border-radius:9px;
     padding:5px 10px;font-size:9px;font-weight:800;letter-spacing:.22em;
@@ -398,12 +455,16 @@
      Слева от картинки — мягкая растушёвка в цвет плашки, чтобы стык не резал
      глаз. */
   .bc.bc-art{position:relative;overflow:hidden;min-height:150px;padding-right:0}
-  .bc-art-i{position:absolute;right:0;top:0;bottom:0;width:46%;z-index:0;
+  /* Арт занимает правую половину плашки и выходит за её верх и низ: при
+     background-size:contain он вписывался целиком и висел маленькой фигуркой
+     посреди пустоты. cover с привязкой к верху показывает персонажа крупно,
+     обрезая низ — там всё равно ноги. */
+  .bc-art-i{position:absolute;right:0;top:-14%;bottom:-14%;width:52%;z-index:0;
     pointer-events:none;
-    background-image:var(--bg);background-size:contain;background-repeat:no-repeat;
-    background-position:right bottom;
-    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 34%,#000 100%);
-    mask-image:linear-gradient(90deg,transparent 0,#000 34%,#000 100%)}
+    background-image:var(--bg);background-size:auto 128%;background-repeat:no-repeat;
+    background-position:right 6% top;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 40%,#000 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 40%,#000 100%)}
   .bc.bc-art>img,.bc.bc-art>.bc-b{position:relative;z-index:1}
   .bc.bc-art>.bc-b{max-width:60%}
   /* плашки без арта не должны быть заметно ниже соседних в ряду */
@@ -946,7 +1007,10 @@
      по три-четыре в ряд, а не по две широких */
   .sec.full .wide{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
   /* характеристики машины: значение со стока и потолок с тюнингом */
-  .vstats{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+  /* Характеристики машины — плитками в несколько колонок. Столбиком они не
+     помещались даже на FullHD: у Пендрагона девять характеристик, и половина
+     уезжала за экран. */
+  .vstats{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px}
   .vst{padding:8px 11px;border-radius:11px;background:var(--pan);border:1px solid var(--line-soft)}
   .vst i{display:block;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.14em;
     text-transform:uppercase;color:var(--tx3)}
@@ -1132,7 +1196,9 @@
   <button class="cloudb" id="planBtn" title="Сколько всего материалов нужно на тех, кого качаешь">план</button>
   <div class="tabs" id="tabs"></div>
   <div class="top-sp"></div>
-  <input class="srch" id="q" type="search" placeholder="поиск" autocomplete="off">
+  <!-- Поиск убран из шапки: на широком экране он уезжал вниз отдельной
+       строкой и занимал полосу впустую. Фильтры на вкладках справляются. -->
+  <input class="srch" id="q" type="search" placeholder="поиск" autocomplete="off" hidden>
 </div></div>
 
 <div class="wrap">
@@ -1144,7 +1210,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v56';
+const APP_VER = 'v57';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1170,6 +1236,8 @@ let NB = {};
 let ART = {};
 // описания навыков и пассивок из локализации игры: слаг → список умений
 let SKL = {};
+// короткая выжимка «что даёт команде»: слаг → две-три строки
+let BRIEF = {};
 
 // ── перевод текстов с prydwen ──────────────────────────────────────────────
 // Сами тексты приезжают с сайта по-английски и при каждом новом прогоне
@@ -1369,6 +1437,7 @@ async function load() {
   NB = (nb && nb.a) || {};
   ART = (art && art.a) || {};
   SKL = (sk && sk.a) || {};
+  BRIEF = (sk && sk.brief) || {};
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
   $('cloudBtn').onclick = showSync;
@@ -2731,7 +2800,7 @@ function carCard(c) {
     '<div class="suit-in">' +
       (c.desc ? '<div class="sec full"><div class="hint">' + esc(c.desc) + '</div></div>' : '') +
       ((c.stats || []).length ?
-        '<div class="sec">' +
+        '<div class="sec full">' +
           cap2('Характеристики', 'со стока → с тюнингом') + vstatsHtml(c.stats) +
           '<div class="hint">Потолок считается по каждой характеристике отдельно: ' +
           'в каждом узле берётся лучшая по ней деталь. Собрать все максимумы ' +
@@ -2740,7 +2809,7 @@ function carCard(c) {
             money(c.modGold, 'Fons') + '</div>' : '') +
         '</div>' : '') +
       (Object.keys(c.parts || {}).length
-        ? '<div class="sec">' + cap2('Тюнинг', 'по узлам') + partsHtml(c.parts) + '</div>' : '') +
+        ? '<div class="sec full">' + cap2('Тюнинг', 'по узлам') + partsHtml(c.parts) + '</div>' : '') +
       (skins.length ? '<div class="sec">' + cap2('Раскраски', skins.length + ' шт.') +
         '<div class="wide">' + skins.map(sk =>
           '<div class="part">' +
@@ -2821,19 +2890,30 @@ function flatCard(f, anom) {
         cap2('Аномальная мебель', anom.length + ' предметов') +
         '<div class="hint" style="margin:0 0 8px">Ставится в любое купленное жильё — ' +
         'привязки к конкретному дому в файлах игры нет.</div>' +
-        '<div class="wide">' + anom.map(anomCard).join('') + '</div></div>' : '') +
+        '<div class="anoms">' + anom.map(anomCard).join('') + '</div></div>' : '') +
     '</div>' +
   '</details>';
 }
+// Карточка аномальной мебели. Все по одному правилу: ровная высота, текст
+// сверху, кнопка раскрытия прижата к низу — иначе в ряду одни блоки в два
+// раза выше других. Ступени прокачки раскрываются на всю ширину ряда и сами
+// ложатся в колонки: их бывает десять, и лентой вниз они не помещаются.
 function anomCard(x) {
-  return '<div class="cart"><div class="item-b">' +
-    '<b style="font-size:13px;color:var(--gold)">' + esc(x.ru) + '</b>' +
-    (x.desc ? '<div class="set-b">' + esc(x.desc) + '</div>' : '') +
-    (x.lv && x.lv.length ? '<details class="mfold" style="margin-top:7px">' +
-      '<summary><b>' + x.lv.length + ' ступеней прокачки</b></summary><div class="mfold-in">' +
-      '<ol style="margin:8px 0 0;padding-left:20px;color:var(--tx2);font-size:11.5px;line-height:1.6">' +
-      x.lv.map(v => '<li>' + esc(v) + '</li>').join('') + '</ol></div></details>' : '') +
-  '</div></div>';
+  const pic = x.pic ? 'img/anom/' + esc(x.pic) : '';
+  const head = '<div class="anom-h">' +
+      (pic ? '<img src="' + pic + '" alt="" loading="lazy" ' +
+        'onerror="this.remove()">' : '') +
+      '<div><b>' + esc(x.ru) + '</b>' +
+      (x.desc ? '<span>' + esc(x.desc) + '</span>' : '') + '</div>' +
+    '</div>';
+  if (!(x.lv && x.lv.length)) return '<div class="anom">' + head + '</div>';
+  return '<details class="anom"><summary>' + head +
+      '<em>' + x.lv.length + ' ' +
+      plural(x.lv.length, 'ступень прокачки', 'ступени прокачки', 'ступеней прокачки') +
+      '</em></summary>' +
+    '<div class="anom-lv">' + x.lv.map((v, i) =>
+      '<div class="anom-s"><u>' + (i + 1) + '</u><span>' + esc(v) + '</span></div>').join('') +
+    '</div></details>';
 }
 function drawCity() {
   if (!CITY) {
@@ -3531,11 +3611,30 @@ function mapSideHtml(cats, off, cal) {
 const SDB_COL = { wanderers_journal: '#f0a4ff', map_finds: '#ffd166',
                   weekly: '#7ee8b0', enemies: '#ff8f8f',
                   anomaly_zone: '#9db8ff', incomplete: '#9aa3b5' };
+// Тысяча точек со StarDB приходит без своей картинки — в их данных поле
+// значка просто пустое. На карте они превращались в безликие кружки, и
+// половина карты выглядела «без иконок». Берём запасной значок по типу точки:
+// самый частый среди тех точек этой же группы, у которых картинка есть.
+let sdbFall = null;
+function sdbFallback() {
+  if (sdbFall) return sdbFall;
+  const cnt = {};
+  ((SDB && SDB.pts) || []).forEach(p => {
+    if (!p.ic || !p.g) return;
+    (cnt[p.g] || (cnt[p.g] = {}))[p.ic] = (cnt[p.g][p.ic] || 0) + 1;
+  });
+  sdbFall = {};
+  Object.keys(cnt).forEach(g => {
+    sdbFall[g] = Object.keys(cnt[g]).sort((a, b) => cnt[g][b] - cnt[g][a])[0];
+  });
+  return sdbFall;
+}
 function sdbPts() {
   if (!SDB || !(SDB.pts || []).length) return [];
+  const fb = sdbFallback();
   return SDB.pts.map(p => ({
     id: 'sd-' + p.id, x: p.x, y: p.y, g: 'sd:' + p.g,
-    t: p.t || p.en || 'точка', ru: p.en || '', ic: p.ic, sd: 1
+    t: p.t || p.en || 'точка', ru: p.en || '', ic: p.ic || fb[p.g] || '', sd: 1
   }));
 }
 function drawMap() {
@@ -4347,8 +4446,8 @@ function picksHtml(list, kind, g) {
 // Раньше всё лежало одной простынёй: сборка, составы, синергии, сетка и
 // калькулятор подряд — до сетки нужно было пролистать метр текста. Разложено
 // так же, как в трекере ZZZ.
-const SH_TABS = [['guide','Гайд'], ['kit','Что умеет'], ['awk','Пробуждения'],
-                 ['now','Сейчас'], ['team','Команды'], ['con','Консоль']];
+const SH_TABS = [['guide','Гайд'], ['awk','Пробуждения'], ['now','Сейчас'],
+                 ['team','Команды'], ['con','Консоль']];
 let shTab = 'guide';
 let shSlug = '';
 
@@ -4420,8 +4519,7 @@ function open(slug) {
   // свежих эсперов список ступеней строится по названиям из разбора.
   const hasAwk = (AWK[slug] || []).length || ((NB[slug] || {}).nodes || []).length;
   const shown = SH_TABS.filter(t => (t[0] !== 'con' || gridOf(slug)) &&
-                                    (t[0] !== 'awk' || hasAwk) &&
-                                    (t[0] !== 'kit' || (SKL[slug] || []).length));
+                                    (t[0] !== 'awk' || hasAwk));
   const facts = factsHtml(g);
 
   $('sheetIn').innerHTML =
@@ -4507,7 +4605,6 @@ function shBody(slug, g, a) {
   const has = g.arcs && g.arcs.length;
 
   if (shTab === 'con') return planHtml(slug);
-  if (shTab === 'kit') return kitHtml(slug, cap);
   if (shTab === 'awk') return awkHtml(slug, g, cap);
 
   if (shTab === 'team') {
@@ -4562,34 +4659,6 @@ function awkHave(slug) {
 function awkSave(slug, obj) {
   const list = Object.keys(obj).filter(k => obj[k]).sort();
   try { localStorage.setItem('nte-awk-' + slug, list.join(',')); } catch (e) {}
-}
-// ── что умеет эспер ────────────────────────────────────────────────────────
-// Ответ на «зачем он в команде» лежит не в цифрах сборки, а в его умениях:
-// кто-то снимает защиту с цели, кто-то раздаёт щиты, кто-то просто бьёт.
-// Тексты — из локализации игры, то есть ровно те, что видно в самой игре.
-// Пассивки идут первыми: именно в них обычно написано, что эспер даёт
-// остальным, а не себе.
-function kitHtml(slug, cap) {
-  const list = SKL[slug] || [];
-  if (!list.length) return '<div class="empty">Описаний умений для этого эспера ' +
-    'в локализации игры пока нет.</div>';
-  const pas = list.filter(x => x.pas), act = list.filter(x => !x.pas);
-  const card = x =>
-    '<details class="node"><summary>' +
-      (x.kind ? '<u class="kit-k">' + esc(x.kind) + '</u>' : '') +
-      '<b>' + esc(x.ru) + '</b><em>подробнее</em></summary>' +
-      '<div class="node-in"><div class="kit-d">' +
-        esc(x.desc).replace(/\n/g, '<br>') + '</div></div></details>';
-  return (pas.length
-      ? cap('Что даёт команде', 'пассивные способности') +
-        '<div class="wide">' + pas.map(card).join('') + '</div>'
-      : '') +
-    (act.length
-      ? cap('Умения', act.length + ' штук') +
-        '<div class="wide">' + act.map(card).join('') + '</div>'
-      : '') +
-    '<div class="hint">Тексты — из локализации игры, как на экране умений. ' +
-    'Числа в них даны для первого уровня умения.</div>';
 }
 function awkHtml(slug, g, cap) {
   let list = AWK[slug] || [];
@@ -4992,10 +5061,19 @@ function roleRu(s) {
 }
 function roleHtml(slug) {
   const nb = NB[slug] || {};
-  if (!nb.role) return '';
-  return '<div class="box"><b>Зачем он в команде</b>' + esc(roleRu(nb.role)) +
-    (nb.url ? ' · <a href="' + esc(nb.url) + '" target="_blank" rel="noopener">' +
-      'разбор на ntebuild ↗</a>' : '') + '</div>';
+  const lines = BRIEF[slug] || [];
+  if (!nb.role && !lines.length) return '';
+  // Роль одной строкой, под ней — что эспер делает для остальных. Тексты
+  // игровые: первое предложение каждой его пассивки. Полные описания умений
+  // сюда не тащим — за ответом «зачем он нужен» никто не полезет читать
+  // стену текста.
+  return '<div class="why">' +
+    (nb.role ? '<b>' + esc(roleRu(nb.role)) + '</b>' : '') +
+    (lines.length ? '<ul>' + lines.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '') +
+    '<i>по описаниям умений из игры' +
+      (nb.url ? ' · <a href="' + esc(nb.url) + '" target="_blank" rel="noopener">' +
+        'разбор на ntebuild ↗</a>' : '') + '</i>' +
+  '</div>';
 }
 function nowHtml(slug, g, a, cap) {
   const bans = (GUIDE.banners || []).filter(b => b.slug === slug);
@@ -5211,14 +5289,12 @@ function planPanelHtml() {
       '<div class="st"><b>' + num(t.gold) + '</b>монет</div>' +
     '</div>' +
     '<div class="cap"><b>Кого качаем</b><span></span><em>уровни из карточек</em></div>' +
-    '<div class="wide">' + t.rows.map(r =>
-      '<div class="pick" style="cursor:pointer" data-plan-slug="' + esc(r.a.slug) + '">' +
-        '<img src="' + portrait(r.a) + '" alt="" loading="lazy" ' +
-          'style="width:34px;height:34px;border-radius:9px;object-fit:cover">' +
+    '<div class="plrows">' + t.rows.map(r =>
+      '<div class="plrow" data-plan-slug="' + esc(r.a.slug) + '" title="открыть карточку">' +
+        '<img src="' + portrait(r.a) + '" alt="" loading="lazy">' +
         '<b>' + esc(r.a.ru) + '</b>' +
-        '<span class="gsh">' + r.from + ' → ' + r.to + '</span>' +
-        (r.steps ? '<span class="gsh">' + r.steps + ' ' +
-          plural(r.steps, 'прорыв', 'прорыва', 'прорывов') + '</span>' : '') +
+        '<u>' + r.from + '<i>→</i>' + r.to + '</u>' +
+        (r.steps ? '<em>' + r.steps + '<i>пр.</i></em>' : '') +
       '</div>').join('') + '</div>' +
     '<div class="cap"><b>Что понадобится всего</b><span></span>' +
       '<em>книги, монеты, материалы прорывов</em></div>' +
