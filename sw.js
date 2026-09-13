@@ -5,7 +5,10 @@
 // v8: карточки агентов переведены на card_*.webp / hero_*.webp вместо полноразмерных
 // art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
 // работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
-const CACHE = 'moi-dela-v13';
+// v14: появился обработчик push. Без него уведомления не показывались вовсе:
+// воркер их исправно отправлял, браузер исправно получал, а показать было
+// некому — сюда доезжало событие, которое никто не слушал.
+const CACHE = 'moi-dela-v14';
 // Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
 // страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
 // заново тянул около десяти мегабайт артов и значков. На хорошем канале это
@@ -39,6 +42,12 @@ self.addEventListener('fetch', e => {
   // данные, кешировать их здесь нельзя — иначе после прокачки трекер будет
   // показывать вчерашнюю витрину. Свой кеш у воркера уже есть.
   if (url.pathname.indexOf('/api/') === 0) return;
+
+  // Движок распознавания NTE (/nte/ocr/) — шесть мегабайт, которые не меняются
+  // годами. Держать их в кэше страниц нельзя: при каждом подъёме версии старый
+  // кэш чистится целиком, и браузер качал бы их заново. Обычного HTTP-кэша тут
+  // достаточно, а модель распознавателя и так лежит в IndexedDB.
+  if (url.pathname.indexOf('/nte/ocr/') === 0) return;
 
   if (e.request.mode === 'navigate') {
     // Страница: сеть в приоритете, офлайн — из кэша.
@@ -112,15 +121,38 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// клик по уведомлению — открыть/сфокусировать сайт
+// Приход уведомления. Воркер шлёт JSON вида {title, body, url, tag}; если по
+// какой-то причине тела нет, показываем хотя бы заголовок — молча проглатывать
+// push нельзя, браузер за это ругается своим «сайт обновился в фоне».
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; }
+  catch (err) { d = { body: e.data ? e.data.text() : '' }; }
+  const title = d.title || 'alextask.ru';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: d.body || '',
+    icon: './icon.svg',
+    badge: './icon.svg',
+    tag: d.tag || 'alextask',
+    renotify: true,
+    data: { url: d.url || './' }
+  }));
+});
+
+// клик по уведомлению — открыть нужную страницу или сфокусировать уже открытую
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const цель = (e.notification.data && e.notification.data.url) || './';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
       for (const w of ws) {
-        if ('focus' in w) return w.focus();
+        // окно с нужным разделом уже открыто — просто выводим его вперёд
+        if (w.url.indexOf(цель) >= 0 && 'focus' in w) return w.focus();
       }
-      return clients.openWindow('./');
+      for (const w of ws) {
+        if ('navigate' in w && 'focus' in w) return w.navigate(цель).then(x => x && x.focus());
+      }
+      return clients.openWindow(цель);
     })
   );
 });

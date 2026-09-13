@@ -1382,7 +1382,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v72';
+const APP_VER = 'v73';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -2586,7 +2586,11 @@ function drawBanners() {
   });
   // Счётчик на двоих: вкладка теперь и про баннеры, и про события.
   const ев = (evLive && evLive.list) || [];
-  $('filters').innerHTML = '<span class="fcnt">' + list.length + ' ' +
+  $('filters').innerHTML =
+    '<div class="fgrp"><u>сроки</u>' +
+      '<button class="fb' + (remOn ? ' on' : '') + '" id="remBtn">' +
+      (remOn ? 'напоминания включены' : 'напоминать о сроках') + '</button></div>' +
+    '<span class="fcnt">' + list.length + ' ' +
     plural(list.length, 'баннер', 'баннера', 'баннеров') +
     (ев.length ? ' · ' + ев.filter(e => e.live && !e.perm).length + ' событий идёт' : '') +
     '</span>';
@@ -2600,6 +2604,7 @@ function drawBanners() {
           'прогони nte-pryd.js версии 1.3 или новее.') + '</div>' +
       '<div id="evBox"></div>';
     evDraw();
+    bindRem();
     foot('Календарь событий с ntebuild. Даты по серверу EU.');
     return;
   }
@@ -2663,6 +2668,7 @@ function drawBanners() {
   $('body').insertAdjacentHTML('beforeend', '<div id="evBox"></div>');
   evDraw();
   startBanTick();
+  bindRem();
   foot('Расписание баннеров с prydwen, календарь событий с ntebuild. Даты по серверу EU.');
 }
 
@@ -6376,6 +6382,197 @@ function bindTools() {
   document.addEventListener('click', e => { if (!box.contains(e.target)) закрыть(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') закрыть(); });
 }
+// ── напоминания о сроках ───────────────────────────────────────────────────
+// Push-часть уже построена для трекера ZZZ: воркер принимает подписку, держит
+// задания и рассылает их по расписанию. Здесь только клиент — заводить второй
+// механизм незачем, и ключ подписки берём тот же, что у задач: домен один,
+// localStorage общий, значит и подписка на телефоне одна на весь сайт.
+//
+// Напоминаем о двух вещах: о закрытии текущего баннера и о событиях, которые
+// вот-вот кончатся и при этом что-то дают. Постоянные активности и события
+// без наград не трогаем — иначе это двадцать уведомлений вместо трёх.
+const PUSH_API  = 'https://alextask-push.12dogswog76.workers.dev';
+const VAPID_PUB = 'BNrmwMyHC1OFDhFuQZtwHAzbjdeqCzgs4kyy-gGRGpgHPTAMjvPRyGRyKgiryVJAykh2q10MwHMzSadX-2Rx150';
+const REM_BAN_DAYS = 3;      // за сколько дней предупреждать о баннере
+const REM_EV_DAYS  = 2;      // за сколько — о событии
+const LS_TODO_KEY  = 'alexey_todo_v1_pushKey';   // общий ключ подписки на весь сайт
+let remOn = localStorage.getItem('nte-rem') === '1';
+let remSent = {};
+try { remSent = JSON.parse(localStorage.getItem('nte-rem-sent') || '{}') || {}; } catch (e) {}
+function remSentSave() {
+  try { localStorage.setItem('nte-rem-sent', JSON.stringify(remSent)); } catch (e) {}
+}
+function u8FromB64(s) {
+  const pad = '='.repeat((4 - s.length % 4) % 4);
+  const b = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  const u = new Uint8Array(b.length);
+  for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+  return u;
+}
+// Ключ отделяет твои уведомления от чужих: кто его знает, тот может слать тебе
+// push. Поэтому системный генератор, а не Math.random.
+function remKey(make) {
+  let k = localStorage.getItem(LS_TODO_KEY) || '';
+  if (!k && make) {
+    const b = new Uint8Array(11);
+    crypto.getRandomValues(b);
+    k = 'pk' + Array.from(b).map(x => x.toString(36)).join('').slice(0, 14);
+    localStorage.setItem(LS_TODO_KEY, k);
+  }
+  return k;
+}
+function postPush(tail, body) {
+  return fetch(PUSH_API + tail, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(r => r.json().catch(() => ({})));
+}
+// Что напоминать. Баннеры — по дате закрытия, одной записью на дату: их обычно
+// два-три с общим концом фазы. События — только те, что дают что-то ценное.
+function remPlan() {
+  const now = Date.now(), out = [];
+  const по = {};
+  (GUIDE.banners || []).forEach(b => {
+    if (!b.to || !/current|сейчас/i.test(b.key + ' ' + b.group)) return;
+    const кто = b.slug ? (agentBy(b.slug) || {}).ru : banName(b);
+    (по[b.to] || (по[b.to] = [])).push(кто || b.name);
+  });
+  Object.keys(по).forEach(to => {
+    const конец = Date.parse(to + 'T23:59:59Z');
+    if (!isFinite(конец) || конец <= now) return;
+    out.push({
+      id: 'nteban:' + to,
+      end: конец,
+      at: конец - REM_BAN_DAYS * 86400000,
+      title: 'NTE: баннер закрывается ' + ruDate(to),
+      body: по[to].slice(0, 4).join(', ') + ' — осталось ' + REM_BAN_DAYS + ' ' +
+            plural(REM_BAN_DAYS, 'день', 'дня', 'дней'),
+      что: по[to].slice(0, 4).join(', ')
+    });
+  });
+  // События тоже группируем по дате: в патче их закрывается по пять штук в
+  // один день, и пять отдельных уведомлений подряд — это не напоминание, а
+  // спам. Одно на дату со списком названий.
+  const поСоб = {};
+  ((evLive && evLive.list) || []).forEach(e => {
+    if (e.perm || !e.to || !(e.live || e.soon)) return;
+    if (!/annulith|fons|dice|аннулит|фонс|кубик/i.test(e.rew || '')) return;  // без награды не дёргаем
+    (поСоб[e.to] || (поСоб[e.to] = [])).push(evName(e));
+  });
+  Object.keys(поСоб).forEach(to => {
+    const конец = Date.parse(to + 'T23:59:59Z');
+    if (!isFinite(конец) || конец <= now) return;
+    const имена = поСоб[to];
+    const список = имена.slice(0, 3).join(', ') +
+      (имена.length > 3 ? ' и ещё ' + (имена.length - 3) : '');
+    out.push({
+      id: 'nteev:' + to,
+      end: конец,
+      at: конец - REM_EV_DAYS * 86400000,
+      title: 'NTE: события закрываются ' + ruDate(to),
+      body: список + ' — награды ещё висят',
+      что: список
+    });
+  });
+  return out.sort((a, b) => a.end - b.end);
+}
+// Ставим задания воркеру. Перепланируем только то, что сдвинулось: ключ
+// сохранённого задания — его время, поэтому лишних запросов не будет.
+function remSync(force) {
+  if (!remOn) return;
+  const key = remKey(false);
+  if (!key) return;
+  const now = Date.now(), plan = remPlan(), живые = {};
+  plan.forEach(r => {
+    // Срок предупреждения уже прошёл, а событие ещё идёт — напомним разово
+    // через пару минут: лучше так, чем промолчать.
+    const at = r.at > now + 60000 ? r.at : now + 120000;
+    живые[r.id] = 1;
+    if (remSent[r.id] === at && !force) return;
+    postPush('/schedule', { pushKey: key, taskId: r.id, at: at,
+      title: r.title, body: r.body, url: 'https://alextask.ru/nte/' })
+      .then(() => { remSent[r.id] = at; remSentSave(); })
+      .catch(() => {});
+  });
+  Object.keys(remSent).forEach(id => {
+    if (живые[id] || id.indexOf('nte') !== 0) return;
+    postPush('/cancel', { pushKey: key, taskId: id }).catch(() => {});
+    delete remSent[id];
+  });
+  remSentSave();
+}
+function remOff() {
+  const key = remKey(false);
+  Object.keys(remSent).forEach(id => {
+    if (key) postPush('/cancel', { pushKey: key, taskId: id }).catch(() => {});
+    delete remSent[id];
+  });
+  remOn = false;
+  localStorage.setItem('nte-rem', '');
+  remSentSave();
+}
+async function remToggle(say) {
+  if (remOn) { remOff(); say('напоминания выключены, задания сняты'); draw(); return; }
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      say('этот браузер не умеет push', 1); return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { say('уведомления запрещены в настройках браузера', 1); return; }
+    // Сам обработчик push живёт в /sw.js — он общий на весь сайт и уже
+    // выкладывается вместе с трекером. Регистрируем от корня, иначе браузер
+    // будет искать его в /nte/ и не найдёт.
+    let reg = await navigator.serviceWorker.getRegistration('/');
+    if (!reg) reg = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+    await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe(
+      { userVisibleOnly: true, applicationServerKey: u8FromB64(VAPID_PUB) });
+    const key = remKey(true);
+    const r = await postPush('/subscribe', { subscription: sub.toJSON(), pushKey: key });
+    if (!r || !r.ok) { say('воркер не принял подписку' + (r && r.error ? ': ' + r.error : ''), 1); return; }
+    remOn = true;
+    localStorage.setItem('nte-rem', '1');
+    remSent = {};
+    remSync(true);
+    say('напоминания включены');
+    draw();
+  } catch (e) { say('не вышло: ' + ((e && e.message) || e), 1); }
+}
+// Кнопка и подпись живут на вкладке «События»: там же, где сами сроки.
+function bindRem() {
+  const b = $('remBtn');
+  if (!b) return;
+  const строка = () => {
+    let el = $('remSay');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'hint';
+      el.id = 'remSay';
+      $('body').insertAdjacentElement('afterbegin', el);
+    }
+    el.textContent = remText();
+    return el;
+  };
+  строка();
+  const say = (t, bad) => {
+    const el = строка();
+    el.textContent = t;
+    el.style.color = bad ? '#fbbf24' : 'var(--acc)';
+  };
+  b.onclick = () => remToggle(say);
+  // план мог сдвинуться: приехали свежие даты баннеров или список событий
+  remSync(false);
+}
+// Строка под кнопкой: о чём именно предупредим и когда
+function remText() {
+  if (!remOn) return 'Push за ' + REM_BAN_DAYS + ' дня до закрытия баннера и за ' +
+    REM_EV_DAYS + ' — до конца события с наградой. Приходит и при закрытом сайте.';
+  const plan = remPlan();
+  if (!plan.length) return 'Пока напоминать не о чем: сроки далеко или уже прошли.';
+  return plan.slice(0, 4).map(r => ruDate(new Date(r.at).toISOString().slice(0, 10)) +
+    ' → ' + r.что).join(' · ');
+}
+
 // ── бэкап своих данных ─────────────────────────────────────────────────────
 // Всё, что ты вписал — характеристики, уровни, отметки кодов и найденные точки
 // карты, — живёт в localStorage этого браузера. Облако его возит между
