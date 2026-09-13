@@ -179,6 +179,7 @@
     border:1px solid var(--line);border-radius:999px;padding:3px 9px;flex:none}
   .evc-d{margin-top:7px;font-size:11.5px;color:var(--tx2)}
   .evc.hot .evc-d{color:var(--gold)}
+  .evc-en{font-size:10px;color:var(--tx3);margin-top:2px}
   .evc-r{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
 
   /* ── сравнение двух эсперов ── */
@@ -1379,7 +1380,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v70';
+const APP_VER = 'v71';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1394,6 +1395,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
 
 let DB = null, GUIDE = null, RU = null, GEAR = null, I18N = null, CITY = null;
+let EVRU = {};
 // пробуждения: слаг → список эффектов A1…A6 и резонансов
 let AWK = {};
 // точки карты со StarDB: сундуки, находки, враги — то, чего нет в таблицах игры
@@ -1597,12 +1599,12 @@ async function load() {
   // (опыт, материалы прокачки) на странице просто не появляются.
   const grab = (f, opt) => fetch(f + '?v=' + APP_VER).then(r => r.json())
     .catch(() => opt ? null : Promise.reject(new Error(f)));
-  const [db, guide, dict, gear, i18n, city, awk, sdb, nb, art, sk, ch] = await Promise.all([
+  const [db, guide, dict, gear, i18n, city, awk, sdb, nb, art, sk, ch, evru] = await Promise.all([
     grab('nte-db.json'), grab('nte-guide.json'), grab('nte-ru.json', 1),
     grab('nte-gear.json', 1), grab('nte-i18n.json', 1), grab('nte-city.json', 1),
     grab('nte-awaken.json', 1), grab('nte-map.json', 1), grab('nte-build.json', 1),
     grab('nte-art.json', 1), grab('nte-skills.json', 1),
-    grab('nte-changes.json', 1)
+    grab('nte-changes.json', 1), grab('nte-ev-ru.json', 1)
   ]);
   DB = db; GUIDE = guide; RU = dict; GEAR = gear; I18N = i18n; CITY = city;
   AWK = (awk && awk.awaken) || {};
@@ -1612,6 +1614,12 @@ async function load() {
   SKL = (sk && sk.a) || {};
   BRIEF = (sk && sk.brief) || {};
   CHANGES = ch || null;
+  // Названия событий и их награды по-русски. Файл правится руками: календарь
+  // у ntebuild английский, официального русского списка у нас нет, а в игре
+  // интерфейс русский — и сверять глазами «Runaway Echoes» с «Беглыми
+  // отголосками» каждый раз неудобно.
+  EVRU = (evru && evru.ev) || {};
+  if (evru && evru.rew) Object.keys(evru.rew).forEach(k => { REW_RU[k] = evru.rew[k]; });
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
   bindTools();
@@ -1726,7 +1734,7 @@ function todayHtml() {
     const д = дней(e.to);
     if (!isFinite(д) || д < 0 || д > 7) return;
     пункты.push({ д: д, html: карточка(д <= 2 ? 'hot' : '',
-      esc(e.name), 'событие — ' + (д <= 0 ? 'последний день' :
+      esc(evName(e)), 'событие — ' + (д <= 0 ? 'последний день' :
       'ещё ' + д + ' ' + plural(д, 'день', 'дня', 'дней')), 'ban') });
   });
 
@@ -2683,9 +2691,14 @@ function unent(s) {
     .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 }
+// Русское имя события. Нет в словаре — показываем английское: лучше так, чем
+// пустая карточка у события, вышедшего после последней правки словаря.
+function evName(e) {
+  const ru = EVRU[e && e.slug];
+  return ru || unent(e && e.name);
+}
 function evRew(s) {
-  return unent(s).split(/\s{2,}|·/).map(x => x.trim()).filter(Boolean)
-    .map(x => '<span class="gsh">' + esc(rewName(x)) + '</span>').join('');
+  return rewHtml(unent(s).replace(/\s{2,}/g, ' · '));
 }
 // Сколько осталось — единственная формула на всю страницу. Раньше их было
 // две: одна считала до полуночи, другая до конца последнего дня, и на плашке
@@ -2722,7 +2735,8 @@ function evDraw() {
   }
   const q = state.q.trim().toLowerCase();
   const all = (evLive.list || []).filter(e =>
-    !q || ((e.name || '') + ' ' + (e.rew || '')).toLowerCase().indexOf(q) >= 0);
+    !q || ((e.name || '') + ' ' + evName(e) + ' ' + (e.rew || ''))
+      .toLowerCase().indexOf(q) >= 0);
   const идут = all.filter(e => e.live && !e.perm).sort(evSort);
   const скоро = all.filter(e => e.soon && !e.live).sort(evSort);
   const пост = all.filter(e => e.perm && !e.live && !e.soon)
@@ -2774,10 +2788,11 @@ function evCard(e) {
   return '<div class="evc' + (e.live ? ' on' : '') + (e.soon ? ' soon' : '') +
       (e.perm ? ' perm' : '') + (горит ? ' hot' : '') + '">' +
     '<div class="evc-h">' +
-      '<b>' + esc(unent(e.name)) + '</b>' +
+      '<b>' + esc(evName(e)) + '</b>' +
       (e.kind ? '<u>' + esc(EV_KIND[e.kind] || e.kind) + '</u>' : '') +
     '</div>' +
     '<div class="evc-d">' + esc(evDays(e)) + esc(evTail(e, дней)) + '</div>' +
+    (evName(e) !== unent(e.name) ? '<div class="evc-en">' + esc(unent(e.name)) + '</div>' : '') +
     (e.rew ? '<div class="evc-r">' + evRew(e.rew) + '</div>' : '') +
   '</div>';
 }
