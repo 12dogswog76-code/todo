@@ -815,6 +815,19 @@
     text-transform:uppercase;letter-spacing:.08em}
   .cloudb:hover{border-color:var(--acc);color:var(--tx)}
   .cloudb.on{color:var(--acc);border-color:hsla(140,70%,60%,.4)}
+  .tools{position:relative}
+  .toolsm{position:absolute;right:0;top:calc(100% + 7px);min-width:230px;z-index:40;
+    background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:5px;
+    box-shadow:0 14px 34px #000000b0;display:none}
+  .tools.open .toolsm{display:grid;gap:2px}
+  .toolsm button{display:block;width:100%;text-align:left;background:transparent;border:0;
+    color:var(--tx);padding:8px 10px;border-radius:9px;cursor:pointer;
+    font-family:var(--body);font-size:11px;font-weight:800;letter-spacing:.14em;
+    text-transform:uppercase}
+  .toolsm button:hover{background:hsla(0,0%,100%,.06)}
+  .toolsm button.on{color:var(--acc)}
+  .toolsm button i{display:block;font-style:normal;font-size:10.5px;font-weight:500;
+    letter-spacing:0;text-transform:none;color:var(--tx2);margin-top:3px}
 
   /* карта */
   /* Колонка категорий слева, карта справа и во всю оставшуюся ширину.
@@ -1320,12 +1333,19 @@
 
 <div class="top"><div class="wrap top-in">
   <div class="logo">NTE<b>·</b><i id="ver"></i></div>
-  <button class="cloudb" id="cloudBtn" title="Синхронизация отметок между устройствами">облако</button>
-  <button class="cloudb" id="planBtn" title="Сколько всего материалов нужно на тех, кого качаешь">план</button>
-  <button class="cloudb" id="cmpBtn" title="Сравнить двух эсперов: кого качать первым">сравнить</button>
-  <button class="cloudb" id="statBtn" title="Кинуть пачку скриншотов и разобрать характеристики всех эсперов сразу">скрины</button>
   <div class="tabs" id="tabs"></div>
   <div class="top-sp"></div>
+  <!-- Панели собраны в одно меню: четырьмя кнопками в ряд шапка перерастала
+       в две строки и съедала экран. -->
+  <div class="tools" id="tools">
+    <button class="cloudb" id="toolsBtn" title="Облако, план, сравнение, скрины">инструменты</button>
+    <div class="toolsm">
+      <button data-tool="cloud" id="cloudBtn">облако<i>синхронизация между устройствами</i></button>
+      <button data-tool="plan">план<i>материалы на всех, кого качаешь</i></button>
+      <button data-tool="cmp">сравнить<i>кого качать первым</i></button>
+      <button data-tool="stat">скрины<i>характеристики из снимков экрана</i></button>
+    </div>
+  </div>
   <!-- Поиск убран из шапки: на широком экране он уезжал вниз отдельной
        строкой и занимал полосу впустую. Фильтры на вкладках справляются. -->
   <input class="srch" id="q" type="search" placeholder="поиск" autocomplete="off" hidden>
@@ -1340,7 +1360,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script>
-const APP_VER = 'v66';
+const APP_VER = 'v67';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -1575,11 +1595,9 @@ async function load() {
   CHANGES = ch || null;
   $('ver').textContent = APP_VER;
   $('ver').onclick = showFresh;
-  $('cloudBtn').onclick = showSync;
-  $('planBtn').onclick = showPlan;
-  $('cmpBtn').onclick = showCmp;
-  $('statBtn').onclick = showOcrBulk;
+  bindTools();
   $('cloudBtn').classList.toggle('on', !!syncCfg().np);
+  $('toolsBtn').classList.toggle('on', !!syncCfg().np);
   workerVer();
   drawTabs();
   draw();
@@ -5161,62 +5179,9 @@ function myStats(slug) {
 function myStatsSave(slug, obj) {
   try { localStorage.setItem('nte-my-' + slug, JSON.stringify(obj)); } catch (e) {}
 }
-// Скриншот уходит на воркер, тот читает числа моделью зрения и возвращает их.
-// Перед отправкой ужимаем до 1400px и в jpeg: экран 2K весит мегабайты, а для
-// распознавания хватает и этого.
-const OCR_API = API_BASES.map(b => b + '/api/nte/ocr');   // API_BASES — в шапке скрипта
-
-// Лучшая модель распознавания закрыта лицензией Meta: её принимают одним
-// запросом «agree», и в дашборде Cloudflare такой кнопки нет. Воркеру доступ к
-// AI уже выдан, поэтому согласие отправляет он — по нажатию здесь.
-async function aiAgree(say) {
-  say('отправляю согласие с лицензией…');
-  for (const b of API_BASES) {
-    try {
-      const r = await fetch(b + '/api/nte/agree', { method: 'POST' });
-      const j = await r.json();
-      if (j && j.ok) { say('лицензия принята — распознавание теперь идёт лучшей моделью'); return; }
-      if (j && j.error) { say('не вышло: ' + j.error, 1); return; }
-    } catch (e) {}
-  }
-  say('воркер не ответил — залит ли alextask-worker.js версии 27?', 1);
-}
-
-// Воркер переводит картинку в массив байтов, и на крупных файлах это упирается
-// в его лимит процессорного времени: запрос повисал на минуты без ответа.
-// Поэтому ужимаем с запасом и, если всё равно тяжело, давим сильнее — пока не
-// уложимся в 300 КБ. Текст характеристик крупный, читается и в таком виде.
-const OCR_MAX_BYTES = 200 * 1024;
-// Имя со смыслом и без пересечений: draw() в этом файле уже занят — им
-// рисуется активная вкладка. Вторая функция с тем же именем перекрыла первую,
-// и страница падала на загрузке с «Cannot read properties of undefined».
-function fitCanvas(img, w) {
-  const k = Math.min(1, w / Math.max(img.width, img.height));
-  const cv = document.createElement('canvas');
-  cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
-  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-  return cv;
-}
-function shrink(file) {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.onload = async () => {
-      try {
-        for (const [w, q] of [[900, 0.8], [800, 0.75], [700, 0.7], [600, 0.65]]) {
-          const cv = fitCanvas(img, w);
-          const b = await new Promise(r => cv.toBlob(r, 'image/jpeg', q));
-          if (b && b.size <= OCR_MAX_BYTES) return res(b);
-          if (w === 600) return res(b);           // мельче уже нет смысла
-        }
-      } catch (e) { rej(e); }
-    };
-    img.onerror = () => rej(new Error('это не картинка'));
-    img.src = URL.createObjectURL(file);
-  });
-}
-// Результат локального распознавания: строка «NTE:{"cr":31.2,"cd":128.9}».
-// Принимаем только известные ключи и только числа — вставить в поле можно что
-// угодно, а сохраняется это в браузер и потом идёт в расчёты.
+// Числа перед записью: только известные ключи и только положительные. Разбор
+// идёт с картинки, в него запросто прилетает мусор, а сохраняется это в
+// браузер и потом участвует в расчётах.
 const OCR_KEYS = ['cr', 'cd', 'cyc', 'brk', 'hp', 'atk', 'def', 'dmg'];
 // Числа одного эспера: только знакомые ключи и только положительные числа.
 function ocrPick(o) {
@@ -5228,132 +5193,6 @@ function ocrPick(o) {
   });
   return got;
 }
-// Строка на всех сразу: «NTEALL:{"linko":{…},"zankou":{…}}». Её кладёт
-// nte-ocr.ps1, когда ему скормили папку со скринами — по снимку на эспера.
-// Вставлять можно в карточке любого из них, числа разойдутся по своим.
-function ocrPasteAll(txt, slug, say) {
-  let o = null;
-  try { o = JSON.parse(String(txt).replace(/^\s*NTEALL:\s*/, '')); } catch (e) {}
-  if (!o || typeof o !== 'object') { say('строка не разобралась — скопируй её заново', 1); return; }
-  let людей = 0, чисел = 0, чужих = 0;
-  Object.keys(o).forEach(sl => {
-    if (!agentBy(sl)) { чужих++; return; }
-    const got = ocrPick(o[sl]);
-    const n = Object.keys(got).length;
-    if (!n) return;
-    const my = myStats(sl);
-    Object.keys(got).forEach(k => { my[k] = got[k]; });
-    myStatsSave(sl, my);
-    людей++; чисел += n;
-  });
-  if (!людей) { say('в строке нет знакомых эсперов', 1); return; }
-  say('принято: ' + людей + ' ' + plural(людей, 'эспер', 'эспера', 'эсперов') +
-      ', ' + чисел + ' ' + plural(чисел, 'значение', 'значения', 'значений') +
-      (чужих ? ' (незнакомых пропущено: ' + чужих + ')' : ''));
-  calcFill(slug);
-  const g = (GUIDE.agents || {})[slug] || {};
-  const a = agentBy(slug);
-  const box = $('shBody');
-  if (box) {
-    box.innerHTML = nowHtml(slug, g, a, (t, note) =>
-      '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
-      (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
-    bindMy(slug); bindCharPlan(slug); bindCalc(slug);
-  }
-}
-function ocrPaste(txt, slug, say) {
-  if (/^\s*NTEALL:/.test(String(txt))) return ocrPasteAll(txt, slug, say);
-  let o = null;
-  try { o = JSON.parse(String(txt).replace(/^\s*NTE:\s*/, '')); } catch (e) {}
-  if (!o || typeof o !== 'object') { say('строка не разобралась — скопируй её заново', 1); return; }
-  const got = {};
-  OCR_KEYS.forEach(k => {
-    const v = parseFloat(o[k]);
-    if (isFinite(v) && v > 0) got[k] = Math.round(v * 10) / 10;
-  });
-  const n = Object.keys(got).length;
-  if (!n) { say('в строке нет знакомых характеристик', 1); return; }
-  const my = myStats(slug);
-  Object.keys(got).forEach(k => { my[k] = got[k]; });
-  myStatsSave(slug, my);
-  say('принято значений: ' + n + ' (распознано на твоём компьютере)');
-  calcFill(slug);
-  const g = (GUIDE.agents || {})[slug] || {};
-  const a = agentBy(slug);
-  const box = $('shBody');
-  if (box) {
-    box.innerHTML = nowHtml(slug, g, a, (t, note) =>
-      '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
-      (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
-    bindShBody();
-  }
-}
-async function ocrShot(file, slug, say) {
-  say('сжимаю картинку…');
-  let blob;
-  try { blob = await shrink(file); } catch (e) { say('не вышло: ' + e.message, 1); return; }
-  say('распознаю (' + Math.round(blob.size / 1024) + ' КБ), это секунд десять…');
-  let data = null, err = '';
-  for (const u of OCR_API) {
-    // Ограничение по времени обязательно: без него зависший запрос оставляет
-    // надпись «распознаю…» навсегда, и непонятно, работает оно или нет.
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 45000);
-    try {
-      const r = await fetch(u, { method: 'POST', body: blob, signal: ctl.signal,
-        headers: { 'Content-Type': 'application/octet-stream' } });
-      const j = await r.json();
-      if (j && j.stats) { data = j; break; }
-      err = (j && j.error) || 'пустой ответ';
-    } catch (e) {
-      err = e.name === 'AbortError' ? 'сервер молчал 45 секунд' : e.message;
-    } finally { clearTimeout(timer); }
-  }
-  if (!data) {
-    say('не вышло: ' + err, 1);
-    // модель просит разовое согласие — предлагаем нажать кнопку прямо тут
-    if (/agree|5016|лицензи/i.test(err)) {
-      const el = $('ocrSay');
-      if (el) {
-        const b = document.createElement('button');
-        b.className = 'fb';
-        b.style.marginLeft = '8px';
-        b.textContent = 'принять лицензию модели';
-        b.onclick = () => aiAgree(say);
-        el.after(b);
-      }
-    }
-    return;
-  }
-  const got = data.stats || {};
-  const n = Object.keys(got).length;
-  if (!n) {
-    say('характеристики не распознались', 1);
-    // показываем, что именно прочитала модель: по этому видно, дело в картинке
-    // или в разборе, и есть с чем прийти за исправлением
-    const el = $('ocrSay');
-    if (el && data.raw) {
-      const pre = document.createElement('div');
-      pre.className = 'hint';
-      pre.style.cssText = 'white-space:pre-wrap;max-height:160px;overflow:auto;' +
-        'border:1px solid var(--line);border-radius:9px;padding:8px;margin-top:6px';
-      pre.textContent = 'модель прочитала:\n' + data.raw;
-      el.parentElement.appendChild(pre);
-    }
-    return;
-  }
-  const my = myStats(slug);
-  Object.keys(got).forEach(k => { my[k] = got[k]; });
-  myStatsSave(slug, my);
-  say('распознано значений: ' + n + ' — проверь числа глазами');
-  calcFill(slug);
-  const g = (GUIDE.agents || {})[slug] || {};
-  $('shBody').innerHTML = nowHtml(slug, g, agentBy(slug), (t, note) =>
-    '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
-    (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
-  bindShBody();
-}
-
 function myHtml(slug, g) {
   const my = myStats(slug), G = g.goals || {};
   return '<div class="inp">' + MY_KEYS.map(k => {
@@ -5372,77 +5211,15 @@ function myHtml(slug, g) {
     '</div>';
   }).join('') + '</div>' +
   '<div class="ocr">' +
-    '<button class="fb" id="ocrPick">📷 прочитать со скриншота</button>' +
     '<button class="fb" id="ocrBulkBtn">скрины скопом — на всех сразу</button>' +
-    '<input type="file" id="ocrFile" accept="image/*" style="display:none">' +
-    '<span class="hint" id="ocrSay" style="margin:0">или вставь скрин из буфера — Ctrl+V</span>' +
+    '<span class="hint" id="ocrSay" style="margin:0">или вставь скрин этого эспера ' +
+    'из буфера — Ctrl+V</span>' +
   '</div>' +
-  '<div class="hint">Числа лежат в этом браузере. Витрины профиля и API у NTE нет, ' +
-  'поэтому сами они не подтянутся: либо вписать руками, либо распознать со скриншота ' +
-  'экрана персонажа.<br><b>Скрины скопом</b> — самый короткий путь: кидаешь пачку ' +
-  'снимков в окно, имена файлов и папка значения не имеют, эспер определяется ' +
-  'по имени на самом скрине.</div>' +
-  '<details class="mfold" style="margin-top:8px"><summary><b>Читать скриптом Windows</b>' +
-  '</summary><div class="mfold-in"><div class="hint">' +
-  'Запасной путь на случай, если распознавание в браузере читает криво. ' +
-  'В Windows есть свой распознаватель — на мелких цифрах он точнее, но ради ' +
-  'него придётся возиться с файлами и командой.<br><br>' +
-  '1. Скачай скрипт и положи куда удобно.<br>' +
-  '2. В игре открой экран характеристик, сними область: <b>Win+Shift+S</b>.<br>' +
-  '3. Правой кнопкой по файлу → <b>«Выполнить с помощью PowerShell»</b>. Если ' +
-  'запускаешь из консоли — только <b>Windows PowerShell</b>, не pwsh: ' +
-  'команда ниже это учитывает.<br>' +
-  '4. Скрипт положит в буфер строку — вернись сюда и нажми <b>Ctrl+V</b>.' +
-  '<br><br><b>Все эсперы за раз.</b> Тут скрипт узнаёт эспера только по имени ' +
-  'файла: сделай по скрину на каждого, назови файлы их именами («Линко.png», ' +
-  '«zankou.png»), сложи в одну папку — и жми «команду на папку».' +
-  '<br><br>В командах стоят пути по умолчанию: скрипт в «Загрузках», скрины в ' +
-  '«Изображения\\NTE». Если у тебя иначе — <b>подставь свои</b>. Путь к папке ' +
-  'со скринами проще всего взять так: открой её в проводнике, щёлкни по ' +
-  'адресной строке и скопируй. Путь к самому скрипту — правой кнопкой по файлу ' +
-  '→ «Копировать как путь».' +
-  '</div>' +
-  '<div class="mapbar" style="margin-top:8px">' +
-    '<a class="fb" href="nte-ocr.ps1" download>скачать nte-ocr.ps1</a>' +
-    '<button class="fb" data-ocrcmd>команда на один скрин</button>' +
-    '<button class="fb" data-ocrall>команда на папку</button>' +
-    '<button class="fb" data-ocrhere>команда, если скрипт не скачан</button>' +
-  '</div>' +
-  '<div class="hint" style="margin-top:6px">Команда сама найдёт скрипт в папке ' +
-  '«Загрузки» — если положил его туда, больше ничего править не надо.</div>' +
-  '</div></details>';
+  '<div class="hint">Числа лежат в этом браузере. Витрины профиля и API у NTE ' +
+  'нет, поэтому сами они не подтянутся. Сними экран характеристик — <b>Win+Shift+S</b> — ' +
+  'и вставь сюда по <b>Ctrl+V</b>: снимок разберётся прямо здесь, никуда не уходя. ' +
+  'На всех сразу — <b>скрины скопом</b>.</div>';
 }
-// Команда запуска. Путь не вписан жёстко: у другого человека папки сайта нет
-// вовсе, а скачанный скрипт почти всегда лежит в «Загрузках». Поэтому команда
-// ищет файл там, и запускает именно Windows PowerShell — в pwsh нет проекции
-// WinRT, без которой распознаватель Windows не доступен.
-const OCR_CMD = 'powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\Downloads\\nte-ocr.ps1"';
-// Папочный режим: скрины на всех эсперов разом. Папка по умолчанию —
-// «Изображения\\NTE», её же проще всего назначить для снимков экрана.
-const OCR_CMD_ALL = OCR_CMD + ' -Folder "$env:USERPROFILE\\Pictures\\NTE"';
-// Файл можно и не скачивать: у того, кто собирает сайт, он лежит рядом с
-// исходниками. Первая же попытка запустить «из Загрузок» без скачивания даёт
-// «файл не существует» — эта кнопка избавляет от такого сюрприза.
-const OCR_CMD_HERE = 'powershell -ExecutionPolicy Bypass -File ' +
-  '"F:\\Claude cowork\\сайт\\nte\\nte-ocr.ps1" -Folder ' +
-  '"$env:USERPROFILE\\Documents\\ShareX\\Screenshots\\nte"';
-function bindOcrCmd(box) {
-  if (!box) return;
-  const кнопка = (sel, текст, строка) => {
-    const b = box.querySelector(sel);
-    if (!b) return;
-    b.onclick = () => {
-      navigator.clipboard.writeText(строка).then(() => {
-        b.textContent = 'скопировано';
-        setTimeout(() => { b.textContent = текст; }, 1800);
-      }).catch(() => { b.textContent = 'не вышло — скопируй вручную'; });
-    };
-  };
-  кнопка('[data-ocrcmd]', 'команда на один скрин', OCR_CMD);
-  кнопка('[data-ocrall]', 'команда на папку', OCR_CMD_ALL);
-  кнопка('[data-ocrhere]', 'команда, если скрипт не скачан', OCR_CMD_HERE);
-}
-
 // ── скрины скопом: распознавание прямо в браузере ───────────────────────────
 // Скрипт на PowerShell читает точнее всех, но до него надо дойти: скачать файл,
 // завести отдельную папку, переименовать в ней каждый скрин именем эспера,
@@ -5540,6 +5317,45 @@ function ocrPrep(img) {
   }
   cx.putImageData(d, 0, 0);
   return cv;
+}
+function ocrLoadImg(file) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error('это не картинка'));
+    im.src = URL.createObjectURL(file);
+  });
+}
+// Один эспер: вставка из буфера в его карточке. Тот же движок, что и у пачки,
+// только результат сразу ложится этому эсперу — кто на снимке, спрашивать не
+// надо, карточка уже открыта.
+async function ocrOne(file, slug, say) {
+  let eng;
+  try { eng = await ocrEngine(t => say(t)); }
+  catch (e) { say('не вышло: ' + e.message, 1); return; }
+  say('читаю…');
+  try {
+    const img = await ocrLoadImg(file);
+    const cv = ocrPrep(img);
+    URL.revokeObjectURL(img.src);
+    const r = await eng.recognize(cv);
+    const got = ocrPick(ocrStatsFromText(((r || {}).data || {}).text || ''));
+    const n = Object.keys(got).length;
+    if (!n) { say('ничего не прочиталось — сними экран характеристик покрупнее', 1); return; }
+    const my = myStats(slug);
+    Object.keys(got).forEach(k => { my[k] = got[k]; });
+    myStatsSave(slug, my);
+    say('распознано значений: ' + n + ' — проверь глазами');
+    calcFill(slug);
+    const box = $('shBody');
+    if (box) {
+      const g = (GUIDE.agents || {})[slug] || {};
+      box.innerHTML = nowHtml(slug, g, agentBy(slug), (t, note) =>
+        '<div class="cap"><b>' + esc(t) + '</b><span></span>' +
+        (note ? '<em>' + esc(note) + '</em>' : '') + '</div>');
+      bindShBody();
+    }
+  } catch (e) { say('не вышло: ' + e.message, 1); }
 }
 function ocrThumb(img) {
   const k = 260 / Math.max(1, img.naturalWidth || img.width);
@@ -5802,12 +5618,7 @@ async function ocrRun() {
       const всего = ocrJobs.length, номер = i + 1;
       ocrSayBulk('читаю ' + номер + ' из ' + всего + ': ' + j.name);
       try {
-        const img = await new Promise((res, rej) => {
-          const im = new Image();
-          im.onload = () => res(im);
-          im.onerror = () => rej(new Error('не картинка'));
-          im.src = URL.createObjectURL(j.file);
-        });
+        const img = await ocrLoadImg(j.file);
         j.thumb = ocrThumb(img);
         const cv = ocrPrep(img);
         URL.revokeObjectURL(img.src);
@@ -5994,33 +5805,22 @@ function nowHtml(slug, g, a, cap) {
 function bindMy(slug) {
   const box = $('shBody');
   if (!box) return;
-  bindOcrCmd(box);
   const say = (t, bad) => {
     const el = $('ocrSay');
     if (el) { el.textContent = t; el.style.color = bad ? '#fbbf24' : 'var(--acc)'; }
   };
   if ($('ocrBulkBtn')) $('ocrBulkBtn').onclick = showOcrBulk;
-  if ($('ocrPick')) {
-    $('ocrPick').onclick = () => $('ocrFile').click();
-    $('ocrFile').onchange = e => { const f = e.target.files[0]; if (f) ocrShot(f, slug, say); };
-    // Вставка из буфера, два случая.
-    // Картинка — старый путь: Win+Shift+S и сразу Ctrl+V, распознаёт воркер.
-    // Текст «NTE:{...}» — новый: его кладёт nte-ocr.ps1, который читает
-    // скриншот встроенным распознавателем Windows. Локально, без интернета
-    // и без лимитов, и на мелких цифрах вернее модели зрения.
-    box.onpaste = e => {
-      const cd = e.clipboardData;
-      if (!cd) return;
-      const txt = (cd.getData ? cd.getData('text/plain') : '') || '';
-      // NTE:{…} — один эспер, NTEALL:{…} — все сразу из папочного разбора
-      if (/^\s*NTE(ALL)?:\s*\{/.test(txt)) { e.preventDefault(); ocrPaste(txt, slug, say); return; }
-      const it = [...(cd.items || [])]
-        .filter(x => x.type && x.type.indexOf('image') === 0)[0];
-      if (!it) return;
-      e.preventDefault();
-      ocrShot(it.getAsFile(), slug, say);
-    };
-  }
+  // Один эспер — вставкой из буфера: Win+Shift+S и сразу Ctrl+V, файл сохранять
+  // не надо. Читает тот же движок, что и «скрины скопом», прямо здесь.
+  box.onpaste = e => {
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const it = [...(cd.items || [])]
+      .filter(x => x.type && x.type.indexOf('image') === 0)[0];
+    if (!it) return;
+    e.preventDefault();
+    ocrOne(it.getAsFile(), slug, say);
+  };
   box.querySelectorAll('input[data-my]').forEach(inp => inp.onchange = () => {
     const my = myStats(slug);
     const v = parseFloat(inp.value);
@@ -6299,6 +6099,24 @@ function changesHtml() {
       '<div class="hint" style="margin-top:8px">Сравнение с прошлым прогоном ' +
       'сборщика' + (c.built ? ' · собрано ' + esc(c.built) : '') + '.</div>' +
     '</div>';
+}
+// Меню инструментов: открывается по кнопке, закрывается по выбору, по клику
+// мимо и по Esc.
+function bindTools() {
+  const box = $('tools'), b = $('toolsBtn');
+  if (!box || !b) return;
+  const закрыть = () => box.classList.remove('open');
+  b.onclick = e => { e.stopPropagation(); box.classList.toggle('open'); };
+  box.querySelectorAll('[data-tool]').forEach(el => el.onclick = () => {
+    закрыть();
+    const t = el.dataset.tool;
+    if (t === 'cloud') showSync();
+    else if (t === 'plan') showPlan();
+    else if (t === 'cmp') showCmp();
+    else if (t === 'stat') showOcrBulk();
+  });
+  document.addEventListener('click', e => { if (!box.contains(e.target)) закрыть(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') закрыть(); });
 }
 function showFresh() {
   const codes = (codesLive && codesLive.updated) || (GUIDE && GUIDE.codes && GUIDE.codes.updated) || '';
