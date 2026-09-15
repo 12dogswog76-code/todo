@@ -5,17 +5,31 @@
 // v8: карточки агентов переведены на card_*.webp / hero_*.webp вместо полноразмерных
 // art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
 // работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
+// v16: код страниц переехал в отдельные файлы (*-app.js). Они кэшируются как
+// данные — сеть в приоритете: иначе браузер отдал бы новую страницу со старым
+// скриптом, и это худшая из возможных комбинаций.
+// v15: в офлайн уехал и справочник NTE — страница, её данные и манифест.
+// Картинки NTE (их больше сотни мегабайт) в предзагрузку не идут: они
+// оседают в кэше картинок по мере просмотра, как и у ZZZ.
 // v14: появился обработчик push. Без него уведомления не показывались вовсе:
 // воркер их исправно отправлял, браузер исправно получал, а показать было
 // некому — сюда доезжало событие, которое никто не слушал.
-const CACHE = 'moi-dela-v14';
+const CACHE = 'moi-dela-v16';
 // Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
 // страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
 // заново тянул около десяти мегабайт артов и значков. На хорошем канале это
 // незаметно, на плохом — минуты пустых карточек.
 const IMG_CACHE = 'moi-dela-img';
 const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json',
-                './zzz-extra.json', './zzz-guide.json', './manifest.json', './icon.svg'];
+                './zzz-extra.json', './zzz-guide.json', './manifest.json', './icon.svg',
+                './manifest-zzz.json',
+                './todo-app.js', './money-app.js', './zzz-app.js',
+                // справочник NTE: страница и данные, без картинок
+                './nte/', './nte/index.html', './nte/app.js', './nte/manifest.json',
+                './nte/nte-db.json', './nte/nte-guide.json', './nte/nte-gear.json',
+                './nte/nte-ru.json', './nte/nte-city.json', './nte/nte-map.json',
+                './nte/nte-awaken.json', './nte/nte-build.json', './nte/nte-skills.json',
+                './nte/nte-art.json', './nte/nte-i18n.json', './nte/nte-ev-ru.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -68,7 +82,11 @@ self.addEventListener('fetch', e => {
       const cached = await caches.match(e.request);
       if (!cached) {
         // в кэше пусто — ждём сеть до конца, иначе показывать нечего
-        return net.catch(() => caches.match('./index.html'));
+        // Если сети нет и страницы в кэше ещё не было — отдаём ту оболочку,
+        // которая ближе по адресу: с /nte/ логично показать справочник, а не
+        // список дел.
+        return net.catch(() => caches.match(
+          url.pathname.indexOf('/nte/') === 0 ? './nte/index.html' : './index.html'));
       }
       const slow = new Promise(res => setTimeout(() => res(null), 6000));
       const first = await Promise.race([net.catch(() => null), slow]);
@@ -79,7 +97,7 @@ self.addEventListener('fetch', e => {
 
   // Картинки ZZZ: кэш в приоритете (их много, они не меняются) и живут в своём
   // кэше, который не сбрасывается при обновлении сайта.
-  if (url.pathname.indexOf('/img/zzz/') !== -1) {
+  if (url.pathname.indexOf('/img/zzz/') !== -1 || url.pathname.indexOf('/nte/img/') !== -1) {
     e.respondWith(
       caches.open(IMG_CACHE).then(c => c.match(e.request).then(cached => cached ||
         fetch(e.request).then(r => {
@@ -93,7 +111,9 @@ self.addEventListener('fetch', e => {
 
   // данные трекера: сеть в приоритете. Раньше они отдавались из кэша, и после
   // пересборки zzz-extra.json на сайте ещё сутки могли жить старые прибавки ядра
-  if (/zzz-(db|extra|guide|tier)\.json$/.test(url.pathname)) {
+  if (/zzz-(db|extra|guide|tier)\.json$/.test(url.pathname) ||
+      /\/nte\/nte-[a-z-]+\.json$/.test(url.pathname) ||
+      /-?app\.js$/.test(url.pathname)) {
     e.respondWith(
       fetch(e.request).then(r => {
         if (r.ok) { const c2 = r.clone(); caches.open(CACHE).then(c => c.put(e.request, c2)); }

@@ -1,0 +1,19 @@
+{
+  "name": "ZZZ — трекер",
+  "short_name": "ZZZ",
+  "description": "Трекер Zenless Zone Zero: агенты, сборки, крутки, эндгейм",
+  "lang": "ru",
+  "start_url": "./zzz.html",
+  "scope": "./",
+  "id": "/zzz.html",
+  "display": "standalone",
+  "orientation": "any",
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "background_color": "#08090c",
+  "theme_color": "#08090c",
+  "icons": [
+    { "src": "img/zzz/ui/icon-zzz-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/zzz/ui/icon-zzz-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "img/zzz/ui/icon-zzz-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
