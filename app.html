@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>alextask</title>
+<!-- Общая оболочка на все разделы: отсюда открываются задачи, деньги, трекер
+     ZZZ и справочник NTE. Ставится как одно приложение — своя иконка, своё
+     окно, и внутри переходы между разделами остаются в этом же окне. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.alextask.ru https://alextask-push.12dogswog76.workers.dev https://api.npoint.io https://api.jsonbin.io; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'">
+<link rel="manifest" href="manifest-app.json">
+<meta name="theme-color" content="#08090c">
+<link rel="icon" type="image/png" sizes="512x512" href="img/zzz/ui/icon-zzz.png">
+<link rel="apple-touch-icon" href="img/zzz/ui/icon-zzz-192.png">
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#08090c; --pan:#111318; --pan2:#171a21; --line:#242832;
+    --tx:#e9ecf3; --tx2:#8b92a3; --tx3:#5a6070;
+    --acc:#4ade80; --gold:#ffd54a; --warn:#fbbf24; --bad:#f87171;
+    --mono:ui-monospace,"Cascadia Mono","Segoe UI Mono",Consolas,monospace;
+    --body:Inter,"Segoe UI",Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--body);
+    padding:26px 18px 40px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto}
+  h1{font-size:19px;letter-spacing:.2em;text-transform:uppercase;margin:0 0 3px}
+  .sub{color:var(--tx2);font-size:12px;margin-bottom:22px}
+  .sub b{color:var(--acc);font-weight:600}
+  /* разделы: один уровень, в несколько колонок, выровнены друг по другу */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:11px}
+  a.card{display:flex;gap:13px;align-items:center;text-decoration:none;color:inherit;
+    background:var(--pan);border:1px solid var(--line);border-radius:15px;padding:14px;
+    transition:.15s;box-shadow:1px 1px 0 #ffffff0f inset}
+  a.card:hover{border-color:#3a4050;background:var(--pan2);transform:translateY(-1px)}
+  a.card img{width:46px;height:46px;border-radius:12px;object-fit:cover;flex:none;background:#0d0f14}
+  a.card .ic{width:46px;height:46px;border-radius:12px;flex:none;display:flex;
+    align-items:center;justify-content:center;font-size:22px;background:#0d0f14;
+    border:1px solid var(--line)}
+  a.card b{display:block;font-size:14px}
+  a.card span{display:block;font-size:11px;color:var(--tx2);margin-top:2px}
+  .cap{display:flex;align-items:center;gap:11px;margin:26px 0 11px}
+  .cap:before{content:'';width:3px;height:18px;border-radius:9px;background:var(--acc);flex:none}
+  .cap b{font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+  .cap span{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .box{background:var(--pan);border:1px solid var(--line);border-radius:15px;padding:14px}
+  .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  button{background:var(--pan2);border:1px solid var(--line);color:var(--tx);cursor:pointer;
+    border-radius:11px;padding:9px 14px;font-family:var(--body);font-size:12px;font-weight:600;
+    transition:.15s}
+  button:hover{border-color:#3a4050}
+  button.go{border-color:#2e7d52;color:var(--acc)}
+  button:disabled{opacity:.5;cursor:default}
+  .hint{color:var(--tx2);font-size:11.5px;line-height:1.6;margin-top:10px}
+  .bar{height:6px;border-radius:5px;background:#0d0f14;border:1px solid var(--line);
+    overflow:hidden;margin:11px 0 7px}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--gold));
+    transition:width .2s}
+  .grp{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:10px}
+  .g{display:flex;gap:9px;align-items:center;background:var(--pan2);border:1px solid var(--line);
+    border-radius:11px;padding:9px 11px;font-size:12px}
+  .g input{accent-color:var(--acc);width:15px;height:15px}
+  .g em{font-style:normal;margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--gold)}
+  .st{font-family:var(--mono);font-size:12px;color:var(--tx2)}
+  .st b{color:var(--tx)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>alextask</h1>
+  <div class="sub" id="state">проверяю, что готово к работе без сети…</div>
+
+  <div class="grid">
+    <a class="card" href="zzz.html">
+      <img src="img/zzz/ui/icon-zzz.png" alt="">
+      <div><b>ZZZ — трекер</b><span>агенты, сборки, крутки, эндгейм</span></div>
+    </a>
+    <a class="card" href="nte/">
+      <img src="nte/icon-192.png" alt="">
+      <div><b>NTE — справочник</b><span>эсперы, снаряжение, карта, события</span></div>
+    </a>
+    <a class="card" href="index.html">
+      <div class="ic">✓</div>
+      <div><b>Мои дела</b><span>задачи с синхронизацией</span></div>
+    </a>
+    <a class="card" href="money.html">
+      <div class="ic">₽</div>
+      <div><b>Мои деньги</b><span>расходы и доходы</span></div>
+    </a>
+  </div>
+
+  <div class="cap"><b>Работа без сети</b><span></span></div>
+  <div class="box">
+    <div class="st" id="size">считаю объёмы…</div>
+    <div class="grp" id="groups"></div>
+    <div class="bar"><i id="pb"></i></div>
+    <div class="row">
+      <button class="go" id="go">скачать выбранное</button>
+      <button id="stop" disabled>остановить</button>
+      <button id="clear">очистить кэш</button>
+    </div>
+    <div class="hint" id="say">Страницы и данные кладутся в память браузера при первом
+      заходе. Картинки — только те, что открывал. Кнопка выше докачивает остальное
+      разом, чтобы в дороге или без интернета всё открывалось целиком.</div>
+  </div>
+</div>
+<script src="app-shell.js" defer></script>
+</body>
+</html>

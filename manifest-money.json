@@ -1,0 +1,17 @@
+{
+  "name": "Мои деньги",
+  "short_name": "Деньги",
+  "description": "Учёт расходов и доходов",
+  "lang": "ru",
+  "id": "/money.html",
+  "start_url": "/money.html",
+  "scope": "/money.html",
+  "display": "standalone",
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
