@@ -8,7 +8,7 @@
      хранилищу и запасным зеркалам, и перечислять их поимённо значит ломать
      сайт при каждой смене зеркала. object-src и base-uri закрыты наглухо:
      это классические лазейки для подмены. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; object-src 'none'; base-uri 'none'; frame-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.alextask.ru https://alextask-push.12dogswog76.workers.dev https://api.npoint.io https://api.jsonbin.io https://enka.network https://jsonblob.com; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0b0b0d">
