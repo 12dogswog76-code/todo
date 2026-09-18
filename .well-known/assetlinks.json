@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "ru.alextask.twa",
+        "sha256_cert_fingerprints": ["42:35:03:43:1C:98:07:7E:A3:F4:B6:BA:03:66:60:A4:E7:0E:42:52:70:B7:38:9B:BD:97:70:38:1F:5C:7F:59"]
+      }
+    }]
