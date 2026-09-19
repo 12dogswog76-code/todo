@@ -10,7 +10,7 @@
 <!-- Скрипт отдельным файлом, поэтому inline-обработчиков нет нигде.
      Картинки: значки предметов с enka, арты операторов с prydwen.
      Витрина профиля идёт через наш воркер на workers.dev. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://enka.network https://cdn.prydwen.gg; connect-src 'self' https://alextask-push.12dogswog76.workers.dev; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://enka.network https://cdn.prydwen.gg; connect-src 'self' https://alextask-push.12dogswog76.workers.dev https://zonai.skport.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <style>
 :root{
   --bg:#0e0f11; --pan:#17181c; --pan2:#1e2026; --ln:#2a2d35;
@@ -242,7 +242,7 @@ summary::-webkit-details-marker{display:none}
 
 <div class="top"><div class="top-in">
   <button class="logo" id="up">ENDFIELD<span>.справочник</span></button>
-  <button class="ver" id="ver">v3 <b>· воркер …</b></button>
+  <button class="ver" id="ver">v4 <b>· воркер …</b></button>
   <button class="sync" id="sync">профиль</button>
   <div class="tabs" id="tabs"></div>
 </div></div>
@@ -255,6 +255,7 @@ summary::-webkit-details-marker{display:none}
 
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheet-in"></div></div>
 
+<script src="sk-sign.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

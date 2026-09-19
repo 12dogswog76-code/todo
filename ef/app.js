@@ -10,7 +10,7 @@
 
 'use strict';
 
-const APP_VER = 'v3';
+const APP_VER = 'v4';
 const ЗНАЧКИ = 'https://enka.network/ui/ef';
 const АРТЫ = 'https://cdn.prydwen.gg/images/arknights-endfield/characters/';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
@@ -646,12 +646,23 @@ function профильHtml() {
 }
 
 // ── боевая хроника skport ───────────────────────────────────────────────────
-// Запросы skport подписаны: каждый идёт с заголовком cred — это ключ от
-// аккаунта. Отдавать его наружу нельзя, поэтому хронику собирает скрипт в
-// твоей же вкладке (ef/sk-ef.js): он слушает ответы, которые страница и так
-// получила, и складывает их в файл. Здесь мы этот файл только читаем.
+// Их API отвечает только на подписанные запросы: нужны два ключа, которые
+// лежат в браузере на их сайте. Человек приносит их одной строкой, дальше
+// страница ходит к skport напрямую — ни ключи, ни ответы через наш сервер не
+// идут. Подпись считает sk-sign.js.
+const КОМАНДА = "copy(localStorage.getItem('SK_OAUTH_CRED_KEY')+'|'+localStorage.getItem('SK_TOKEN_CACHE_KEY'))";
 const LS_CHR = 'ef-chr';
 let ХРОНИКА = null;
+
+const РАЗДЕЛЫ = [
+  { имя: 'аккаунт',       путь: '/web/v2/user' },
+  { имя: 'мои персонажи', путь: '/web/v1/game/player/binding' },
+  { имя: 'хроника',       путь: '/web/v1/game/endfield/card/detail',          роль: true },
+  { имя: 'эхо войны',     путь: '/web/v1/game/endfield/card/war-echoes',      роль: true },
+  { имя: 'контракт',      путь: '/web/v1/game/endfield/card/crisis-contract', роль: true },
+  { имя: 'операторы',     путь: '/web/v1/game/endfield/search-chars',         роль: true },
+  { имя: 'оружие',        путь: '/web/v1/game/endfield/search-weapons',       роль: true },
+];
 
 function взятьХронику() {
   try { return JSON.parse(localStorage.getItem(LS_CHR)) || null; } catch (e) { return null; }
@@ -659,34 +670,73 @@ function взятьХронику() {
 
 function хроникаHtml() {
   ХРОНИКА = ХРОНИКА || взятьХронику();
+  const есть = !!skКлючи();
   let h = '<div class="cap">Боевая хроника<i></i><em>skport</em></div>';
 
-  if (!ХРОНИКА) {
-    h += '<div class="box" style="max-width:840px"><b>как забрать</b>' +
-      '<div class="rows" style="margin-top:6px">' +
-        '<div class="row"><span class="n first">1</span>Открой game.skport.com и войди в аккаунт</div>' +
-        '<div class="row"><span class="n">2</span>F12 → Ctrl+Shift+M (режим телефона) → ' +
-          'открой game.skport.com/endfield/game-data → F5</div>' +
-        '<div class="row"><span class="n">3</span>F12 → Console → вставь строку ниже</div>' +
-        '<div class="row"><span class="n">4</span>Пролистай страницу, открой разделы — ' +
-          'оперативники, регионы, контракт</div>' +
-        '<div class="row"><span class="n">5</span>Нажми «Скачать» в жёлтой плашке снизу</div>' +
-      '</div>' +
-      '<div class="fld"><input readonly value="fetch(\'https://alextask.ru/ef/sk-ef.js\')' +
-        '.then(r=>r.text()).then(eval)" id="cmd">' +
-        '<button class="btn" data-act="copy-cmd">Скопировать</button></div>' +
-      '<div class="say">Скрипт ничего не отправляет: он только читает ответы, которые ' +
-      'страница уже получила, и чистит из них всё похожее на ключи. Твой cred ' +
-      'остаётся в браузере.</div></div>';
+  h += '<div class="box" style="max-width:860px"><b>' +
+      (есть ? 'ключ подключён' : 'подключить за два шага') + '</b>' +
+    '<div class="rows" style="margin-bottom:10px">' +
+      '<div class="row"><span class="n first">1</span>На game.skport.com (залогиненным) ' +
+        'открой F12 → Console, вставь строку ниже и нажми Enter — она скопирует ключ ' +
+        'в буфер</div>' +
+      '<div class="row"><span class="n">2</span>Вставь его сюда и нажми «Подключить»</div>' +
+    '</div>' +
+    '<div class="fld"><input readonly id="cmd" value="' + эк(КОМАНДА) + '">' +
+      '<button class="btn sec2" data-act="copy-cmd">Скопировать команду</button></div>' +
+    '<div class="fld"><input id="skkeys" type="password" placeholder="' +
+      (есть ? 'ключ сохранён — вставь новый, чтобы заменить' : 'вставь скопированное') + '">' +
+      '<button class="btn" data-act="sk-save">Подключить</button>' +
+      (есть ? '<button class="btn sec2" data-act="sk-forget">Забыть</button>' : '') +
+    '</div>' +
+    '<div class="say" id="skstatus">Ключ хранится только в этом браузере. Запросы идут ' +
+      'с твоей машины прямо на skport, мимо нашего сервера.</div></div>';
+
+  if (есть) {
+    h += '<div class="fbar" style="margin-top:12px">' +
+      '<button class="fb" data-act="sk-load">Обновить хронику</button></div>';
   }
-
-  h += '<div class="box" style="max-width:840px;margin-top:10px"><b>загрузить файл</b>' +
-    '<div class="fld"><input type="file" id="chrfile" accept="application/json">' +
-    (ХРОНИКА ? '<button class="btn sec2" data-act="chr-forget">Забыть</button>' : '') +
-    '</div><div class="say">Файл ef-хроника.json, который выдал сборщик.</div></div>';
-
-  if (ХРОНИКА) h += рисоватьХронику();
+  h += '<div id="skbody">' + (ХРОНИКА ? рисоватьХронику() : '') + '</div>';
   return h;
+}
+
+function ролиИз(ответ) {
+  const д = (ответ && ответ.data) || {};
+  for (const р of (д.list || д.roles || [])) {
+    const id = р.roleId || р.uid || р.id;
+    if (id) return { roleId: String(id), uid: String(р.uid || id) };
+  }
+  return null;
+}
+
+async function грузитьХронику() {
+  const тело = $('skbody'), ст = $('skstatus');
+  тело.innerHTML = '<div class="empty">спрашиваю skport…</div>';
+  const собрано = {}; const лог = [];
+  let роль = null;
+  for (const р of РАЗДЕЛЫ) {
+    if (р.роль && !роль) { лог.push('· ' + р.имя + ' — пропуск: не знаю roleId'); continue; }
+    try {
+      const о = await skЗапрос(р.путь, р.роль ? { roleId: роль.roleId, uid: роль.uid } : undefined);
+      if (о && о.code !== undefined && о.code !== 0) {
+        лог.push('· ' + р.имя + ' — отказ: ' + эк(о.message || о.code));
+        continue;
+      }
+      собрано[р.путь] = о;
+      if (!роль) { const н = ролиИз(о); if (н) роль = н; }
+      лог.push('✓ ' + р.имя);
+    } catch (e) {
+      лог.push('· ' + р.имя + ' — ошибка: ' + эк(e.message));
+    }
+  }
+  if (ст) ст.innerHTML = лог.join('<br>');
+  if (!Object.keys(собрано).length) {
+    тело.innerHTML = '<div class="box"><b>ничего не пришло</b>Скорее всего ключ устарел: ' +
+      'зайди на skport заново и повтори команду.</div>';
+    return;
+  }
+  ХРОНИКА = { снято: new Date().toISOString(), разделы: собрано };
+  try { localStorage.setItem(LS_CHR, JSON.stringify(ХРОНИКА)); } catch (e) {}
+  тело.innerHTML = рисоватьХронику();
 }
 
 // Ответы skport видим впервые, поэтому сначала показываем их разборчиво:
@@ -695,18 +745,15 @@ function хроникаHtml() {
 function рисоватьХронику() {
   const р = (ХРОНИКА && ХРОНИКА.разделы) || {};
   const ключи = Object.keys(р);
-  if (!ключи.length) return '<div class="empty">в файле нет разделов</div>';
+  if (!ключи.length) return '';
   const когда = ХРОНИКА.снято ? new Date(ХРОНИКА.снято).toLocaleString('ru') : '';
-  return '<div class="cap">Что собрано<i></i><em>' + эк(когда) + '</em></div>' +
-    '<div class="stats" style="margin-bottom:12px">' +
-      '<div class="st"><u>разделов</u><b>' + ключи.length + '</b></div>' +
-      '<div class="st"><u>снято</u><b style="font-size:13px">' + эк(когда) + '</b></div>' +
-    '</div>' +
+  const имя = п => (РАЗДЕЛЫ.find(x => x.путь === п) || {}).имя || п;
+  return '<div class="cap">Что пришло<i></i><em>' + эк(когда) + '</em></div>' +
     '<div class="list">' + ключи.map(k =>
       '<details class="op" style="--el:#ffd046"><summary><span class="nm2">' +
-      эк(k.replace(/^\/web\/v\d\//, '').replace(/^\/api\/v\d\//, '')) +
-      '<i>' + эк(k) + '</i></span></summary><div class="op-in">' +
-      дерево(р[k], 0) + '</div></details>').join('') + '</div>';
+      эк(имя(k)) + '<i>' + эк(k) + '</i></span></summary><div class="op-in">' +
+      дерево(р[k] && р[k].data !== undefined ? р[k].data : р[k], 0) +
+      '</div></details>').join('') + '</div>';
 }
 
 function дерево(о, гл) {
@@ -801,34 +848,23 @@ document.addEventListener('click', e => {
   } else if (т.dataset.act === 'chr-forget') {
     localStorage.removeItem(LS_CHR); ХРОНИКА = null; рисовать();
   } else if (т.dataset.act === 'sk-save') {
-    const v = ($('sk').value || '').trim();
-    if (v.length < 20) { alert('Это не похоже на строку cookie'); return; }
-    localStorage.setItem(LS_SK, v);
-    $('sk').value = '';
+    const v = ($('skkeys').value || '').trim().replace(/^"|"$/g, '');
+    if (v.split('|').length !== 2 || v.length < 20) {
+      alert('Нужна строка вида cred|токен — её даёт команда выше'); return;
+    }
+    localStorage.setItem(SK_КЛЮЧИ, v);
+    $('skkeys').value = '';
     рисовать();
-    грузитьХронику('binding');
+    грузитьХронику();
+  } else if (т.dataset.act === 'sk-load') {
+    грузитьХронику();
   } else if (т.dataset.act === 'sk-forget') {
-    localStorage.removeItem(LS_SK); localStorage.removeItem('ef-role');
+    localStorage.removeItem(SK_КЛЮЧИ); localStorage.removeItem(LS_CHR);
     ХРОНИКА = null; рисовать();
   }
 });
 
 function закрыть() { $('sheet').classList.remove('on'); ОТКРЫТ = null; }
-
-document.addEventListener('change', e => {
-  if (e.target.id !== 'chrfile' || !e.target.files || !e.target.files[0]) return;
-  const ч = new FileReader();
-  ч.onload = () => {
-    try {
-      const д = JSON.parse(ч.result);
-      if (!д.разделы) throw new Error('это не файл хроники');
-      ХРОНИКА = д;
-      try { localStorage.setItem(LS_CHR, JSON.stringify(д)); } catch (e2) {}
-      рисовать();
-    } catch (e3) { alert('Файл не подошёл: ' + e3.message); }
-  };
-  ч.readAsText(e.target.files[0]);
-});
 
 document.addEventListener('input', e => {
   if (e.target.id !== 'q') return;
