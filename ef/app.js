@@ -654,14 +654,25 @@ const КОМАНДА = "copy(localStorage.getItem('SK_OAUTH_CRED_KEY')+'|'+local
 const LS_CHR = 'ef-chr';
 let ХРОНИКА = null;
 
+// У skport два набора адресов: /web/... для сайта и /api/... для приложения.
+// Что именно живо на конкретном разделе — заранее неизвестно, поэтому у
+// каждого пункта список кандидатов: берём первый, который ответил.
 const РАЗДЕЛЫ = [
-  { имя: 'аккаунт',       путь: '/web/v2/user' },
-  { имя: 'мои персонажи', путь: '/web/v1/game/player/binding' },
-  { имя: 'хроника',       путь: '/web/v1/game/endfield/card/detail',          роль: true },
-  { имя: 'эхо войны',     путь: '/web/v1/game/endfield/card/war-echoes',      роль: true },
-  { имя: 'контракт',      путь: '/web/v1/game/endfield/card/crisis-contract', роль: true },
-  { имя: 'операторы',     путь: '/web/v1/game/endfield/search-chars',         роль: true },
-  { имя: 'оружие',        путь: '/web/v1/game/endfield/search-weapons',       роль: true },
+  { имя: 'аккаунт', пути: ['/web/v2/user', '/api/v2/user'] },
+  { имя: 'мои персонажи', пути: ['/web/v1/game/player/binding',
+                                 '/api/v1/game/player/binding',
+                                 '/web/v1/game/player/info',
+                                 '/api/v1/game/player/info'] },
+  { имя: 'хроника', роль: true, пути: ['/web/v1/game/endfield/card/detail',
+                                       '/api/v1/game/endfield/card/detail'] },
+  { имя: 'эхо войны', роль: true, пути: ['/web/v1/game/endfield/card/war-echoes',
+                                         '/api/v1/game/endfield/card/war-echoes'] },
+  { имя: 'контракт', роль: true, пути: ['/web/v1/game/endfield/card/crisis-contract',
+                                        '/api/v1/game/endfield/card/crisis-contract'] },
+  { имя: 'операторы', роль: true, пути: ['/web/v1/game/endfield/search-chars',
+                                         '/api/v1/game/endfield/search-chars'] },
+  { имя: 'оружие', роль: true, пути: ['/web/v1/game/endfield/search-weapons',
+                                      '/api/v1/game/endfield/search-weapons'] },
 ];
 
 function взятьХронику() {
@@ -676,7 +687,7 @@ function хроникаHtml() {
   h += '<div class="box" style="max-width:860px"><b>' +
       (есть ? 'ключ подключён' : 'подключить за два шага') + '</b>' +
     '<div class="rows" style="margin-bottom:10px">' +
-      '<div class="row"><span class="n first">1</span>На game.skport.com (залогиненным) ' +
+      '<div class="row"><span class="n first">1</span>На www.skport.com (залогиненным) ' +
         'открой F12 → Console, вставь строку ниже и нажми Enter — она скопирует ключ ' +
         'в буфер</div>' +
       '<div class="row"><span class="n">2</span>Вставь его сюда и нажми «Подключить»</div>' +
@@ -699,12 +710,20 @@ function хроникаHtml() {
   return h;
 }
 
-function ролиИз(ответ) {
-  const д = (ответ && ответ.data) || {};
-  for (const р of (д.list || д.roles || [])) {
-    const id = р.roleId || р.uid || р.id;
-    if (id) return { roleId: String(id), uid: String(р.uid || id) };
+// roleId может лежать где угодно в ответе, поэтому ищем по всему дереву.
+function ролиИз(о, гл) {
+  гл = гл || 0;
+  if (!о || typeof о !== 'object' || гл > 6) return null;
+  if (Array.isArray(о)) {
+    for (const x of о) { const р = ролиИз(x, гл + 1); if (р) return р; }
+    return null;
   }
+  const id = о.roleId || о.role_id || о.uid || о.gameUid || о.game_uid;
+  // Берём только похожее на игровой идентификатор: длинное число.
+  if (id && /^\d{6,}$/.test(String(id))) {
+    return { roleId: String(о.roleId || о.role_id || id), uid: String(о.uid || о.gameUid || id) };
+  }
+  for (const v of Object.values(о)) { const р = ролиИз(v, гл + 1); if (р) return р; }
   return null;
 }
 
@@ -715,18 +734,24 @@ async function грузитьХронику() {
   let роль = null;
   for (const р of РАЗДЕЛЫ) {
     if (р.роль && !роль) { лог.push('· ' + р.имя + ' — пропуск: не знаю roleId'); continue; }
-    try {
-      const о = await skЗапрос(р.путь, р.роль ? { roleId: роль.roleId, uid: роль.uid } : undefined);
-      if (о && о.code !== undefined && о.code !== 0) {
-        лог.push('· ' + р.имя + ' — отказ: ' + эк(о.message || о.code));
-        continue;
+    let ладно = false, последняя = '';
+    for (const путь of р.пути) {
+      try {
+        const о = await skЗапрос(путь, роль ? { roleId: роль.roleId, uid: роль.uid } : undefined);
+        if (о && о.code !== undefined && о.code !== 0) {
+          последняя = 'отказ: ' + (о.message || о.code);
+          continue;
+        }
+        собрано[путь] = о;
+        if (!роль) { const н = ролиИз(о); if (н) { роль = н; лог.push('  нашёл игровой id'); } }
+        лог.push('✓ ' + р.имя + ' <span style="color:#585c67">' + эк(путь) + '</span>');
+        ладно = true;
+        break;
+      } catch (e) {
+        последняя = e.message;
       }
-      собрано[р.путь] = о;
-      if (!роль) { const н = ролиИз(о); if (н) роль = н; }
-      лог.push('✓ ' + р.имя);
-    } catch (e) {
-      лог.push('· ' + р.имя + ' — ошибка: ' + эк(e.message));
     }
+    if (!ладно) лог.push('· ' + р.имя + ' — ' + эк(последняя));
   }
   if (ст) ст.innerHTML = лог.join('<br>');
   if (!Object.keys(собрано).length) {
@@ -747,7 +772,7 @@ function рисоватьХронику() {
   const ключи = Object.keys(р);
   if (!ключи.length) return '';
   const когда = ХРОНИКА.снято ? new Date(ХРОНИКА.снято).toLocaleString('ru') : '';
-  const имя = п => (РАЗДЕЛЫ.find(x => x.путь === п) || {}).имя || п;
+  const имя = п => (РАЗДЕЛЫ.find(x => (x.пути || []).indexOf(п) >= 0) || {}).имя || п;
   return '<div class="cap">Что пришло<i></i><em>' + эк(когда) + '</em></div>' +
     '<div class="list">' + ключи.map(k =>
       '<details class="op" style="--el:#ffd046"><summary><span class="nm2">' +

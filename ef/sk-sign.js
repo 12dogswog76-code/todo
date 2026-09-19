@@ -162,5 +162,14 @@ async function skЗапрос(путь, параметры) {
       cred: к.cred, sign, 'sk-language': 'ru_RU', 'Content-Type': 'application/json',
     },
   });
-  return r.json();
+  // Не всегда приходит json: на неизвестный путь сервер отвечает страницей.
+  // Тогда показываем начало ответа — по нему видно, что не так.
+  const текст = await r.text();
+  try {
+    return JSON.parse(текст);
+  } catch (e) {
+    const о = new Error('ответ не json (' + r.status + '): ' + текст.slice(0, 90));
+    о.статус = r.status;
+    throw о;
+  }
 }
