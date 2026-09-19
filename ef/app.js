@@ -57,7 +57,7 @@ async function старт() {
   ПРОФ = взятьСохранённый();
   обновитьКнопку();
   try {
-    const r = await fetch('ef-db.json', { cache: 'no-cache' });
+    const r = await fetch('ef-db.json?v=' + APP_VER, { cache: 'no-cache' });
     if (!r.ok) throw new Error('ef-db.json: ' + r.status);
     БАЗА = await r.json();
   } catch (e) {
@@ -659,10 +659,11 @@ let ХРОНИКА = null;
 // каждого пункта список кандидатов: берём первый, который ответил.
 const РАЗДЕЛЫ = [
   { имя: 'аккаунт', пути: ['/web/v2/user', '/api/v2/user'] },
-  { имя: 'мои персонажи', пути: ['/web/v1/game/player/binding',
-                                 '/api/v1/game/player/binding',
-                                 '/web/v1/game/player/info',
-                                 '/api/v1/game/player/info'] },
+  // /web/v1/game/player/binding отдаёт 404: у раздела игроков живёт только
+  // ветка /api/. Проверено запросом без входа: 404 против 401.
+  { имя: 'мои персонажи', пути: ['/api/v1/game/player/binding',
+                                 '/api/v1/game/player/info',
+                                 '/api/v1/game/player/asset-show'] },
   { имя: 'хроника', роль: true, пути: ['/web/v1/game/endfield/card/detail',
                                        '/api/v1/game/endfield/card/detail'] },
   { имя: 'эхо войны', роль: true, пути: ['/web/v1/game/endfield/card/war-echoes',
