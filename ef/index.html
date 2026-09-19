@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Endfield — справочник</title>
+<meta name="theme-color" content="#0e0f11">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- Скрипт отдельным файлом, поэтому inline тут не нужен ни в каком виде.
+     Картинки берутся с enka.network — там лежат значки предметов игры. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://enka.network; connect-src 'self' https://alextask.ru https://enka.network; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<style>
+:root{
+  /* Палитра Endfield: индустриальная, тёмная, с жёлтым. Жёлтый здесь —
+     фирменный цвет игры, и он же по правилам образа красит числа. */
+  --bg:#0e0f11; --pan:#17181c; --pan2:#1e2026; --ln:#2a2d35;
+  --tx:#edeef2; --tx2:#8d919c; --tx3:#585c67;
+  --acc:#4ade80; --gold:#ffd046; --warn:#fbbf24; --bad:#f87171;
+  --disp:Oswald,"Arial Narrow",Impact,sans-serif;
+  --body:Inter,"Segoe UI",Roboto,system-ui,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --glass:inset 0 0 40px rgba(255,255,255,.02);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 var(--body);
+     -webkit-text-size-adjust:100%}
+a{color:inherit}
+.wrap{max-width:1760px;margin:0 auto;padding:0 14px 60px}
+
+/* ── шапка ─────────────────────────────────────────────────────────────── */
+.top{position:sticky;top:0;z-index:30;background:rgba(14,15,17,.93);
+     backdrop-filter:blur(9px);border-bottom:1px solid var(--ln);margin:0 -14px 12px;
+     padding:8px 14px}
+.top-in{max-width:1760px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font:600 19px/1 var(--disp);letter-spacing:.14em;text-transform:uppercase;
+      color:var(--gold);background:none;border:0;cursor:pointer;padding:2px 0}
+.logo span{color:var(--tx2)}
+.ver{font:10px/1 var(--mono);color:var(--tx3);background:var(--pan);border:1px solid var(--ln);
+     border-radius:9px;padding:4px 7px;cursor:pointer}
+.tabs{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}
+.tab{font:11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--tx2);
+     background:var(--pan);border:1px solid var(--ln);border-radius:10px;padding:8px 12px;
+     cursor:pointer;transition:.16s}
+.tab:hover{border-color:#3a3e49;color:var(--tx);transform:translateY(-1px)}
+.tab.on{color:#0e0f11;background:var(--gold);border-color:var(--gold);font-weight:600}
+
+/* ── строка фильтров ───────────────────────────────────────────────────── */
+.fbar{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.fgrp{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.fgrp>i{font:9px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;
+        color:var(--tx3);font-style:normal;margin-right:2px}
+.fb{font:11px/1 var(--body);color:var(--tx2);background:var(--pan);border:1px solid var(--ln);
+    border-radius:9px;padding:7px 10px;cursor:pointer;transition:.16s;display:flex;
+    align-items:center;gap:5px}
+.fb:hover{border-color:#3a3e49;color:var(--tx)}
+.fb.on{color:var(--acc);border-color:rgba(74,222,128,.55);
+       box-shadow:0 0 0 1px rgba(74,222,128,.18),0 0 16px rgba(74,222,128,.10)}
+.fb img{width:15px;height:15px;object-fit:contain}
+.fcnt{font:9px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--tx3);
+      margin-left:auto}
+.srch{font:12px var(--body);color:var(--tx);background:var(--pan);border:1px solid var(--ln);
+      border-radius:9px;padding:7px 10px;min-width:150px;outline:none}
+.srch:focus{border-color:#3a3e49}
+
+/* ── общие блоки ───────────────────────────────────────────────────────── */
+.cap{display:flex;align-items:center;gap:9px;margin:16px 0 9px;
+     font:600 12px/1 var(--disp);letter-spacing:.09em;text-transform:uppercase;color:var(--tx)}
+.cap::before{content:"";width:3px;height:19px;border-radius:2px;background:var(--gold)}
+.cap i{flex:1;height:1px;background:var(--ln)}
+.cap em{font:italic 9px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;
+        color:var(--tx3);font-style:italic}
+.box{background:var(--pan);border:1px solid var(--ln);border-radius:13px;padding:11px 12px;
+     box-shadow:var(--glass)}
+.box>b{display:block;color:var(--gold);font:600 11px/1 var(--body);letter-spacing:.05em;
+       text-transform:uppercase;margin-bottom:7px}
+.hint{color:var(--tx3);font-size:11px;margin:14px 0 0}
+.empty{text-align:center;color:var(--tx3);font:11px/1 var(--body);letter-spacing:.2em;
+       text-transform:uppercase;padding:40px 0}
+.chip{display:inline-flex;align-items:center;gap:4px;font:10px/1 var(--mono);
+      border:1px solid var(--ln);border-radius:7px;padding:4px 6px;color:var(--tx2)}
+.num{font-family:var(--mono);color:var(--gold)}
+
+/* ── сетки: один уровень, колонки, раскрытие в ширину ──────────────────── */
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:9px;
+      align-items:start}
+.list>details[open]{grid-column:1/-1}
+.wide{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px}
+.card-in{display:grid;gap:0 18px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));
+         align-items:start}
+.sec.full{grid-column:1/-1}
+
+/* ── карточка оператора ────────────────────────────────────────────────── */
+details.op{background:var(--pan);border:1px solid var(--ln);border-left:3px solid var(--el,#555);
+           border-radius:13px;overflow:hidden;box-shadow:var(--glass);transition:.16s}
+details.op:hover{border-color:#3a3e49;transform:translateY(-1px)}
+details.op[open]{transform:none;border-color:var(--el,#555)}
+summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:9px 11px}
+summary::-webkit-details-marker{display:none}
+.ava{width:46px;height:46px;border-radius:11px;object-fit:cover;background:var(--pan2);
+     border:1px solid var(--ln);flex:none}
+.nm{font:600 14px/1.15 var(--body)}
+.nm i{display:block;font:italic 10px/1.3 var(--body);color:var(--tx3);margin-top:3px}
+.rar{margin-left:auto;font:600 12px/1 var(--mono);color:var(--gold);flex:none}
+.op-in{padding:0 11px 12px;border-top:1px solid var(--ln);margin-top:2px}
+.sec{padding:11px 0 0}
+.sec>h4{margin:0 0 7px;font:600 10px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;
+        color:var(--tx3)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:12px}
+.kv>span{color:var(--tx2)}
+.kv>b{font-family:var(--mono);color:var(--gold);font-weight:500}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;font:9px/1 var(--body);letter-spacing:.16em;text-transform:uppercase;
+        color:var(--tx3);padding:5px 7px;border-bottom:1px solid var(--ln);font-weight:500}
+.tbl td{padding:5px 7px;border-bottom:1px solid rgba(255,255,255,.04)}
+.tbl td.n{text-align:right;font-family:var(--mono);color:var(--gold)}
+.tbl tr.top td{background:rgba(255,208,70,.06)}
+
+/* ── предметы ──────────────────────────────────────────────────────────── */
+.it{display:flex;align-items:center;gap:9px;background:var(--pan);border:1px solid var(--ln);
+    border-radius:11px;padding:8px 10px;transition:.16s}
+.it:hover{border-color:#3a3e49;transform:translateY(-1px)}
+.it img{width:38px;height:38px;object-fit:contain;flex:none;background:var(--pan2);
+        border-radius:9px;padding:2px}
+.it b{display:block;font:600 12px/1.2 var(--body)}
+.it i{font:italic 10px/1.3 var(--body);color:var(--tx3)}
+.r6{color:var(--gold)} .r5{color:#c89bff} .r4{color:#63b3ff}
+
+/* ── панель поверх страницы ────────────────────────────────────────────── */
+.sheet{position:fixed;inset:0;z-index:60;background:rgba(6,7,9,.72);backdrop-filter:blur(3px);
+       display:none;padding:26px 14px;overflow:auto}
+.sheet.on{display:block}
+.sheet-in{max-width:980px;margin:0 auto;background:var(--pan);border:1px solid var(--ln);
+          border-radius:18px;padding:16px;box-shadow:0 30px 70px rgba(0,0,0,.6)}
+.x{float:right;background:var(--pan2);border:1px solid var(--ln);border-radius:9px;
+   color:var(--tx2);cursor:pointer;padding:5px 10px;font:12px var(--body)}
+.fld{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0}
+.fld input{flex:1;min-width:170px;font:13px var(--mono);color:var(--tx);background:var(--pan2);
+           border:1px solid var(--ln);border-radius:9px;padding:9px 11px;outline:none}
+.btn{font:12px var(--body);color:#0e0f11;background:var(--gold);border:0;border-radius:9px;
+     padding:9px 14px;cursor:pointer;font-weight:600}
+.btn.sec2{background:var(--pan2);color:var(--tx2);border:1px solid var(--ln);font-weight:400}
+.say{font-size:11px;color:var(--tx2);min-height:16px}
+@media(max-width:700px){
+  .wrap{padding:0 9px 50px} .top{margin:0 -9px 10px;padding:7px 9px}
+  .list{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="top-in">
+  <button class="logo" id="up">ENDFIELD<span>.справочник</span></button>
+  <button class="ver" id="ver">v1</button>
+  <div class="tabs" id="tabs"></div>
+</div></div>
+
+<div class="wrap">
+  <div class="fbar" id="fbar"></div>
+  <div id="body"><div class="empty">загрузка базы…</div></div>
+  <p class="hint" id="src"></p>
+</div>
+
+<div class="sheet" id="sheet"><div class="sheet-in" id="sheet-in"></div></div>
+
+<script src="app.js"></script>
+</body>
+</html>
