@@ -82,11 +82,12 @@ body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 var(--body);
 .wide{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px}
 
 /* ── плитки операторов: главная витрина ────────────────────────────────── */
-.ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:11px;
+.ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px;
      align-items:start}
 .tile{position:relative;aspect-ratio:3/4;border-radius:14px;overflow:hidden;cursor:pointer;
       background:var(--pan);border:1px solid var(--ln);box-shadow:var(--glass);
-      transition:.17s;padding:0;display:block;width:100%;text-align:left}
+      transition:.17s;padding:0;display:block;width:100%;text-align:left;
+      color:var(--tx);font-family:var(--body)}
 .tile:hover{transform:translateY(-2px);border-color:var(--el,#3a3e49)}
 .tile>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
 .tile .sh{position:absolute;inset:0;
@@ -101,9 +102,41 @@ body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 var(--body);
           padding:4px 6px}
 .tile .lv{position:absolute;top:8px;right:9px;font:600 11px/1 var(--mono);color:#0e0f11;
           background:var(--acc);border-radius:7px;padding:4px 6px}
-.tile .lv.no{background:var(--pan2);color:var(--tx3);border:1px solid var(--ln)}
+.tile .lv.no{background:rgba(14,15,17,.72);color:var(--tx3);border:1px solid var(--ln)}
 .tile .pot{position:absolute;top:32px;right:9px;font:10px/1 var(--mono);color:var(--gold);
            background:rgba(14,15,17,.72);border:1px solid var(--ln);border-radius:7px;padding:3px 5px}
+.tile .tr{position:absolute;top:32px;left:9px;font:600 10px/1 var(--mono);
+          background:rgba(14,15,17,.78);border:1px solid var(--ln);border-radius:7px;padding:3px 5px}
+.t0{color:#ff5f5f;border-color:rgba(255,95,95,.5)!important}
+.t05{color:#ff9f43;border-color:rgba(255,159,67,.5)!important}
+.t1{color:var(--gold);border-color:rgba(255,208,70,.5)!important}
+.t15{color:#9ad7ff} .t2{color:var(--tx2)}
+
+/* ── вкладки внутри карточки ───────────────────────────────────────────── */
+.ctabs{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 12px}
+.ctab{font:11px/1 var(--body);color:var(--tx2);background:var(--pan2);border:1px solid var(--ln);
+      border-radius:9px;padding:7px 11px;cursor:pointer;transition:.15s}
+.ctab:hover{color:var(--tx);border-color:#3a3e49}
+.ctab.on{color:#0e0f11;background:var(--gold);border-color:var(--gold);font-weight:600}
+.lnk{color:var(--gold);font-size:11px;text-decoration:none;border-bottom:1px dotted currentColor}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;align-items:center;gap:9px;background:var(--pan2);border:1px solid var(--ln);
+     border-radius:10px;padding:7px 10px;font-size:12px}
+.row b{margin-left:auto;font-family:var(--mono);color:var(--gold);font-weight:500}
+.row .n{width:22px;height:22px;border-radius:6px;background:var(--pan);color:var(--tx3);
+        display:flex;align-items:center;justify-content:center;font:600 11px var(--mono);flex:none}
+.row .n.first{background:var(--gold);color:#0e0f11}
+.team{display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--pan2);
+      border:1px solid var(--ln);border-radius:11px;padding:8px}
+.team img{width:38px;height:38px;border-radius:9px;object-fit:cover;background:var(--pan)}
+.team .who{font:10px/1.2 var(--body);color:var(--tx2);text-align:center;width:54px}
+.team .mem{display:flex;flex-direction:column;align-items:center;gap:4px}
+.team .mem.me img{outline:2px solid var(--acc)}
+.tiergrid{display:grid;gap:9px}
+.tierrow{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:start;
+         background:var(--pan);border:1px solid var(--ln);border-radius:13px;padding:9px}
+.tierlab{font:700 20px/1 var(--disp);letter-spacing:.06em;display:flex;align-items:center;
+         justify-content:center;border-radius:10px;background:var(--pan2);padding:12px 0}
 
 /* ── панель поверх страницы: карточка оператора ────────────────────────── */
 .sheet{position:fixed;inset:0;z-index:60;background:rgba(6,7,9,.74);backdrop-filter:blur(3px);
@@ -188,7 +221,7 @@ summary::-webkit-details-marker{display:none}
 
 <div class="top"><div class="top-in">
   <button class="logo" id="up">ENDFIELD<span>.справочник</span></button>
-  <button class="ver" id="ver">v2 <b>· воркер …</b></button>
+  <button class="ver" id="ver">v3 <b>· воркер …</b></button>
   <button class="sync" id="sync">профиль</button>
   <div class="tabs" id="tabs"></div>
 </div></div>

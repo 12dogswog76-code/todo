@@ -1,21 +1,22 @@
-// Справочник Arknights: Endfield. Весь код страницы — здесь.
+// Справочник Arknights: Endfield.
 //
-// Устройство такое же, как у трекера ZZZ: главная — витрина плиток с артами,
-// клик по плитке открывает карточку в панели поверх страницы. Профиль с
-// витрины enka подтягивается сам при каждом заходе и накладывается на плитки:
-// уровень, потенциал, уровни навыков.
+// Устройство повторяет трекер ZZZ: главная — витрина плиток с артами, клик
+// открывает карточку в панели поверх страницы, внутри карточки свои вкладки.
+// Профиль с витрины enka подтягивается сам при каждом заходе и накладывается
+// на плитки и карточки.
 //
-// В разметке нет ни одного onclick — политика безопасности запрещает
+// В разметке нет ни одного onclick: политика безопасности запрещает
 // inline-скрипты, поэтому события ловятся делегированием на документе.
 
 'use strict';
 
-const APP_VER = 'v2';
+const APP_VER = 'v3';
 const ЗНАЧКИ = 'https://enka.network/ui/ef';
 const АРТЫ = 'https://cdn.prydwen.gg/images/arknights-endfield/characters/';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
+const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
 const LS_UID = 'ef-uid';
-const LS_PROF = 'ef-prof';        // последняя витрина: показываем сразу, до ответа сети
+const LS_PROF = 'ef-prof';
 
 const $ = id => document.getElementById(id);
 const эк = s => String(s == null ? '' : s)
@@ -24,15 +25,29 @@ const чис = n => (n == null ? '—' : (Math.round(n * 10) / 10).toLocaleStrin
 
 let БАЗА = null;
 let ВКЛ = 'ops';
-let ПРОФ = null;                  // разобранная витрина: {uid, имя, ур, мир, оп:{id:{…}}}
-const Ф = { стихия: '', класс: '', редкость: 0, оружие: '', поиск: '', свои: false };
+let ПРОФ = null;
+let ОТКРЫТ = null;                 // id оператора в панели
+let ВКЛК = 'обзор';                // вкладка внутри карточки
+const Ф = { стихия: '', класс: '', редкость: 0, тир: '', поиск: '', свои: false };
 
 const ВКЛАДКИ = [
   { id: 'ops',  имя: 'Операторы' },
+  { id: 'tier', имя: 'Тир-лист' },
+  { id: 'team', имя: 'Команды' },
   { id: 'gear', имя: 'Снаряжение' },
   { id: 'wpn',  имя: 'Оружие' },
   { id: 'prof', имя: 'Профиль' },
 ];
+const ВКЛКАРТЫ = [
+  { id: 'обзор',   имя: 'Обзор' },
+  { id: 'сборка',  имя: 'Сборка' },
+  { id: 'команды', имя: 'Команды' },
+  { id: 'рост',    имя: 'Рост' },
+  { id: 'моё',     имя: 'Моё' },
+];
+
+// Классы для цвета тира: T0 — красный, дальше холоднее.
+const ТИРКЛ = { 'T0': 't0', 'T0.5': 't05', 'T1': 't1', 'T1.5': 't15', 'T2': 't2' };
 
 // ── старт ───────────────────────────────────────────────────────────────────
 async function старт() {
@@ -40,7 +55,6 @@ async function старт() {
   версияВоркера();
   ПРОФ = взятьСохранённый();
   обновитьКнопку();
-
   try {
     const r = await fetch('ef-db.json', { cache: 'no-cache' });
     if (!r.ok) throw new Error('ef-db.json: ' + r.status);
@@ -49,25 +63,20 @@ async function старт() {
     $('body').innerHTML = '<div class="empty">база не загрузилась: ' + эк(e.message) + '</div>';
     return;
   }
-  $('src').textContent = 'Данные: ' + БАЗА.источник + '. Арты — prydwen.gg. ' +
-    'Операторов ' + БАЗА.персонажи.length + ', оружия ' + БАЗА.оружие.length +
-    ', снаряжения ' + БАЗА.снаряжение.length + ', наборов ' + БАЗА.наборы.length + '.';
+  $('src').textContent = 'Данные: таблицы игры (дамп 22.06.2026), разборы и арты — prydwen.gg, ' +
+    'значки — enka.network. Операторов ' + БАЗА.персонажи.length +
+    ', оружия ' + БАЗА.оружие.length + ', снаряжения ' + БАЗА.снаряжение.length +
+    ', наборов ' + БАЗА.наборы.length + '.';
   рисовать();
-
-  // Синхронизация постоянная: UID сохранён — тянем свежую витрину сразу, без
-  // кнопок. Показанное из памяти при этом уже на экране.
   const uid = localStorage.getItem(LS_UID);
   if (uid) синхра(uid, true);
 }
 
 async function версияВоркера() {
   try {
-    const r = await fetch(ВОРКЕР + '/api/ef/ping', { cache: 'no-store' });
-    const j = await r.json();
+    const j = await (await fetch(ВОРКЕР + '/api/ef/ping', { cache: 'no-store' })).json();
     $('ver').innerHTML = APP_VER + ' <b>· воркер ' + эк(j.v) + '</b>';
-  } catch (e) {
-    $('ver').innerHTML = APP_VER + ' <b>· воркер не отвечает</b>';
-  }
+  } catch (e) { $('ver').innerHTML = APP_VER + ' <b>· воркер не отвечает</b>'; }
 }
 
 function рисоватьВкладки() {
@@ -80,12 +89,14 @@ function рисовать() {
   рисоватьВкладки();
   const тело = $('body'), фб = $('fbar');
   if (ВКЛ === 'ops') { фб.innerHTML = фильтрыОператоров(); тело.innerHTML = витрина(); }
+  else if (ВКЛ === 'tier') { фб.innerHTML = ''; тело.innerHTML = тирЛист(); }
+  else if (ВКЛ === 'team') { фб.innerHTML = ''; тело.innerHTML = всеКоманды(); }
   else if (ВКЛ === 'gear') { фб.innerHTML = фильтрНаборов(); тело.innerHTML = спискомНаборов(); }
   else if (ВКЛ === 'wpn') { фб.innerHTML = фильтрОружия(); тело.innerHTML = спискомОружия(); }
   else { фб.innerHTML = ''; тело.innerHTML = профильHtml(); }
 }
 
-// ── профиль: разбор и хранение ──────────────────────────────────────────────
+// ── профиль ─────────────────────────────────────────────────────────────────
 // Строковый id оператора достаём из идентификатора навыка: в этой части
 // витрины enka отдаёт числовые шаблоны, а в навыках — нормальные имена вида
 // chr_0016_laevat_UltimateSkill.
@@ -98,27 +109,32 @@ function ктоЭто(ч) {
 function разобрать(д) {
   const и = д.playerInfo || {}, к = и.businessCard || {}, ст = и.statistic || {};
   const оп = {};
+  (и.charList || []).forEach(c => {
+    if (c.templateId) оп[c.templateId] = { ур: c.level, пот: c.potentialLevel || 0 };
+  });
   (д.charData || []).forEach(ч => {
     const id = ктоЭто(ч);
     if (!id) return;
-    оп[id] = {
+    оп[id] = Object.assign(оп[id] || {}, {
       ур: ч.level, пот: ч.potentialLevel || 0,
       навыки: ((ч.skillInfo || {}).levelInfo || []).map(н => ({
         имя: имяНавыка(н.skillId), ур: н.skillLevel, макс: н.skillMaxLevel })),
       оружие: ч.weapon || null,
-      слоты: (ч.equip || []).length,
+      слоты: (ч.equip || []).map(e => ({ слот: e.key, шаблон: (e.value || {}).templateid,
+        прокачки: ((e.value || {}).enhance || []).length })),
       таланты: (ч.talent || {}).attrNodes || [],
-    };
+      пассивки: (ч.talent || {}).latestPassiveSkillNodes || [],
+      завод: (ч.talent || {}).latestFactorySkillNodes || [],
+      прорыв: (ч.talent || {}).latestBreakNode || '',
+      витрина: true,
+    });
   });
-  // Список «есть у меня» шире витрины: в карточке профиля игра отдаёт четверых,
-  // а в charList — тех, кого игрок вывел на витрину профиля.
-  (и.charList || []).forEach(c => {
-    const id = c.templateId;
-    if (!id) return;
-    оп[id] = Object.assign({ ур: c.level, пот: c.potentialLevel || 0 }, оп[id] || {});
-  });
+  const дост = (к.achievement || {}).display || [];
   return {
     uid: д.uid, имя: к.name || '', ур: к.adventureLevel, мир: к.worldLevel,
+    миссия: к.mainMissionId || '', подпись: к.signature || '',
+    создан: к.createTime || 0, домены: ((к.domainDev || {}).domains || []),
+    достижения: дост.reduce((s, x) => s + (x.value || 0), 0),
     оп, всего: ст.charNum, оружий: ст.weaponNum, записей: ст.docNum,
     ttl: д.ttl || 60, когда: Date.now(),
   };
@@ -138,7 +154,8 @@ async function синхра(uid, тихо) {
     try { localStorage.setItem(LS_PROF, JSON.stringify(ПРОФ)); } catch (e) {}
     localStorage.setItem(LS_UID, uid);
     обновитьКнопку();
-    if (ВКЛ === 'ops' || ВКЛ === 'prof') рисовать();
+    рисовать();
+    if (ОТКРЫТ) открытьОп(ОТКРЫТ);
   } catch (e) {
     кн.className = 'sync err';
     кн.textContent = 'профиль: ' + e.message;
@@ -155,13 +172,27 @@ function обновитьКнопку() {
     (мин < 1 ? 'только что' : мин < 60 ? мин + ' мин назад' : Math.round(мин / 60) + ' ч назад');
 }
 
-// ── витрина операторов ──────────────────────────────────────────────────────
+const мой = id => (ПРОФ && ПРОФ.оп[id]) || null;
+
+// Имена наборов в разборах пишут сокращённо и без спецзнаков: «Aethertech»
+// против «Æthertech» в таблицах игры. Поэтому сверяем по упрощённому виду.
+function просто(s) {
+  return String(s || '').toLowerCase()
+    .replace(/æ/g, 'ae').replace(/[^a-z0-9]+/g, '');
+}
+function найтиНабор(имя) {
+  const п = просто(имя);
+  return БАЗА.наборы.find(n => просто(n.имя) === п) ||
+         БАЗА.наборы.find(n => просто(n.имя).startsWith(п) && п.length > 3) || null;
+}
+
+// ── витрина ─────────────────────────────────────────────────────────────────
 function фильтрыОператоров() {
   const чип = (тип, знач, текст, цвет) =>
     '<button class="fb' + (Ф[тип] === знач ? ' on' : '') + '" data-f="' + тип +
     '" data-v="' + эк(знач) + '"' + (цвет ? ' style="color:#' + цвет + '"' : '') + '>' +
     эк(текст) + '</button>';
-  const уник = поле => [...new Set(БАЗА.персонажи.map(c => c[поле]))];
+  const уник = поле => [...new Set(БАЗА.персонажи.map(c => c[поле]))].filter(Boolean);
   return '' +
     '<div class="fgrp"><i>стихия</i>' + уник('стихия').map(s => {
       const о = БАЗА.персонажи.find(c => c.стихия === s);
@@ -169,6 +200,8 @@ function фильтрыОператоров() {
     }).join('') + '</div>' +
     '<div class="fgrp"><i>класс</i>' + уник('класс').map(k =>
       чип('класс', k, БАЗА.персонажи.find(c => c.класс === k).классРу)).join('') + '</div>' +
+    '<div class="fgrp"><i>тир</i>' + ['T0', 'T0.5', 'T1', 'T1.5', 'T2'].map(t =>
+      чип('тир', t, t)).join('') + '</div>' +
     '<div class="fgrp"><i>ранг</i>' + [6, 5, 4].map(r =>
       '<button class="fb' + (Ф.редкость === r ? ' on' : '') +
       '" data-f="редкость" data-v="' + r + '">' + r + '✦</button>').join('') + '</div>' +
@@ -184,7 +217,8 @@ function отбор() {
     (!Ф.стихия || c.стихия === Ф.стихия) &&
     (!Ф.класс || c.класс === Ф.класс) &&
     (!Ф.редкость || c.редкость === Ф.редкость) &&
-    (!Ф.свои || (ПРОФ && ПРОФ.оп[c.id])) &&
+    (!Ф.тир || c.тир === Ф.тир) &&
+    (!Ф.свои || мой(c.id)) &&
     (!q || (c.имя + ' ' + (c.имяРу || '')).toLowerCase().includes(q)));
 }
 
@@ -199,85 +233,82 @@ function витрина() {
 }
 
 function плитка(c) {
-  const мой = ПРОФ && ПРОФ.оп[c.id];
+  const м = мой(c.id);
   return '<button class="tile" style="--el:#' + эк(c.цвет) + '" data-op="' + эк(c.id) + '">' +
     '<img src="' + эк(АРТЫ + c.арт) + '" alt="" loading="lazy" data-nf="hide">' +
     '<span class="sh"></span><span class="el"></span>' +
     '<span class="rk">' + c.редкость + '✦</span>' +
-    (мой ? '<span class="lv">' + эк(мой.ур) + '</span>' +
-           (мой.пот ? '<span class="pot">P' + эк(мой.пот) + '</span>' : '')
-         : '<span class="lv no">нет</span>') +
+    (c.тир ? '<span class="tr ' + (ТИРКЛ[c.тир] || '') + '">' + эк(c.тир) + '</span>' : '') +
+    (м ? '<span class="lv">' + эк(м.ур) + '</span>' +
+         (м.пот ? '<span class="pot">P' + эк(м.пот) + '</span>' : '')
+       : '<span class="lv no">нет</span>') +
     '<span class="info">' +
       '<span class="nm">' + эк(c.имяРу || c.имя) + '</span>' +
       '<span class="sub">' + эк(c.стихияРу) + ' · ' + эк(c.классРу) + '</span>' +
-    '</span>' +
-  '</button>';
+    '</span></button>';
 }
 
-// ── карточка оператора в панели ─────────────────────────────────────────────
+// ── тир-лист ────────────────────────────────────────────────────────────────
+function тирЛист() {
+  const порядок = ['T0', 'T0.5', 'T1', 'T1.5', 'T2'];
+  const есть = порядок.filter(t => БАЗА.персонажи.some(c => c.тир === t));
+  return '<div class="cap">Тир-лист<i></i><em>оценка prydwen, режим Umbral Monument</em></div>' +
+    '<div class="tiergrid">' + есть.map(t => {
+      const кто = БАЗА.персонажи.filter(c => c.тир === t)
+        .sort((a, b) => b.редкость - a.редкость || a.имя.localeCompare(b.имя));
+      return '<div class="tierrow">' +
+        '<div class="tierlab ' + (ТИРКЛ[t] || '') + '">' + эк(t) + '</div>' +
+        '<div class="ops">' + кто.map(плитка).join('') + '</div></div>';
+    }).join('') + '</div>' +
+    '<p class="hint">T0 — сильнейшие. Пустой уровень не показывается.</p>';
+}
+
+// ── все команды ─────────────────────────────────────────────────────────────
+function всеКоманды() {
+  const видел = new Set(), строки = [];
+  БАЗА.персонажи.forEach(c => (c.команды || []).forEach(k => {
+    const ключ = k.split(',').map(s => s.trim()).sort().join('|');
+    if (видел.has(ключ)) return;
+    видел.add(ключ);
+    строки.push(k);
+  }));
+  const мои = строки.filter(k => доляМоих(k) === 1);
+  const блок = (список, имя, подпись) => !список.length ? '' :
+    '<div class="cap">' + имя + '<i></i><em>' + подпись + '</em></div>' +
+    '<div class="wide">' + список.map(команда).join('') + '</div>';
+  return блок(мои, 'Собираются полностью', мои.length + ' из ' + строки.length) +
+    блок(строки.filter(k => доляМоих(k) < 1), 'Остальные составы', 'не хватает операторов');
+}
+
+function доляМоих(строка) {
+  if (!ПРОФ) return 0;
+  const имена = строка.split(',').map(s => s.trim());
+  const есть = имена.filter(и => {
+    const c = БАЗА.персонажи.find(x => (x.имяРу || x.имя) === и || x.имя === и);
+    return c && мой(c.id);
+  });
+  return имена.length ? есть.length / имена.length : 0;
+}
+
+function команда(строка) {
+  const имена = строка.split(',').map(s => s.trim());
+  return '<div class="team">' + имена.map(и => {
+    const c = БАЗА.персонажи.find(x => x.имя === и || (x.имяРу || '') === и);
+    const есть = c && мой(c.id);
+    return '<span class="mem' + (есть ? ' me' : '') + '"' +
+      (c ? ' data-op="' + эк(c.id) + '"' : '') + '>' +
+      (c ? '<img src="' + эк(АРТЫ + c.арт) + '" alt="" data-nf="hide" loading="lazy">'
+         : '<img alt="">') +
+      '<span class="who">' + эк(c ? (c.имяРу || c.имя) : и) + '</span></span>';
+  }).join('') + '</div>';
+}
+
+// ── карточка оператора ──────────────────────────────────────────────────────
 function открытьОп(id) {
   const c = БАЗА.персонажи.find(x => x.id === id);
   if (!c) return;
-  const мой = ПРОФ && ПРОФ.оп[id];
-  const ур = мой ? мой.ур : 90;
-  const s = c.статы[ур] || c.статы[90] || c.макс || {};
-
-  let прав = '';
-  прав += '<div class="sec"><h4>кто это</h4><div class="kv">' +
-    '<span>Имя в игре</span><b>' + эк(c.имя) + '</b>' +
-    '<span>Стихия</span><b style="color:#' + эк(c.цвет) + '">' + эк(c.стихияРу) + '</b>' +
-    '<span>Класс</span><b>' + эк(c.классРу) + '</b>' +
-    '<span>Оружие</span><b>' + эк(c.оружиеРу) + '</b>' +
-    (c.отдел ? '<span>Отдел</span><b>' + эк(c.отдел) + '</b>' : '') +
-    (мой ? '<span>Мой уровень</span><b>' + эк(мой.ур) + '</b>' +
-           (мой.пот ? '<span>Потенциал</span><b>' + эк(мой.пот) + '</b>' : '') : '') +
-    '</div></div>';
-
-  if (c.безСтатов) {
-    прав += '<div class="sec"><h4>характеристики</h4><div class="box"><b>нет в дампе</b>' +
-      'Оператор вышел после снятия таблиц игры: имя, класс и стихия известны, ' +
-      'кривая характеристик появится с обновлением дампа.</div></div>';
-  } else {
-    прав += '<div class="sec"><h4>характеристики' +
-      (мой ? ' на уровне ' + эк(ур) : ' на 90 уровне') + '</h4><div class="kv">' +
-      [['hp', 'Здоровье'], ['atk', 'Атака'], ['def', 'Защита'],
-       ['str', 'Сила'], ['agi', 'Ловкость'], ['wisd', 'Разум'], ['will', 'Воля']]
-        .filter(([k]) => s[k] != null)
-        .map(([k, имя]) => '<span>' + имя + '</span><b>' + чис(s[k]) + '</b>').join('') +
-      '</div></div>';
-  }
-
-  if (мой && мой.навыки && мой.навыки.length) {
-    прав += '<div class="sec"><h4>мои навыки</h4><table class="tbl">' +
-      мой.навыки.map(н => '<tr' + (н.ур >= н.макс ? ' class="top"' : '') + '>' +
-        '<td>' + эк(н.имя) + '</td><td class="n">' + н.ур + ' / ' + н.макс + '</td></tr>').join('') +
-      '</table></div>';
-    if (мой.оружие) {
-      прав += '<div class="sec"><h4>моё оружие</h4><div class="box">' +
-        '<b>номер ' + эк(мой.оружие.templateId) + '</b>' +
-        'Уровень <span class="num">' + эк(мой.оружие.weaponLv) + '</span>, ' +
-        'прорыв <span class="num">' + эк(мой.оружие.breakthroughLv || 0) + '</span>. ' +
-        'Названия витрина не отдаёт — только номер шаблона.</div></div>';
-    }
-  }
-
-  if (!c.безСтатов) {
-    const точки = [1, 20, 40, 60, 80, 90, 99].filter(у => c.статы[у]);
-    прав += '<div class="sec full"><h4>рост по уровням</h4><table class="tbl">' +
-      '<tr><th>ур.</th><th>HP</th><th>ATK</th><th>STR</th><th>AGI</th><th>WISD</th><th>WILL</th></tr>' +
-      точки.map(у => {
-        const t = c.статы[у];
-        return '<tr' + (у === ур ? ' class="top"' : '') + '><td>' + у + '</td>' +
-          ['hp', 'atk', 'str', 'agi', 'wisd', 'will']
-            .map(k => '<td class="n">' + чис(t[k]) + '</td>').join('') + '</tr>';
-      }).join('') + '</table></div>';
-  }
-
-  if (c.своёОружие) {
-    const w = БАЗА.оружие.find(x => x.id === c.своёОружие);
-    if (w) прав += '<div class="sec"><h4>стартовое оружие</h4>' + строкаПредмета(w) + '</div>';
-  }
-
+  ОТКРЫТ = id;
+  const м = мой(id);
   $('sheet-in').innerHTML =
     '<button class="x" data-close="1">закрыть</button>' +
     '<div class="card" style="--el:#' + эк(c.цвет) + '">' +
@@ -291,15 +322,167 @@ function открытьОп(id) {
           '<span class="chip">' + эк(c.классРу) + '</span>' +
           '<span class="chip">' + эк(c.оружиеРу) + '</span>' +
           '<span class="chip" style="color:var(--gold)">' + c.редкость + '✦</span>' +
-          (мой ? '<span class="chip" style="color:var(--acc)">у меня: ' + эк(мой.ур) + '</span>' : '') +
+          (c.тир ? '<span class="chip ' + (ТИРКЛ[c.тир] || '') + '">' + эк(c.тир) + '</span>' : '') +
+          (м ? '<span class="chip" style="color:var(--acc)">у меня: ур. ' + эк(м.ур) +
+               (м.пот ? ', P' + эк(м.пот) : '') + '</span>' : '') +
         '</div>' +
+        (c.слаг ? '<p class="hint"><a class="lnk" href="' + эк(РАЗБОР + c.слаг) +
+          '" target="_blank" rel="noopener">полный разбор на prydwen' +
+          (c.разборОт ? ' · ' + эк(c.разборОт) : '') + '</a></p>' : '') +
       '</div>' +
-      '<div class="card-in">' + прав + '</div>' +
+      '<div>' +
+        '<div class="ctabs">' + ВКЛКАРТЫ.map(в =>
+          '<button class="ctab' + (в.id === ВКЛК ? ' on' : '') + '" data-ct="' + в.id + '">' +
+          эк(в.имя) + '</button>').join('') + '</div>' +
+        '<div id="cbody">' + нутроКарточки(c, м) + '</div>' +
+      '</div>' +
     '</div>';
   $('sheet').classList.add('on');
 }
 
-// ── снаряжение ──────────────────────────────────────────────────────────────
+function нутроКарточки(c, м) {
+  if (ВКЛК === 'обзор') return обзор(c, м);
+  if (ВКЛК === 'сборка') return сборка(c, м);
+  if (ВКЛК === 'команды') return командыОп(c);
+  if (ВКЛК === 'рост') return рост(c, м);
+  return моё(c, м);
+}
+
+function обзор(c, м) {
+  const ур = м ? м.ур : 90;
+  const s = c.статы[ур] || c.статы[90] || c.макс || {};
+  let h = '<div class="card-in">';
+  h += '<div class="sec"><h4>кто это</h4><div class="kv">' +
+    '<span>Имя в игре</span><b>' + эк(c.имя) + '</b>' +
+    '<span>Стихия</span><b style="color:#' + эк(c.цвет) + '">' + эк(c.стихияРу) + '</b>' +
+    '<span>Класс</span><b>' + эк(c.классРу) + '</b>' +
+    '<span>Оружие</span><b>' + эк(c.оружиеРу) + '</b>' +
+    '<span>Ранг</span><b>' + c.редкость + '✦</b>' +
+    (c.тир ? '<span>Тир</span><b>' + эк(c.тир) + '</b>' : '') +
+    (c.отдел ? '<span>Отдел</span><b>' + эк(c.отдел) + '</b>' : '') +
+    '</div></div>';
+
+  if (c.безСтатов) {
+    h += '<div class="sec"><h4>характеристики</h4><div class="box"><b>нет в дампе</b>' +
+      'Оператор вышел после снятия таблиц игры — кривая характеристик появится ' +
+      'с обновлением дампа.</div></div>';
+  } else {
+    h += '<div class="sec"><h4>характеристики' + (м ? ' на ур. ' + эк(ур) : ' на 90 ур.') +
+      '</h4><div class="kv">' +
+      [['hp', 'Здоровье'], ['atk', 'Атака'], ['def', 'Защита'],
+       ['str', 'Сила'], ['agi', 'Ловкость'], ['wisd', 'Разум'], ['will', 'Воля']]
+        .filter(([k]) => s[k] != null)
+        .map(([k, имя]) => '<span>' + имя + '</span><b>' + чис(s[k]) + '</b>').join('') +
+      '</div></div>';
+  }
+
+  if ((c.навыки || []).length) {
+    h += '<div class="sec"><h4>навыки</h4><div class="rows">' +
+      c.навыки.map((н, i) => '<div class="row"><span class="n' + (i === 0 ? ' first' : '') + '">' +
+        (i + 1) + '</span>' + эк(н) +
+        (м && м.навыки && м.навыки[i] ? '<b>' + м.навыки[i].ур + ' / ' + м.навыки[i].макс + '</b>' : '') +
+        '</div>').join('') + '</div></div>';
+  }
+  return h + '</div>';
+}
+
+function сборка(c, м) {
+  let h = '<div class="card-in">';
+  const ор = c.лучшееОружие || [];
+  h += '<div class="sec"><h4>оружие по приоритету</h4>' +
+    (ор.length ? '<div class="rows">' + ор.map((o, i) => {
+      const [имя, p] = o.split('|');
+      const w = БАЗА.оружие.find(x => x.имя === имя);
+      return '<div class="row"><span class="n' + (i === 0 ? ' first' : '') + '">' + (i + 1) + '</span>' +
+        (w ? '<img src="' + эк(ЗНАЧКИ + '/itemicon/' + w.значок) +
+             '" alt="" data-nf="hide" style="width:26px;height:26px;object-fit:contain">' : '') +
+        эк(имя) + '<b>' + эк(p || '') + '</b></div>';
+    }).join('') + '</div>' : '<div class="box">разбор не нашёлся</div>') +
+    '<p class="hint">P0 — без дублей, P5 — с пятью. Порядок из расчётов prydwen.</p></div>';
+
+  const наб = c.лучшиеНаборы || [];
+  h += '<div class="sec"><h4>наборы снаряжения</h4>' +
+    (наб.length ? '<div class="rows">' + наб.map((n, i) => {
+      const наш = найтиНабор(n);
+      return '<div class="row"><span class="n' + (i === 0 ? ' first' : '') + '">' + (i + 1) + '</span>' +
+        (наш ? '<img src="' + эк(ЗНАЧКИ + '/equipmentlogobigwhite/' + наш.значок) +
+               '" alt="" data-nf="hide" style="width:26px;height:26px;object-fit:contain">' : '') +
+        эк(n) + (наш ? '<b>T' + (наш.ранг || '?') + '</b>' : '') + '</div>';
+    }).join('') + '</div>'
+    : '<div class="box"><b>нет рекомендаций</b>У этого оператора на prydwen нет ' +
+      'разобранной сборки снаряжения — смотри наборы по стихии и роли.</div>') + '</div>';
+
+  const наши = наб.map(найтиНабор).filter(Boolean);
+  if (наши.length) {
+    h += '<div class="sec full"><h4>что дают эти наборы</h4><div class="wide">' +
+      наши.map(n => '<div class="box"><b>' + эк(n.имя) + '</b>' +
+        эк((n.эффектРу || n.эффект || '').slice(0, 240)) + '</div>').join('') + '</div></div>';
+  }
+  if (c.своёОружие) {
+    const w = БАЗА.оружие.find(x => x.id === c.своёОружие);
+    if (w) h += '<div class="sec"><h4>стартовое оружие</h4>' + строкаПредмета(w) + '</div>';
+  }
+  return h + '</div>';
+}
+
+function командыОп(c) {
+  const к = c.команды || [];
+  if (!к.length) return '<div class="box">составов для этого оператора нет</div>';
+  return '<div class="rows">' + к.map(k => команда(k)).join('') + '</div>' +
+    '<p class="hint">Зелёной рамкой обведены те, кто уже есть у тебя.</p>';
+}
+
+function рост(c, м) {
+  if (c.безСтатов) return '<div class="box"><b>нет данных</b>Кривая характеристик появится ' +
+    'с обновлением дампа таблиц.</div>';
+  const ур = м ? м.ур : 90;
+  const точки = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99].filter(у => c.статы[у]);
+  return '<table class="tbl">' +
+    '<tr><th>ур.</th><th>HP</th><th>ATK</th><th>STR</th><th>AGI</th><th>WISD</th><th>WILL</th></tr>' +
+    точки.map(у => {
+      const t = c.статы[у];
+      return '<tr' + (у === ур ? ' class="top"' : '') + '><td>' + у + '</td>' +
+        ['hp', 'atk', 'str', 'agi', 'wisd', 'will']
+          .map(k => '<td class="n">' + чис(t[k]) + '</td>').join('') + '</tr>';
+    }).join('') + '</table>' +
+    (м ? '<p class="hint">Подсвечен твой уровень.</p>' : '');
+}
+
+function моё(c, м) {
+  if (!ПРОФ) return '<div class="box"><b>профиль не подключён</b>Вкладка «Профиль» — ' +
+    'введи UID, и сюда подтянутся твои уровни, навыки и снаряжение.</div>';
+  if (!м) return '<div class="box"><b>нет в профиле</b>Этого оператора нет среди тех, ' +
+    'кого отдаёт витрина. Витрина показывает только выставленных в профиле игры.</div>';
+  let h = '<div class="card-in">';
+  h += '<div class="sec"><h4>прокачка</h4><div class="kv">' +
+    '<span>Уровень</span><b>' + эк(м.ур) + '</b>' +
+    '<span>Потенциал</span><b>' + эк(м.пот || 0) + '</b>' +
+    (м.прорыв ? '<span>Узел прорыва</span><b>' + эк(м.прорыв) + '</b>' : '') +
+    (м.таланты ? '<span>Узлов талантов</span><b>' + м.таланты.length + '</b>' : '') +
+    (м.завод ? '<span>Заводских навыков</span><b>' + м.завод.length + '</b>' : '') +
+    '</div></div>';
+  if (м.навыки && м.навыки.length) {
+    h += '<div class="sec"><h4>уровни навыков</h4><table class="tbl">' +
+      м.навыки.map(н => '<tr' + (н.ур >= н.макс ? ' class="top"' : '') + '><td>' + эк(н.имя) +
+        '</td><td class="n">' + н.ур + ' / ' + н.макс + '</td></tr>').join('') + '</table></div>';
+  }
+  if (м.оружие) {
+    h += '<div class="sec"><h4>оружие</h4><div class="kv">' +
+      '<span>Уровень</span><b>' + эк(м.оружие.weaponLv) + '</b>' +
+      '<span>Прорыв</span><b>' + эк(м.оружие.breakthroughLv || 0) + '</b>' +
+      '<span>Шаблон</span><b>#' + эк(м.оружие.templateId) + '</b>' +
+      '</div><p class="hint">Название витрина не отдаёт — только номер шаблона.</p></div>';
+  }
+  if (м.слоты && м.слоты.length) {
+    h += '<div class="sec"><h4>снаряжение</h4><div class="rows">' +
+      м.слоты.map(с => '<div class="row"><span class="n">' + (с.слот + 1) + '</span>' +
+        'шаблон #' + эк(с.шаблон) + '<b>' + с.прокачки + ' прокачек</b></div>').join('') +
+      '</div></div>';
+  }
+  return h + '</div>';
+}
+
+// ── снаряжение и оружие ─────────────────────────────────────────────────────
 function фильтрНаборов() {
   return '<div class="fgrp"><i>ранг набора</i>' + [4, 3, 1].map(r =>
     '<button class="fb' + (Ф.редкость === r ? ' on' : '') +
@@ -312,16 +495,23 @@ function спискомНаборов() {
   if (!наб.length) return '<div class="empty">ничего не нашлось</div>';
   return '<div class="list">' + наб.map(n => {
     const вещи = БАЗА.снаряжение.filter(v => v.набор === n.id);
+    const кому = БАЗА.персонажи.filter(c => (c.лучшиеНаборы || []).some(x => найтиНабор(x) === n));
     return '<details class="op" style="--el:#ffd046">' +
       '<summary>' +
         '<img class="ava" src="' + эк(ЗНАЧКИ + '/equipmentlogobigwhite/' + (n.значок || '')) +
           '" alt="" data-nf="hide" loading="lazy">' +
         '<span class="nm2">' + эк(n.имяРу || n.имя) +
-          '<i>T' + (n.ранг || '?') + ' · предметов: ' + вещи.length + '</i></span>' +
+          '<i>T' + (n.ранг || '?') + ' · предметов: ' + вещи.length +
+          (кому.length ? ' · советуют ' + кому.length : '') + '</i></span>' +
       '</summary>' +
       '<div class="op-in"><div class="card-in">' +
         '<div class="sec full"><h4>эффект комплекта</h4><div class="box"><b>' +
           (n.нужно || 3) + ' предмета</b>' + эк(n.эффектРу || n.эффект || '—') + '</div></div>' +
+        (кому.length ? '<div class="sec full"><h4>кому советуют</h4><div class="wide">' +
+          кому.map(c => '<div class="it" data-op="' + эк(c.id) + '" style="cursor:pointer">' +
+            '<img src="' + эк(ЗНАЧКИ + '/charremoteicon/' + c.значок) + '" alt="" data-nf="hide">' +
+            '<span><b>' + эк(c.имяРу || c.имя) + '</b><i>' + эк(c.стихияРу) + ' · ' +
+            эк(c.классРу) + '</i></span></div>').join('') + '</div></div>' : '') +
         '<div class="sec full"><h4>предметы набора</h4><div class="wide">' +
           вещи.map(строкаВещи).join('') + '</div></div>' +
       '</div></div></details>';
@@ -337,7 +527,6 @@ function строкаВещи(v) {
     (осн ? ' · <span class="num">' + эк(осн) + '</span>' : '') + '</i></span></div>';
 }
 
-// ── оружие ──────────────────────────────────────────────────────────────────
 function фильтрОружия() {
   return '<div class="fgrp"><i>ранг</i>' + [6, 5, 4, 3].map(r =>
     '<button class="fb' + (Ф.редкость === r ? ' on' : '') +
@@ -358,13 +547,15 @@ function спискомОружия() {
 }
 
 function строкаПредмета(w) {
+  // Кому это оружие советуют: список собран из разборов prydwen.
+  const кому = БАЗА.персонажи.filter(c => (c.лучшееОружие || []).some(o => o.split('|')[0] === w.имя));
   return '<div class="it">' +
     '<img src="' + эк(ЗНАЧКИ + '/itemicon/' + w.значок) + '" alt="" data-nf="hide" loading="lazy">' +
     '<span><b class="r' + w.редкость + '">' + эк(w.имяРу || w.имя) + '</b>' +
-    '<i>' + w.редкость + '✦</i></span></div>';
+    '<i>' + w.редкость + '✦' + (кому.length ? ' · советуют ' + кому.length : '') + '</i></span></div>';
 }
 
-// ── вкладка профиля ─────────────────────────────────────────────────────────
+// ── профиль ─────────────────────────────────────────────────────────────────
 function профильHtml() {
   const uid = localStorage.getItem(LS_UID) || '';
   let h = '<div class="cap">Синхронизация<i></i><em>enka.network</em></div>' +
@@ -374,22 +565,25 @@ function профильHtml() {
         '<button class="btn" data-act="load">Обновить</button>' +
         (uid ? '<button class="btn sec2" data-act="forget">Забыть</button>' : '') +
       '</div>' +
-      '<div class="say">UID запоминается, и витрина подтягивается сама при каждом заходе. ' +
-      'Чтобы в игре обновились данные, выйди из аккаунта и вернись.</div></div>';
+      '<div class="say">UID запоминается, витрина тянется сама при каждом заходе. ' +
+      'Чтобы данные в игре обновились, выйди из аккаунта и вернись.</div></div>';
 
   if (ПРОФ) {
+    const д = (ПРОФ.домены || []).map(x => x.domainId + ' ур.' + x.level).join(', ');
     h += '<div class="cap">' + эк(ПРОФ.имя || 'профиль') + '<i></i><em>UID ' + эк(ПРОФ.uid) + '</em></div>' +
       '<div class="wide">' +
         плитка2('Уровень', ПРОФ.ур) + плитка2('Уровень мира', ПРОФ.мир) +
         плитка2('Операторов', ПРОФ.всего) + плитка2('Оружия', ПРОФ.оружий) +
-        плитка2('Записей', ПРОФ.записей) +
-        плитка2('На витрине', Object.keys(ПРОФ.оп).length) +
+        плитка2('Записей', ПРОФ.записей) + плитка2('Достижений', ПРОФ.достижения) +
       '</div>' +
+      (д ? '<div class="box" style="margin-top:9px"><b>развитие доменов</b>' + эк(д) + '</div>' : '') +
       '<div class="cap">Кто на витрине<i></i><em>клик открывает карточку</em></div>' +
       '<div class="ops">' + Object.keys(ПРОФ.оп).map(id => {
         const c = БАЗА.персонажи.find(x => x.id === id);
         return c ? плитка(c) : '';
-      }).join('') + '</div>';
+      }).join('') + '</div>' +
+      '<p class="hint">Витрина отдаёт подробности только по тем, кого ты выставил в профиле ' +
+      'игры (обычно четверо). Остальные операторы известны только уровнем.</p>';
   }
   return h;
 }
@@ -411,17 +605,18 @@ function имяНавыка(id) {
 
 // ── события ─────────────────────────────────────────────────────────────────
 document.addEventListener('click', e => {
-  const т = e.target.closest('[data-tab],[data-f],[data-act],[data-op],[data-close]');
-  if (!т) {
-    if (e.target.id === 'sheet') $('sheet').classList.remove('on');
-    return;
-  }
-  if (т.dataset.close) { $('sheet').classList.remove('on'); return; }
-  if (т.dataset.tab) {
+  const т = e.target.closest('[data-tab],[data-f],[data-act],[data-op],[data-close],[data-ct]');
+  if (!т) { if (e.target.id === 'sheet') закрыть(); return; }
+  if (т.dataset.close) { закрыть(); return; }
+  if (т.dataset.ct) {
+    ВКЛК = т.dataset.ct;
+    if (ОТКРЫТ) открытьОп(ОТКРЫТ);
+  } else if (т.dataset.op) {
+    ВКЛК = 'обзор';
+    открытьОп(т.dataset.op);
+  } else if (т.dataset.tab) {
     ВКЛ = т.dataset.tab; Ф.редкость = 0; Ф.поиск = '';
     рисовать();
-  } else if (т.dataset.op) {
-    открытьОп(т.dataset.op);
   } else if (т.dataset.f) {
     const п = т.dataset.f;
     if (п === 'свои') Ф.свои = !Ф.свои;
@@ -440,6 +635,8 @@ document.addEventListener('click', e => {
   }
 });
 
+function закрыть() { $('sheet').classList.remove('on'); ОТКРЫТ = null; }
+
 document.addEventListener('input', e => {
   if (e.target.id !== 'q') return;
   Ф.поиск = e.target.value;
@@ -453,29 +650,27 @@ document.addEventListener('error', e => {
   if (э && э.tagName === 'IMG' && э.dataset.nf === 'hide') э.style.visibility = 'hidden';
 }, true);
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') $('sheet').classList.remove('on');
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') закрыть(); });
 
 $('up').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 $('sync').addEventListener('click', () => {
   const uid = localStorage.getItem(LS_UID);
-  if (uid) синхра(uid, false);
-  else { ВКЛ = 'prof'; рисовать(); }
+  if (uid) синхра(uid, false); else { ВКЛ = 'prof'; рисовать(); }
 });
 $('ver').addEventListener('click', () => {
   $('sheet-in').innerHTML = '<button class="x" data-close="1">закрыть</button>' +
     '<div class="cap">Откуда данные<i></i><em>' + APP_VER + '</em></div>' +
     '<table class="tbl">' +
       '<tr><td>Операторы, снаряжение, оружие</td><td>таблицы игры, дамп 22.06.2026</td></tr>' +
-      '<tr><td>Наборы и их эффекты</td><td>таблицы игры, состав сверен отдельно</td></tr>' +
+      '<tr><td>Тиры, приоритет оружия, наборы, команды</td><td>разборы prydwen.gg</td></tr>' +
       '<tr><td>Арты операторов</td><td>prydwen.gg</td></tr>' +
       '<tr><td>Значки предметов</td><td>enka.network</td></tr>' +
       '<tr><td>Витрина профиля</td><td>enka.network/api/ef через свой воркер</td></tr>' +
     '</table>' +
-    '<p class="hint">Дамп таблиц отстаёт от игры: у операторов, вышедших позже, ' +
-    'нет кривой характеристик. Оружие и снаряжение витрина отдаёт номерами ' +
-    'шаблонов, а таблицы с этими номерами в открытых источниках пока нет.</p>';
+    '<p class="hint">Тексты обзоров не копируются: в карточке стоит ссылка на исходный ' +
+    'разбор. Дамп таблиц отстаёт от игры — у новых операторов нет кривой характеристик. ' +
+    'Оружие и снаряжение витрина отдаёт номерами шаблонов, таблицы с этими номерами ' +
+    'в открытых источниках пока нет.</p>';
   $('sheet').classList.add('on');
 });
 

@@ -16,7 +16,7 @@
 // v14: появился обработчик push. Без него уведомления не показывались вовсе:
 // воркер их исправно отправлял, браузер исправно получал, а показать было
 // некому — сюда доезжало событие, которое никто не слушал.
-const CACHE = 'moi-dela-v17';
+const CACHE = 'moi-dela-v18';
 // Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
 // страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
 // заново тянул около десяти мегабайт артов и значков. На хорошем канале это
@@ -33,7 +33,11 @@ const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.js
                 './nte/nte-db.json', './nte/nte-guide.json', './nte/nte-gear.json',
                 './nte/nte-ru.json', './nte/nte-city.json', './nte/nte-map.json',
                 './nte/nte-awaken.json', './nte/nte-build.json', './nte/nte-skills.json',
-                './nte/nte-art.json', './nte/nte-i18n.json', './nte/nte-ev-ru.json'];
+                './nte/nte-art.json', './nte/nte-i18n.json', './nte/nte-ev-ru.json',
+                // справочник Endfield: страница, код и база. Арты операторов
+                // лежат на чужих сайтах, в офлайн-кэш не кладутся
+                './ef/', './ef/index.html', './ef/app.js', './ef/manifest.json',
+                './ef/ef-db.json', './ef/ef-guide.json', './ef/icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
