@@ -646,108 +646,78 @@ function профильHtml() {
 }
 
 // ── боевая хроника skport ───────────────────────────────────────────────────
-// Витрина enka отдаёт мало: четверых выставленных операторов. Остальное —
-// прогресс, кризисный контракт, эхо войны — живёт в личном кабинете skport и
-// требует входа. Cookie хранятся только здесь, в браузере, и уходят на воркер
-// заголовком: ни в адресе, ни в логах их нет.
-const LS_SK = 'ef-sk';
-const РАЗДЕЛЫ = [
-  { id: 'binding', имя: 'Мои аккаунты' },
-  { id: 'detail',  имя: 'Хроника' },
-  { id: 'echoes',  имя: 'Эхо войны' },
-  { id: 'crisis',  имя: 'Кризисный контракт' },
-];
-let ХРОНИКА = null;   // последний ответ: { раздел, данные }
+// Запросы skport подписаны: каждый идёт с заголовком cred — это ключ от
+// аккаунта. Отдавать его наружу нельзя, поэтому хронику собирает скрипт в
+// твоей же вкладке (ef/sk-ef.js): он слушает ответы, которые страница и так
+// получила, и складывает их в файл. Здесь мы этот файл только читаем.
+const LS_CHR = 'ef-chr';
+let ХРОНИКА = null;
+
+function взятьХронику() {
+  try { return JSON.parse(localStorage.getItem(LS_CHR)) || null; } catch (e) { return null; }
+}
 
 function хроникаHtml() {
-  const есть = !!localStorage.getItem(LS_SK);
-  let h = '<div class="cap">Боевая хроника<i></i><em>skport, личный кабинет</em></div>' +
-    '<div class="box" style="max-width:720px"><b>ключ доступа</b>' +
-      '<div class="fld">' +
-        '<input id="sk" type="password" placeholder="' +
-          (есть ? 'ключ сохранён — вставь новый, чтобы заменить' : 'строка cookie со страницы skport') + '">' +
-        '<button class="btn" data-act="sk-save">Сохранить</button>' +
-        (есть ? '<button class="btn sec2" data-act="sk-forget">Забыть</button>' : '') +
+  ХРОНИКА = ХРОНИКА || взятьХронику();
+  let h = '<div class="cap">Боевая хроника<i></i><em>skport</em></div>';
+
+  if (!ХРОНИКА) {
+    h += '<div class="box" style="max-width:840px"><b>как забрать</b>' +
+      '<div class="rows" style="margin-top:6px">' +
+        '<div class="row"><span class="n first">1</span>Открой game.skport.com и войди в аккаунт</div>' +
+        '<div class="row"><span class="n">2</span>F12 → Ctrl+Shift+M (режим телефона) → ' +
+          'открой game.skport.com/endfield/game-data → F5</div>' +
+        '<div class="row"><span class="n">3</span>F12 → Console → вставь строку ниже</div>' +
+        '<div class="row"><span class="n">4</span>Пролистай страницу, открой разделы — ' +
+          'оперативники, регионы, контракт</div>' +
+        '<div class="row"><span class="n">5</span>Нажми «Скачать» в жёлтой плашке снизу</div>' +
       '</div>' +
-      '<div class="say">Это твой ключ входа на skport: он хранится только в этом браузере ' +
-      'и уходит на воркер заголовком, не в адресе. Никому его не показывай и не вставляй ' +
-      'в переписку. Чтобы взять: открой game.skport.com залогиненным → F12 → Application → ' +
-      'Cookies → скопируй строку целиком.</div></div>';
-
-  if (есть) {
-    h += '<div class="fbar" style="margin-top:12px">' + РАЗДЕЛЫ.map(р =>
-      '<button class="fb" data-sk="' + р.id + '">' + эк(р.имя) + '</button>').join('') +
-      '<span class="fcnt" id="skcnt"></span></div>';
+      '<div class="fld"><input readonly value="fetch(\'https://alextask.ru/ef/sk-ef.js\')' +
+        '.then(r=>r.text()).then(eval)" id="cmd">' +
+        '<button class="btn" data-act="copy-cmd">Скопировать</button></div>' +
+      '<div class="say">Скрипт ничего не отправляет: он только читает ответы, которые ' +
+      'страница уже получила, и чистит из них всё похожее на ключи. Твой cred ' +
+      'остаётся в браузере.</div></div>';
   }
-  h += '<div id="skbody"></div>';
+
+  h += '<div class="box" style="max-width:840px;margin-top:10px"><b>загрузить файл</b>' +
+    '<div class="fld"><input type="file" id="chrfile" accept="application/json">' +
+    (ХРОНИКА ? '<button class="btn sec2" data-act="chr-forget">Забыть</button>' : '') +
+    '</div><div class="say">Файл ef-хроника.json, который выдал сборщик.</div></div>';
+
+  if (ХРОНИКА) h += рисоватьХронику();
   return h;
 }
 
-async function грузитьХронику(раздел) {
-  const ключ = localStorage.getItem(LS_SK);
-  const тело = $('skbody');
-  if (!ключ) { тело.innerHTML = '<div class="box">сначала сохрани ключ</div>'; return; }
-  тело.innerHTML = '<div class="empty">запрашиваю…</div>';
-  const парам = new URLSearchParams();
-  // roleId нужен всем разделам, кроме списка аккаунтов: берём тот, что выбрали.
-  const роль = localStorage.getItem('ef-role');
-  if (роль && раздел !== 'binding') parseRole(роль, парам);
-  try {
-    const r = await fetch(ВОРКЕР + '/api/ef/self/' + раздел + (парам.toString() ? '?' + парам : ''), {
-      cache: 'no-store', headers: { 'X-SK-Cookie': ключ },
-    });
-    const д = await r.json();
-    ХРОНИКА = { раздел, данные: д };
-    тело.innerHTML = рисоватьХронику(раздел, д, r.status);
-  } catch (e) {
-    тело.innerHTML = '<div class="box"><b>не вышло</b>' + эк(e.message) + '</div>';
-  }
+// Ответы skport видим впервые, поэтому сначала показываем их разборчиво:
+// числа и строки — таблицей, вложенное — раскрывающимися блоками. Как станет
+// понятно, что внутри, соберём нормальные карточки.
+function рисоватьХронику() {
+  const р = (ХРОНИКА && ХРОНИКА.разделы) || {};
+  const ключи = Object.keys(р);
+  if (!ключи.length) return '<div class="empty">в файле нет разделов</div>';
+  const когда = ХРОНИКА.снято ? new Date(ХРОНИКА.снято).toLocaleString('ru') : '';
+  return '<div class="cap">Что собрано<i></i><em>' + эк(когда) + '</em></div>' +
+    '<div class="stats" style="margin-bottom:12px">' +
+      '<div class="st"><u>разделов</u><b>' + ключи.length + '</b></div>' +
+      '<div class="st"><u>снято</u><b style="font-size:13px">' + эк(когда) + '</b></div>' +
+    '</div>' +
+    '<div class="list">' + ключи.map(k =>
+      '<details class="op" style="--el:#ffd046"><summary><span class="nm2">' +
+      эк(k.replace(/^\/web\/v\d\//, '').replace(/^\/api\/v\d\//, '')) +
+      '<i>' + эк(k) + '</i></span></summary><div class="op-in">' +
+      дерево(р[k], 0) + '</div></details>').join('') + '</div>';
 }
 
-function parseRole(строка, парам) {
-  const [roleId, uid] = строка.split('|');
-  if (roleId) парам.set('roleId', roleId);
-  if (uid) парам.set('gameUid', uid);
-}
-
-function рисоватьХронику(раздел, д, статус) {
-  if (статус === 401 || (д && д.code && д.code !== 0)) {
-    return '<div class="box"><b>skport отказал</b>' +
-      эк((д && (д.message || д.error)) || ('код ' + статус)) +
-      '<p class="hint">Обычно это значит, что ключ устарел — зайди на skport заново ' +
-      'и скопируй cookie ещё раз.</p></div>';
-  }
-  const данные = (д && д.data) || д;
-  let h = '';
-  if (раздел === 'binding') {
-    const список = (данные && (данные.list || данные.roles)) || [];
-    h += '<div class="cap">Привязанные аккаунты<i></i><em>выбери, по какому смотреть</em></div>' +
-      (список.length ? '<div class="wide">' + список.map(р => {
-        const roleId = р.roleId || р.uid || р.id || '';
-        const имя = р.nickName || р.nickname || р.roleName || р.name || 'без имени';
-        return '<div class="box" data-role="' + эк(roleId + '|' + (р.uid || '')) +
-          '" style="cursor:pointer"><b>' + эк(имя) + '</b>' +
-          'id: <span class="num">' + эк(roleId) + '</span>' +
-          (р.serverName ? '<br>сервер: ' + эк(р.serverName) : '') +
-          (р.level ? '<br>уровень: <span class="num">' + эк(р.level) + '</span>' : '') +
-          '</div>';
-      }).join('') + '</div>' : '<div class="box">аккаунтов не пришло</div>');
-  }
-  h += '<div class="cap">Что пришло<i></i><em>' + эк(раздел) + '</em></div>' + дерево(данные, 0);
-  return h;
-}
-
-// Ответы skport мы видим впервые, поэтому показываем их как есть: числа и
-// строки — строками, вложенное — раскрывающимися блоками. Как станет понятно,
-// что внутри, соберём нормальные карточки.
 function дерево(о, гл) {
-  if (о == null) return '<div class="box">пусто</div>';
+  if (о == null) return '<div class="row">пусто</div>';
   if (typeof о !== 'object') return '<div class="row">' + эк(String(о)) + '</div>';
   if (Array.isArray(о)) {
     if (!о.length) return '<div class="row">пустой список</div>';
     return '<div class="rows">' + о.slice(0, 40).map((x, i) =>
-      (typeof x === 'object'
-        ? '<details class="op"><summary><span class="nm2">запись ' + (i + 1) + '</span></summary>' +
+      (x && typeof x === 'object'
+        ? '<details class="op"><summary><span class="nm2">запись ' + (i + 1) +
+          '<i>' + эк(Object.keys(x).slice(0, 4).join(', ')) + '</i></span></summary>' +
           '<div class="op-in">' + дерево(x, гл + 1) + '</div></details>'
         : '<div class="row"><span class="n">' + (i + 1) + '</span>' + эк(String(x)) + '</div>')
     ).join('') + '</div>';
@@ -758,9 +728,9 @@ function дерево(о, гл) {
   let h = '';
   if (простые.length) {
     h += '<div class="kv">' + простые.map(([k, v]) =>
-      '<span>' + эк(k) + '</span><b>' + эк(String(v)).slice(0, 60) + '</b>').join('') + '</div>';
+      '<span>' + эк(k) + '</span><b>' + эк(String(v)).slice(0, 80) + '</b>').join('') + '</div>';
   }
-  if (сложные.length && гл < 3) {
+  if (сложные.length && гл < 4) {
     h += '<div class="rows" style="margin-top:8px">' + сложные.map(([k, v]) =>
       '<details class="op"><summary><span class="nm2">' + эк(k) +
       '<i>' + (Array.isArray(v) ? v.length + ' записей' : 'объект') + '</i></span></summary>' +
@@ -822,6 +792,14 @@ document.addEventListener('click', e => {
   } else if (т.dataset.act === 'forget') {
     localStorage.removeItem(LS_UID); localStorage.removeItem(LS_PROF);
     ПРОФ = null; обновитьКнопку(); рисовать();
+  } else if (т.dataset.act === 'copy-cmd') {
+    const п = $('cmd');
+    п.select();
+    navigator.clipboard.writeText(п.value).then(
+      () => { т.textContent = 'скопировано'; },
+      () => { т.textContent = 'выдели и скопируй сам'; });
+  } else if (т.dataset.act === 'chr-forget') {
+    localStorage.removeItem(LS_CHR); ХРОНИКА = null; рисовать();
   } else if (т.dataset.act === 'sk-save') {
     const v = ($('sk').value || '').trim();
     if (v.length < 20) { alert('Это не похоже на строку cookie'); return; }
@@ -836,6 +814,21 @@ document.addEventListener('click', e => {
 });
 
 function закрыть() { $('sheet').classList.remove('on'); ОТКРЫТ = null; }
+
+document.addEventListener('change', e => {
+  if (e.target.id !== 'chrfile' || !e.target.files || !e.target.files[0]) return;
+  const ч = new FileReader();
+  ч.onload = () => {
+    try {
+      const д = JSON.parse(ч.result);
+      if (!д.разделы) throw new Error('это не файл хроники');
+      ХРОНИКА = д;
+      try { localStorage.setItem(LS_CHR, JSON.stringify(д)); } catch (e2) {}
+      рисовать();
+    } catch (e3) { alert('Файл не подошёл: ' + e3.message); }
+  };
+  ч.readAsText(e.target.files[0]);
+});
 
 document.addEventListener('input', e => {
   if (e.target.id !== 'q') return;
