@@ -1,0 +1,10 @@
+Google Sans Bold — Copyright 2025 The Google Sans Project Authors
+(github.com/googlefonts/googlesans).
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+Full text: https://openfontlicense.org
+
+Файл урезан до латиницы, кириллицы и знаков препинания (pyftsubset) —
+это разрешённая лицензией модификация. «Google» и «Google Sans» —
+товарные знаки Google LLC, поэтому изменённый файл назван иначе:
+efsans-bold.woff2, в CSS — «EF Sans».

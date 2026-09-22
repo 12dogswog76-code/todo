@@ -5,6 +5,9 @@
 // v8: карточки агентов переведены на card_*.webp / hero_*.webp вместо полноразмерных
 // art_*.png. Версию обязательно поднимать при любой замене картинок — ветка /img/zzz/
 // работает cache-first, иначе браузер вечно отдаёт старый файл под тем же именем.
+// v21: справочник Endfield переехал на свою базу (ef/data/), свои картинки
+// (ef/img/) и карту (ef/map/). Картинки и тайлы — в кэше картинок, cache-first;
+// данные и код раздела — сеть в приоритете, как у остальных.
 // v17: появилась оболочка app.html — одна иконка на все разделы, и офлайн
 // докачивается оттуда пачками в кэш картинок.
 // v16: код страниц переехал в отдельные файлы (*-app.js). Они кэшируются как
@@ -16,7 +19,7 @@
 // v14: появился обработчик push. Без него уведомления не показывались вовсе:
 // воркер их исправно отправлял, браузер исправно получал, а показать было
 // некому — сюда доезжало событие, которое никто не слушал.
-const CACHE = 'moi-dela-v20';
+const CACHE = 'moi-dela-v21';
 // Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
 // страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
 // заново тянул около десяти мегабайт артов и значков. На хорошем канале это
@@ -37,8 +40,10 @@ const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.js
                 './nte/nte-art.json', './nte/nte-i18n.json', './nte/nte-ev-ru.json',
                 // справочник Endfield: страница, код и база. Арты операторов
                 // лежат на чужих сайтах, в офлайн-кэш не кладутся
-                './ef/', './ef/index.html', './ef/app.js', './ef/manifest.json',
-                './ef/ef-db.json', './ef/ef-guide.json', './ef/icon.svg', './ef/sk-sign.js'];
+                './ef/', './ef/index.html', './ef/app.js', './ef/map.js', './ef/tools.js',
+                './ef/factory.js', './ef/sk-sign.js', './ef/manifest.json', './ef/icon.svg',
+                './ef/font/efsans-bold.woff2', './ef/data/ef-db.json', './ef/data/ef-tools.json',
+                './ef/data/ef-map.json', './ef/data/ef-factory.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -95,7 +100,8 @@ self.addEventListener('fetch', e => {
         // которая ближе по адресу: с /nte/ логично показать справочник, а не
         // список дел.
         return net.catch(() => caches.match(
-          url.pathname.indexOf('/nte/') === 0 ? './nte/index.html' : './index.html'));
+          url.pathname.indexOf('/nte/') === 0 ? './nte/index.html' :
+          url.pathname.indexOf('/ef/') === 0 ? './ef/index.html' : './index.html'));
       }
       const slow = new Promise(res => setTimeout(() => res(null), 6000));
       const first = await Promise.race([net.catch(() => null), slow]);
@@ -106,7 +112,8 @@ self.addEventListener('fetch', e => {
 
   // Картинки ZZZ: кэш в приоритете (их много, они не меняются) и живут в своём
   // кэше, который не сбрасывается при обновлении сайта.
-  if (url.pathname.indexOf('/img/zzz/') !== -1 || url.pathname.indexOf('/nte/img/') !== -1) {
+  if (url.pathname.indexOf('/img/zzz/') !== -1 || url.pathname.indexOf('/nte/img/') !== -1 ||
+      url.pathname.indexOf('/ef/img/') === 0 || url.pathname.indexOf('/ef/map/') === 0) {
     e.respondWith(
       caches.open(IMG_CACHE).then(c => c.match(e.request).then(cached => cached ||
         fetch(e.request).then(r => {
@@ -122,12 +129,15 @@ self.addEventListener('fetch', e => {
   // пересборки zzz-extra.json на сайте ещё сутки могли жить старые прибавки ядра
   if (/zzz-(db|extra|guide|tier)\.json$/.test(url.pathname) ||
       /\/nte\/nte-[a-z-]+\.json$/.test(url.pathname) ||
-      /-?app\.js$/.test(url.pathname)) {
+      /-?app\.js$/.test(url.pathname) ||
+      url.pathname.indexOf('/ef/data/') === 0 || /\/ef\/[a-z-]+\.js$/.test(url.pathname)) {
     e.respondWith(
       fetch(e.request).then(r => {
         if (r.ok) { const c2 = r.clone(); caches.open(CACHE).then(c => c.put(e.request, c2)); }
         return r;
-      }).catch(() => caches.match(e.request))
+      // Страницы просят файлы с ?v=версия, а в предзагрузке они лежат без
+      // хвоста: без ignoreSearch офлайн не находил ни данных, ни кода.
+      }).catch(() => caches.match(e.request).then(m => m || caches.match(e.request, { ignoreSearch: true })))
     );
     return;
   }
