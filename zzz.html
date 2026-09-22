@@ -431,9 +431,12 @@
   .card.no{--cmid:color-mix(in srgb,var(--cw),#000 88%);--cdark:#0a0c10}
   .card .ph{position:relative;aspect-ratio:1/1;overflow:hidden;background:#0b0d11;
     isolation:isolate;contain:paint;margin-bottom:-2px}
+  /* У части артов персонаж занимает половину кадра: остальное — оружие или
+     пустой фон, и в плитке фигура выходит вдвое мельче соседних. Для таких
+     задаём приближение поимённо: --zoom из данных агента. */
   .card .ph img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;
     image-rendering:auto;position:relative;z-index:0;will-change:transform;backface-visibility:hidden;
-    transform-origin:top center}
+    transform-origin:var(--zorig,top center);transform:scale(var(--zoom,1))}
   /* низ фотографии гасим не в чёрный, а в цвет самой карточки — стыка не видно */
   .card .ph::after{
     content:'';position:absolute;inset:0 0 -3px 0;z-index:1;
@@ -561,7 +564,8 @@
      арт скачком увеличивается при раскрытии описания диска или оружия, а если
      считать высоту от пропорций картинки — у каждого агента выходит свой размер. */
   .hart .hfig{position:relative;aspect-ratio:29/47;height:auto;overflow:hidden;z-index:1}
-  .hart .hfig img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .hart .hfig img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;
+    transform-origin:var(--zorig,top center);transform:scale(var(--zoom,1))}
   .hart .hfig::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 70%,#0b0d1166 88%,#0b0d11b3 100%)}
   /* остаток колонки закрываем размытым тем же артом, чтобы не было пустоты */
@@ -2164,6 +2168,25 @@
   .warn b{color:#fff}
   .warn code{background:#0b0d11;padding:2px 6px;border-radius:5px;font-family:Consolas,monospace;font-size:12px}
   .empty{text-align:center;color:var(--tx3);padding:40px 12px;font-size:13px}
+  /* ── промокоды ── */
+  .csec{margin:0 0 14px}
+  .csec>b{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--tx3);margin:0 0 7px}
+  .crow{display:flex;align-items:center;gap:10px;background:var(--pan2);
+    border:1px solid var(--line);border-radius:11px;padding:8px 11px;margin-bottom:6px;
+    transition:.15s;flex-wrap:wrap}
+  .crow:hover{border-color:#3a3e49}
+  .crow.done{opacity:.55}
+  .cchk{flex:none;width:24px;height:24px;border-radius:7px;cursor:pointer;
+    background:var(--pan);border:1px solid var(--line);color:var(--acc);
+    font-size:13px;line-height:1}
+  .crow.done .cchk{background:hsla(140,70%,60%,.16);border-color:var(--acc)}
+  .ccode{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--gold);
+    cursor:pointer;letter-spacing:.04em}
+  .crow.done .ccode{text-decoration:line-through;color:var(--tx3)}
+  .crew{font-size:12px;color:var(--tx2);min-width:0}
+  .cnote{font-size:10.5px;color:var(--tx3);font-style:normal;margin-left:auto}
+  .chint{font-size:11px;color:var(--tx3);margin-top:10px}
   .foot{margin-top:26px;text-align:center;color:var(--tx3);font-size:11.5px}
   .foot a{color:var(--tx2);text-decoration:none}.foot a:hover{color:var(--acc)}
 
@@ -2286,7 +2309,7 @@
     <span class="sp"></span>
     <!-- Семь кнопок занимали всю строку и лезли во вторую. Теперь одна, всё
          остальное — разделами внутри меню. -->
-    <button class="tbtn tbtn-menu" id="menuBtn" title="Импорт, облако, баннеры, эндгейм и прочее">☰ Меню</button>
+    <button class="tbtn tbtn-menu" id="menuBtn" title="Импорт, облако, баннеры, эндгейм и прочее">☰ Инструменты</button>
   </div>
 
   <div id="noDb" class="warn" style="display:none">
@@ -2475,6 +2498,17 @@
   <div class="panel" id="todoPanel"><div id="todoBox"></div></div>
   <div class="panel" id="matsPanel"><div id="matsBox"></div></div>
   <div class="panel" id="booPanel"><div id="booBox"></div></div>
+  <!-- Промокоды. Список собирает воркер с обзорных сайтов: у prydwen страницы
+       кодов для ZZZ нет, а официальная только принимает ввод. -->
+  <div class="panel" id="codePanel">
+    <div class="ptop"><b>Промокоды</b>
+      <span class="pnote" id="codeWhen"></span>
+      <button class="mini" id="codeRefresh">обновить сейчас</button>
+      <a class="mini" href="https://zenless.hoyoverse.com/redemption" target="_blank"
+         rel="noopener">страница активации</a>
+    </div>
+    <div id="codeBody"><div class="empty">загружаю…</div></div>
+  </div>
   <div class="panel" id="bannerPanel"><div id="bannerBox"></div></div>
   <div class="panel" id="endPanel"><div id="endBox"></div></div>
   <div class="panel" id="histPanel"><div id="histBox"></div></div>
@@ -2579,7 +2613,7 @@
     <ol class="wsteps">
       <li>В игре нажми на свой профиль слева вверху — <b>UID</b> написан внизу
           окна. Девять цифр, например <code>1502024259</code>.</li>
-      <li>Здесь: <b>☰ Меню</b> → <b>⟳ Импорт из игры</b> → впиши UID →
+      <li>Здесь: <b>☰ Инструменты</b> → <b>⟳ Импорт из игры</b> → впиши UID →
           <b>⚡ Загрузить весь аккаунт</b>. Приедет около девяти агентов — те,
           кого показывает твоя хроника, — с уровнями, ядрами, навыками и
           движками.</li>
@@ -2624,5 +2658,7 @@
 </div></div>
 
 <script src="zzz-app.js" defer></script>
+<script src="menu.js" defer></script>
+<script src="install.js" defer></script>
 </body>
 </html>

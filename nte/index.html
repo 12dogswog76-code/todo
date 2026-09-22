@@ -849,6 +849,30 @@
   .pri li u{text-decoration:none;font-family:var(--mono);font-size:10px;color:var(--tx3);
     min-width:12px}
   .pri li.top u{color:var(--acc)}
+  /* Панель инструментов открывается как в трекере: слева колонка разделов,
+     справа содержимое. Колонка никуда не девается — из «плана» можно сразу
+     перейти в «готовность», не закрывая окно. */
+  .tmnav{flex:none;width:236px;padding:12px;display:flex;flex-direction:column;gap:3px;
+    border-right:1px solid var(--line);background:linear-gradient(180deg,#ffffff06,transparent);
+    max-height:calc(100vh - 90px);overflow:auto}
+  .tmi{display:block;width:100%;text-align:left;padding:9px 11px;border-radius:11px;
+    background:none;border:1px solid transparent;color:var(--tx2);cursor:pointer;
+    font-family:inherit;font-size:12.5px;font-weight:600;transition:.14s}
+  .tmi:hover{background:#ffffff0a;border-color:var(--line);color:var(--tx)}
+  .tmi.on{background:hsla(140,70%,60%,.12);border-color:var(--acc);color:var(--acc)}
+  .tmi i{display:block;font-style:normal;font-size:10px;font-weight:500;color:var(--tx3);
+    margin-top:2px}
+  .tmi.on i{color:hsla(140,70%,60%,.65)}
+  .tmbody{flex:1;min-width:0;max-height:calc(100vh - 90px);overflow:auto}
+  .sheet-in.tm{display:flex;gap:0;padding:0;max-width:1480px;overflow:hidden}
+  .sheet-in.tm .tmbody>*{padding-left:18px;padding-right:18px}
+  @media(max-width:900px){
+    .sheet-in.tm{display:block}
+    .tmnav{width:auto;flex-direction:row;overflow:auto;border-right:0;
+      border-bottom:1px solid var(--line);max-height:none}
+    .tmi{white-space:nowrap}
+    .tmi i{display:none}
+  }
   .tools{position:relative}
   .toolsm{position:absolute;right:0;top:calc(100% + 7px);min-width:230px;z-index:40;
     background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:5px;
@@ -1385,5 +1409,7 @@
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
 <script src="app.js" defer></script>
+<script src="../menu.js" defer></script>
+<script src="../install.js" defer></script>
 </body>
 </html>

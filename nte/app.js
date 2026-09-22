@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v75';
+const APP_VER = 'v76';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -377,6 +377,25 @@ function todayHtml() {
     пункты.push({ д: 99, html: карточка('', свежие.length + ' ' +
       plural(свежие.length, 'код не активирован', 'кода не активированы', 'кодов не активировано'),
       'награды сгорают со временем', 'codes') });
+  }
+
+  // Данные, которые собираются скриптами на компьютере, со временем тухнут:
+  // тир-лист, сборки и баннеры остаются от прошлого патча, а по странице это
+  // незаметно. Если с прогона прошло больше двух недель — это тоже «горит».
+  const СТАРО = 14;
+  const стухло = [];
+  const проверить = (имя, когда) => {
+    const д = daysAgo(когда);
+    if (д != null && д > СТАРО) стухло.push({ имя: имя, д: д });
+  };
+  проверить('эсперы и картинки', (DB && DB.built) || '');
+  проверить('тир-лист и сборки', (GUIDE && GUIDE.built) || '');
+  if (стухло.length) {
+    стухло.sort((a, b) => b.д - a.д);
+    const самое = стухло[0];
+    пункты.push({ д: -1, html: карточка('hot',
+      'данные не обновлялись ' + самое.д + ' ' + plural(самое.д, 'день', 'дня', 'дней'),
+      стухло.map(x => x.имя).join(', ') + ' — запусти обновить-nte.ps1', '') });
   }
 
   if (!пункты.length) return '';
@@ -3728,7 +3747,7 @@ function open(slug) {
                                     (t[0] !== 'awk' || hasAwk));
   const facts = factsHtml(g);
 
-  $('sheetIn').innerHTML =
+  сброситьПанель(); $('sheetIn').innerHTML =
     '<div class="sh-head" style="' + elStyle(a.el) + ';--capc:var(--' + esc(a.el) + ')">' +
       '<div class="sh-art">' + lookHtml(a) + '</div>' +
       '<div class="sh-body">' +
@@ -4327,7 +4346,7 @@ function ocrBulkDraw() {
   bindOcrBulk();
 }
 function showOcrBulk() {
-  $('sheetIn').innerHTML = ocrBulkHtml();
+  сброситьПанель(); $('sheetIn').innerHTML = ocrBulkHtml();
   $('sheet').classList.add('on');
   bindOcrBulk();
 }
@@ -4953,7 +4972,7 @@ function cmpHtml() {
   '</div>';
 }
 function showCmp() {
-  $('sheetIn').innerHTML = cmpHtml();
+  сброситьПанель(); $('sheetIn').innerHTML = cmpHtml();
   $('sheet').classList.add('on');
   const c = $('close');
   if (c) c.onclick = () => $('sheet').classList.remove('on');
@@ -4963,7 +4982,7 @@ function showCmp() {
   });
 }
 function showPlan() {
-  $('sheetIn').innerHTML = planPanelHtml();
+  сброситьПанель(); $('sheetIn').innerHTML = planPanelHtml();
   $('sheet').classList.add('on');
   const c = $('close');
   if (c) c.onclick = () => $('sheet').classList.remove('on');
@@ -4992,6 +5011,60 @@ function changesHtml() {
 }
 // Меню инструментов: открывается по кнопке, закрывается по выбору, по клику
 // мимо и по Esc.
+// Список инструментов держим в одном месте: он нужен и выпадающему меню в
+// шапке, и колонке внутри открытой панели.
+const ИНСТРУМЕНТЫ = [
+  { id: 'cloud', имя: 'облако',      под: 'синхронизация между устройствами' },
+  { id: 'plan',  имя: 'план',        под: 'материалы на всех, кого качаешь' },
+  { id: 'cmp',   имя: 'сравнить',    под: 'кого качать первым' },
+  { id: 'ready', имя: 'готовность',  под: 'все эсперы против целей гайда' },
+  { id: 'pulls', имя: 'крутки',      под: 'сколько до гаранта и хватит ли' },
+  { id: 'bak',   имя: 'мои данные',  под: 'сохранить файлом и восстановить' },
+  { id: 'stat',  имя: 'скрины',      под: 'характеристики из снимков экрана' },
+];
+
+function открытьИнструмент(t) {
+  if (t === 'cloud') showSync();
+  else if (t === 'plan') showPlan();
+  else if (t === 'cmp') showCmp();
+  else if (t === 'ready') showReady();
+  else if (t === 'pulls') showPulls();
+  else if (t === 'bak') showBak();
+  else if (t === 'stat') showOcrBulk();
+  else return;
+  колонкаИнструментов(t);
+}
+
+// Колонку добавляем уже поверх готового содержимого. Узлы не переписываем, а
+// переносим: обработчики, навешанные внутри show*(), живут на самих узлах и
+// при переносе сохраняются — в отличие от подмены innerHTML.
+function сброситьПанель() {
+  const in_ = $('sheetIn');
+  if (in_) in_.classList.remove('tm');
+}
+
+function колонкаИнструментов(активный) {
+  const in_ = $('sheetIn');
+  if (!in_) return;
+  const тело = document.createElement('div');
+  тело.className = 'tmbody';
+  while (in_.firstChild) тело.appendChild(in_.firstChild);
+
+  const nav = document.createElement('nav');
+  nav.className = 'tmnav';
+  ИНСТРУМЕНТЫ.forEach(и => {
+    const b = document.createElement('button');
+    b.className = 'tmi' + (и.id === активный ? ' on' : '');
+    b.innerHTML = esc(и.имя) + '<i>' + esc(и.под) + '</i>';
+    b.onclick = () => { if (и.id !== активный) открытьИнструмент(и.id); };
+    nav.appendChild(b);
+  });
+
+  in_.appendChild(nav);
+  in_.appendChild(тело);
+  in_.classList.add('tm');
+}
+
 function bindTools() {
   const box = $('tools'), b = $('toolsBtn');
   if (!box || !b) return;
@@ -4999,15 +5072,7 @@ function bindTools() {
   b.onclick = e => { e.stopPropagation(); box.classList.toggle('open'); };
   box.querySelectorAll('[data-tool]').forEach(el => el.onclick = () => {
     закрыть();
-    const t = el.dataset.tool;
-    if (t === 'cloud') showSync();
-    else if (t === 'plan') showPlan();
-    else if (t === 'cmp') showCmp();
-    else if (t === 'ready') showReady();
-    else if (t === 'pulls') showPulls();
-    else if (t === 'bak') showBak();
-    else if (t === 'inst') { if (ставить) { ставить.prompt(); ставить = null; } }
-    else if (t === 'stat') showOcrBulk();
+    открытьИнструмент(el.dataset.tool);
   });
   document.addEventListener('click', e => { if (!box.contains(e.target)) закрыть(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') закрыть(); });
@@ -5050,25 +5115,12 @@ function swStart() {
     location.reload();
   });
 }
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  ставить = e;
-  const b = $('instBtn');
-  if (b) b.style.display = '';
-});
+// Установку приложением теперь ведёт общий install.js: он одинаково работает
+// на всех разделах и сам прячется, когда сайт уже открыт приложением.
 function instBind() {
+  // Кнопка в меню убрана: установка живёт в общем install.js.
   const b = $('instBtn');
-  if (!b) return;
-  // Кнопку показываем, только если браузер готов поставить: в уже
-  // установленном приложении и в Safari приглашения не будет вовсе.
-  b.style.display = ставить ? '' : 'none';
-  b.onclick = async () => {
-    if (!ставить) return;
-    ставить.prompt();
-    try { await ставить.userChoice; } catch (e) {}
-    ставить = null;
-    b.style.display = 'none';
-  };
+  if (b && b.parentElement) b.parentElement.removeChild(b);
 }
 
 // ── напоминания о сроках ───────────────────────────────────────────────────
@@ -5369,7 +5421,7 @@ function bakHtml() {
   '</div>';
 }
 function showBak() {
-  $('sheetIn').innerHTML = bakHtml();
+  сброситьПанель(); $('sheetIn').innerHTML = bakHtml();
   $('sheet').classList.add('on');
   const c = $('close');
   if (c) c.onclick = () => $('sheet').classList.remove('on');
@@ -5513,7 +5565,7 @@ function pullsHtml() {
   '</div>';
 }
 function showPulls() {
-  $('sheetIn').innerHTML = pullsHtml();
+  сброситьПанель(); $('sheetIn').innerHTML = pullsHtml();
   $('sheet').classList.add('on');
   const c = $('close');
   if (c) c.onclick = () => $('sheet').classList.remove('on');
@@ -5624,7 +5676,7 @@ function readyHtml() {
   '</div>';
 }
 function showReady() {
-  $('sheetIn').innerHTML = readyHtml();
+  сброситьПанель(); $('sheetIn').innerHTML = readyHtml();
   $('sheet').classList.add('on');
   const c = $('close');
   if (c) c.onclick = () => $('sheet').classList.remove('on');
@@ -5634,8 +5686,13 @@ function showReady() {
     el.onclick = () => open(el.dataset.slug));
 }
 function showFresh() {
-  const codes = (codesLive && codesLive.updated) || (GUIDE && GUIDE.codes && GUIDE.codes.updated) || '';
-  $('sheetIn').innerHTML =
+  // Здесь нужна дата нашего запроса, а не та, что написана на чужой странице:
+  // раньше после «обновить сейчас» в окне оставалось «4 дня назад» — это была
+  // дата правки источника, и выглядело как будто кнопка не работает.
+  const codes = (codesLive && codesLive.t)
+    ? new Date(codesLive.t).toISOString().slice(0, 16).replace('T', ' ')
+    : ((GUIDE && GUIDE.codes && GUIDE.codes.updated) || '');
+  сброситьПанель(); $('sheetIn').innerHTML =
     '<div class="sh-body">' +
       '<div class="sh-title"><h2>Откуда данные<i>и когда собирались</i></h2>' +
         '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
@@ -5646,7 +5703,9 @@ function showFresh() {
       freshRow('Оружие, картриджи, модули', GEAR && GEAR.built, 'build-nte-db.ps1', 'таблицы игры') +
       freshRow('Тир-лист, сборки, команды', GUIDE && GUIDE.built, 'nte-pryd.js в браузере', 'с prydwen.gg') +
       freshRow('Баннеры', GUIDE && GUIDE.built, 'nte-pryd.js в браузере', 'с prydwen.gg') +
-      freshRow('Коды', codes, codesLive ? 'сам, через воркер' : 'воркер не ответил', 'список кодов') +
+      freshRow('Коды', codes,
+        codesLive ? (codesLive.cached ? 'воркер, из кэша' : 'воркер, только что') : 'воркер не ответил',
+        'список кодов' + (codesLive && codesLive.updated ? ' · на источнике: ' + codesLive.updated : '')) +
       '</tbody></table></div>' +
       '<div class="hint">Автоматически обновляются только коды. Всё остальное — ровно то, ' +
       'что собрано в последний прогон: после патча запусти <b>обновить-nte.ps1</b> ' +
@@ -5756,7 +5815,7 @@ async function syncNow(say) {
 function showSync() {
   const cfg = syncCfg();
   const on = !!cfg.np;
-  $('sheetIn').innerHTML =
+  сброситьПанель(); $('sheetIn').innerHTML =
     '<div class="sh-body">' +
       '<div class="sh-title"><h2>Облако<i>отметки на всех устройствах</i></h2>' +
         '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +

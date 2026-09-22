@@ -36,6 +36,34 @@ function мб(n) { return (n / 1048576).toFixed(n > 10485760 ? 0 : 1) + ' МБ';
 function скачано() {
   try { return JSON.parse(localStorage.getItem(LS_OFF)) || {}; } catch (e) { return {}; }
 }
+
+// Отметка в localStorage — это память о нажатии, а не факт. Кэш мог быть
+// очищен браузером, а приложение открыться в другом профиле, и человек видел
+// бы «скачано» там, где скачанного нет. Поэтому проверяем по-настоящему:
+// берём из группы несколько файлов и спрашиваем кэш, лежат ли они.
+async function правдаСкачано(группа) {
+  const файлы = (СПИСОК && СПИСОК.groups[группа]) || [];
+  if (!файлы.length) return false;
+  const cache = await caches.open(IMG_CACHE);
+  const проба = [файлы[0], файлы[Math.floor(файлы.length / 2)], файлы[файлы.length - 1]];
+  for (const п of проба) {
+    if (!(await cache.match(п))) return false;
+  }
+  return true;
+}
+
+// Сверяем отметки с кэшем и чистим те, что не подтвердились.
+async function сверить() {
+  const было = скачано();
+  let менялось = false;
+  for (const г of Object.keys(было)) {
+    if (!(await правдаСкачано(г))) { delete было[г]; менялось = true; }
+  }
+  if (менялось) {
+    try { localStorage.setItem(LS_OFF, JSON.stringify(было)); } catch (e) {}
+  }
+  return было;
+}
 function отметить(g) {
   const o = скачано();
   o[g] = Date.now();
@@ -60,7 +88,7 @@ async function загрузитьСписок() {
       'коды, события, облако, профиль Enka.';
     return;
   }
-  const было = скачано();
+  const было = await сверить();
   $('groups').innerHTML = Object.keys(ИМЕНА).filter(g => (СПИСОК.groups[g] || []).length)
     .map(g => {
       const n = СПИСОК.groups[g].length;

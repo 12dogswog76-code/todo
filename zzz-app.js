@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v244';
+const APP_VER = 'v245';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1579,6 +1579,22 @@ function imgUrl(kind, v) {
 function agentPic(a, kind) {
   return picChain(a, kind)[0];
 }
+
+// Поправки на композицию арта. У большинства агентов фигура занимает почти весь
+// кадр, но бывают арты, где половину забирает оружие или фон: в общей сетке
+// такой персонаж выглядит вдвое мельче соседей. Здесь — приближение по имени,
+// отдельно для плитки и для карточки (в карточке кадр выше, нужно меньше).
+const ART_ZOOM = {
+  'Claret':  { card: 1.5,  hero: 1.28, orig: 'top center' },
+  'Кларет':  { card: 1.5,  hero: 1.28, orig: 'top center' },
+};
+function artZoomStyle(a, kind) {
+  const z = ART_ZOOM[a && a.en] || ART_ZOOM[a && a.ru];
+  if (!z) return '';
+  const v = kind === 'hero' ? z.hero : z.card;
+  if (!v || v === 1) return '';
+  return ' style="--zoom:' + v + ';--zorig:' + (z.orig || 'top center') + '"';
+}
 // Порядок, в котором пробуем картинку: сначала webp (старые агенты), потом png
 // (новые — webp средствами Windows не записать), в конце полный арт.
 // Раньше возвращался только webp, и у Кларет с Рокси плитка была пустой.
@@ -1741,7 +1757,7 @@ function cardHTML(a, idx) {
       (pic ? '<img src="' + esc(pic) + '" alt="" width="480" height="480" decoding="async"' +
         (idx != null && idx < EAGER_CARDS ? ' fetchpriority="high"' : ' loading="lazy"') +
         ' data-pic="' + esc(a.id) + '" data-kind="card"' +
-        ' data-nf="next">' : '') +
+        artZoomStyle(a, 'card') + ' data-nf="next">' : '') +
       '<span class="rk">' + rankBadge(a.rarity, 'sm', 'Редкость ' + a.rarity) + '</span>' +
       (tierOf(a.id) ? (function () {
         const t = tierOf(a.id), src = tierSrc() || {};
@@ -2926,7 +2942,8 @@ function renderSheet() {
     '</div></div>' +
     (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
     (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async"' +
-      ' data-pic="' + esc(a.id) + '" data-kind="hero" data-nf="next"></div>' : '') +
+      ' data-pic="' + esc(a.id) + '" data-kind="hero"' + artZoomStyle(a, 'hero') +
+      ' data-nf="next"></div>' : '') +
     '<div class="who"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span>' +
       '<div class="tags"><span class="tg el" title="' + esc((ELEM[el] && ELEM[el].ru) || '') + '">' +
         elIcon(el, 16) + '</span>' +
@@ -5415,6 +5432,7 @@ const MENU = [
   { k: 'boo',    p: 'booPanel',    i: '🤖', n: 'Банбу',          d: 'Кто что включает и кто есть у тебя' },
   { k: 'pull',   p: 'pullPanel',   i: '🎲', n: 'Крутки',          d: 'Сколько до гаранта и вся история' },
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
+  { k: 'codes',  p: 'codePanel',   i: '🎁', n: 'Промокоды',        d: 'Активные коды и что уже введено' },
   { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Твои прохождения и мета' },
   { k: 'squad',  p: 'squadPanel',  i: '🖼', n: 'Состав картинкой', d: 'Трое и банбу одним PNG' },
   { k: 'hist',   p: 'histPanel',   i: '📈', n: 'История',         d: 'График и журнал изменений' },
@@ -5453,6 +5471,7 @@ function menuGo(k) {
   if (k === 'gear')   drawGear();
   if (k === 'pull')   { drawPulls(); planAuto(); }
   if (k === 'banner') drawBanners();
+  if (k === 'codes')  { drawCodes(); if (!codesLive) loadCodes(false); }
   if (k === 'end')    { drawEndgame(); runsAuto(); }
   if (k === 'squad')  drawSquad();
   if (k === 'hist')   drawHist();
@@ -10366,3 +10385,147 @@ if ('serviceWorker' in navigator) {
     location.reload();
   });
 }
+
+// ─────────────── напоминание о несвежих данных ───────────────
+// Тир-лист, сборки и база агентов собираются скриптами на компьютере и живут
+// ровно до следующего прогона. По экрану этого не видно: данные прошлого
+// патча выглядят как сегодняшние. Поэтому при заходе один раз показываем
+// плашку — с той же логикой, что и в справочнике NTE (порог в две недели).
+(() => {
+  const СТАРО = 14;                       // дней
+  const КЛЮЧ = 'zzz-стухло-показано';     // чтобы не мозолить глаза каждый раз
+  const ЧАС = 3600000;
+
+  const дней = s => {
+    if (!s) return null;
+    const t = Date.parse(String(s).replace(' ', 'T'));
+    return isNaN(t) ? null : Math.floor((Date.now() - t) / 86400000);
+  };
+
+  function проверить() {
+    const источники = [
+      ['агенты и картинки', (DB || {}).built],
+      ['тир-лист и сборки', (GUIDE || {}).built],
+      ['оценки Шиюй', (TIER || {}).built],
+    ];
+    const стухло = источники
+      .map(([имя, когда]) => ({ имя, д: дней(когда) }))
+      .filter(x => x.д != null && x.д > СТАРО)
+      .sort((a, b) => b.д - a.д);
+    if (!стухло.length) return;
+
+    // Не чаще раза в сутки: напоминание, а не будильник.
+    try {
+      const было = +localStorage.getItem(КЛЮЧ) || 0;
+      if (Date.now() - было < 24 * ЧАС) return;
+      localStorage.setItem(КЛЮЧ, String(Date.now()));
+    } catch (e) {}
+
+    const х = стухло[0];
+    toast('Данные устарели',
+      х.имя + ' не обновлялись ' + х.д + ' дн. — запусти обновить-zzz.ps1',
+      'err', 12000);
+  }
+
+  // Ждём, пока базы загрузятся: они приходят отдельными запросами.
+  setTimeout(проверить, 4000);
+})();
+
+// ─────────────── промокоды ───────────────
+// Список активных кодов приходит из воркера: он раз в несколько часов
+// обходит обзорные сайты и отдаёт разобранную таблицу. Отметки «введено»
+// хранятся у себя — сервер об этом ничего не знает.
+const CODE_API = PUSH_API + '/api/zzz/codes';
+const CODE_USED = LS + '_codes';
+let codesLive = null;
+
+function codesUsed() {
+  try { return JSON.parse(localStorage.getItem(CODE_USED)) || {}; } catch (e) { return {}; }
+}
+function codesMark(code, on) {
+  const u = codesUsed();
+  if (on) u[code] = Date.now(); else delete u[code];
+  try { localStorage.setItem(CODE_USED, JSON.stringify(u)); } catch (e) {}
+}
+
+function codesHtml() {
+  const список = (codesLive && codesLive.list) || [];
+  if (!список.length) return '<div class="empty">коды не загрузились</div>';
+  const было = codesUsed();
+  const строка = c => {
+    const введён = !!было[c.code];
+    return '<div class="crow' + (введён ? ' done' : '') + '">' +
+      '<button class="cchk" data-code="' + esc(c.code) + '" title="отметить">' +
+        (введён ? '✓' : '') + '</button>' +
+      '<code class="ccode" data-copy="' + esc(c.code) + '" title="скопировать">' +
+        esc(c.code) + '</code>' +
+      '<span class="crew">' + esc(c.rew || '') + '</span>' +
+      (c.note ? '<i class="cnote">' + esc(c.note) + '</i>' : '') +
+      '</div>';
+  };
+  const свежие = список.filter(c => !было[c.code]);
+  const старые = список.filter(c => было[c.code]);
+  return (свежие.length
+      ? '<div class="csec"><b>не введены — ' + свежие.length + '</b>' +
+        свежие.map(строка).join('') + '</div>' : '') +
+    (старые.length
+      ? '<div class="csec"><b>уже введены — ' + старые.length + '</b>' +
+        старые.map(строка).join('') + '</div>' : '') +
+    '<div class="chint">Коды сгорают без предупреждения: если пишет «недоступен», ' +
+    'значит лимит активаций кончился. Отметки хранятся только у тебя.</div>';
+}
+
+function drawCodes() {
+  const тело = $('codeBody');
+  if (тело) тело.innerHTML = codesHtml();
+  const когда = $('codeWhen');
+  if (когда) {
+    // Показываем время своего запроса, а не дату с чужой страницы: иначе
+    // после «обновить сейчас» на экране остаётся прошлая неделя.
+    const t = codesLive && codesLive.t;
+    когда.textContent = t
+      ? 'обновлено ' + new Date(t).toLocaleString('ru', { day: '2-digit', month: '2-digit',
+          hour: '2-digit', minute: '2-digit' }) +
+        (codesLive.stale ? ' · источник не ответил, показан прошлый список' : '')
+      : '';
+  }
+  if (!тело) return;
+  тело.querySelectorAll('[data-code]').forEach(b => b.onclick = () => {
+    const было = codesUsed();
+    codesMark(b.dataset.code, !было[b.dataset.code]);
+    drawCodes();
+  });
+  тело.querySelectorAll('[data-copy]').forEach(el => el.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(el.dataset.copy);
+      toast('Скопировано', el.dataset.copy + ' — вставь на странице активации', 'ok');
+    } catch (e) {
+      toast('Не вышло скопировать', 'выдели код руками', 'err');
+    }
+  });
+}
+
+async function loadCodes(fresh) {
+  const тело = $('codeBody');
+  if (тело && !codesLive) тело.innerHTML = '<div class="empty">загружаю…</div>';
+  const т = fresh ? toast('Обновляю коды', 'спрашиваю источники', 'work', 20000) : null;
+  try {
+    const r = await fetch(CODE_API + (fresh ? '?fresh=1' : ''), { cache: 'no-store' });
+    const j = await r.json();
+    if (!j || !j.list) throw new Error(j && j.error ? j.error : 'пустой ответ');
+    codesLive = j;
+    drawCodes();
+    if (т) т.set('Коды обновлены', j.list.length + ' в списке', 'ok', 4000);
+  } catch (e) {
+    if (т) т.set('Коды не обновились', String(e.message || e), 'err', 6000);
+    if (тело && !codesLive) тело.innerHTML = '<div class="empty">не загрузилось: ' +
+      esc(String(e.message || e)) + '</div>';
+  }
+}
+
+// Кнопка «обновить сейчас» просит воркер обойти кэш: без ?fresh=1 он полдня
+// отдаёт прошлый снимок, и на экране висит вчерашний список.
+(() => {
+  const b = document.getElementById('codeRefresh');
+  if (b) b.onclick = () => loadCodes(true);
+})();
