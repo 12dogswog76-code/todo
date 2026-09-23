@@ -19,7 +19,7 @@
 // v14: появился обработчик push. Без него уведомления не показывались вовсе:
 // воркер их исправно отправлял, браузер исправно получал, а показать было
 // некому — сюда доезжало событие, которое никто не слушал.
-const CACHE = 'moi-dela-v22';
+const CACHE = 'moi-dela-v23';
 // Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
 // страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
 // заново тянул около десяти мегабайт артов и значков. На хорошем канале это
@@ -29,7 +29,11 @@ const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.js
                 './zzz-extra.json', './zzz-guide.json', './manifest.json', './icon.svg',
                 './manifest-zzz.json',
                 './todo-app.js', './money-app.js', './zzz-app.js',
-                './app.html', './app-shell.js', './manifest-app.json',
+                './app.html', './app-shell.js', './app-news.js', './manifest-app.json',
+                // оболочка: арты плиток и шрифты (берутся из NTE)
+                './img/app/zzz.webp', './img/app/nte.webp', './img/app/ef.webp',
+                './nte/fonts/oswald-cyr.woff2', './nte/fonts/oswald-latin.woff2',
+                './nte/fonts/inter-cyr.woff2', './nte/fonts/inter-latin.woff2',
                 './menu.js', './install.js',
                 './manifest-money.json', './offline-list.json',
                 // справочник NTE: страница и данные, без картинок
@@ -150,7 +154,8 @@ self.addEventListener('fetch', e => {
   // clone() уже после того, как ответ ушёл странице, он падает с ошибкой —
   // а вместе с ним падал и весь обработчик, подсовывая старый файл из кэша.
   e.respondWith(
-    caches.match(e.request).then(cached => {
+    // ignoreSearch запасным: файлы подключаются с ?v=, а в предзагрузке лежат без хвоста
+    caches.match(e.request).then(c => c || caches.match(e.request, { ignoreSearch: true })).then(cached => {
       const net = fetch(e.request).then(r => {
         if (r && r.ok) {
           const copy = r.clone();
