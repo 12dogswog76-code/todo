@@ -16,17 +16,25 @@
 
   const ФЛАГ = 'из-оболочки';
 
+  // Окно приложения узнаём тремя способами: установленное из браузера
+  // (display-mode), запущенное alextask.exe (метка ?app=1 в адресе оболочки)
+  // и iOS. Окно Chrome, открытое с ключом --app без установки, по
+  // display-mode неотличимо от вкладки — поэтому exe и ставит метку.
   const приложение = () =>
-    window.matchMedia('(display-mode: standalone)').matches ||
+    ['standalone', 'minimal-ui', 'window-controls-overlay', 'fullscreen']
+      .some(m => window.matchMedia('(display-mode: ' + m + ')').matches) ||
     window.navigator.standalone === true;
 
   // Переход из оболочки помним на всю вкладку: дальше человек ходит по
   // разделам, и кнопка должна оставаться.
   try {
-    if (document.referrer && document.referrer.includes('app.html')) {
+    if ((document.referrer && document.referrer.includes('app.html')) ||
+        /[?&]app=1\b/.test(location.search)) {
       sessionStorage.setItem(ФЛАГ, '1');
     }
   } catch (e) {}
+  // В самой оболочке кнопка не нужна — это и есть список разделов.
+  if (/\/app\.html$/.test(location.pathname)) return;
 
   let надо = приложение();
   try { надо = надо || sessionStorage.getItem(ФЛАГ) === '1'; } catch (e) {}
@@ -38,24 +46,24 @@
 
   const кнопка = document.createElement('a');
   кнопка.href = вверх;
-  кнопка.textContent = '☰ Разделы';
+  кнопка.textContent = '← Разделы';
   кнопка.setAttribute('aria-label', 'Вернуться к списку разделов');
   кнопка.style.cssText = [
     'position:fixed', 'left:12px', 'bottom:12px', 'z-index:2147483000',
     'display:flex', 'align-items:center', 'gap:6px',
     'padding:9px 13px', 'border-radius:11px',
-    'background:rgba(14,15,17,.92)', 'color:#edeef2',
-    'border:1px solid rgba(255,255,255,.14)',
-    'font:12px/1 Inter,"Segoe UI",system-ui,sans-serif', 'text-decoration:none',
+    'background:rgba(14,15,17,.94)', 'color:#fff',
+    'border:1px solid rgba(74,222,128,.6)',
+    'font:700 12.5px/1 Inter,"Segoe UI",system-ui,sans-serif', 'text-decoration:none',
     'box-shadow:0 8px 24px rgba(0,0,0,.45)', 'backdrop-filter:blur(8px)',
     'transition:.16s', 'user-select:none',
   ].join(';');
   кнопка.addEventListener('mouseenter', () => {
-    кнопка.style.borderColor = 'rgba(255,255,255,.3)';
+    кнопка.style.borderColor = 'rgba(74,222,128,1)';
     кнопка.style.transform = 'translateY(-1px)';
   });
   кнопка.addEventListener('mouseleave', () => {
-    кнопка.style.borderColor = 'rgba(255,255,255,.14)';
+    кнопка.style.borderColor = 'rgba(74,222,128,.6)';
     кнопка.style.transform = 'none';
   });
 

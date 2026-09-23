@@ -2065,18 +2065,39 @@
   .mmnav{flex:none;width:252px;padding:12px;display:flex;flex-direction:column;gap:3px;
     border-right:1px solid var(--line);background:linear-gradient(180deg,var(--pan2),var(--pan));
     max-height:calc(100vh - 48px);overflow:auto}
-  .mmi{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;
+  /* Пункты — как в NTE: название капсом с разрядкой, под ним пояснение.
+     Значков-эмодзи нет: они пестрили и ничего не добавляли. */
+  .mmi{display:block;padding:9px 12px;border-radius:11px;
     background:none;border:1px solid transparent;color:var(--tx2);cursor:pointer;
     text-align:left;font-family:inherit;transition:.14s}
   .mmi:hover{background:var(--pan2);border-color:var(--line);color:var(--tx)}
   .mmi.on{background:#4ade801f;border-color:var(--acc);color:#a7f3c0}
-  .mmi u{flex:none;width:22px;text-align:center;text-decoration:none;font-size:14px}
   .mmi span{min-width:0;display:block}
-  .mmi b{display:block;font-size:12.5px;font-weight:700}
-  .mmi i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:1px}
+  .mmi b{display:block;font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .mmi i{display:block;font-style:normal;font-size:10.5px;color:var(--tx3);margin-top:3px}
   .mmi.on i{color:#a7f3c099}
   .mmbody{flex:1;min-width:0;padding:0;max-height:calc(100vh - 48px);overflow:auto;
-    display:none}
+    display:none;background:radial-gradient(#ffffff07 1px,transparent 1.2px) 0 0/14px 14px,var(--pan)}
+  /* шапка открытого раздела: крупное название и строка-пояснение */
+  .mmhead{position:sticky;top:0;z-index:3;padding:18px 20px 14px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,var(--pan2),var(--pan) 92%)}
+  .mmhead h2{margin:0;font-size:26px;line-height:1.05;font-weight:800;letter-spacing:.01em;
+    text-transform:uppercase;color:var(--tx)}
+  .mmhead i{display:block;font-style:normal;margin-top:6px;font-size:10px;font-weight:700;
+    letter-spacing:.24em;text-transform:uppercase;color:var(--tx3)}
+  .mmhead:empty{display:none}
+  /* короткий список под кнопкой «Инструменты» */
+  .tools{position:relative}
+  .toolsm{position:absolute;right:0;top:calc(100% + 7px);min-width:250px;z-index:130;
+    background:var(--pan);border:1px solid var(--line);border-radius:13px;padding:5px;
+    box-shadow:0 14px 34px #000000b0;display:none;max-height:calc(100vh - 90px);overflow:auto}
+  .tools.open .toolsm{display:grid;gap:2px}
+  .toolsm button{display:block;width:100%;text-align:left;background:transparent;border:0;
+    color:var(--tx);padding:8px 11px;border-radius:9px;cursor:pointer;font-family:inherit;
+    font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .toolsm button:hover{background:#ffffff0f}
+  .toolsm button i{display:block;font-style:normal;font-size:10.5px;font-weight:500;
+    letter-spacing:0;text-transform:none;color:var(--tx2);margin-top:3px}
   .mmbox.open .mmbody{display:block}
   .mmslot{padding:16px 18px 20px}
   /* Крестик снаружи окна, в углу экрана: внутри он налезал на содержимое
@@ -2097,7 +2118,6 @@
       border-bottom:1px solid var(--line);max-height:none;gap:4px;padding:9px}
     .mmi{flex:1 1 46%;padding:8px 9px}
     .mmi i{display:none}
-    .mmi u{width:18px;font-size:13px}
     .mmi b{font-size:12px}
     /* Раздел выбран — колонка из восьми кнопок съела бы пол-экрана. Сворачиваем
        её в ленту с горизонтальной прокруткой: и переключаться удобно, и место
@@ -2309,7 +2329,12 @@
     <span class="sp"></span>
     <!-- Семь кнопок занимали всю строку и лезли во вторую. Теперь одна, всё
          остальное — разделами внутри меню. -->
-    <button class="tbtn tbtn-menu" id="menuBtn" title="Импорт, облако, баннеры, эндгейм и прочее">☰ Инструменты</button>
+    <!-- Кнопка открывает короткий список, как в NTE. Выбранный пункт
+         открывает окно: слева тот же список, справа содержимое. -->
+    <div class="tools" id="toolsBox">
+      <button class="tbtn tbtn-menu" id="menuBtn" title="Импорт, облако, баннеры, эндгейм и прочее">☰ Инструменты</button>
+      <div class="toolsm" id="toolsDrop"></div>
+    </div>
   </div>
 
   <div id="noDb" class="warn" style="display:none">
@@ -2335,7 +2360,7 @@
   <div class="mmwrap" id="menuWrap">
     <div class="mmbox" id="menuBox">
       <nav class="mmnav" id="menuNav"></nav>
-      <div class="mmbody" id="menuBody"><div class="mmslot" id="menuSlot"></div></div>
+      <div class="mmbody" id="menuBody"><div class="mmhead" id="menuHead"></div><div class="mmslot" id="menuSlot"></div></div>
     </div>
     <button class="mmx" id="menuClose" title="Закрыть">✕</button>
   </div>
@@ -2657,7 +2682,7 @@
   </div>
 </div></div>
 
-<script src="zzz-app.js" defer></script>
+<script src="zzz-app.js?v=246" defer></script>
 <script src="menu.js" defer></script>
 <script src="install.js" defer></script>
 </body>

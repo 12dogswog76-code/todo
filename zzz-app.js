@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v245';
+const APP_VER = 'v246';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1584,9 +1584,12 @@ function agentPic(a, kind) {
 // кадр, но бывают арты, где половину забирает оружие или фон: в общей сетке
 // такой персонаж выглядит вдвое мельче соседей. Здесь — приближение по имени,
 // отдельно для плитки и для карточки (в карточке кадр выше, нужно меньше).
+// У Кларет свои кадры card_1611.webp и hero_1611.webp, вырезанные по фигуре
+// (без половины косы): приближение через CSS мылило и всё равно оставляло её
+// мельче соседей. Здесь — только лёгкая доводка карточки.
 const ART_ZOOM = {
-  'Claret':  { card: 1.5,  hero: 1.28, orig: 'top center' },
-  'Кларет':  { card: 1.5,  hero: 1.28, orig: 'top center' },
+  'Claret':  { card: 1,  hero: 1.1, orig: 'top center' },
+  'Кларет':  { card: 1,  hero: 1.1, orig: 'top center' },
 };
 function artZoomStyle(a, kind) {
   const z = ART_ZOOM[a && a.en] || ART_ZOOM[a && a.ru];
@@ -5445,15 +5448,28 @@ function menuDraw() {
   if (!nav) return;
   nav.innerHTML = MENU.map(m =>
     '<button class="mmi' + (menuCur === m.k ? ' on' : '') + '" data-k="' + m.k + '">' +
-      '<u>' + m.i + '</u><span><b>' + esc(m.n) + '</b><i>' + esc(m.d) + '</i></span></button>').join('');
+      '<span><b>' + esc(m.n) + '</b><i>' + esc(m.d) + '</i></span></button>').join('');
   nav.querySelectorAll('.mmi').forEach(b => b.onclick = () => menuGo(b.dataset.k));
+}
+// Короткий список под кнопкой — тот же MENU, чтобы пункты не расходились.
+function menuDropDraw() {
+  const d = $('toolsDrop');
+  if (!d) return;
+  d.innerHTML = MENU.map(m => '<button data-k="' + m.k + '">' + esc(m.n) + '<i>' + esc(m.d) + '</i></button>').join('');
+  d.querySelectorAll('button').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    $('toolsBox').classList.remove('open');
+    menuOpen(b.dataset.k);
+  });
 }
 function menuGo(k) {
   const m = MENU.filter(x => x.k === k)[0];
   if (!m) return;
-  // повторный клик по открытому разделу — сворачиваем обратно к колонке
-  if (menuCur === k) { menuCur = ''; menuPark(); $('menuBox').classList.remove('open'); menuDraw(); return; }
+  // повторный клик по открытому разделу ничего не делает: окно остаётся
+  if (menuCur === k) return;
   menuCur = k;
+  const head = $('menuHead');
+  if (head) head.innerHTML = '<h2>' + esc(m.n) + '</h2><i>' + esc(m.d) + '</i>';
   // Прежнюю панель возвращаем в panelZone, а не чистим слот через innerHTML:
   // innerHTML='' уничтожает узел вместе со всеми обработчиками, и следующее
   // открытие того же раздела падало на пустом месте.
@@ -5505,10 +5521,19 @@ function menuClose() {
   menuPark();
   menuCur = '';
 }
-$('menuBtn').onclick   = () => menuOpen('');
+$('menuBtn').onclick   = e => {
+  e.stopPropagation();
+  menuDropDraw();
+  $('toolsBox').classList.toggle('open');
+};
+document.addEventListener('click', e => {
+  const box = $('toolsBox');
+  if (box && !box.contains(e.target)) box.classList.remove('open');
+});
 $('menuClose').onclick = menuClose;
 $('menuWrap').onclick  = e => { if (e.target === $('menuWrap')) menuClose(); };
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('toolsBox')) $('toolsBox').classList.remove('open');
   if (e.key === 'Escape' && $('menuWrap').classList.contains('open') &&
       !$('modal').classList.contains('open')) menuClose();
 });
@@ -7345,8 +7370,9 @@ function coachStart(force) {
       text: 'Все разделы трекера живут в этом меню. Нажми — откроется список.',
       // Открыто именно окно меню — это menuWrap; menuBox с классом open
       // означает другое: что внутри уже раскрыт какой-то раздел.
-      skip: () => !!($('menuWrap') && $('menuWrap').classList.contains('open')) },
-    { sel: '.mmi[data-k="enka"]', title: 'Импорт из игры',
+      skip: () => !!(($('menuWrap') && $('menuWrap').classList.contains('open')) ||
+                     ($('toolsBox') && $('toolsBox').classList.contains('open'))) },
+    { sel: '#toolsDrop [data-k="enka"]', title: 'Импорт из игры',
       text: 'Первый пункт. Отсюда переносится аккаунт.',
       skip: () => !!document.querySelector('#menuSlot #enkaPanel') },
     { sel: '#uidInput', title: 'Впиши UID и жми «Загрузить весь аккаунт»',

@@ -42,16 +42,21 @@ function скачано() {
 // Отметка в localStorage — это память о нажатии, а не факт. Кэш мог быть
 // очищен браузером, а приложение открыться в другом профиле, и человек видел
 // бы «скачано» там, где скачанного нет. Поэтому проверяем по-настоящему:
-// берём из группы несколько файлов и спрашиваем кэш, лежат ли они.
+// берём из группы до 12 файлов вразброс и спрашиваем кэш, лежат ли они.
+// Хватает трёх из четырёх: пара файлов из списка может отсутствовать на
+// сервере (404 при скачивании), и раньше один такой файл на месте «первого»
+// или «последнего» снимал отметку со всей группы — скачанное «пропадало».
 async function правдаСкачано(группа) {
   const файлы = (СПИСОК && СПИСОК.groups[группа]) || [];
   if (!файлы.length) return false;
   const cache = await caches.open(IMG_CACHE);
-  const проба = [файлы[0], файлы[Math.floor(файлы.length / 2)], файлы[файлы.length - 1]];
-  for (const п of проба) {
-    if (!(await cache.match(п))) return false;
+  const n = Math.min(12, файлы.length);
+  let есть = 0;
+  for (let i = 0; i < n; i++) {
+    const п = файлы[Math.floor(i * (файлы.length - 1) / Math.max(1, n - 1))];
+    if (await cache.match(п)) есть++;
   }
-  return true;
+  return есть / n >= 0.75;
 }
 
 // Сверяем отметки с кэшем и чистим те, что не подтвердились.
@@ -134,6 +139,8 @@ async function поехали() {
   const группы = [...document.querySelectorAll('[data-g]')].filter(x => x.checked).map(x => x.dataset.g);
   if (!группы.length) { $('say').textContent = 'отметь, что скачивать'; return; }
   идёт = true; стоп = false;
+  // Без «постоянного» хранилища браузер вправе выкинуть кэш при нехватке места.
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
   $('go').disabled = true; $('stop').disabled = false;
   const файлы = [];
   группы.forEach(g => (СПИСОК.groups[g] || []).forEach(p => файлы.push(p)));
