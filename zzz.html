@@ -587,9 +587,10 @@
   .hart .hroll-in span{display:block;white-space:nowrap;font-size:clamp(30px,20cqw,90px);
     font-weight:900;letter-spacing:.04em;line-height:1;color:var(--el);text-transform:uppercase;
     font-family:Impact,"Arial Black",var(--mono);will-change:transform}
+  /* odd/even, а не 1/2: строк три, и третья раньше стояла на месте */
   @media(prefers-reduced-motion:no-preference){
-    .hart .hroll-in span:nth-child(1){animation:hrollA 90s linear infinite}
-    .hart .hroll-in span:nth-child(2){animation:hrollB 90s linear infinite}
+    .hart .hroll-in span:nth-child(odd){animation:hrollA 90s linear infinite}
+    .hart .hroll-in span:nth-child(even){animation:hrollB 90s linear infinite}
   }
   @keyframes hrollA{to{transform:translateX(-16.666%)}}
   @keyframes hrollB{from{transform:translateX(-16.666%)}to{transform:translateX(0)}}
@@ -2320,6 +2321,28 @@
   .nmb b{font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.02em}
   .nmb span{font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
   .mmhead h2{font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+
+  /* ═════ v249: карточка агента как в NTE ═════════════════════════════════
+     Окно карточки ростом с экран и само не прокручивается: слева арт стоит
+     на месте и виден целиком (contain, без обрезки), справа прокручивается
+     только колонка с данными (.hbody), внизу — панель с кнопками. Раньше
+     прокручивалось всё окно, липкий арт показывал на длинных сборках ноги,
+     а верх/низ картинки обрезались. На телефоне — прежняя одна колонка. */
+  @media(min-width:861px){
+    .modal{align-items:center;padding:12px;overflow:hidden}
+    .sheet{max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+    .sheet>.hero{flex:1 1 auto;min-height:0;grid-template-rows:minmax(0,1fr);overflow:hidden}
+    .hart{position:relative;top:auto;max-height:none;height:100%;align-self:stretch;
+      display:flex;flex-direction:column;justify-content:flex-end}
+    .hart .hfig{position:absolute;inset:0 0 118px 0;aspect-ratio:auto;height:auto}
+    .hart .hfig img{object-fit:contain;object-position:center bottom}
+    .hart .hfig::after{display:none}      /* его нижний край давал видимую ступеньку */
+    .hart::after{background:linear-gradient(180deg,transparent 70%,#0b0d11b3 84%,#0b0d11 94%),
+               radial-gradient(60% 40% at 50% 0%,color-mix(in srgb,var(--el) 22%,transparent),transparent 70%)}
+    .hart .who{margin-top:0}
+    .hbody{overflow-y:auto;min-height:0;overscroll-behavior:contain}
+    .sheet>.foot2{flex:none}
+  }
 </style>
 </head>
 <body>
@@ -2704,7 +2727,7 @@
   </div>
 </div></div>
 
-<script src="zzz-app.js?v=248" defer></script>
+<script src="zzz-app.js?v=249" defer></script>
 <script src="menu.js?v=3" defer></script>
 <script src="install.js" defer></script>
 </body>

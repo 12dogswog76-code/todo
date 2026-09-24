@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v248';
+const APP_VER = 'v249';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3242,7 +3242,16 @@ function renderSheet() {
        '<button data-act="closeModal">Закрыть</button>' +
        '<button class="pri" id="saveBtn">Сохранить</button></div>';
 
+  // С v249 прокручивается не окно, а правая колонка (.hbody): арт стоит на
+  // месте. Карточка перерисовывается целиком при каждой правке — сохраняем
+  // позицию прокрутки, если это тот же агент, иначе прыгало бы наверх.
+  const былаHb = $('sheet').querySelector('.hbody');
+  const тотЖе = былаHb && $('sheet').dataset.agent === String(curId);
+  const прокр = тотЖе ? былаHb.scrollTop : 0;
   $('sheet').innerHTML = h;
+  $('sheet').dataset.agent = String(curId);
+  const новаяHb = $('sheet').querySelector('.hbody');
+  if (новаяHb) новаяHb.scrollTop = прокр;
   $('modal').classList.add('open');
   // фон-подложка: ставим первый живой адрес из цепочки, иначе у новых агентов
   // (webp ещё не сделан) низ карточки оставался пустым

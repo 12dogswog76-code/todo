@@ -63,7 +63,11 @@
   // ── каналы ─────────────────────────────────────────────────────────────────
   const имя = s => String(s || '').trim().replace(/^https?:\/\/t\.me\/(s\/)?/i, '').replace(/^@/, '').replace(/[/?#].*$/, '');
   const разобрать = s => String(s || '').split(/[\s,;]+/).map(имя).filter(x => /^[A-Za-z][A-Za-z0-9_]{3,40}$/.test(x));
-  let каналы = чит(LS_CH, { zzz: [], nte: [], ef: [] });
+  // Каналы по умолчанию — стандарт, вводить их не нужно. Своё, заданное
+  // кнопкой «Каналы», их заменяет; если список игры пустой — берётся стандарт.
+  const СТАНДАРТ = { zzz: ['zenlessleak'], nte: ['NTE_MIUMIU'], ef: ['ArknightsEndfieldleaks'] };
+  let каналы = чит(LS_CH, {});
+  Object.keys(СТАНДАРТ).forEach(g => { if (!Array.isArray(каналы[g]) || !каналы[g].length) каналы[g] = СТАНДАРТ[g].slice(); });
   const всеКаналы = () => Object.keys(ИГРЫ).reduce((a, g) => a.concat((каналы[g] || []).map(c => [g, c])), []);
 
   function настройкаОткрыть(on) {
@@ -77,6 +81,7 @@
   $('chSave').onclick = () => {
     const н = {};
     document.querySelectorAll('[data-ch]').forEach(i => { н[i.dataset.ch] = разобрать(i.value); });
+    Object.keys(СТАНДАРТ).forEach(g => { if (!н[g] || !н[g].length) н[g] = СТАНДАРТ[g].slice(); });
     каналы = н; пиши(LS_CH, н);
     настройкаОткрыть(false);
     забрать(true);
