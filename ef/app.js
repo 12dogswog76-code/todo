@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v7';
+const APP_VER = 'v8';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -135,7 +135,7 @@ const ВМЕНЮ = [
   ['ach', 'Прогресс по достижениям'],
   ['gacha', 'Гарант, история, симулятор'],
   ['prof', 'Витрина аккаунта по UID'],
-  ['chr', 'Боевая хроника skport'],
+  ['chr', 'Регионы, база, эндгейм из SKPORT'],
 ];
 const ИНСТРПОД = {
   cloud: 'Синхронизация между устройствами',
@@ -650,41 +650,131 @@ function вклДосье(c, д) {
     '<div class="dd-in lore">' + богат(r.т) + '</div></details>').join('') + '</div>';
   return h + '</div>';
 }
+// Вещь из нашей базы по русскому имени из SKPORT (у них свои id-хеши).
+const снарПоИмени = имя => EF.БАЗА.снаряжение.find(x => x.имяРу === имя) || null;
+const оружиеПоИмени = имя => EF.БАЗА.оружие.find(x => x.имяРу === имя || x.имя === имя) || null;
+function атк(w, ур) {
+  const т = Object.keys(w.атк || {}).map(Number).sort((a, b) => a - b);
+  let v = null; т.forEach(t => { if (t <= ур) v = w.атк[t]; });
+  return v;
+}
+const знач = (x) => x.проц ? проц(x.знач) : '+' + чис(x.знач, 0);
+// Характеристики вещи: значения из нашей базы, имена — где база не знает
+// («тип 32») — из SKPORT; усиления SKPORT идут по номеру характеристики (1–3).
+function статыВещи(e) {
+  const x = снарПоИмени(e.имя);
+  if (!x) return e.свойства.map((и, i) => ({ имя: и, знач: null, проц: false, усил: +(e.усил[i + 1] || 0) }));
+  return [x.основной].concat(x.статы || []).filter(Boolean).map((st, i) => ({
+    имя: i && /^тип \d+/.test(st.имя) && e.свойства[i - 1] ? e.свойства[i - 1] : st.имя,
+    знач: st.знач, проц: st.проц, усил: i ? +(e.усил[i] || 0) : 0 }));
+}
+
 function вклМоё(c, д, м) {
-  if (!м) {
-    return '<div class="box brk"><b>нет у тебя</b>Этого оператора нет ни в витрине enka (раздел «Профиль»), ни в выгрузке SKPORT ' +
-      '(«☰ Инструменты» → Хроника). Подключи любой из двух — и здесь будут уровень, характеристики и снаряжение.</div>';
-  }
-  const ур = +м.ур || 1;
-  const s = д ? статыНа(д, ур) : null;
-  const ист = [м.витрина ? 'enka' : '', м.skport ? 'SKPORT' : ''].filter(Boolean).join(' + ');
-  let h = '<div class="stats" style="margin-bottom:16px">' +
-    '<div class="st ok"><u>уровень</u><b>' + эк(ур) + '<small> / 90</small></b></div>' +
-    '<div class="st"><u>потенциал</u><b>' + эк(м.пот || 0) + '<small> / 5</small></b></div>' +
-    (м.оружие ? '<div class="st"><u>оружие ур.</u><b>' + эк(м.оружие.weaponLv) + '</b></div><div class="st"><u>прорыв оружия</u><b>' + эк(м.оружие.breakthroughLv || 0) + '</b></div>' : '') +
-    (м.навыки ? '<div class="st"><u>навыков на максимуме</u><b>' + м.навыки.filter(н => н.ур >= н.макс).length + '<small> / ' + м.навыки.length + '</small></b></div>' : '') +
-    (м.слоты ? '<div class="st"><u>слотов надето</u><b>' + м.слоты.length + '<small> / 4</small></b></div>' : '') +
-    '<div class="st"><u>откуда</u><b style="font-size:14px">' + эк(ист || '—') + '</b></div></div>';
-  if (s) {
-    h += '<div class="sec"><h4>характеристики на твоём ур. ' + ур + '<em>база оператора, без оружия и снаряжения</em></h4>' +
-      '<div class="stats">' + плиткиСтатов(s, c) + '</div></div>';
-  }
-  if (м.навыки && м.навыки.length && д) {
-    h += '<div class="sec"><h4>уровни навыков</h4><table class="tbl">' + м.навыки.map(н => {
-      const наш = (д.навыки || []).find(x => н.id && x.id && н.id.indexOf(x.id.replace(/^chr_\d+_[a-z]+_/i, '')) >= 0);
-      return '<tr' + (н.ур >= н.макс ? ' class="top"' : '') + '><td>' + эк(наш ? наш.имя : н.id) + '</td><td class="n">' + н.ур + ' / ' + н.макс + '</td></tr>';
-    }).join('') + '</table></div>';
-  }
-  // Всё, что SKPORT отдал по этому оператору, — как есть. Поля ещё не
-  // разобраны по смыслу (структура ответа становится известна только по
-  // выгрузке), поэтому показываем их деревом: видно, что есть.
   ХРОНИКА = ХРОНИКА || хроникаИзХранилища();
-  const сырой = ХРОНИКА && ХРОНИКА.data ? (операторыSk(ХРОНИКА.data.card)[c.id] || {}).raw : null;
-  if (сырой) {
-    h += '<div class="sec"><h4>из SKPORT<em>' + (ХРОНИКА.at ? эк(new Date(ХРОНИКА.at).toLocaleString('ru')) : '') + '</em></h4>' +
-      '<div class="box">' + дерево(сырой, 0) + '</div></div>';
-  } else if (!м.skport) {
-    h += '<p class="hint">Больше данных — из SKPORT: «☰ Инструменты» → Хроника.</p>';
+  const sk = ХРОНИКА && ХРОНИКА.оп ? ХРОНИКА.оп[c.id] : null;
+  if (!м && !sk) {
+    return '<div class="box brk"><b>нет у тебя</b>Этого оператора нет ни в выгрузке SKPORT («☰ Инструменты» → Аккаунт), ни в витрине enka ' +
+      '(«Профиль»). Подключи SKPORT — и здесь будут уровень, прорыв, навыки, оружие и снаряжение.</div>';
+  }
+  const ур = +((sk && sk.ур) || (м && м.ур) || 1);
+  const s = д ? статыНа(д, ур) : null;
+  const ист = [sk ? 'SKPORT' : '', м && м.витрина ? 'enka' : ''].filter(Boolean).join(' + ');
+  const нав = (sk && sk.навыки) || [];
+  let h = '<div class="stats" style="margin-bottom:16px">' +
+    '<div class="st ok"><u>уровень</u><b>' + ур + '<small> / 90</small></b>' + полоса(ур, 90) + '</div>' +
+    (sk ? '<div class="st"><u>прорыв</u><b>' + sk.фаза + '<small> / 4</small></b>' + полоса(sk.фаза, 4) + '</div>' : '') +
+    '<div class="st"><u>потенциал</u><b>' + ((sk && sk.пот) || (м && м.пот) || 0) + '<small> / 5</small></b>' + полоса((sk && sk.пот) || (м && м.пот) || 0, 5) + '</div>' +
+    (нав.length ? '<div class="st"><u>навыки на максимуме</u><b>' + нав.filter(н => н.ур >= н.макс).length + '<small> / ' + нав.length + '</small></b></div>' : '') +
+    '<div class="st"><u>откуда</u><b style="font-size:14px">' + эк(ист || '—') + '</b>' +
+      (ХРОНИКА && sk ? '<small style="display:block;margin-top:5px">' + эк(new Date(ХРОНИКА.at).toLocaleDateString('ru')) + '</small>' : '') + '</div></div>';
+
+  if (!sk) {
+    // только витрина enka — как раньше
+    if (s) h += '<div class="sec"><h4>характеристики на твоём ур. ' + ур + '<em>база оператора</em></h4><div class="stats">' + плиткиСтатов(s, c) + '</div></div>';
+    if (м.навыки && м.навыки.length && д) {
+      h += '<div class="sec"><h4>уровни навыков</h4><table class="tbl">' + м.навыки.map(н => {
+        const наш = (д.навыки || []).find(x => н.id && x.id && н.id.indexOf(x.id.replace(/^chr_\d+_[a-z]+_/i, '')) >= 0);
+        return '<tr' + (н.ур >= н.макс ? ' class="top"' : '') + '><td>' + эк(наш ? наш.имя : н.id) + '</td><td class="n">' + н.ур + ' / ' + н.макс + '</td></tr>';
+      }).join('') + '</table></div>';
+    }
+    return h + '<p class="hint">Оружие, снаряжение, навыки и таланты — из SKPORT: «☰ Инструменты» → Аккаунт.</p>';
+  }
+
+  // характеристики: база оператора на его уровне + что даёт снаряжение по нашей базе
+  const отСнар = {};
+  (sk.снар || []).forEach(e => статыВещи(e).forEach(st => {
+    if (st.знач == null) return;
+    const k = st.имя + (st.проц ? ' %' : '');
+    отСнар[k] = (отСнар[k] || 0) + (+st.знач || 0);
+  }));
+  const о = sk.оружие, wБаза = о ? оружиеПоИмени(о.имя) : null;
+  h += '<div class="cols">';
+  if (s) h += '<div class="sec"><h4>характеристики оператора на ур. ' + ур + '<em>без оружия и снаряжения</em></h4><div class="stats">' + плиткиСтатов(s, c) + '</div></div>';
+  const сн = Object.entries(отСнар);
+  if (сн.length || (wБаза && атк(wБаза, о.ур))) {
+    h += '<div class="sec"><h4>прибавки<em>база вещей, без усилений</em></h4><div class="kv">' +
+      (wБаза && атк(wБаза, о.ур) != null ? '<span>АТК оружия (ур. ' + о.ур + ')</span><b>+' + чис(атк(wБаза, о.ур), 0) + '</b>' : '') +
+      сн.map(([k, v]) => '<span>' + эк(k.replace(/ %$/, '')) + ' · снаряжение</span><b>' + (/ %$/.test(k) ? проц(v) : '+' + чис(v, 0)) + '</b>').join('') +
+      '</div></div>';
+  }
+  h += '</div>';
+
+  // оружие
+  if (о) {
+    h += '<div class="sec"><h4>оружие</h4><div class="box"><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">' +
+      '<span class="chipi r' + (о.р || 1) + '" style="width:64px;height:64px"><img src="' + эк((wБаза && wБаза.значок) || о.зн) + '" alt="" data-nf="hide" style="width:52px;height:52px"></span>' +
+      '<div style="flex:1;min-width:180px"><b class="r' + (о.р || 1) + ' rt" style="font:600 20px/1.1 var(--disp);letter-spacing:.03em;display:block">' + эк(о.имя) + '</b>' +
+        '<span class="hint" style="margin:4px 0 0;display:block">' + эк(о.тип) + ' · ' + EF.звёзды(о.р) + '</span></div>' +
+      '<div class="stats" style="flex:2;min-width:300px;grid-template-columns:repeat(3,1fr)">' +
+        стат('уровень', о.ур, 90) + стат('прорыв', о.прорыв, 4) + стат('заточка', о.заточка, 5) + '</div></div>' +
+      '<table class="tbl" style="margin-top:10px">' + о.навыки.map(x => '<tr' + (x.ур >= x.макс ? ' class="top"' : '') + '><td>' + эк(x.имя) +
+        '</td><td class="n">' + x.ур + ' / ' + x.макс + '</td></tr>').join('') + '</table>' +
+      (о.эссенция ? '<p class="hint">Эссенция: <span class="hl">' + эк(о.эссенция.имя) + '</span> — ' + эк(о.эссенция.термы.join(', ')) + '</p>' : '') +
+      '</div></div>';
+  }
+
+  // снаряжение
+  if ((sk.снар || []).length) {
+    const наборы = {};
+    sk.снар.forEach(e => { if (e.набор) { наборы[e.набор.имя] = наборы[e.набор.имя] || { n: 0, опис: e.набор.опис }; наборы[e.набор.имя].n++; } });
+    h += '<div class="sec"><h4>снаряжение<em>' + sk.снар.length + ' / 4</em></h4><div class="wide" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">' +
+      sk.снар.map(e => {
+        const x = снарПоИмени(e.имя);
+        const статы = статыВещи(e);
+        return '<div class="box"><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">' +
+          '<span class="chipi r' + (e.р || 1) + '"><img src="' + эк((x && x.значок) || e.зн) + '" alt="" data-nf="hide"></span>' +
+          '<span style="min-width:0"><b style="display:block;font:700 13px/1.25 var(--head)">' + эк(e.имя) + '</b>' +
+          '<i class="hint" style="margin:3px 0 0;display:block;font-style:normal">' + эк(e.слот) + ' · ур. ' + e.ур + '</i></span></div>' +
+          '<div class="kv">' + статы.map(st => '<span>' + эк(st.имя) + (st.усил ? ' <span class="hl">+' + st.усил + '</span>' : '') + '</span><b>' +
+            (st.знач == null ? '' : знач(st)) + '</b>').join('') + '</div>' +
+          '</div>';
+      }).join('') + '</div>' +
+      Object.entries(наборы).map(([имя, v]) => '<div class="' + (v.n >= 3 ? 'verdict' : 'box') + '" style="margin-top:10px"><b>' + эк(имя) + ' · ' + v.n + ' / 3' +
+        (v.n >= 3 ? ' · активен' : '') + '</b>' + эк(v.опис) + '</div>').join('') +
+      '<p class="hint">Цифры — базовые значения вещи из справочника; <span class="hl">+N</span> — сколько раз усилена характеристика.</p></div>';
+  }
+  if (sk.такт) h += '<div class="sec"><h4>тактический предмет</h4><div class="it"><img src="' + эк(sk.такт.зн) + '" alt="" style="width:40px;height:40px;object-fit:contain" data-nf="hide">' +
+    '<span><b>' + эк(sk.такт.имя) + '</b><i>' + эк(sk.такт.эффект) + '</i></span></div></div>';
+
+  // навыки
+  if (нав.length) h += '<div class="sec"><h4>навыки</h4><div class="wide" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">' +
+    нав.map(н => '<div class="it"><img src="' + эк(н.зн) + '" alt="" style="width:36px;height:36px;object-fit:contain" data-nf="hide"><span><b>' + эк(н.имя) + '</b><i>' + эк(н.тип) + '</i></span>' +
+      '<span class="rt2' + (н.ур >= н.макс ? ' ok' : '') + '">' + н.ур + ' / ' + н.макс + '</span></div>').join('') + '</div></div>';
+
+  // таланты: открытые ярко, закрытые приглушены
+  if ((sk.таланты || []).length) {
+    const виды = [['атрибут', 'атрибуты'], ['боевой', 'боевые таланты'], ['корабль', 'корабль и база']];
+    h += '<div class="sec"><h4>таланты<em>открыто ступеней ' + sk.таланты.filter(t => t.есть).length + ' / ' + sk.таланты.length + '</em></h4>' +
+      виды.map(([k, и]) => { const л = sk.таланты.filter(t => t.вид === k); if (!л.length) return '';
+        // Ступени одного таланта приходят отдельными записями с одним именем —
+        // сводим в одну строку: сколько ступеней открыто и описание последней.
+        const гр = [];
+        л.forEach(t => { let g = гр.find(x => x.имя === t.имя); if (!g) { g = { имя: t.имя, ст: [] }; гр.push(g); } g.ст.push(t); });
+        return '<div class="hint" style="margin:10px 0 6px">' + и + '</div>' + гр.map(g => {
+          const откр = g.ст.filter(t => t.есть).length, t = g.ст.filter(x => x.есть).pop() || g.ст[0];
+          return '<div class="node" style="' + (откр ? '' : 'opacity:.42') + '">' +
+            '<img src="' + эк(t.зн) + '" alt="" data-nf="hide"><div style="flex:1"><b>' + эк(g.имя) + '</b><p>' + эк(t.опис) + '</p></div>' +
+            '<span class="lvl">' + (g.ст.length > 1 ? откр + ' / ' + g.ст.length : (откр ? 'открыт' : 'закрыт')) + '</span></div>'; }).join(''); }).join('') + '</div>';
   }
   return h;
 }
@@ -845,96 +935,247 @@ let ХРОНИКА = null;
 // Запись прежней версии (до v6: {снято, разделы}) не годится — её не показываем.
 function хроникаИзХранилища() {
   const х = взять(LS_CHR, null);
-  return х && х.mark === 'alextask-skport' ? х : null;
+  if (!х || х.mark !== 'alextask-skport') return null;
+  if (х.v === 2) return х;
+  const в = выжимка(х);            // сырой ответ v1 → выжимка, заодно освобождаем место
+  try { localStorage.setItem(LS_CHR, JSON.stringify(в)); } catch (e) {}
+  return в;
 }
 const КОМАНДА = () => '(' + String(window.skЭкспорт) + ')()';
 try { localStorage.removeItem('ef-sk-keys'); } catch (e) {}   // старые ключи не храним
 
-// Операторы из карточки: любые объекты, где есть id вида chr_0000_имя.
+// ── разбор карточки SKPORT ──────────────────────────────────────────────────
+// Ответ /api/v1/game/endfield/card/detail (разобран по выгрузке 24.09.2026):
+//   detail.base         ник, уровень, мир, опыт, сервер, число операторов/оружия/досье
+//   detail.chars[]      все операторы: level, evolvePhase (прорыв 0–4), potentialLevel,
+//                       userSkills (уровни навыков), weapon (ур., прорыв, заточка,
+//                       навыки оружия, эссенция), bodyEquip/armEquip/first/secondAccessory
+//                       (снаряжение: имя, ур., редкость, свойства, усиления), tacticalItem,
+//                       talent (открытые узлы), charData (имя, навыки, все таланты)
+//   detail.spaceShip    отсеки корабля: уровень, кто назначен
+//   detail.domain[]     регионы: уровень, поселения, собранное по зонам
+//   detail.dungeon / bpSystem / dailyMission / weeklyMission — санити, пропуск, дейлики
+//   detail.achieve, warEchoes, indieHard, seekSuspicion
+// Итоговых характеристик и инвентаря в ответе НЕТ.
+// Храним не сырой ответ (800 КБ), а выжимку — она в 10+ раз меньше и влезает в
+// хранилище браузера.
+const СВОЙСТВА = {
+  equip_attr_agi: 'Ловкость', equip_attr_str: 'Сила', equip_attr_wisd: 'Интеллект', equip_attr_will: 'Воля',
+  equip_attr_atk: 'АТК', equip_attr_max_hp: 'ОЗ', equip_attr_all_damage_taken_scalar: 'Снижение получаемого урона',
+  equip_attr_combo_skill_damage_increase: 'Урон навыка комбо', equip_attr_damage_to_broken_unit_increase: 'Урон по сломленным',
+  equip_attr_normal_skill_damage_increase: 'Урон боевого навыка', equip_attr_physical_and_spellInfliction_enhance: 'Физ. и магические эффекты',
+  equip_attr_ultimate_sp_gain_scalar: 'Накопление энергии ульты', equip_fire_and_natural_damage_increase: 'Урон теплом и природой',
+  equip_main: 'Основной атрибут', equip_sub: 'Второй атрибут',
+};
+const СЛОТЫ = [['bodyEquip', 'Броня'], ['armEquip', 'Перчатки'], ['firstAccessory', 'Амуниция 1'], ['secondAccessory', 'Амуниция 2']];
+const чистый = t => String(t || '').replace(/<[@#$/][^>]*>|<\/>/g, '').replace(/\s+\n/g, '\n').trim();
+// Подстановка чисел в описания SKPORT: {name:0}, {name:0%}, {-name:0}, {1-name:0%}.
+function подставить(t, пар) {
+  пар = пар || {};
+  return String(t || '').replace(/\{(-)?(1-)?([A-Za-z_][\w]*)(?::(\d+))?(%)?\}/g, (всё, минус, единица, k, знаков, проц) => {
+    if (пар[k] == null) return всё;
+    let v = +пар[k];
+    if (isNaN(v)) return String(пар[k]);
+    if (единица) v = 1 - v;
+    if (минус) v = -v;
+    if (проц) v *= 100;
+    return (Math.round(v * 10) / 10).toLocaleString('ru') + (проц ? '%' : '');
+  });
+}
+const числоРедк = r => +(String((r && r.key) || '').match(/(\d)\s*$/) || [0, 0])[1] || 0;
+
+function idОператора(ch) {
+  const cd = ch.charData || {};
+  const строки = [].concat((cd.abilityTalents || []).map(t => t.id), (cd.combatTalents || []).map(t => t.id),
+    (cd.cultivationTalents || []).map(t => t.id), ((ch.talent || {}).attrNodes || []));
+  for (const x of строки) { const м = /(chr_\d{4}_[a-z]+)/i.exec(x || ''); if (м && EF.оп(м[1].toLowerCase())) return м[1].toLowerCase(); }
+  const поИмени = EF.БАЗА.персонажи.find(c => c.имяРу === cd.name || c.имя === cd.name);
+  return поИмени ? поИмени.id : '';
+}
+function разобратьSk(card) {
+  const D = (card && card.detail) || card || {};
+  const B = D.base || {};
+  const оп = {};
+  (D.chars || []).forEach(ch => {
+    const id = idОператора(ch);
+    if (!id) return;
+    const cd = ch.charData || {}, т = ch.talent || {};
+    const навыкиИмя = {};
+    (cd.skills || []).forEach(н => { навыкиИмя[н.id] = н; });
+    const w = ch.weapon || null, wd = (w && w.weaponData) || {};
+    const снар = СЛОТЫ.map(([k, слот]) => {
+      const e = ch[k]; if (!e || !e.equipData) return null;
+      const ed = e.equipData;
+      return { слот, имя: ed.name, зн: ed.iconUrl, р: числоРедк(ed.rarity), ур: +((ed.level || {}).value || 0),
+        свойства: (ed.properties || []).map(k2 => СВОЙСТВА[k2] || '').filter(Boolean), усил: e.enhance || {},
+        набор: ed.suit && ed.suit.name ? { имя: ed.suit.name, опис: подставить(чистый(ed.suit.skillDesc), ed.suit.skillDescParams) } : null };
+    }).filter(Boolean);
+    const открыт = new Set([].concat(т.attrNodes || [], т.latestPassiveSkillNodes || [], т.latestFactorySkillNodes || [], т.latestSpaceshipSkillNodes || []));
+    const таланты = (вид, список) => (список || []).map(x => ({ вид, имя: x.name, зн: x.iconUrl, опис: подставить(чистый(x.desc), x.descParams).slice(0, 500), есть: открыт.has(x.id) }));
+    оп[id] = {
+      ур: +ch.level || 0, фаза: +ch.evolvePhase || 0, пот: +ch.potentialLevel || 0, имя: cd.name, когда: ch.ownTs,
+      навыки: Object.values(ch.userSkills || {}).map(u => { const н = навыкиИмя[u.skillId] || {};
+        return { имя: н.name || u.skillId, тип: (н.type || {}).value || '', зн: н.iconUrl || '', ур: +u.level, макс: +u.maxLevel }; }),
+      оружие: w ? { имя: wd.name, зн: wd.iconUrl, р: +((wd.rarity || {}).value || 0), тип: (wd.type || {}).value || '',
+        ур: +w.level || 0, прорыв: +w.breakthroughLevel || 0, заточка: +w.refineLevel || 0,
+        навыки: (w.skills || []).map(x => ({ имя: x.name, ур: +x.level, макс: +x.currentMaxLevel })),
+        эссенция: w.gem && w.gem.gemData ? { имя: w.gem.gemData.name, зн: w.gem.gemData.icon, термы: (w.gem.terms || []).map(t => t.name) } : null } : null,
+      снар,
+      такт: ch.tacticalItem && ch.tacticalItem.tacticalItemData ? { имя: ch.tacticalItem.tacticalItemData.name,
+        зн: ch.tacticalItem.tacticalItemData.iconUrl, эффект: подставить(чистый(ch.tacticalItem.tacticalItemData.activeEffect), ch.tacticalItem.tacticalItemData.activeEffectParams) } : null,
+      прорывУзел: т.latestBreakNode || '',
+      таланты: [].concat(таланты('атрибут', cd.abilityTalents), таланты('боевой', cd.combatTalents), таланты('корабль', cd.cultivationTalents)),
+    };
+  });
+  const пара = o => o ? [+o.count || 0, +o.total || 0] : [0, 0];
+  const база = {
+    корабль: ((D.spaceShip || {}).rooms || []).map((r, i) => ({ ном: i + 1, тип: r.type, ур: +r.level || 0,
+      опы: (r.chars || []).map(x => x.charId) })),
+    регионы: (D.domain || []).map(d => ({ имя: чистый(d.name), ур: +d.level || 0,
+      деньги: d.moneyMgr ? [+d.moneyMgr.count || 0, +d.moneyMgr.total || 0] : null,
+      поселения: (d.settlements || []).map(x => ({ имя: x.name, ур: +x.level || 0, макс: !!x.isFinalMaxLevel })),
+      зоны: (d.levels || []).map(z => ({ имя: z.name, загадки: пара(z.puzzleCount), сундуки: пара(z.trchestCount),
+        снарСундуки: пара(z.equipTrchestCount), осколки: пара(z.pieceCount), ящики: пара(z.blackboxCount), звёзды: пара(z.trstarCount) })) })),
+    эхо: ((D.warEchoes || {}).seasons || []).map(x => ({ имя: x.name, звёзд: +x.stars || 0, конец: x.endTs,
+      недели: (x.weeks || []).map(w => ({ имя: w.name, звёзд: +w.stars || 0, бои: (w.dungeonGroups || []).map(g => ({ имя: g.name, звёзд: +g.star || 0 })) })) })),
+    испытания: ((D.indieHard || {}).indieHardGroups || []).map(g => ({ имя: g.name, акт: !!g.isInActivity,
+      бои: (g.dungeonGroups || []).map(x => ({ имя: (x.normalDungeon || {}).name, есть: !!(x.normalDungeon || {}).isPass,
+        трудный: !!(x.hardDungeon || {}).isPass })) })),
+  };
+  const акк = {
+    ник: B.name, ур: +B.level || 0, мир: +B.worldLevel || 0, опыт: +B.exp || 0, сервер: B.serverName, миссия: (B.mainMission || {}).description || '',
+    создан: B.createTime, вход: B.lastLoginTime, операторов: +B.charNum || 0, оружия: +B.weaponNum || 0, досье: +B.docNum || 0,
+    достижений: +(D.achieve || {}).count || 0,
+    санити: D.dungeon ? [+D.dungeon.curStamina || 0, +D.dungeon.maxStamina || 0] : null,
+    пропуск: D.bpSystem ? [+D.bpSystem.curLevel || 0, +D.bpSystem.maxLevel || 0] : null,
+    дейлик: D.dailyMission ? [+D.dailyMission.dailyActivation || 0, +D.dailyMission.maxDailyActivation || 0] : null,
+    неделя: D.weeklyMission ? [+D.weeklyMission.score || 0, +D.weeklyMission.total || 0] : null,
+    подозрение: D.seekSuspicion ? [+D.seekSuspicion.count || 0, +D.seekSuspicion.total || 0] : null,
+  };
+  return { акк, оп, база };
+}
+// Совместимость: карточка, в которой не нашлось понятной структуры, — старым
+// поиском по id вида chr_0000_имя (уровень и потенциал).
 function операторыSk(о, out) {
   out = out || {};
   if (!о || typeof о !== 'object') return out;
   if (Array.isArray(о)) { о.forEach(x => операторыSk(x, out)); return out; }
-  // id ищем в самом объекте, а если нет — во вложенном на уровень ниже
-  // ({charData:{id:'chr_…'}, level:80} — уровень снаружи, id внутри).
   const найти = x => {
     for (const v of Object.values(x)) {
-      if (typeof v === 'string') { const м = /^(chr_\d{4}_[a-z0-9]+)/i.exec(v); if (м) return м[1].toLowerCase(); }
+      if (typeof v === 'string') { const м = /^(chr_\d{4}_[a-z]+)/i.exec(v); if (м) return м[1].toLowerCase(); }
     }
     return '';
   };
   let id = найти(о);
-  if (!id && (о.level || о.potentialLevel)) {
-    for (const v of Object.values(о)) if (v && typeof v === 'object' && !Array.isArray(v)) { id = найти(v); if (id) break; }
-  }
   if (id && EF.оп(id)) {
-    const ур = +(о.level || о.lv || о.charLevel || 0);
-    const пот = +(о.potentialLevel || о.potential || о.potentialRank || 0);
     const был = out[id] || {};
-    // raw — самый «полный» объект про оператора (с уровнем), его и показываем
-    const полнее = !был.raw || (ур && !был.ур) || JSON.stringify(о).length > JSON.stringify(был.raw).length;
-    out[id] = { ур: Math.max(был.ур || 0, ур), пот: Math.max(был.пот || 0, пот), raw: полнее ? о : был.raw };
+    out[id] = { ур: Math.max(был.ур || 0, +(о.level || 0)), пот: Math.max(был.пот || 0, +(о.potentialLevel || 0)) };
   }
   Object.values(о).forEach(v => { if (v && typeof v === 'object') операторыSk(v, out); });
   return out;
 }
-// Переносим найденное в профиль: отметки «есть у меня» и уровни работают
-// так же, как от витрины enka. Витринные подробности не затираются.
+// Переносим уровни в профиль: «есть у меня» и уровни в витрине работают так
+// же, как от витрины enka. Подробности витрины не затираются.
 function вПрофиль(х) {
-  const оп = операторыSk(х.data && х.data.card);
+  const оп = х.оп || {};
   const n = Object.keys(оп).length;
   if (!n) return 0;
-  const П = EF.ПРОФ || { uid: (х.role || {}).roleId || '', имя: (х.role || {}).nick || '', ур: (х.role || {}).level, оп: {}, когда: Date.now() };
+  const r = х.role || {}, а = х.акк || {};
+  const П = EF.ПРОФ || { uid: r.roleId || '', имя: а.ник || r.nick || '', ур: а.ур || r.level, мир: а.мир, оп: {}, когда: Date.now() };
   Object.entries(оп).forEach(([id, v]) => {
     const был = П.оп[id] || {};
-    // уровень и потенциал из SKPORT свежее витрины enka — берём больший
-    П.оп[id] = Object.assign({}, был, { ур: Math.max(+был.ур || 0, v.ур || 0), пот: Math.max(+был.пот || 0, v.пот || 0), skport: true });
+    П.оп[id] = Object.assign({}, был, { ур: v.ур || был.ур, пот: Math.max(+был.пот || 0, v.пот || 0), skport: true });
   });
+  if (!П.имя && а.ник) П.имя = а.ник;
   П.skport = х.at;
   EF.ПРОФ = П;
   try { localStorage.setItem(LS_PROF, JSON.stringify(П)); } catch (e) {}
   return n;
+}
+// Из выгрузки скрипта (сырой ответ) — выжимка, которую храним и показываем.
+function выжимка(х) {
+  if (х.v === 2) return х;
+  const card = х.data && х.data.card;
+  const р = card ? разобратьSk(card) : { акк: {}, оп: {}, база: {} };
+  if (card && !Object.keys(р.оп).length) Object.entries(операторыSk(card)).forEach(([id, v]) => { р.оп[id] = v; });
+  return { mark: 'alextask-skport', v: 2, at: х.at, role: х.role, cardPath: х.cardPath, log: х.log || [], акк: р.акк, оп: р.оп, база: р.база };
 }
 function принятьХронику(текст) {
   let х;
   try { х = JSON.parse(текст); } catch (e) { return 'это не то: вставь текст целиком, как его положил скрипт'; }
   if (!х || х.mark !== 'alextask-skport') return 'это не выгрузка skport — запусти скрипт ещё раз';
   if (/"(cred|token|sign)"\s*:/.test(текст)) return 'в тексте есть ключи — такое не сохраняю';
+  х = выжимка(х);
   ХРОНИКА = х;
-  // Старая запись удаляется до записи новой: иначе обе не влезают, новая
-  // молча не сохраняется, а после перезагрузки всплывает старая.
   let сохр = true;
   try { localStorage.removeItem(LS_CHR); localStorage.setItem(LS_CHR, JSON.stringify(х)); } catch (e) { сохр = false; }
   const n = вПрофиль(х);
-  return 'принято: ' + (х.data.card ? 'карточка аккаунта' : 'без карточки') + (n ? ', операторов — ' + n : '') +
-    (сохр ? '' : ' · НЕ СОХРАНИЛОСЬ: не влезло в хранилище браузера (' + Math.round(текст.length / 1024) + ' КБ). ' +
-      'Операторы в профиль записаны, а сама выгрузка пропадёт после перезагрузки — нажми «Скачать выгрузку».');
+  return 'принято: операторов — ' + n + (х.база && х.база.регионы && х.база.регионы.length ? ', регионы и база' : '') +
+    (сохр ? '' : ' · НЕ СОХРАНИЛОСЬ: не влезло в хранилище браузера. Операторы в профиль записаны.');
+}
+
+// ── страница «Аккаунт» ──────────────────────────────────────────────────────
+const полоса = (a, b, ok) => '<div class="bar' + (ok || (b && a >= b) ? ' ok' : '') + '" style="margin-top:7px"><i style="width:' +
+  (b ? Math.min(100, Math.round(a * 100 / b)) : 0) + '%"></i></div>';
+const стат = (подпись, a, b, класс) => '<div class="st' + (класс ? ' ' + класс : '') + '"><u>' + подпись + '</u><b>' + чис(a, 0) +
+  (b != null ? '<small> / ' + чис(b, 0) + '</small>' : '') + '</b>' + (b ? полоса(a, b) : '') + '</div>';
+const дата = ts => ts ? new Date(+ts * 1000).toLocaleDateString('ru') : '—';
+function аватар(id, подпись) {
+  const c = EF.оп(id) || {};
+  return '<span class="mem me" data-op="' + эк(id) + '"><img src="' + эк(c.значок || '') + '" alt="" data-nf="hide">' +
+    '<span class="who">' + эк(c.имяРу || id) + (подпись ? '<br>' + подпись : '') + '</span></span>';
 }
 function рисоватьХронику() {
   if (!ХРОНИКА) return '';
-  const р = ХРОНИКА.data || {}, ro = ХРОНИКА.role || {};
-  const оп = операторыSk(р.card);
-  let h = EF.блок('Аккаунт', ХРОНИКА.at ? эк(new Date(ХРОНИКА.at).toLocaleString('ru')) : '') +
+  const х = ХРОНИКА, а = х.акк || {}, б = х.база || {};
+  let h = EF.блок('Аккаунт', (а.сервер ? эк(а.сервер) + ' · ' : '') + 'снято ' + (х.at ? эк(new Date(х.at).toLocaleString('ru')) : '')) +
     '<div class="stats">' +
-      '<div class="st"><u>ник</u><b style="font-size:17px">' + эк(ro.nick || '—') + '</b></div>' +
-      '<div class="st"><u>roleId</u><b style="font-size:15px">' + эк(ro.roleId || '—') + '</b></div>' +
-      '<div class="st"><u>сервер</u><b>' + эк(ro.serverId || '—') + '</b></div>' +
-      '<div class="st' + (р.card ? ' ok' : '') + '"><u>карточка</u><b>' + (р.card ? 'есть' : 'нет') + '</b></div>' +
-      '<div class="st"><u>операторов</u><b>' + Object.keys(оп).length + '</b></div>' +
+      '<div class="st"><u>ник</u><b style="font-size:19px">' + эк(а.ник || (х.role || {}).nick || '—') + '</b></div>' +
+      стат('уровень авантюриста', а.ур) + стат('уровень мира', а.мир) +
+      стат('операторов', а.операторов) + стат('оружия', а.оружия) + стат('досье', а.досье) + стат('достижений', а.достижений) +
+      '<div class="st"><u>в игре с</u><b style="font-size:16px">' + дата(а.создан) + '</b></div>' +
     '</div>';
-  if (Object.keys(оп).length) {
-    h += EF.блок('Операторы из SKPORT', Object.keys(оп).length + '') + '<div class="team">' +
-      Object.entries(оп).map(([id, v]) => {
-        const c = EF.оп(id) || {};
-        return '<span class="mem me" data-op="' + эк(id) + '"><img src="' + эк(c.значок || '') + '" alt="" data-nf="hide">' +
-          '<span class="who">' + эк(c.имяРу || c.имя || id) + (v.ур ? '<br>ур. ' + v.ур : '') + '</span></span>';
-      }).join('') + '</div>';
-  }
-  if (ХРОНИКА.log && ХРОНИКА.log.length) h += '<p class="hint">Что не ответило: ' + эк(ХРОНИКА.log.join(' · ')) + '</p>';
-  const ключи = Object.keys(р);
-  h += EF.блок('Что пришло', ключи.length + ' разд.') + '<div class="list">' + ключи.map(k =>
-    '<details class="dd"><summary><span class="nm2"><b>' + эк(k) + '</b><i>' + эк(k === 'card' ? (ХРОНИКА.cardPath || '') : '') + '</i></span></summary>' +
-    '<div class="dd-in">' + дерево(р[k], 0) + '</div></details>').join('') + '</div>';
+  const прог = [['санити', а.санити], ['боевой пропуск', а.пропуск], ['дейлик', а.дейлик], ['неделя', а.неделя], ['подозрение', а.подозрение]]
+    .filter(([, v]) => v);
+  if (прог.length) h += EF.блок('Сейчас', 'на момент выгрузки') + '<div class="stats">' + прог.map(([и, v]) => стат(и, v[0], v[1])).join('') + '</div>';
+  if (а.миссия) h += '<p class="hint">Сюжет: <span class="hl">' + эк(а.миссия) + '</span></p>';
+
+  // операторы: уровень и прорыв
+  const оп = Object.entries(х.оп || {}).sort((a, b) => (b[1].ур || 0) - (a[1].ур || 0));
+  if (оп.length) h += EF.блок('Операторы', оп.length + '') + '<div class="team">' +
+    оп.map(([id, v]) => аватар(id, 'ур. ' + (v.ур || '?') + (v.фаза != null ? ' · Э' + v.фаза : '') + (v.пот ? ' · P' + v.пот : ''))).join('') + '</div>';
+
+  // регионы
+  (б.регионы || []).forEach(р => {
+    const итог = { загадки: [0, 0], сундуки: [0, 0], ящики: [0, 0] };
+    р.зоны.forEach(з => Object.keys(итог).forEach(k => { итог[k][0] += з[k][0]; итог[k][1] += з[k][1]; }));
+    h += EF.блок(р.имя, 'уровень региона ' + р.ур) + '<div class="stats">' +
+      стат('загадки', итог.загадки[0], итог.загадки[1]) + стат('сундуки', итог.сундуки[0], итог.сундуки[1]) +
+      стат('чёрные ящики', итог.ящики[0], итог.ящики[1]) +
+      (р.деньги ? стат('казна региона', р.деньги[0], р.деньги[1]) : '') + '</div>' +
+      '<div class="cols" style="margin-top:10px"><div class="sec"><h4>поселения</h4><table class="tbl">' +
+        р.поселения.map(x => '<tr' + (x.макс ? ' class="top"' : '') + '><td>' + эк(x.имя) + '</td><td class="n">' + x.ур + (x.макс ? ' · макс' : '') + '</td></tr>').join('') + '</table></div>' +
+      '<div class="sec"><h4>зоны<em>загадки · сундуки · ящики</em></h4><table class="tbl">' +
+        р.зоны.map(з => '<tr><td>' + эк(з.имя) + '</td>' + ['загадки', 'сундуки', 'ящики'].map(k =>
+          '<td class="n' + (з[k][1] && з[k][0] >= з[k][1] ? ' ok' : '') + '">' + з[k][0] + '/' + з[k][1] + '</td>').join('') + '</tr>').join('') + '</table></div></div>';
+  });
+
+  // корабль
+  if ((б.корабль || []).length) h += EF.блок('Корабль', б.корабль.length + ' отсеков') + '<div class="wide">' +
+    б.корабль.map(к => '<div class="box"><b>отсек ' + к.ном + ' · ур. ' + к.ур + '</b><div class="team" style="border:0;padding:0;background:none">' +
+      (к.опы.length ? к.опы.map(id => аватар(id)).join('') : '<span class="hint" style="margin:0">никого</span>') + '</div></div>').join('') + '</div>';
+
+  // эхо войны и испытания
+  (б.эхо || []).forEach(с => {
+    h += EF.блок('Эхо войны · ' + с.имя, 'звёзд: ' + с.звёзд) + '<div class="wide">' + с.недели.map(н =>
+      '<div class="box"><b>' + эк(н.имя) + ' · ★' + н.звёзд + '</b>' + н.бои.map(b => '<div class="kv"><span>' + эк(b.имя) + '</span><b>★' + b.звёзд + '</b></div>').join('') + '</div>').join('') + '</div>';
+  });
+  if ((б.испытания || []).length) h += EF.блок('Испытания', '') + '<div class="wide">' + б.испытания.map(г =>
+    '<div class="box"><b>' + эк(г.имя) + (г.акт ? ' · идёт' : '') + '</b>' + г.бои.map(b => '<div class="kv"><span>' + эк(b.имя || '—') + '</span><b>' +
+      (b.есть ? '✓' : '·') + ' ' + (b.трудный ? '✓' : '·') + '</b></div>').join('') + '</div>').join('') + '</div>' +
+    '<p class="hint">В испытаниях: обычный · агония.</p>';
+  if (х.log && х.log.length) h += '<p class="hint">Что не ответило: ' + эк(х.log.join(' · ')) + '</p>';
+  h += '<p class="hint">SKPORT не отдаёт итоговые характеристики операторов и инвентарь — только то, что выше и во вкладке «Моё» у каждого оператора.</p>';
   return h;
 }
 function дерево(о, гл) {
@@ -957,11 +1198,11 @@ function дерево(о, гл) {
   return h || '<div class="hint">нет полей</div>';
 }
 EF.раздел('chr', {
-  имя: 'Хроника', буква: '✎',
+  имя: 'Аккаунт', буква: '✎',
   рисовать() {
     ХРОНИКА = ХРОНИКА || хроникаИзХранилища();
-    EF.шапка('skport.account', 'Хроника SKPORT', null);
-    $('body').innerHTML = '<div class="box brk" style="max-width:980px"><b>' + (ХРОНИКА ? 'обновить данные' : 'подключить за три шага') + '</b>' +
+    EF.шапка('skport.account', 'Аккаунт SKPORT', ХРОНИКА ? Object.keys(ХРОНИКА.оп || {}).length : null, 'операторов');
+    const импорт = '<b>' + (ХРОНИКА ? 'обновить данные' : 'подключить за три шага') + '</b>' +
       '<div class="node"><span class="tag">1</span><div style="flex:1">Открой <a class="lnk" href="https://www.skport.com/" target="_blank" rel="noopener">www.skport.com</a> и войди в аккаунт.</div></div>' +
       '<div class="node"><span class="tag">2</span><div style="flex:1">Там же: F12 → Console, вставь скрипт и нажми Enter. Если Chrome просит — сначала напиши <span class="hl">allow pasting</span> и Enter. ' +
         'Скрипт сам возьмёт вход, обновит токен и положит в буфер <b>только игровые данные</b> — ключи skport со страницы не уходят.</div></div>' +
@@ -970,10 +1211,13 @@ EF.раздел('chr', {
       '<div class="node" style="margin-top:10px"><span class="tag gh">3</span><div style="flex:1">Вставь сюда то, что скопировал скрипт, и нажми «Загрузить».</div></div>' +
       '<div class="fld"><input class="inp" id="skjson" placeholder="вставь выгрузку ({&quot;mark&quot;:&quot;alextask-skport&quot;…})" spellcheck="false">' +
         '<button class="btn" data-act="sk-paste">Загрузить</button>' +
-        (ХРОНИКА ? '<button class="btn sec" data-act="sk-dl" title="Файл без ключей — можно отдать на разбор">Скачать выгрузку</button>' +
+        (ХРОНИКА ? '<button class="btn sec" data-act="sk-dl" title="Файл без ключей — можно отдать на разбор">Скачать выжимку</button>' +
                    '<button class="btn gh" data-act="sk-forget">Забыть</button>' : '') + '</div>' +
-      '<div class="say" id="skstatus"></div></div>' +
-      '<div id="skbody">' + рисоватьХронику() + '</div>';
+      '<div class="say" id="skstatus"></div>';
+    $('body').innerHTML = (ХРОНИКА
+        ? '<div id="skbody">' + рисоватьХронику() + '</div><details class="dd" style="margin-top:18px"><summary><span class="nm2"><b>Обновить из SKPORT</b>' +
+          '<i>скрипт для консоли на skport.com</i></span></summary><div class="dd-in">' + импорт + '</div></details>'
+        : '<div class="box brk" style="max-width:980px">' + импорт + '</div><div id="skbody"></div>');
   },
 });
 
@@ -1191,7 +1435,8 @@ document.addEventListener('click', e => {
     case 'sk-paste': {
       const итог = принятьХронику(($('skjson').value || '').trim());
       $('skstatus').textContent = итог;
-      if (/^принято/.test(итог)) { $('skbody').innerHTML = рисоватьХронику(); $('skjson').value = ''; }
+      if (/^принято/.test(итог)) рисовать();
+      const ст = $('skstatus'); if (ст) ст.textContent = итог;
       return;
     }
     case 'sk-forget':
