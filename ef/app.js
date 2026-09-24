@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v6';
+const APP_VER = 'v7';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -412,15 +412,19 @@ let ОТКРЫТ = null;
 let ВКЛК = 'обзор';
 let УР = 90;         // уровень для характеристик в карточке
 let УРН = 12;        // уровень навыков
-const ВКЛКАРТЫ = [['обзор', 'Обзор'], ['навыки', 'Навыки'], ['таланты', 'Таланты'], ['сборка', 'Сборка'],
-  ['команды', 'Команды'], ['прокачка', 'Прокачка'], ['досье', 'Досье'], ['моё', 'Моё']];
+// Как в трекере ZZZ: первая вкладка — «Моё» (что у тебя сейчас: уровень,
+// статы, оружие, данные SKPORT), дальше справочные. Свой оператор
+// открывается сразу на «Моё», чужой — на «Обзоре».
+const ВКЛКАРТЫ = [['моё', 'Моё'], ['обзор', 'Обзор'], ['навыки', 'Навыки'], ['таланты', 'Таланты'], ['сборка', 'Сборка'],
+  ['команды', 'Команды'], ['прокачка', 'Прокачка'], ['досье', 'Досье']];
+const первая = id => (EF.мой(id) ? 'моё' : 'обзор');
 
 async function открытьОп(id) {
   const c = EF.оп(id);
   if (!c) return;
   ОТКРЫТ = id;
   const м = EF.мой(id);
-  if (м && ВКЛК === 'обзор') УР = м.ур || 90;
+  if (м && (ВКЛК === 'обзор' || ВКЛК === 'моё')) УР = м.ур || 90;
   let д = null;
   try { д = await EF.подробно(id); } catch (e) { д = null; }
   if (ОТКРЫТ !== id) return;
@@ -447,7 +451,7 @@ async function открытьОп(id) {
       '</div>' +
     '</div>');
 }
-EF.открытьОп = (id, вкладка) => { ВКЛК = вкладка || 'обзор'; открытьОп(id); };
+EF.открытьОп = (id, вкладка) => { ВКЛК = вкладка || первая(id); открытьОп(id); };
 
 function нутро(c, д, м) {
   if (!д && ВКЛК !== 'сборка' && ВКЛК !== 'команды' && ВКЛК !== 'моё') {
@@ -647,21 +651,41 @@ function вклДосье(c, д) {
   return h + '</div>';
 }
 function вклМоё(c, д, м) {
-  if (!EF.ПРОФ) return '<div class="box"><b>профиль не подключён</b>Раздел «Профиль» — введи UID, и сюда подтянутся уровни, навыки и снаряжение.</div>';
-  if (!м) return '<div class="box"><b>нет в профиле</b>Витрина игры отдаёт подробности только по выставленным в профиле операторам.</div>';
+  if (!м) {
+    return '<div class="box brk"><b>нет у тебя</b>Этого оператора нет ни в витрине enka (раздел «Профиль»), ни в выгрузке SKPORT ' +
+      '(«☰ Инструменты» → Хроника). Подключи любой из двух — и здесь будут уровень, характеристики и снаряжение.</div>';
+  }
+  const ур = +м.ур || 1;
+  const s = д ? статыНа(д, ур) : null;
+  const ист = [м.витрина ? 'enka' : '', м.skport ? 'SKPORT' : ''].filter(Boolean).join(' + ');
   let h = '<div class="stats" style="margin-bottom:16px">' +
-    '<div class="st ok"><u>уровень</u><b>' + эк(м.ур) + '<small> / 90</small></b></div>' +
-    '<div class="st"><u>потенциал</u><b>' + эк(м.пот || 0) + '</b></div>' +
+    '<div class="st ok"><u>уровень</u><b>' + эк(ур) + '<small> / 90</small></b></div>' +
+    '<div class="st"><u>потенциал</u><b>' + эк(м.пот || 0) + '<small> / 5</small></b></div>' +
     (м.оружие ? '<div class="st"><u>оружие ур.</u><b>' + эк(м.оружие.weaponLv) + '</b></div><div class="st"><u>прорыв оружия</u><b>' + эк(м.оружие.breakthroughLv || 0) + '</b></div>' : '') +
     (м.навыки ? '<div class="st"><u>навыков на максимуме</u><b>' + м.навыки.filter(н => н.ур >= н.макс).length + '<small> / ' + м.навыки.length + '</small></b></div>' : '') +
-    (м.слоты ? '<div class="st"><u>слотов надето</u><b>' + м.слоты.length + '<small> / 4</small></b></div>' : '') + '</div>';
+    (м.слоты ? '<div class="st"><u>слотов надето</u><b>' + м.слоты.length + '<small> / 4</small></b></div>' : '') +
+    '<div class="st"><u>откуда</u><b style="font-size:14px">' + эк(ист || '—') + '</b></div></div>';
+  if (s) {
+    h += '<div class="sec"><h4>характеристики на твоём ур. ' + ур + '<em>база оператора, без оружия и снаряжения</em></h4>' +
+      '<div class="stats">' + плиткиСтатов(s, c) + '</div></div>';
+  }
   if (м.навыки && м.навыки.length && д) {
     h += '<div class="sec"><h4>уровни навыков</h4><table class="tbl">' + м.навыки.map(н => {
       const наш = (д.навыки || []).find(x => н.id && x.id && н.id.indexOf(x.id.replace(/^chr_\d+_[a-z]+_/i, '')) >= 0);
       return '<tr' + (н.ур >= н.макс ? ' class="top"' : '') + '><td>' + эк(наш ? наш.имя : н.id) + '</td><td class="n">' + н.ур + ' / ' + н.макс + '</td></tr>';
     }).join('') + '</table></div>';
   }
-  h += '<p class="hint">Оружие и снаряжение витрина enka отдаёт номерами шаблонов — таблицы с этими номерами в открытых данных нет.</p>';
+  // Всё, что SKPORT отдал по этому оператору, — как есть. Поля ещё не
+  // разобраны по смыслу (структура ответа становится известна только по
+  // выгрузке), поэтому показываем их деревом: видно, что есть.
+  ХРОНИКА = ХРОНИКА || хроникаИзХранилища();
+  const сырой = ХРОНИКА && ХРОНИКА.data ? (операторыSk(ХРОНИКА.data.card)[c.id] || {}).raw : null;
+  if (сырой) {
+    h += '<div class="sec"><h4>из SKPORT<em>' + (ХРОНИКА.at ? эк(new Date(ХРОНИКА.at).toLocaleString('ru')) : '') + '</em></h4>' +
+      '<div class="box">' + дерево(сырой, 0) + '</div></div>';
+  } else if (!м.skport) {
+    h += '<p class="hint">Больше данных — из SKPORT: «☰ Инструменты» → Хроника.</p>';
+  }
   return h;
 }
 
@@ -818,6 +842,11 @@ EF.раздел('prof', {
 // отдаёт CORS чужим сайтам, а cred вообще лежит в cookie, не в localStorage.
 const LS_CHR = 'ef-chr';
 let ХРОНИКА = null;
+// Запись прежней версии (до v6: {снято, разделы}) не годится — её не показываем.
+function хроникаИзХранилища() {
+  const х = взять(LS_CHR, null);
+  return х && х.mark === 'alextask-skport' ? х : null;
+}
 const КОМАНДА = () => '(' + String(window.skЭкспорт) + ')()';
 try { localStorage.removeItem('ef-sk-keys'); } catch (e) {}   // старые ключи не храним
 
@@ -842,7 +871,9 @@ function операторыSk(о, out) {
     const ур = +(о.level || о.lv || о.charLevel || 0);
     const пот = +(о.potentialLevel || о.potential || о.potentialRank || 0);
     const был = out[id] || {};
-    out[id] = { ур: Math.max(был.ур || 0, ур), пот: Math.max(был.пот || 0, пот) };
+    // raw — самый «полный» объект про оператора (с уровнем), его и показываем
+    const полнее = !был.raw || (ур && !был.ур) || JSON.stringify(о).length > JSON.stringify(был.raw).length;
+    out[id] = { ур: Math.max(был.ур || 0, ур), пот: Math.max(был.пот || 0, пот), raw: полнее ? о : был.raw };
   }
   Object.values(о).forEach(v => { if (v && typeof v === 'object') операторыSk(v, out); });
   return out;
@@ -854,7 +885,11 @@ function вПрофиль(х) {
   const n = Object.keys(оп).length;
   if (!n) return 0;
   const П = EF.ПРОФ || { uid: (х.role || {}).roleId || '', имя: (х.role || {}).nick || '', ур: (х.role || {}).level, оп: {}, когда: Date.now() };
-  Object.entries(оп).forEach(([id, v]) => { П.оп[id] = Object.assign({}, v, П.оп[id] || {}, { skport: true }); });
+  Object.entries(оп).forEach(([id, v]) => {
+    const был = П.оп[id] || {};
+    // уровень и потенциал из SKPORT свежее витрины enka — берём больший
+    П.оп[id] = Object.assign({}, был, { ур: Math.max(+был.ур || 0, v.ур || 0), пот: Math.max(+был.пот || 0, v.пот || 0), skport: true });
+  });
   П.skport = х.at;
   EF.ПРОФ = П;
   try { localStorage.setItem(LS_PROF, JSON.stringify(П)); } catch (e) {}
@@ -866,9 +901,14 @@ function принятьХронику(текст) {
   if (!х || х.mark !== 'alextask-skport') return 'это не выгрузка skport — запусти скрипт ещё раз';
   if (/"(cred|token|sign)"\s*:/.test(текст)) return 'в тексте есть ключи — такое не сохраняю';
   ХРОНИКА = х;
-  try { localStorage.setItem(LS_CHR, JSON.stringify(х)); } catch (e) {}
+  // Старая запись удаляется до записи новой: иначе обе не влезают, новая
+  // молча не сохраняется, а после перезагрузки всплывает старая.
+  let сохр = true;
+  try { localStorage.removeItem(LS_CHR); localStorage.setItem(LS_CHR, JSON.stringify(х)); } catch (e) { сохр = false; }
   const n = вПрофиль(х);
-  return 'принято: ' + (х.data.card ? 'карточка аккаунта' : 'без карточки') + (n ? ', операторов — ' + n : '');
+  return 'принято: ' + (х.data.card ? 'карточка аккаунта' : 'без карточки') + (n ? ', операторов — ' + n : '') +
+    (сохр ? '' : ' · НЕ СОХРАНИЛОСЬ: не влезло в хранилище браузера (' + Math.round(текст.length / 1024) + ' КБ). ' +
+      'Операторы в профиль записаны, а сама выгрузка пропадёт после перезагрузки — нажми «Скачать выгрузку».');
 }
 function рисоватьХронику() {
   if (!ХРОНИКА) return '';
@@ -919,7 +959,7 @@ function дерево(о, гл) {
 EF.раздел('chr', {
   имя: 'Хроника', буква: '✎',
   рисовать() {
-    ХРОНИКА = ХРОНИКА || взять(LS_CHR, null);
+    ХРОНИКА = ХРОНИКА || хроникаИзХранилища();
     EF.шапка('skport.account', 'Хроника SKPORT', null);
     $('body').innerHTML = '<div class="box brk" style="max-width:980px"><b>' + (ХРОНИКА ? 'обновить данные' : 'подключить за три шага') + '</b>' +
       '<div class="node"><span class="tag">1</span><div style="flex:1">Открой <a class="lnk" href="https://www.skport.com/" target="_blank" rel="noopener">www.skport.com</a> и войди в аккаунт.</div></div>' +
@@ -929,7 +969,9 @@ EF.раздел('chr', {
       '<textarea class="inp" id="cmd" readonly spellcheck="false" style="width:100%;height:84px;resize:vertical;font-size:11px">' + эк(КОМАНДА()) + '</textarea>' +
       '<div class="node" style="margin-top:10px"><span class="tag gh">3</span><div style="flex:1">Вставь сюда то, что скопировал скрипт, и нажми «Загрузить».</div></div>' +
       '<div class="fld"><input class="inp" id="skjson" placeholder="вставь выгрузку ({&quot;mark&quot;:&quot;alextask-skport&quot;…})" spellcheck="false">' +
-        '<button class="btn" data-act="sk-paste">Загрузить</button>' + (ХРОНИКА ? '<button class="btn gh" data-act="sk-forget">Забыть</button>' : '') + '</div>' +
+        '<button class="btn" data-act="sk-paste">Загрузить</button>' +
+        (ХРОНИКА ? '<button class="btn sec" data-act="sk-dl" title="Файл без ключей — можно отдать на разбор">Скачать выгрузку</button>' +
+                   '<button class="btn gh" data-act="sk-forget">Забыть</button>' : '') + '</div>' +
       '<div class="say" id="skstatus"></div></div>' +
       '<div id="skbody">' + рисоватьХронику() + '</div>';
   },
@@ -1110,7 +1152,7 @@ document.addEventListener('click', e => {
   if (д.tl) { ИНСТРВКЛ = д.tl; инструменты(); return; }
   if (д.plan) { e.preventDefault(); EF.закрыть(); EF.вПлан && EF.вПлан(д.plan); return; }
   if (д.ct) { ВКЛК = д.ct; if (ОТКРЫТ) открытьОп(ОТКРЫТ); return; }
-  if (д.op) { ВКЛК = 'обзор'; открытьОп(д.op); return; }
+  if (д.op) { ВКЛК = первая(д.op); открытьОп(д.op); return; }
   if (д.wpn) { EF.открытьОружие(д.wpn); return; }
   if (д.set) {
     const n = EF.БАЗА.наборы.find(x => x.id === д.set);
@@ -1154,6 +1196,15 @@ document.addEventListener('click', e => {
     }
     case 'sk-forget':
       localStorage.removeItem(LS_CHR); ХРОНИКА = null; рисовать(); return;
+    case 'sk-dl': {
+      if (!ХРОНИКА) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(ХРОНИКА, null, 1)], { type: 'application/json' }));
+      a.download = 'skport-выгрузка.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      return;
+    }
     case 'bk-save': скачатьБэкап(); return;
     case 'np-save': {
       const id = облакоИд($('npkey').value);
