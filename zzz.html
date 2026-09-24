@@ -2298,6 +2298,30 @@
     to{transform:translateX(-50%)}
   }
   @media(prefers-reduced-motion:reduce){ .sc span.marq>i{animation:none} }
+
+  /* ═════ v247: общий стандарт alextask (как NTE, Endfield и оболочка) ═════
+     Изменения намеренно лёгкие: шрифт заголовков Oswald с разрядкой, кнопка
+     «☰ Инструменты» с цветной рамкой, «предупреждающая» полоса под шапкой,
+     имена агентов крупнее. Цвет раздела остаётся золотой (--gold). */
+  @font-face{font-family:Oswald;src:url(nte/fonts/oswald-latin.woff2) format("woff2");font-weight:600;font-display:swap;
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:Oswald;src:url(nte/fonts/oswald-cyr.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  :root{--disp:Oswald,"Arial Narrow",Impact,sans-serif}
+  .logo-btn>span:nth-of-type(2){font-family:var(--disp);font-weight:600;font-size:22px;letter-spacing:.1em;text-transform:uppercase}
+  .top::after{content:'';order:99;flex:0 0 100%;height:4px;margin-top:4px;border-radius:2px;opacity:.7;
+    background:repeating-linear-gradient(135deg,var(--gold) 0 9px,transparent 9px 18px)}
+  .tbtn{border-radius:10px}
+  .tbtn-menu{font-weight:800;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx);
+    background:#ffd54a14;border-color:#ffd54a8c;box-shadow:0 0 20px -9px var(--gold);padding:9px 15px}
+  .tbtn-menu:hover,.tools.open .tbtn-menu{background:#ffd54a29;border-color:var(--gold);color:var(--gold)}
+  .gsec>h4{font-family:var(--disp);font-weight:600;font-size:16px;letter-spacing:.16em;color:var(--tx)}
+  .gsec>h4::before{content:'';width:3px;height:16px;border-radius:9px;background:var(--gold);flex:none}
+  .gsec>h4 .gstar{font-family:inherit}
+  .gsec>h4 i{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0}
+  .sect>h4{font-family:var(--disp);font-weight:600;font-size:12.5px;letter-spacing:.14em}
+  .nmb b{font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.02em}
+  .nmb span{font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
+  .mmhead h2{font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -2682,7 +2706,7 @@
   </div>
 </div></div>
 
-<script src="zzz-app.js?v=246" defer></script>
+<script src="zzz-app.js?v=247" defer></script>
 <script src="menu.js?v=3" defer></script>
 <script src="install.js" defer></script>
 </body>

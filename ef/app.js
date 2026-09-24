@@ -809,69 +809,93 @@ EF.раздел('prof', {
   },
 });
 
-// ── боевая хроника skport ──────────────────────────────────────────────────
-// API skport отвечает только на подписанные запросы. Ключи человек приносит
-// одной строкой, дальше страница ходит к skport напрямую — ни ключи, ни ответы
-// через наш сервер не идут. Подпись считает sk-sign.js.
-const КОМАНДА = "copy(localStorage.getItem('SK_OAUTH_CRED_KEY')+'|'+localStorage.getItem('SK_TOKEN_CACHE_KEY'))";
+// ── аккаунт SKPORT («Хроника») ──────────────────────────────────────────────
+// С v6: ключи skport к нам больше не копируются. Человек запускает скрипт
+// (sk-export.js, функция skЭкспорт) в консоли на www.skport.com — там
+// запросы к их API разрешены, — скрипт сам берёт вход из cookie, обновляет
+// токен и кладёт в буфер одни игровые данные. Сюда вставляется результат.
+// Прежний путь (ключи сюда + запросы отсюда) не работал: zonai.skport.com не
+// отдаёт CORS чужим сайтам, а cred вообще лежит в cookie, не в localStorage.
 const LS_CHR = 'ef-chr';
 let ХРОНИКА = null;
-const РАЗДЕЛЫ = [
-  { имя: 'аккаунт', пути: ['/web/v2/user', '/api/v2/user'] },
-  { имя: 'мои персонажи', пути: ['/api/v1/game/player/binding', '/api/v1/game/player/info', '/api/v1/game/player/asset-show'] },
-  { имя: 'хроника', роль: true, пути: ['/web/v1/game/endfield/card/detail', '/api/v1/game/endfield/card/detail'] },
-  { имя: 'эхо войны', роль: true, пути: ['/web/v1/game/endfield/card/war-echoes', '/api/v1/game/endfield/card/war-echoes'] },
-  { имя: 'контракт', роль: true, пути: ['/web/v1/game/endfield/card/crisis-contract', '/api/v1/game/endfield/card/crisis-contract'] },
-  { имя: 'операторы', роль: true, пути: ['/web/v1/game/endfield/search-chars', '/api/v1/game/endfield/search-chars'] },
-  { имя: 'оружие', роль: true, пути: ['/web/v1/game/endfield/search-weapons', '/api/v1/game/endfield/search-weapons'] },
-];
-function ролиИз(о, гл) {
-  гл = гл || 0;
-  if (!о || typeof о !== 'object' || гл > 6) return null;
-  if (Array.isArray(о)) { for (const x of о) { const р = ролиИз(x, гл + 1); if (р) return р; } return null; }
-  const id = о.roleId || о.role_id || о.uid || о.gameUid || о.game_uid;
-  if (id && /^\d{6,}$/.test(String(id))) return { roleId: String(о.roleId || о.role_id || id), uid: String(о.uid || о.gameUid || id) };
-  for (const v of Object.values(о)) { const р = ролиИз(v, гл + 1); if (р) return р; }
-  return null;
-}
-async function грузитьХронику() {
-  const тело = $('skbody'), ст = $('skstatus');
-  тело.innerHTML = '<div class="empty">спрашиваю skport…</div>';
-  const собрано = {}, лог = [];
-  let роль = null;
-  for (const р of РАЗДЕЛЫ) {
-    if (р.роль && !роль) { лог.push('· ' + р.имя + ' — пропуск: не знаю roleId'); continue; }
-    let ладно = false, последняя = '';
-    for (const путь of р.пути) {
-      try {
-        const о = await window.skЗапрос(путь, роль ? { roleId: роль.roleId, uid: роль.uid } : undefined);
-        if (о && о.code !== undefined && о.code !== 0) { последняя = 'отказ: ' + (о.message || о.code); continue; }
-        собрано[путь] = о;
-        if (!роль) { const н = ролиИз(о); if (н) { роль = н; лог.push('  нашёл игровой id'); } }
-        лог.push('✓ ' + р.имя + ' <span style="color:var(--tx3)">' + эк(путь) + '</span>');
-        ладно = true;
-        break;
-      } catch (e) { последняя = e.message; }
+const КОМАНДА = () => '(' + String(window.skЭкспорт) + ')()';
+try { localStorage.removeItem('ef-sk-keys'); } catch (e) {}   // старые ключи не храним
+
+// Операторы из карточки: любые объекты, где есть id вида chr_0000_имя.
+function операторыSk(о, out) {
+  out = out || {};
+  if (!о || typeof о !== 'object') return out;
+  if (Array.isArray(о)) { о.forEach(x => операторыSk(x, out)); return out; }
+  // id ищем в самом объекте, а если нет — во вложенном на уровень ниже
+  // ({charData:{id:'chr_…'}, level:80} — уровень снаружи, id внутри).
+  const найти = x => {
+    for (const v of Object.values(x)) {
+      if (typeof v === 'string') { const м = /^(chr_\d{4}_[a-z0-9]+)/i.exec(v); if (м) return м[1].toLowerCase(); }
     }
-    if (!ладно) лог.push('· ' + р.имя + ' — ' + эк(последняя));
+    return '';
+  };
+  let id = найти(о);
+  if (!id && (о.level || о.potentialLevel)) {
+    for (const v of Object.values(о)) if (v && typeof v === 'object' && !Array.isArray(v)) { id = найти(v); if (id) break; }
   }
-  if (ст) ст.innerHTML = лог.join('<br>');
-  if (!Object.keys(собрано).length) {
-    тело.innerHTML = '<div class="box"><b>ничего не пришло</b>Скорее всего ключ устарел: зайди на skport заново и повтори команду.</div>';
-    return;
+  if (id && EF.оп(id)) {
+    const ур = +(о.level || о.lv || о.charLevel || 0);
+    const пот = +(о.potentialLevel || о.potential || о.potentialRank || 0);
+    const был = out[id] || {};
+    out[id] = { ур: Math.max(был.ур || 0, ур), пот: Math.max(был.пот || 0, пот) };
   }
-  ХРОНИКА = { снято: new Date().toISOString(), разделы: собрано };
-  try { localStorage.setItem(LS_CHR, JSON.stringify(ХРОНИКА)); } catch (e) {}
-  тело.innerHTML = рисоватьХронику();
+  Object.values(о).forEach(v => { if (v && typeof v === 'object') операторыSk(v, out); });
+  return out;
+}
+// Переносим найденное в профиль: отметки «есть у меня» и уровни работают
+// так же, как от витрины enka. Витринные подробности не затираются.
+function вПрофиль(х) {
+  const оп = операторыSk(х.data && х.data.card);
+  const n = Object.keys(оп).length;
+  if (!n) return 0;
+  const П = EF.ПРОФ || { uid: (х.role || {}).roleId || '', имя: (х.role || {}).nick || '', ур: (х.role || {}).level, оп: {}, когда: Date.now() };
+  Object.entries(оп).forEach(([id, v]) => { П.оп[id] = Object.assign({}, v, П.оп[id] || {}, { skport: true }); });
+  П.skport = х.at;
+  EF.ПРОФ = П;
+  try { localStorage.setItem(LS_PROF, JSON.stringify(П)); } catch (e) {}
+  return n;
+}
+function принятьХронику(текст) {
+  let х;
+  try { х = JSON.parse(текст); } catch (e) { return 'это не то: вставь текст целиком, как его положил скрипт'; }
+  if (!х || х.mark !== 'alextask-skport') return 'это не выгрузка skport — запусти скрипт ещё раз';
+  if (/"(cred|token|sign)"\s*:/.test(текст)) return 'в тексте есть ключи — такое не сохраняю';
+  ХРОНИКА = х;
+  try { localStorage.setItem(LS_CHR, JSON.stringify(х)); } catch (e) {}
+  const n = вПрофиль(х);
+  return 'принято: ' + (х.data.card ? 'карточка аккаунта' : 'без карточки') + (n ? ', операторов — ' + n : '');
 }
 function рисоватьХронику() {
-  const р = (ХРОНИКА && ХРОНИКА.разделы) || {};
+  if (!ХРОНИКА) return '';
+  const р = ХРОНИКА.data || {}, ro = ХРОНИКА.role || {};
+  const оп = операторыSk(р.card);
+  let h = EF.блок('Аккаунт', ХРОНИКА.at ? эк(new Date(ХРОНИКА.at).toLocaleString('ru')) : '') +
+    '<div class="stats">' +
+      '<div class="st"><u>ник</u><b style="font-size:17px">' + эк(ro.nick || '—') + '</b></div>' +
+      '<div class="st"><u>roleId</u><b style="font-size:15px">' + эк(ro.roleId || '—') + '</b></div>' +
+      '<div class="st"><u>сервер</u><b>' + эк(ro.serverId || '—') + '</b></div>' +
+      '<div class="st' + (р.card ? ' ok' : '') + '"><u>карточка</u><b>' + (р.card ? 'есть' : 'нет') + '</b></div>' +
+      '<div class="st"><u>операторов</u><b>' + Object.keys(оп).length + '</b></div>' +
+    '</div>';
+  if (Object.keys(оп).length) {
+    h += EF.блок('Операторы из SKPORT', Object.keys(оп).length + '') + '<div class="team">' +
+      Object.entries(оп).map(([id, v]) => {
+        const c = EF.оп(id) || {};
+        return '<span class="mem me" data-op="' + эк(id) + '"><img src="' + эк(c.значок || '') + '" alt="" data-nf="hide">' +
+          '<span class="who">' + эк(c.имяРу || c.имя || id) + (v.ур ? '<br>ур. ' + v.ур : '') + '</span></span>';
+      }).join('') + '</div>';
+  }
+  if (ХРОНИКА.log && ХРОНИКА.log.length) h += '<p class="hint">Что не ответило: ' + эк(ХРОНИКА.log.join(' · ')) + '</p>';
   const ключи = Object.keys(р);
-  if (!ключи.length) return '';
-  const имя = п => (РАЗДЕЛЫ.find(x => x.пути.indexOf(п) >= 0) || {}).имя || п;
-  return EF.блок('Что пришло', ХРОНИКА.снято ? эк(new Date(ХРОНИКА.снято).toLocaleString('ru')) : '') +
-    '<div class="list">' + ключи.map(k => '<details class="dd"><summary><span class="nm2"><b>' + эк(имя(k)) + '</b><i>' + эк(k) + '</i></span></summary>' +
-      '<div class="dd-in">' + дерево(р[k] && р[k].data !== undefined ? р[k].data : р[k], 0) + '</div></details>').join('') + '</div>';
+  h += EF.блок('Что пришло', ключи.length + ' разд.') + '<div class="list">' + ключи.map(k =>
+    '<details class="dd"><summary><span class="nm2"><b>' + эк(k) + '</b><i>' + эк(k === 'card' ? (ХРОНИКА.cardPath || '') : '') + '</i></span></summary>' +
+    '<div class="dd-in">' + дерево(р[k], 0) + '</div></details>').join('') + '</div>';
+  return h;
 }
 function дерево(о, гл) {
   if (о == null) return '<div class="hint">пусто</div>';
@@ -896,18 +920,18 @@ EF.раздел('chr', {
   имя: 'Хроника', буква: '✎',
   рисовать() {
     ХРОНИКА = ХРОНИКА || взять(LS_CHR, null);
-    const есть = !!window.skКлючи();
-    EF.шапка('skport.chronicle', 'Хроника', null);
-    let h = '<div class="box brk" style="max-width:900px"><b>' + (есть ? 'ключ подключён' : 'подключить за два шага') + '</b>' +
-      '<div class="node"><span class="tag">1</span><div style="flex:1">На www.skport.com (залогиненным): F12 → Console, вставь строку ниже и нажми Enter — ключ скопируется в буфер.</div></div>' +
-      '<div class="node"><span class="tag gh">2</span><div style="flex:1">Вставь его сюда и нажми «Подключить».</div></div>' +
-      '<div class="fld"><input class="inp" readonly id="cmd" value="' + эк(КОМАНДА) + '"><button class="btn sec" data-act="copy-cmd">Скопировать команду</button></div>' +
-      '<div class="fld"><input class="inp" id="skkeys" type="password" placeholder="' + (есть ? 'ключ сохранён — вставь новый, чтобы заменить' : 'вставь скопированное') + '">' +
-        '<button class="btn" data-act="sk-save">Подключить</button>' + (есть ? '<button class="btn gh" data-act="sk-forget">Забыть</button>' : '') + '</div>' +
-      '<div class="say" id="skstatus">Ключ хранится только в этом браузере. Запросы идут с твоей машины прямо на skport, мимо нашего сервера.</div></div>';
-    if (есть) h += '<div style="margin:14px 0"><button class="btn sec" data-act="sk-load">Обновить хронику</button></div>';
-    h += '<div id="skbody">' + (ХРОНИКА ? рисоватьХронику() : '') + '</div>';
-    $('body').innerHTML = h;
+    EF.шапка('skport.account', 'Хроника SKPORT', null);
+    $('body').innerHTML = '<div class="box brk" style="max-width:980px"><b>' + (ХРОНИКА ? 'обновить данные' : 'подключить за три шага') + '</b>' +
+      '<div class="node"><span class="tag">1</span><div style="flex:1">Открой <a class="lnk" href="https://www.skport.com/" target="_blank" rel="noopener">www.skport.com</a> и войди в аккаунт.</div></div>' +
+      '<div class="node"><span class="tag">2</span><div style="flex:1">Там же: F12 → Console, вставь скрипт и нажми Enter. Если Chrome просит — сначала напиши <span class="hl">allow pasting</span> и Enter. ' +
+        'Скрипт сам возьмёт вход, обновит токен и положит в буфер <b>только игровые данные</b> — ключи skport со страницы не уходят.</div></div>' +
+      '<div class="fld"><button class="btn sec" data-act="copy-cmd">Скопировать скрипт</button><span class="say">' + Math.round(КОМАНДА().length / 1024 * 10) / 10 + ' КБ, текст ниже</span></div>' +
+      '<textarea class="inp" id="cmd" readonly spellcheck="false" style="width:100%;height:84px;resize:vertical;font-size:11px">' + эк(КОМАНДА()) + '</textarea>' +
+      '<div class="node" style="margin-top:10px"><span class="tag gh">3</span><div style="flex:1">Вставь сюда то, что скопировал скрипт, и нажми «Загрузить».</div></div>' +
+      '<div class="fld"><input class="inp" id="skjson" placeholder="вставь выгрузку ({&quot;mark&quot;:&quot;alextask-skport&quot;…})" spellcheck="false">' +
+        '<button class="btn" data-act="sk-paste">Загрузить</button>' + (ХРОНИКА ? '<button class="btn gh" data-act="sk-forget">Забыть</button>' : '') + '</div>' +
+      '<div class="say" id="skstatus"></div></div>' +
+      '<div id="skbody">' + рисоватьХронику() + '</div>';
   },
 });
 
@@ -956,7 +980,7 @@ function нутроИнстр() {
 }
 
 // Бэкап: всё с префиксом ef-, кроме служебного и ключей доступа.
-const БЕЗ = ['ef-sync', 'ef-sk-keys', 'ef-prof', 'ef-chr'];
+const БЕЗ = ['ef-sync', 'ef-sk-keys', 'ef-prof', 'ef-chr'];  // ef-sk-keys — от старой версии, на всякий случай
 function собрать() {
   const out = {};
   for (let i = 0; i < localStorage.length; i++) {
@@ -1122,16 +1146,14 @@ document.addEventListener('click', e => {
       navigator.clipboard.writeText(п.value).then(() => { т.textContent = 'скопировано'; }, () => { т.textContent = 'выдели и скопируй сам'; });
       return;
     }
-    case 'sk-save': {
-      const v = ($('skkeys').value || '').trim().replace(/^"|"$/g, '');
-      if (v.split('|').length !== 2 || v.length < 20) { alert('Нужна строка вида cred|токен — её даёт команда выше'); return; }
-      localStorage.setItem(window.SK_КЛЮЧИ || 'ef-sk-keys', v);
-      рисовать(); грузитьХронику();
+    case 'sk-paste': {
+      const итог = принятьХронику(($('skjson').value || '').trim());
+      $('skstatus').textContent = итог;
+      if (/^принято/.test(итог)) { $('skbody').innerHTML = рисоватьХронику(); $('skjson').value = ''; }
       return;
     }
-    case 'sk-load': грузитьХронику(); return;
     case 'sk-forget':
-      localStorage.removeItem('ef-sk-keys'); localStorage.removeItem(LS_CHR); ХРОНИКА = null; рисовать(); return;
+      localStorage.removeItem(LS_CHR); ХРОНИКА = null; рисовать(); return;
     case 'bk-save': скачатьБэкап(); return;
     case 'np-save': {
       const id = облакоИд($('npkey').value);

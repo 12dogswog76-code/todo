@@ -19,7 +19,7 @@
 // v14: появился обработчик push. Без него уведомления не показывались вовсе:
 // воркер их исправно отправлял, браузер исправно получал, а показать было
 // некому — сюда доезжало событие, которое никто не слушал.
-const CACHE = 'moi-dela-v24';
+const CACHE = 'moi-dela-v25';
 // Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
 // страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
 // заново тянул около десяти мегабайт артов и значков. На хорошем канале это
@@ -45,7 +45,7 @@ const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.js
                 // справочник Endfield: страница, код и база. Арты операторов
                 // лежат на чужих сайтах, в офлайн-кэш не кладутся
                 './ef/', './ef/index.html', './ef/app.js', './ef/map.js', './ef/tools.js',
-                './ef/factory.js', './ef/sk-sign.js', './ef/manifest.json', './ef/icon.svg',
+                './ef/factory.js', './ef/sk-export.js', './ef/manifest.json', './ef/icon.svg',
                 './ef/font/efsans-bold.woff2', './ef/data/ef-db.json', './ef/data/ef-tools.json',
                 './ef/data/ef-map.json', './ef/data/ef-factory.json'];
 
