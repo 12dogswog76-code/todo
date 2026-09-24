@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v5';
+const APP_VER = 'v6';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -125,24 +125,45 @@ EF.закрыть = function () {
 };
 
 // ── разделы ─────────────────────────────────────────────────────────────────
-const МЕНЮ = [
-  { сек: 'База', пункты: ['ops', 'tier', 'team', 'wpn', 'gear'] },
-  { сек: 'Мир', пункты: ['map'] },
-  { сек: 'Фабрика', пункты: ['fac'] },
-  { сек: 'Инструменты', пункты: ['plan', 'daily', 'ach', 'gacha'] },
-  { сек: 'Личное', пункты: ['prof', 'chr'] },
+// С v6 навигация по общему стандарту сайта (как NTE и ZZZ): основные разделы —
+// вкладками в шапке, остальное — в выпадающем меню «☰ Инструменты» справа.
+// Пункт меню — крупное название прописными и пояснение строкой ниже.
+const ВКЛАДКИ = ['ops', 'tier', 'team', 'wpn', 'gear', 'map', 'fac'];
+const ВМЕНЮ = [
+  ['plan', 'Сколько фармить до цели'],
+  ['daily', 'Ежедневные и еженедельные'],
+  ['ach', 'Прогресс по достижениям'],
+  ['gacha', 'Гарант, история, симулятор'],
+  ['prof', 'Витрина аккаунта по UID'],
+  ['chr', 'Боевая хроника skport'],
 ];
+const ИНСТРПОД = {
+  cloud: 'Синхронизация между устройствами',
+  backup: 'Скачать и восстановить отметки',
+  fresh: 'Когда собрана база',
+  src: 'Откуда взяты данные',
+};
 EF.раздел = function (id, опц) { EF.разделы[id] = опц; };
 let ВКЛ = 'ops';
 
+function пунктМеню(атр, имя, под, вкл) {
+  return '<button class="tmi' + (вкл ? ' on' : '') + '" ' + атр + '>' + эк(имя) + '<i>' + эк(под) + '</i></button>';
+}
 function рисоватьМеню() {
-  $('nav').innerHTML = МЕНЮ.map(г => '<div class="sb-sec">' + эк(г.сек) + '</div>' +
-    г.пункты.filter(id => EF.разделы[id]).map(id => {
-      const р = EF.разделы[id];
-      return '<button class="sb-a' + (id === ВКЛ ? ' on' : '') + '" data-tab="' + id + '">' +
-        '<span class="ic">' + (р.значок ? '<img src="' + эк(р.значок) + '" alt="">' : эк(р.буква || '·')) + '</span>' +
-        эк(р.имя) + (р.новое ? '<em>new</em>' : '') + '</button>';
-    }).join('')).join('');
+  $('nav').innerHTML = ВКЛАДКИ.filter(id => EF.разделы[id]).map(id => {
+    const р = EF.разделы[id];
+    return '<button class="tab' + (id === ВКЛ ? ' on' : '') + '" data-tab="' + id + '">' + эк(р.имя) +
+      (р.новое ? '<em>new</em>' : '') + '</button>';
+  }).join('');
+  const изМеню = ВМЕНЮ.some(([id]) => id === ВКЛ);
+  $('toolsBtn').classList.toggle('on', изМеню);
+  $('toolsBtn').innerHTML = '☰ ' + (изМеню ? эк(EF.разделы[ВКЛ].имя) : 'Инструменты');
+  $('toolsDrop').innerHTML =
+    ВМЕНЮ.filter(([id]) => EF.разделы[id]).map(([id, под]) => пунктМеню('data-tab="' + id + '"', EF.разделы[id].имя, под, id === ВКЛ)).join('') +
+    '<hr>' + ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', false)).join('');
+}
+function меню(откр) {
+  $('toolsBox').classList.toggle('open', откр == null ? !$('toolsBox').classList.contains('open') : откр);
 }
 
 EF.перейти = function (id, тихо) {
@@ -150,7 +171,8 @@ EF.перейти = function (id, тихо) {
   if (EF.уйти) { const f = EF.уйти; EF.уйти = null; try { f(); } catch (e) {} }
   ВКЛ = id;
   if (!тихо && location.hash !== '#' + id) history.replaceState(null, '', '#' + id);
-  document.body.classList.remove('nav');
+  меню(false);
+  if ($('sheet').classList.contains('on')) EF.закрыть();
   рисовать();
   window.scrollTo(0, 0);
 };
@@ -895,10 +917,14 @@ EF.раздел('chr', {
 const ИНСТР = [['cloud', 'Облако'], ['backup', 'Бэкап файлом'], ['fresh', 'Свежесть данных'], ['src', 'Откуда данные']];
 let ИНСТРВКЛ = 'cloud';
 function инструменты() {
-  EF.открыть('<div class="hd" style="margin-top:0"><div class="ttl"><span class="eyebrow">// system.tools</span><h1>Инструменты</h1></div></div>' +
-    '<div style="display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start" class="toolsg">' +
-      '<div style="display:flex;flex-direction:column;gap:3px">' + ИНСТР.map(([k, и]) =>
-        '<button class="sb-a' + (k === ИНСТРВКЛ ? ' on' : '') + '" data-tl="' + k + '">' + эк(и) + '</button>').join('') + '</div>' +
+  меню(false);
+  const имя = (ИНСТР.find(([k]) => k === ИНСТРВКЛ) || ИНСТР[0])[1];
+  EF.открыть('<div class="wh"><h2>' + эк(имя) + '</h2><i>' + эк(ИНСТРПОД[ИНСТРВКЛ] || '') + '</i></div>' +
+    '<div class="toolsg">' +
+      '<div class="tcol">' +
+        ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', k === ИНСТРВКЛ)).join('') +
+        '<hr>' + ВМЕНЮ.filter(([id]) => EF.разделы[id]).map(([id, под]) => пунктМеню('data-tab="' + id + '"', EF.разделы[id].имя, под, false)).join('') +
+      '</div>' +
       '<div id="tlbody">' + нутроИнстр() + '</div></div>');
 }
 function нутроИнстр() {
@@ -1149,9 +1175,11 @@ window.addEventListener('hashchange', () => {
   if (EF.разделы[х] && х !== ВКЛ && EF.БАЗА) { EF.закрыть(); EF.перейти(х, true); }
 });
 $('logo').addEventListener('click', () => EF.перейти('ops'));
-$('burger').addEventListener('click', () => document.body.classList.toggle('nav'));
-$('sbdim').addEventListener('click', () => document.body.classList.remove('nav'));
 $('ver').addEventListener('click', () => { ИНСТРВКЛ = 'src'; инструменты(); });
+// Меню «☰ Инструменты»: открыть/закрыть, закрыть кликом мимо и по Escape.
+$('toolsBtn').addEventListener('click', e => { e.stopPropagation(); меню(); });
+document.addEventListener('click', e => { if (!e.target.closest('#toolsBox')) меню(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') меню(false); });
 
 // Старт — после того как подгрузятся map.js, tools.js и factory.js: они
 // регистрируют свои разделы через EF.раздел().

@@ -7,13 +7,22 @@
 <meta name="theme-color" content="#0a0b08">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<!-- Оформление повторяет endfieldtools.dev (с разрешения автора): тёмная
-     индустриальная сцена, кислотно-жёлтый акцент, метки «// РАЗДЕЛ».
+<!-- Оформление v6 — общий стандарт alextask, сведённый из трёх разделов:
+     от NTE — шапка с вкладками, Oswald с разрядкой, меню «☰ Инструменты»;
+     от ZZZ — «предупреждающие» полосы, диагональные надписи на фоне;
+     от endfieldtools.dev (с разрешения автора) — кислотно-жёлтый акцент,
+     уголки-скобки, метки «// РАЗДЕЛ», шрифт EF Sans в крупных именах.
      Код отдельными файлами, inline-обработчиков нет нигде. Все картинки свои
      (ef/img), кроме витрины профиля enka. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://enka.network; font-src 'self'; connect-src 'self' https://alextask-push.12dogswog76.workers.dev https://api.alextask.ru https://api.npoint.io https://zonai.skport.com; base-uri 'none'; form-action 'none'">
 <style>
 @font-face{font-family:"EF Sans";src:url(font/efsans-bold.woff2) format("woff2");font-weight:500 900;font-display:swap}
+@font-face{font-family:Oswald;src:url(../nte/fonts/oswald-latin.woff2) format("woff2");font-weight:600;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Oswald;src:url(../nte/fonts/oswald-cyr.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Inter;src:url(../nte/fonts/inter-latin.woff2) format("woff2");font-weight:100 900;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Inter;src:url(../nte/fonts/inter-cyr.woff2) format("woff2");font-weight:100 900;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
 :root{
   --scene:#0a0b08; --scene2:#101109; --gr:#14150d; --gr2:#1d1e14; --gr3:#26271c;
   --ln:rgba(255,255,255,.07); --ln2:rgba(255,255,255,.13);
@@ -23,7 +32,8 @@
   --ok:#46e08c; --warn:#f59e0b; --bad:#ef4444;
   --r1:#959595; --r2:#dbe535; --r3:#12c4ff; --r4:#a562ff; --r5:#ffc412; --r6:#ff8012;
   --head:"EF Sans","Segoe UI",system-ui,sans-serif;
-  --body:"Segoe UI",Inter,Roboto,system-ui,sans-serif;
+  --body:Inter,"Segoe UI",Roboto,system-ui,sans-serif;
+  --disp:Oswald,"Arial Narrow",Impact,sans-serif;
   --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
   --e:cubic-bezier(.2,.85,.25,1);
   --sb:240px;
@@ -42,20 +52,7 @@ button{font-family:inherit}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
 ::-webkit-scrollbar-track{background:transparent}
 
-/* ── боковая панель ──────────────────────────────────────────────────────── */
-.sb{position:fixed;left:0;top:0;bottom:0;width:var(--sb);z-index:40;overflow-y:auto;
-  background:linear-gradient(180deg,var(--scene2),var(--scene));border-right:1px solid var(--ln);
-  padding:14px 12px 24px;display:flex;flex-direction:column;gap:3px}
-.sb-logo{display:flex;align-items:center;gap:10px;padding:4px 8px 12px;border:0;background:none;
-  color:var(--tx);cursor:pointer;text-align:left}
-.sb-logo i{width:30px;height:30px;flex:none;background:var(--acid);
-  clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%);display:grid;place-items:center;
-  font:900 14px/1 var(--head);color:var(--ink);font-style:normal}
-.sb-logo b{font:800 15px/1 var(--head);letter-spacing:.08em;text-transform:uppercase;display:block}
-.sb-logo small{display:block;font:10px/1 var(--mono);color:var(--tx3);margin-top:4px;letter-spacing:.06em}
-.sb-sec{display:flex;align-items:center;gap:9px;margin:12px 10px 4px;font:700 10px/1 var(--head);
-  letter-spacing:.17em;text-transform:uppercase;color:var(--tx3)}
-.sb-sec:after{content:"";flex:1;height:1px;background:var(--ln)}
+/* ── пункты колонок (окно инструментов) ─────────────────────────────────── */
 .sb-a{display:flex;align-items:center;gap:11px;width:100%;min-height:40px;padding:8px 12px;border:0;
   background:none;cursor:pointer;border-radius:9px;color:var(--tx2);font:600 13.5px/1.2 var(--body);
   text-align:left;position:relative;transition:.15s var(--e)}
@@ -66,16 +63,8 @@ button{font-family:inherit}
 .sb-a .ic img{width:24px;height:24px;object-fit:contain}
 .sb-a em{margin-left:auto;font:700 8px/1 var(--head);letter-spacing:.08em;font-style:normal;
   padding:3px 6px;border-radius:4px;background:var(--ok);color:#08210f;text-transform:uppercase}
-.sb-foot{margin-top:auto;padding-top:14px;display:flex;flex-direction:column;gap:6px}
-.sb-ver{font:10px/1.4 var(--mono);color:var(--tx3);padding:4px 12px;background:none;border:0;
-  text-align:left;cursor:pointer}
-.sb-ver b{color:var(--tx2);font-weight:400}
-.burger{display:none;position:fixed;left:12px;top:12px;z-index:45;width:42px;height:42px;border-radius:12px;
-  border:1px solid var(--ln2);background:rgba(16,17,9,.92);color:var(--tx);cursor:pointer;font:700 18px/1 var(--head)}
-.sb-dim{display:none}
-
 /* ── основное поле ───────────────────────────────────────────────────────── */
-.main{margin-left:var(--sb);min-height:100vh;padding:22px 26px 70px}
+.main{min-height:100vh;padding:22px 26px 70px}
 .wrap{max-width:1680px;margin:0 auto}
 .hd{display:flex;align-items:flex-end;gap:16px;margin:2px 0 18px;flex-wrap:wrap}
 .hd .ttl{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -367,15 +356,10 @@ details.dd>summary .rt2{margin-left:auto;font:800 12px/1 var(--head);color:var(-
 .pull:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--rar)}
 .pulls{display:flex;flex-wrap:wrap;gap:5px}
 
-@media (max-width:760px){.toolsg{grid-template-columns:1fr!important}}
+
 @media (max-width:1100px){.mapw{grid-template-columns:1fr;height:auto}.mapside{max-height:260px}.mapbox{height:70vh}}
 @media (max-width:900px){
-  :root{--sb:0px}
-  .sb{width:264px;transform:translateX(-100%);transition:transform .2s var(--e);z-index:70}
-  body.nav .sb{transform:none}
-  body.nav .sb-dim{display:block;position:fixed;inset:0;z-index:65;background:rgba(0,0,0,.6)}
-  .burger{display:block}
-  .main{padding:66px 12px 60px}
+  .main{padding:16px 12px 60px}
   .card{grid-template-columns:1fr}.card-l{position:static}
   .art{max-width:360px;margin:0 auto}
   .ops{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
@@ -383,20 +367,154 @@ details.dd>summary .rt2{margin-left:auto;font:800 12px/1 var(--head);color:var(-
   .sheet{padding:8px}.sheet-in{padding:16px 12px 20px}
   .tierrow{grid-template-columns:52px 1fr}
 }
+
+/* ═════ v6: общий стандарт alextask ═══════════════════════════════════════ */
+/* фон рисует .bg (z-index:-1) — у body своего фона быть не должно, иначе он его закроет */
+html{background:var(--scene)}
+body{background:transparent}
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:var(--scene)}
+.bg:before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.075) 1px,transparent 1.3px);
+  background-size:22px 22px;mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 85%)}
+.bg:after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 1px,transparent 1px 4px)}
+.glow{position:absolute;border-radius:50%;filter:blur(90px)}
+.glow.g1{width:640px;height:640px;left:-200px;top:-240px;background:rgba(253,253,31,.10)}
+.glow.g2{width:700px;height:700px;right:-240px;bottom:-280px;background:rgba(74,222,128,.08)}
+.words{position:absolute;left:-20%;top:-10%;width:140%;height:130%;transform:rotate(-14deg);display:flex;flex-direction:column;justify-content:space-around}
+.words div{font-family:var(--disp);font-size:clamp(90px,12vw,190px);line-height:1;white-space:nowrap;letter-spacing:.04em;
+  color:transparent;-webkit-text-stroke:1.5px rgba(255,255,255,.045);animation:ползти 110s linear infinite}
+.words div:nth-child(2){animation-direction:reverse;-webkit-text-stroke-color:rgba(253,253,31,.06)}
+@keyframes ползти{from{transform:translateX(0)}to{transform:translateX(-33.33%)}}
+@media (prefers-reduced-motion:reduce){.words div{animation:none}}
+
+/* шапка: как у NTE — логотип, вкладки, справа меню */
+.ehead{position:sticky;top:0;z-index:40;background:rgba(10,11,8,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--ln)}
+.top-in{max-width:1732px;margin:0 auto;padding:12px 26px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ehead .hz{display:block;height:4px;opacity:.75;
+  background:repeating-linear-gradient(135deg,var(--acid) 0 9px,transparent 9px 18px)}
+.logo{display:flex;align-items:center;gap:10px;border:0;background:none;color:var(--tx);cursor:pointer;padding:0}
+.logo i{width:34px;height:34px;flex:none;background:var(--acid);clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%);
+  display:grid;place-items:center;font:900 15px/1 var(--head);color:var(--ink);font-style:normal}
+.logo span{font:600 24px/1 var(--disp);letter-spacing:.1em;text-transform:uppercase}
+.ver{font:700 10px/1 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--tx3);background:none;cursor:pointer;
+  border:1px solid var(--ln2);border-radius:999px;padding:5px 9px}
+.ver:hover{color:var(--tx);border-color:var(--tx3)}
+.ver b{font-weight:700;color:var(--tx3)}
+.tabs{display:flex;gap:3px;padding:4px;border-radius:14px;background:rgba(20,21,13,.8);border:1px solid var(--ln);
+  overflow-x:auto;scrollbar-width:none;max-width:100%}
+.tabs::-webkit-scrollbar{display:none}
+.tab{position:relative;flex:none;border:1px solid transparent;background:none;cursor:pointer;border-radius:10px;padding:9px 15px;
+  font:600 13px/1 var(--disp);letter-spacing:.16em;text-transform:uppercase;color:var(--tx3);transition:.15s var(--e)}
+.tab:hover{color:var(--tx)}
+.tab.on{color:var(--acid);background:var(--acid-s);border-color:rgba(253,253,31,.5);box-shadow:0 0 18px -8px var(--acid)}
+.tab em{font:800 8px/1 var(--body);letter-spacing:.08em;font-style:normal;padding:3px 5px;border-radius:4px;background:var(--ok);
+  color:#08210f;margin-left:6px;vertical-align:2px}
+.top-sp{flex:1}
+.tools{position:relative;margin-left:auto}
+@media (max-width:1500px){.tab{padding:9px 10px;letter-spacing:.1em}.logo span{font-size:21px}}
+.tbtn{font:800 12px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--tx);cursor:pointer;
+  background:rgba(253,253,31,.08);border:1px solid rgba(253,253,31,.55);border-radius:11px;padding:11px 16px;
+  box-shadow:0 0 22px -10px var(--acid);transition:.15s var(--e);white-space:nowrap}
+.tbtn:hover,.tools.open .tbtn,.tbtn.on{background:rgba(253,253,31,.16);border-color:var(--acid);color:var(--acid)}
+.toolsm{position:absolute;right:0;top:calc(100% + 8px);min-width:290px;z-index:50;display:none;
+  background:#12130c;border:1px solid var(--ln2);border-radius:14px;padding:6px;box-shadow:0 18px 40px rgba(0,0,0,.7);
+  max-height:calc(100vh - 100px);overflow:auto}
+.tools.open .toolsm{display:grid;gap:2px}
+.toolsm hr,.tcol hr{border:0;height:1px;background:var(--ln2);margin:5px 8px}
+.tmi{display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:10px;cursor:pointer;
+  padding:9px 12px;color:var(--tx);font:800 11.5px/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;transition:.12s}
+.tmi i{display:block;font:500 10.5px/1.3 var(--body);letter-spacing:0;text-transform:none;color:var(--tx3);margin-top:4px;font-style:normal}
+.tmi:hover{background:rgba(255,255,255,.05)}
+.tmi.on{border-color:rgba(253,253,31,.5);background:var(--acid-s);color:var(--acid)}
+
+/* заголовок раздела */
+.hd{margin:6px 0 20px;padding-bottom:16px;border-bottom:1px solid var(--ln);position:relative}
+.hd:after{content:'';position:absolute;left:0;bottom:-1px;width:120px;height:2px;background:var(--acid)}
+.eyebrow{font:700 10.5px/1 var(--body);letter-spacing:.26em;color:var(--tx3)}
+.hd h1{font:600 clamp(28px,3.4vw,42px)/1 var(--disp);letter-spacing:.08em}
+.hd .cnt{border-radius:12px;background:rgba(20,21,13,.8)}
+.hd .cnt b{font:600 24px/1 var(--disp);letter-spacing:.04em}
+.hd .cnt i{font:800 9.5px/1 var(--body);letter-spacing:.2em}
+/* блок: полоса + Oswald с разрядкой + линия (как «ЧТО ГОРИТ» у NTE) */
+.sh>b{clip-path:none;background:none;color:var(--tx);padding:0 0 0 13px;position:relative;
+  font:600 18px/1 var(--disp);letter-spacing:.16em}
+.sh>b:before{content:'';position:absolute;left:0;top:-1px;bottom:-1px;width:3px;border-radius:9px;background:var(--acid)}
+.sh>em{font:700 10px/1 var(--body);letter-spacing:.2em;text-transform:uppercase}
+
+/* фильтры: строкой, как у NTE, без подложки */
+.fbar{background:none;border:0;padding:0;margin:0 0 18px}
+.fgrp>i{font:800 9.5px/1 var(--body);letter-spacing:.24em;color:var(--tx4)}
+.fb{border-radius:10px;background:rgba(20,21,13,.8);border-color:var(--ln);font:600 12px/1 var(--body);padding:8px 12px}
+.fb.on{box-shadow:0 0 16px -8px var(--acid)}
+.srch{border-radius:10px}
+.fcnt{font:800 10px/1 var(--body);letter-spacing:.2em}
+
+/* кнопки: радиус и прописные — как на всём сайте */
+.btn{border-radius:10px;font:800 11.5px/1 var(--body);letter-spacing:.12em;text-transform:uppercase}
+.btn.sm{font-size:10.5px}
+.seg{border-radius:12px}.seg button{border-radius:9px;font:600 12.5px/1 var(--disp);letter-spacing:.12em;text-transform:uppercase}
+
+/* карточки */
+.box,.it,details.dd,.team,.skill,.node,.chk,.ach,.rcp{border-radius:14px}
+.box{background:linear-gradient(168deg,rgba(26,27,17,.92),rgba(15,16,10,.92))}
+
+/* плитки операторов: как у NTE — имя крупно Oswald, латиница с разрядкой,
+   снизу «предупреждающая» полоса цвета редкости (ZZZ) */
+.tile{border-radius:14px}
+.tile .rb{height:6px;opacity:.9;background:repeating-linear-gradient(135deg,var(--rar) 0 8px,transparent 8px 16px)}
+.tile .nm{font:600 21px/1 var(--disp);text-transform:none;letter-spacing:.02em}
+.tile .sub{font:700 9.5px/1.3 var(--body);letter-spacing:.2em;text-transform:uppercase;color:#c9cbbf}
+.tile .tr{font:600 12px/1 var(--disp);letter-spacing:.06em}
+.tierlab{font:600 26px/1 var(--disp)}
+
+/* окно поверх страницы: как у ZZZ — шапка, точечная подложка, колонка слева */
+.sheet-in{border-radius:20px;background:
+  radial-gradient(rgba(255,255,255,.05) 1px,transparent 1.3px) 0 0/18px 18px,linear-gradient(180deg,#14150d,#0d0e08)}
+.wh{position:sticky;top:-22px;z-index:2;margin:-22px -24px 20px;padding:22px 24px 16px;border-bottom:1px solid var(--ln);
+  background:linear-gradient(180deg,#14150d,rgba(20,21,13,.94));border-radius:20px 20px 0 0}
+.wh h2{margin:0;font:600 30px/1 var(--disp);letter-spacing:.1em;text-transform:uppercase}
+.wh i{display:block;margin-top:8px;font:700 10px/1 var(--body);letter-spacing:.26em;text-transform:uppercase;color:var(--tx3);font-style:normal}
+.toolsg{display:grid;grid-template-columns:250px 1fr;gap:20px;align-items:start}
+.tcol{display:flex;flex-direction:column;gap:3px;position:sticky;top:70px;padding-right:14px;border-right:1px solid var(--ln)}
+.cname{font:600 34px/1 var(--disp);letter-spacing:.06em}
+.sec>h4{font:600 14px/1 var(--disp);letter-spacing:.16em;color:var(--tx)}
+.x{border-radius:10px;font:800 10.5px/1 var(--body);letter-spacing:.14em;text-transform:uppercase}
+
+@media (max-width:900px){
+  .top-in{padding:10px 12px;gap:9px}
+  .top-sp{display:none}
+  .tabs{order:5;width:100%}
+  .logo span{font-size:20px}
+  .ver{display:none}
+  .toolsm{position:fixed;left:10px;right:10px;top:auto;min-width:0}
+  .toolsg{grid-template-columns:1fr}
+  .tcol{position:static;border-right:0;padding-right:0}
+  .wh{margin:-16px -12px 16px;padding:16px 12px 12px;top:-16px}
+}
 </style>
 </head>
 <body>
 
-<button class="burger" id="burger" aria-label="Меню">≡</button>
-<div class="sb-dim" id="sbdim"></div>
-<nav class="sb" id="sb">
-  <button class="sb-logo" id="logo"><i>EF</i><span><b>Endfield</b><small>справочник · alextask</small></span></button>
-  <div id="nav"></div>
-  <div class="sb-foot">
-    <button class="sb-a" data-tools="1"><span class="ic">☰</span>Инструменты</button>
-    <button class="sb-ver" id="ver">v5 <b>· воркер …</b></button>
+<div class="bg" aria-hidden="true">
+  <i class="glow g1"></i><i class="glow g2"></i>
+  <div class="words">
+    <div>ENDFIELD · TALOS-II · ВАЛЛИ-IV · УЛИН · ENDFIELD · TALOS-II · ВАЛЛИ-IV · УЛИН · ENDFIELD · TALOS-II · ВАЛЛИ-IV · УЛИН ·</div>
+    <div>ОПЕРАТОРЫ · ФАБРИКА · КАРТА · ПРОТОКОЛ · ОПЕРАТОРЫ · ФАБРИКА · КАРТА · ПРОТОКОЛ · ОПЕРАТОРЫ · ФАБРИКА · КАРТА · ПРОТОКОЛ ·</div>
+    <div>ENDFIELD · TALOS-II · ВАЛЛИ-IV · УЛИН · ENDFIELD · TALOS-II · ВАЛЛИ-IV · УЛИН · ENDFIELD · TALOS-II · ВАЛЛИ-IV · УЛИН ·</div>
   </div>
-</nav>
+</div>
+
+<header class="ehead"><div class="top-in">
+  <button class="logo" id="logo" title="К операторам"><i>EF</i><span>Endfield</span></button>
+  <button class="ver" id="ver" title="Откуда данные">v6</button>
+  <nav class="tabs" id="nav"></nav>
+  <div class="top-sp"></div>
+  <!-- Меню как в NTE и ZZZ: выпадающий список справа, пункт — крупное
+       название прописными и пояснение ниже. -->
+  <div class="tools" id="toolsBox">
+    <button class="tbtn" id="toolsBtn">☰ Инструменты</button>
+    <div class="toolsm" id="toolsDrop"></div>
+  </div>
+</div><i class="hz"></i></header>
 
 <main class="main"><div class="wrap">
   <div id="head"></div>
@@ -407,11 +525,11 @@ details.dd>summary .rt2{margin-left:auto;font:800 12px/1 var(--head);color:var(-
 
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheet-in"></div></div>
 
-<script src="sk-sign.js?v=5"></script>
-<script src="app.js?v=5"></script>
-<script src="map.js?v=5"></script>
-<script src="tools.js?v=5"></script>
-<script src="factory.js?v=5"></script>
+<script src="sk-sign.js?v=6"></script>
+<script src="app.js?v=6"></script>
+<script src="map.js?v=6"></script>
+<script src="tools.js?v=6"></script>
+<script src="factory.js?v=6"></script>
 <script src="../menu.js?v=3" defer></script>
 <script src="../install.js" defer></script>
 </body>

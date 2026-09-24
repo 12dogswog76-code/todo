@@ -19,7 +19,7 @@
 // v14: появился обработчик push. Без него уведомления не показывались вовсе:
 // воркер их исправно отправлял, браузер исправно получал, а показать было
 // некому — сюда доезжало событие, которое никто не слушал.
-const CACHE = 'moi-dela-v23';
+const CACHE = 'moi-dela-v24';
 // Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
 // страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
 // заново тянул около десяти мегабайт артов и значков. На хорошем канале это
@@ -31,7 +31,7 @@ const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.js
                 './todo-app.js', './money-app.js', './zzz-app.js',
                 './app.html', './app-shell.js', './app-news.js', './manifest-app.json',
                 // оболочка: арты плиток и шрифты (берутся из NTE)
-                './img/app/zzz.webp', './img/app/nte.webp', './img/app/ef.webp',
+                './img/app/zzz.webp', './img/app/nte.webp', './img/app/ef.webp', './img/app/mark.svg',
                 './nte/fonts/oswald-cyr.woff2', './nte/fonts/oswald-latin.woff2',
                 './nte/fonts/inter-cyr.woff2', './nte/fonts/inter-latin.woff2',
                 './menu.js', './install.js',

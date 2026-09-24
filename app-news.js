@@ -37,6 +37,29 @@
   }
   часы(); setInterval(часы, 15000);
 
+  // ── перенос из Chrome (только в окне alextask.exe) ─────────────────────────
+  // Окно на WebView2 держит своё хранилище. Кнопка просит окно прочитать
+  // localStorage Chrome с диска и положить сюда — отметки и коды облака.
+  const wv = window.chrome && window.chrome.webview;
+  if (wv) {
+    const b = $('imp');
+    b.hidden = false;
+    b.onclick = () => {
+      if (!confirm('Забрать данные сайта из Chrome? Ключи, которые есть в Chrome, заменят здешние. Дальше разделы синхронизируются через облако как обычно.')) return;
+      b.disabled = true; b.textContent = 'переношу…';
+      wv.postMessage('import-chrome');
+    };
+    wv.addEventListener('message', e => {
+      let d; try { d = JSON.parse(e.data); } catch (x) { return; }
+      if (d.import == null) return;
+      b.disabled = false;
+      if (d.error) { b.textContent = 'не вышло: ' + d.error; return; }
+      b.classList.add('ok');
+      b.textContent = 'перенесено ' + d.import + ' · ' + d.profile;
+      setTimeout(() => location.reload(), 1400);
+    });
+  }
+
   // ── каналы ─────────────────────────────────────────────────────────────────
   const имя = s => String(s || '').trim().replace(/^https?:\/\/t\.me\/(s\/)?/i, '').replace(/^@/, '').replace(/[/?#].*$/, '');
   const разобрать = s => String(s || '').split(/[\s,;]+/).map(имя).filter(x => /^[A-Za-z][A-Za-z0-9_]{3,40}$/.test(x));
