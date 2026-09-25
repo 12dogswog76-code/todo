@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v250';
+const APP_VER = 'v251';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -232,6 +232,9 @@ const ROLL = { hp:112, hpp:300, atk:19, atkp:300, def:15, defp:480,
 // Крит здесь не отдельная роль, а часть формулы: сквозной урон тоже критует,
 // и у разрывника криты учитываются внутри своей ветки.
 function guideRole(id, prof) {
+  // Оружейники (Кларет) — своя механика, гайд её не выражает: урон идёт от
+  // защиты, атаки нет вовсе, шанс крита выше 100% — это шанс двойного крита.
+  if (prof === 'armorer') return 'armorer';
   const g = guideOf(id);
   if (!g) return null;
   const eng = g.engines || [];
@@ -259,6 +262,7 @@ function agentRole(a, p) {
   const byGuide = a ? guideRole(a.id, pr) : null;
   if (byGuide) return byGuide;
   // запасной путь: гайда на агента нет (новый персонаж, файл не собран)
+  if (pr === 'armorer') return 'armorer';
   if (pr === 'rupture') return 'rupture';
   if (pr === 'support' || pr === 'stun' || pr === 'defense') return 'rec';
   const rec = (a && p) ? subsOf(a.id, p) : [];
@@ -287,6 +291,9 @@ const ROLE_MIX = {
 function dmgModel(role, t) {
   const dm = defMult(953, 0.2, t.penp || 0, t.pen || 0);   // средняя цель
   const el = 1 + (t.dmg || 0) / 100;
+  // Оружейник: носитель урона — защита; шанс крита не упирается в 100%,
+  // остаток идёт в шанс второго крита, поэтому без Math.min.
+  if (role === 'armorer') return (t.def || 1) * (1 + (t.cr || 0) / 100 * ((t.cd || 0) / 100)) * el * dm;
   const mix = ROLE_MIX[role] || ROLE_MIX.crit;
   const crit = 1 + Math.min(1, (t.cr || 0) / 100) * ((t.cd || 0) / 100);
   // все три слагаемых приводим к сопоставимому масштабу, отношения не меняются
@@ -301,6 +308,20 @@ function dmgModel(role, t) {
 // если добавить одну прокрутку. Нормируем к лучшей — она получает единицу.
 function statWeights(a, p) {
   const role = agentRole(a, p);
+  if (role === 'armorer') {
+    // Модель урона тут не годится: часть крит. урона игра переводит в шанс
+    // крита (коэффициент ~0.3–0.4, точно не известен), а сверх 100% шанс
+    // крита — это двойной крит. Порядок пользы задаём прямо, со слов игрока
+    // и по гайду prydwen: защита > шанс крита > крит. урон > пробивание.
+    // Плоская защита — примерно треть процентной прокрутки (15 против 4.8% от
+    // базы ~840). Атака и HP не дают ничего.
+    const out = {};
+    Object.keys(ROLL).forEach(k => { out[k] = 0; });
+    Object.assign(out, { defp: 1, def: 0.35, cr: 0.8, cd: 0.45, pen: 0.3 });
+    out._role = 'armorer';
+    out._id = a.id;
+    return out;
+  }
   if (role === 'rec') {
     // Урон у этих агентов не главное, считать его нечестно — берём приоритет
     // из гайда как есть. Криты сюда больше не подмешиваются: у Санны, например,
@@ -473,7 +494,8 @@ function suitRecommended(id, suitId) {
   return names.some(n => nameKey(n) === nameKey(s.en));
 }
 const ROLE_RU = { crit: 'урон с критами', anomaly: 'урон от аномалии',
-                  rupture: 'сквозной урон от здоровья', rec: 'по рекомендациям к сборке' };
+                  rupture: 'сквозной урон от здоровья', rec: 'по рекомендациям к сборке',
+                  armorer: 'урон от защиты (оружейник): защита > шанс крита > крит. урон' };
 function discHint(sc, d) {
   if (!sc) return '';
   return 'Оценка диска для этого агента: ' + sc.grade + ' (' + sc.pct + '%)\n' +
@@ -2077,7 +2099,7 @@ const BOSS_DEF = [
   { id: 2, n: 'много',   v: 1588 }
 ];
 // прибавки самого пятого диска на +15, значения из игры
-const D5 = { dmg: 0.30, atkp: 0.30, hpp: 0.30, penp: 0.24 };
+const D5 = { dmg: 0.30, atkp: 0.30, hpp: 0.30, defp: 0.48, penp: 0.24 };
 
 // множитель защиты: столько от урона доходит до цели
 function defMult(bossDef, shred, penRatio, flatPen) {
@@ -2095,15 +2117,18 @@ function fifthDisc(a, p, team, boss) {
   // Носитель урона: у разрывников он не атака, а здоровье. Сила атаки им не
   // даёт ничего, поэтому и сравнивать надо «HP 30%» против бонуса стихии.
   // Роль берётся из гайда с prydwen — там она видна по целям сборки.
-  const byHp = agentRole(a, p) === 'rupture';
+  const role5 = agentRole(a, p);
+  const byHp = role5 === 'rupture';
+  const byDef = role5 === 'armorer';     // у оружейника урон от защиты
+  const carrier = byHp ? 'hp' : byDef ? 'def' : 'atk';
   // Бафы команды на атаку разрывнику бесполезны: его урон считается от HP.
   // Пробивание защиты от поддержки работает в обоих случаях.
-  const tb = byHp ? { flat: 0, atkp: 0, shred: tb0.shred, n: tb0.n } : tb0;
+  const tb = (byHp || byDef) ? { flat: 0, atkp: 0, shred: tb0.shred, n: tb0.n } : tb0;
 
   const without = (p.discs || []).filter(d => d && d.slot !== 5);
   const T  = calcTotals(a, p, without);         // расчёт без пятого диска
   const TW = calcTotals(a, p, p.discs || []);   // расчёт со всеми дисками
-  const pt = byHp ? T._parts.hp : T._parts.atk;
+  const pt = T._parts[carrier] || T._parts.atk;
 
   // Итоговые характеристики из игры (p.cur) включают всё, чего наш расчёт не
   // знает: пассивки ядра, дополнительные способности, эффекты оружия и бонусы
@@ -2126,7 +2151,7 @@ function fifthDisc(a, p, team, boss) {
   const fDmg  = ((+fight.dmg  || 0) + (wf ? wf.dmg  : 0) + (sf ? sf.dmg  : 0)) / 100;
   const fPen  = ((+fight.penp || 0) + (wf ? wf.penp : 0) + (sf ? sf.penp : 0)) / 100;
 
-  const atkOwn = byHp ? real('hp', T.hp, TW.hp) : real('atk', T.atk, TW.atk);
+  const atkOwn = real(carrier, T[carrier], TW[carrier]);
   let affix    = real('dmg', T.dmg * 100, TW.dmg * 100) / 100;
   let penOwn   = real('penp', T.penp * 100, TW.penp * 100) / 100;
   const flatPen = real('pen', T.pen, TW.pen);
@@ -2140,7 +2165,7 @@ function fifthDisc(a, p, team, boss) {
   const affixAll = affix + (tb.dmg || 0);
   const penFlatAll = flatPen + (tb.pen || 0);
   // атака в бою: своё и боевые пассивки, потом множитель команды и её плоские прибавки
-  const atkOwnF = atkOwn + baseAtk * fAtkp;
+  const atkOwnF = atkOwn + (byDef || byHp ? 0 : baseAtk * fAtkp);
   const atkNow  = atkOwnF * (1 + tb.atkp) + tb.flat;
   const dm      = defMult(bd, tb.shred, penOwn, penFlatAll);
 
@@ -2148,14 +2173,14 @@ function fifthDisc(a, p, team, boss) {
   const now = dps(atkNow, affixAll, penOwn);
 
   // прибавка от диска считается от базы агента с оружием и ядром
-  const vAtk = dps((atkOwnF + baseAtk * (byHp ? D5.hpp : D5.atkp)) * (1 + tb.atkp) + tb.flat,
+  const vAtk = dps((atkOwnF + baseAtk * (byHp ? D5.hpp : byDef ? D5.defp : D5.atkp)) * (1 + tb.atkp) + tb.flat,
                    affixAll, penOwn);
   const vDmg = dps(atkNow, affixAll + D5.dmg, penOwn);
   const vPen = dps(atkNow, affixAll, penOwn + D5.penp);
 
   const list = [
     { k: 'dmg',  n: 'Бонус стихии 30%', v: vDmg },
-    { k: byHp ? 'hpp' : 'atkp', n: byHp ? 'HP 30%' : 'Сила атаки 30%', v: vAtk },
+    { k: byHp ? 'hpp' : byDef ? 'defp' : 'atkp', n: byHp ? 'HP 30%' : byDef ? 'Защита 48%' : 'Сила атаки 30%', v: vAtk },
     { k: 'penp', n: 'Пробивание 24%',   v: vPen }
   ].sort((x, y) => y.v - x.v);
 
@@ -2166,12 +2191,12 @@ function fifthDisc(a, p, team, boss) {
   // сколько защиты у цели осталось после всех снижений — по этому числу сразу
   // видно, есть ли ещё куда пробивать
   const defLeft = Math.max(0, bd * (1 - tb.shred) * (1 - penOwn) - penFlatAll);
-  return { list: list, best: best, lead: lead, atk: Math.round(atkNow), byHp: byHp,
+  return { list: list, best: best, lead: lead, atk: Math.round(atkNow), byHp: byHp, byDef: byDef,
            affix: Math.round(affixAll * 1000) / 10, dm: Math.round(dm * 1000) / 10,
            own: Math.round(affix * 1000) / 10, teamDmg: Math.round((tb.dmg || 0) * 100),
            pen: Math.round(penOwn * 1000) / 10, defLeft: Math.round(defLeft),
            bossDef: bd,
-           fromGame: cur.atk != null, fight: fight, wf: wf, sf: sf,
+           fromGame: cur[carrier] != null, fight: fight, wf: wf, sf: sf,
            team: tb, boss: (BOSS_DEF[boss] || BOSS_DEF[1]).n };
 }
 
@@ -2221,7 +2246,7 @@ function fifthHTML(a, p) {
     '<details class="d5fight"' + (hasFight ? ' open' : '') + '>' +
       '<summary>' + (hasFight ? 'вписано вручную' : 'уточнить вручную') + '</summary>' +
       '<div class="d5frow">' +
-      fld('atkp', r.byHp ? 'HP %' : 'атака %', '0') + fld('dmg', 'стихия %', '0') +
+      fld('atkp', r.byHp ? 'HP %' : r.byDef ? 'защита %' : 'атака %', '0') + fld('dmg', 'стихия %', '0') +
       fld('penp', 'пробой %', '0') +
       '<span class="d5note">' + (function () {
         const src = [];
@@ -2245,7 +2270,7 @@ function fifthHTML(a, p) {
       (near ? 'Разница с ближайшим вариантом всего ' + r.lead.toFixed(1) +
               '% — бери тот, где лучше доп. характеристики. '
             : 'Отрыв от второго варианта: ' + r.lead.toFixed(1) + '%. ') +
-      'Считано от твоих статов без пятого диска: ' + (r.byHp ? 'HP ' : 'атака ') + r.atk +
+      'Считано от твоих статов без пятого диска: ' + (r.byHp ? 'HP ' : r.byDef ? 'защита ' : 'атака ') + r.atk +
       ', бонус стихии ' + r.affix + '%' +
       (r.teamDmg ? ' (свои ' + r.own + ' + от команды ' + r.teamDmg + ')' : '') +
       ', пробивание ' + r.pen + '%. ' +
@@ -2256,6 +2281,8 @@ function fifthHTML(a, p) {
         : '') +
       (r.byHp ? 'Этот агент бьёт от здоровья, поэтому сила атаки и бафы команды на атаку ' +
                 'в сравнение не входят. ' : '') +
+      (r.byDef ? 'Этот агент бьёт от защиты, поэтому сила атаки и бафы команды на атаку ' +
+                 'в сравнение не входят. ' : '') +
       (r.fromGame ? 'Характеристики взяты из игры, то есть с пассивками ядра, оружия и комплектов.'
                   : 'Импорта не было — считано по справочнику, без пассивок.') +
       ' Крит в сравнение не входит: он множит все три варианта одинаково.' +
@@ -3429,7 +3456,7 @@ function applySheet() {
     if (v === '') delete p.goal[i.dataset.k]; else p.goal[i.dataset.k] = +v;
   });
   if (!p.manual) p.manual = {};
-  const calc = calcTotals(DB.byId[curId], p, p.discs);
+  const calc = nowTotals(DB.byId[curId], p);
   document.querySelectorAll('.curin').forEach(i => {
     const k = i.dataset.k, raw = i.value.replace(',', '.').replace('%', '').trim();
     if (raw === '') { delete p.manual[k]; return; }
@@ -3960,7 +3987,7 @@ const UP_SHOW = ['atk', 'cr', 'cd', 'ap', 'am', 'im', 'pen', 'penp', 'er'];
 function upDiff(a, p0, p1) {
   const T0 = calcTotals(a, p0, p0.discs), T1 = calcTotals(a, p1, p1.discs);
   const out = [];
-  UP_SHOW.forEach(k => {
+  (a && a.prof === 'armorer' ? ['def'].concat(UP_SHOW.filter(k => k !== 'atk')) : UP_SHOW).forEach(k => {
     const v0 = +T0[k] || 0, v1 = +T1[k] || 0, d = v1 - v0;
     if (Math.abs(d) < 0.05) return;
     const pct = !!GOAL_PCT[k] || k === 'cr' || k === 'cd';
@@ -4064,6 +4091,13 @@ function upHtml(id) {
       'усиливает пассивку, а характеристики не трогает.</div></details>';
 }
 
+// Характеристики «сейчас»: расчёт, где есть цифры из игры — они (см. gameStats).
+function nowTotals(a, p) {
+  const t = calcTotals(a, p, p.discs);
+  const G = gameStats(p);
+  if (G) Object.keys(G).forEach(k => { t[k] = G[k]; });
+  return t;
+}
 function calcTotals(a, p, discs) {
   const b = baseAt(a, p), w = weaponBonus(p), d = discSum(discs);
   const cb = coreBonusOf(a && a.id, p);   // прибавки от прокачанного ядра
@@ -6207,7 +6241,7 @@ function buildIssues(a, p) {
   }
 
   // 3. целевые значения: смотрим только заметный недобор
-  const T = calcTotals(a, p, p.discs);
+  const T = nowTotals(a, p);     // как в карточке: цифры игры, если есть
   Object.keys(g.goals || {}).forEach(k => {
     if (GOAL_NOCALC[k]) return;              // эти величины трекер не пересчитывает
     const lo = g.goals[k][0];
