@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v249';
+const APP_VER = 'v250';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2975,6 +2975,15 @@ function renderSheet() {
     const showCB = !!cbOpen;
     const nowT  = calcTotals(a, p, p.discs);
     const planT = calcTotals(a, planProg(p), planDiscs(p));
+    // Итог из игры (хроника HoYoLab) точнее нашего расчёта: в нём ядро,
+    // пассивки и механики, которых расчёт не знает (у Кларет — урон от защиты,
+    // атаки нет вовсе). «План» = цифра игры + разница, которую даёт расчёт.
+    const G = gameStats(p);
+    const calcNow = Object.assign({}, nowT);
+    if (G) Object.keys(G).forEach(k => {
+      nowT[k] = G[k];
+      planT[k] = G[k] + ((+planT[k] || 0) - (+calcNow[k] || 0));
+    });
     const T = curTab === 'plan' ? planT : nowT;
 
     h += '<div class="hhead">' +
@@ -3044,6 +3053,13 @@ function renderSheet() {
       ['def','Защита',0], ['penp','Процент пробивания',1], ['im','Импульс',0], ['pen','Пробивание',0],
       ['cr','Шанс крит. попадания',1], ['er','Восст. энергии',2], ['cd','Крит. урон',1], ['dmg','Бонус стихии',1]
     ];
+    if (G) {
+      // у кого в игре нет атаки (Кларет) — на её месте «Рассекающий урон»
+      if (G.atk == null && G.rend != null) rows[2] = ['rend', 'Рассекающий урон', 1];
+      else if (G.rend != null) rows.push(['rend', 'Рассекающий урон', 1]);
+      if (G.sheer != null) rows.push(['sheer', 'Сквозная сила', 0]);
+      if (p.game.er) rows[9] = ['er', p.game.er, 2];
+    }
     const pri = priOf(curId, p);        // жёлтая подсветка
     const mods = modifiersOf(curId, curTab === 'plan' ? planProg(p) : p);
     const modHint = Object.keys(mods.by).map(k => statName(k) + ': ' + mods.by[k]).join(', ');
@@ -3053,6 +3069,11 @@ function renderSheet() {
         ? '<button id="manReset" class="modbadge" style="cursor:pointer;border-color:var(--warn);' +
           'color:var(--warn)" title="Сейчас ' + manCount + ' значений вписаны руками и перекрывают ' +
           'расчёт. Нажми, чтобы вернуть расчётные.">↺ вписано вручную: ' + manCount + '</button>'
+        : '') +
+      (G && curTab === 'now'
+        ? '<span class="modbadge" style="border-color:var(--ok);color:var(--ok)" title="Цифры сняты из игры ' +
+          'через хронику HoYoLab ' + esc(new Date(p.game.t).toLocaleString('ru')) + ' и совпадают с текущей ' +
+          'сборкой. Поменяешь диск, уровень или движок руками — пойдёт наш расчёт до следующего импорта.">из игры</span>'
         : '') +
       '<button id="modBadge" class="modbadge" style="cursor:pointer" title="Сумма рекомендуемых ' +
         'доп. характеристик на дисках и их удачных улучшений — как в игре.' +
@@ -3104,10 +3125,14 @@ function renderSheet() {
       }
       const isPri = pri.indexOf(k) >= 0;
       h += '<div class="st' + cls + (man ? ' man' : '') + (isPri ? ' pri-stat' : '') + '">' +
-        '<span class="lab">' + (k === 'dmg' ? elIcon(el, 14) : statIcon(k, 13)) + esc(r[1]) + '</span>' +
+        '<span class="lab">' + (k === 'dmg' ? elIcon(el, 14) : statIcon(k === 'rend' ? 'sheer' : k, 13)) + esc(r[1]) + '</span>' +
         (curTab === 'now'
           ? '<input class="curin" data-k="' + k + '" value="' + esc(disp) +
-            '" title="' + esc(statHint(k, T, calcDisp, man)) + '">'
+            '" title="' + esc(G && G[k] != null && !man
+              ? 'Из игры (хроника HoYoLab): ' + calcDisp + '.' +
+                (calcNow[k] != null ? '\nНаш расчёт: ' + (isPct ? (+calcNow[k]).toFixed(1) + '%' : (isEr ? (+calcNow[k]).toFixed(2) : Math.round(calcNow[k]))) + '.' : '') +
+                '\nМожно вписать своё значение.'
+              : statHint(k, T, calcDisp, man)) + '">'
           : '<span class="val">' + esc(disp) + extra + '</span>') +
         '<input class="goalin" data-k="' + k + '" value="' +
           (goal == null ? '' : esc(goal)) + '" placeholder="Цель">' + bar + '</div>';
@@ -4186,8 +4211,26 @@ function hoyoPromo(lvl) {
 }
 
 // В блоке итоговых характеристик у хроники своя нумерация, короткая
+// 19 — сквозная сила у разрывников (Исюань), 28 — «Рассекающий урон» у
+// оружейников (Кларет: у неё атаки в хронике нет вовсе, урон от защиты).
+// 20 и 25 — их аналоги восстановления энергии: «адреналин» и «острота».
 const HOYO_STAT = { 1:'hp', 2:'atk', 3:'def', 4:'im', 5:'cr', 6:'cd',
-                    7:'am', 8:'ap', 9:'penp', 11:'er', 232:'pen' };
+                    7:'am', 8:'ap', 9:'penp', 11:'er', 19:'sheer', 20:'er', 25:'er',
+                    28:'rend', 232:'pen' };
+const HOYO_ER_NAME = { 20: 'Автонакопл. адреналина', 25: 'Автонакопл. остроты' };
+
+// Характеристики из игры верны ровно для той сборки, с которой их сняли.
+// Слепок сборки хранится рядом: пока он совпадает, карточка показывает цифры
+// игры; стоит поменять диск, уровень или движок руками — снова наш расчёт.
+function gameSig(p) {
+  const w = p.w || {};
+  return [p.lvl || 0, p.core || 0, p.mind || 0, w.id || 0, w.lvl || 0, w.phase || 1,
+    (p.discs || []).map(d => [d.slot, d.suit, d.lvl, d.mainP,
+      (d.subs || []).map(x => x.p + ':' + (x.l || 1)).join('.')].join('/')).sort().join(',')].join('|');
+}
+function gameStats(p) {
+  return p && p.game && p.game.st && p.game.sig === gameSig(p) ? p.game.st : null;
+}
 function hoyoNum(v) {
   const n = parseFloat(String(v == null ? '' : v).replace('%', '').replace(',', '.'));
   return isFinite(n) ? n : 0;
@@ -4281,6 +4324,8 @@ function applyHoyo(raw) {
     });
     if (cur.dmg == null) cur.dmg = 0;
     p.cur = cur;
+    const erId = Object.keys(HOYO_ER_NAME).filter(k => st[k] != null)[0];
+    p.game = { st: Object.assign({}, cur), sig: gameSig(p), t: Date.now(), er: erId ? HOYO_ER_NAME[erId] : '' };
   } else {
     const t = calcTotals(a, p, p.discs);
     p.cur = { hp: t.hp, atk: t.atk, def: t.def,
@@ -7468,7 +7513,9 @@ function toast(title, text, kind, life) {
 // сутки вместо тринадцати тысяч.
 const LS_AUTOIMP = LS + '_autoimp';
 const LS_AUTOCHK = LS + '_autochk';
-const AUTOIMP_EVERY = 3 * 3600 * 1000;    // полный импорт
+// С воркера 43 полный импорт занимает секунды, а не минуту, — можно чаще.
+const AUTOIMP_EVERY = 1 * 3600 * 1000;    // полный импорт
+const AUTOIMP_RETRY = 10 * 60 * 1000;     // повтор после сбоя
 const AUTOCHK_EVERY = 10 * 60 * 1000;     // лёгкая сверка
 const AUTOIMP_WAIT = 4000;
 function autoImpOn() { return !ui || ui.autoImp !== 0; }   // по умолчанию включён
@@ -7507,7 +7554,11 @@ async function autoImport(force) {
   const uid = localStorage.getItem(LS + '_uid') || '';
   if (!uid || !autoImpOn()) return;
   if (!force && Date.now() - autoImpAt() < AUTOIMP_EVERY) return;
+  // Метку ставим сразу (чтобы две вкладки не пошли одновременно), но если
+  // импорт сорвётся — сдвигаем так, чтобы повтор был через 10 минут, а не
+  // через час. Раньше один сбой хроники откладывал обновление на три часа.
   localStorage.setItem(LS_AUTOIMP, String(Date.now()));
+  const retrySoon = () => localStorage.setItem(LS_AUTOIMP, String(Date.now() - AUTOIMP_EVERY + AUTOIMP_RETRY));
 
   const who = $('whoAmI');
   if (who) who.classList.add('busy');
@@ -7521,6 +7572,7 @@ async function autoImport(force) {
     // когда сам нажмёт импорт.
     if (!d || d.error || !(d.avatars || []).length) {
       tst.set('Обновить не вышло', (d && d.error) || res.err || 'хроника не ответила', 'err', 6000);
+      retrySoon();
       return;
     }
     let n = 0;
@@ -7534,6 +7586,7 @@ async function autoImport(force) {
     scheduleSync();
     render();
     setNick(d.nick || '', uid);
+    if (curId && $('modal').classList.contains('open')) renderSheet();   // открытая карточка — сразу свежие цифры
     if (menuCur === 'enka') refreshAutoImp();
     tst.set('Аккаунт обновлён',
       n + ' ' + plural(n, 'агент', 'агента', 'агентов') +
@@ -7541,6 +7594,7 @@ async function autoImport(force) {
       'ok', 4500);
   } catch (e) {
     tst.set('Обновить не вышло', netMsg(e), 'err', 6000);
+    retrySoon();
   } finally {
     if (who) who.classList.remove('busy');
   }
