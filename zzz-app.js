@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v251';
+const APP_VER = 'v252';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3937,10 +3937,14 @@ function baseAt(a, p) {
   const pi = Math.max(0, Math.min(pr.length - 1, p.promo != null ? p.promo : Math.ceil(lvl / 10) - 1));
   const st = pr[pi] || {};
   const grow = k => (g[k] || 0) * (lvl - 1) / 10000;
+  // Поправка справочника по игре (см. baseFixFrom): у новых агентов рост
+  // характеристик в данных бывает временный — у Кларет защита вдвое ниже.
+  const fx = (ui && ui.baseFix && ui.baseFix[a.id]) || {};
+  const f = k => (+fx[k] > 0 ? +fx[k] : 1);
   return {
-    hp:  (b.hp || 0) + grow('hp')  + (st.hp || 0),
-    atk: (b.atk || 0) + grow('atk') + (st.atk || 0),
-    def: (b.def || 0) + grow('def') + (st.def || 0),
+    hp:  ((b.hp || 0) + grow('hp')  + (st.hp || 0)) * f('hp'),
+    atk: ((b.atk || 0) + grow('atk') + (st.atk || 0)) * f('atk'),
+    def: ((b.def || 0) + grow('def') + (st.def || 0)) * f('def'),
     im: b.im || 0, ap: b.ap || 0, am: b.am || 0,
     cr: b.cr || 500, cd: b.cd || 5000, er: b.er || 0, pen: b.pen || 0
   };
@@ -4310,6 +4314,22 @@ function applyBuddy(list) {
   save();
   return n;
 }
+// Хроника (воркер 44+) присылает базу агента — HP, атаку, защиту без дисков и
+// движка. Если справочник расходится с игрой больше чем на 3%, запоминаем
+// множитель: расчёт планов и прикидки дальше идут от игровой базы.
+function baseFixFrom(a, p, base) {
+  if (!base || !a) return;
+  const ours = baseAt(a, Object.assign({}, p, { lvl: p.lvl, promo: p.promo }));
+  const fx = (ui.baseFix = ui.baseFix || {});
+  const was = fx[a.id] || {};
+  const now = {};
+  [['1', 'hp'], ['2', 'atk'], ['3', 'def']].forEach(([pid, k]) => {
+    const g = hoyoNum(base[pid]);
+    const o = ours[k] / (+was[k] > 0 ? +was[k] : 1);     // без прежней поправки
+    if (g > 0 && o > 0 && Math.abs(g / o - 1) > 0.03) now[k] = Math.round(g / o * 10000) / 10000;
+  });
+  if (Object.keys(now).length) fx[a.id] = now; else delete fx[a.id];
+}
 function applyHoyo(raw) {
   const av = hoyoNorm(raw);
   const a = DB.byId[av.id];
@@ -4343,6 +4363,7 @@ function applyHoyo(raw) {
   }));
 
   p.disc = discSum(p.discs);
+  baseFixFrom(a, p, av.base);
 
   // Итоговые характеристики берём прямо из игры — это точнее любого расчёта.
   // Если хроника их не прислала, считаем сами, как при импорте с Enka.

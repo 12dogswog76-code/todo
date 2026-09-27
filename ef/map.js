@@ -10,8 +10,9 @@
 // роняют браузер (проверено на карте NTE), canvas рисует их мгновенно.
 // Масштаб — через размер отрисовки, а не transform: иначе мыло.
 //
-// Тайлов на диске может быть не все: их докачивают отдельным скриптом
-// (ef\Исходники\eft-tiles.js в консоли браузера). Где тайла нет — рисуется контур ячейки.
+// Тайлы: 854 из 854 (26.09.2026). У четырёх зон Улина (map02_lv006–009) они
+// лежат не в levelmapgrids, а в levelmapchunks/<зона>/h_<зона>_i_j.png — это
+// учтено в ef\Исходники\eft-tiles.js. Где тайла нет — рисуется контур ячейки.
 
 (function () {
 'use strict';
@@ -33,6 +34,13 @@ const выкл = () => EF.взять('ef-map-off', null) || Object.assign({}, П
 const собрано = () => EF.взять('ef-map-found', {});
 let скрыватьСобранное = EF.взять('ef-map-hidefound', false);
 let поиск = '';
+// Этаж: null — все сразу; 0 — поверхность; −1, −2 — подземные ярусы; 1, 2 —
+// верхние (tierIndex из данных игры). Своей подложки у ярусов в открытых
+// данных нет, поэтому переключатель фильтрует точки, а тайлы остаются.
+let ЭТАЖ = null;
+const этаж = т => (т[5] || 0);
+const наЭтаже = т => ЭТАЖ === null || этаж(т) === ЭТАЖ;
+const ЭТАЖИ = { '-2': 'ярус −2', '-1': 'ярус −1', '0': 'поверхность', '1': 'ярус +1', '2': 'ярус +2' };
 
 function карта() { return МИР.карты[К]; }
 function ключТочки(т) { return карта().id + ':' + т[4]; }
@@ -126,6 +134,7 @@ function рисовать() {
   к.точки.forEach(т => {
     const тип = МИР.типы[т[2]];
     if (off['g:' + тип.г] || off['t:' + т[2]]) return;
+    if (!наЭтаже(т)) return;
     const взят = !!f[ключТочки(т)];
     if (взят && скрыватьСобранное) return;
     const [sx, sy] = наЭкран(т[0], -т[1]);
@@ -297,7 +306,9 @@ function колонка() {
   const к = карта();
   const off = выкл(), f = собрано();
   const по = {};
+  const этажи = [...new Set(к.точки.map(этаж))].sort((a, b) => a - b);
   к.точки.forEach(т => {
+    if (!наЭтаже(т)) return;
     const о = по[т[2]] || (по[т[2]] = { n: 0, взято: 0 });
     о.n++;
     if (f[ключТочки(т)]) о.взято++;
@@ -307,6 +318,10 @@ function колонка() {
     '<button class="' + (i === К ? 'on' : '') + '" data-mmap="' + i + '" style="flex:1">' + эк(m.имя) + '</button>').join('') + '</div>' +
     '<select class="srch" id="mzone" style="width:100%;margin-bottom:8px"><option value="">— перейти к зоне —</option>' +
     к.уровни.map((л, i) => '<option value="' + i + '">' + эк(л.имя) + ' · тайлов ' + л.есть.length + '/' + л.тайлы.length + '</option>').join('') + '</select>' +
+    (этажи.length > 1 ? '<div class="seg" style="width:100%;margin-bottom:8px;flex-wrap:wrap">' +
+      '<button class="' + (ЭТАЖ === null ? 'on' : '') + '" data-mfloor="all" style="flex:1">все этажи</button>' +
+      этажи.slice().reverse().map(e => '<button class="' + (ЭТАЖ === e ? 'on' : '') + '" data-mfloor="' + e + '" style="flex:1" title="' +
+        к.точки.filter(т => этаж(т) === e).length + ' точек">' + эк(ЭТАЖИ[e] || ('ярус ' + (e < 0 ? '−' + (-e) : '+' + e))) + '</button>').join('') + '</div>' : '') +
     '<input class="srch" id="mq" placeholder="поиск: сундук, феррий, рогач…" value="' + эк(поиск) + '" style="width:100%;min-width:0;margin-bottom:8px">' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
       '<button class="btn sm ' + (скрыватьСобранное ? '' : 'gh') + '" data-mhide="1">' + (скрыватьСобранное ? 'собранное скрыто' : 'скрыть собранное') + '</button>' +
@@ -354,10 +369,11 @@ EF.раздел('map', {
 });
 
 document.addEventListener('click', e => {
-  const т = e.target.closest('[data-mmap],[data-mg],[data-mt],[data-mz],[data-mfound],[data-mhide],[data-mall],[data-mnone]');
+  const т = e.target.closest('[data-mfloor],[data-mmap],[data-mg],[data-mt],[data-mz],[data-mfound],[data-mhide],[data-mall],[data-mnone]');
   if (!т || !МИР) return;
   const д = т.dataset;
-  if (д.mmap != null) { К = +д.mmap; вид = null; EF.перерисовать(); return; }
+  if (д.mfloor != null) { ЭТАЖ = д.mfloor === 'all' ? null : +д.mfloor; закрытьПопап(); обновитьКолонку(); рисовать(); return; }
+  if (д.mmap != null) { К = +д.mmap; ЭТАЖ = null; вид = null; EF.перерисовать(); return; }
   if (д.mz != null) {
     if (+д.mz === 0) вписать(рамка()); else зум(+д.mz, W / 2, H / 2);
     рисовать(); return;

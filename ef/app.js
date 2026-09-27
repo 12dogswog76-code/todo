@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v8';
+const APP_VER = 'v9';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -962,9 +962,9 @@ try { localStorage.removeItem('ef-sk-keys'); } catch (e) {}   // старые к
 const СВОЙСТВА = {
   equip_attr_agi: 'Ловкость', equip_attr_str: 'Сила', equip_attr_wisd: 'Интеллект', equip_attr_will: 'Воля',
   equip_attr_atk: 'АТК', equip_attr_max_hp: 'ОЗ', equip_attr_all_damage_taken_scalar: 'Снижение получаемого урона',
-  equip_attr_combo_skill_damage_increase: 'Урон навыка комбо', equip_attr_damage_to_broken_unit_increase: 'Урон по сломленным',
-  equip_attr_normal_skill_damage_increase: 'Урон боевого навыка', equip_attr_physical_and_spellInfliction_enhance: 'Физ. и магические эффекты',
-  equip_attr_ultimate_sp_gain_scalar: 'Накопление энергии ульты', equip_fire_and_natural_damage_increase: 'Урон теплом и природой',
+  equip_attr_combo_skill_damage_increase: 'УРН комбонавыка', equip_attr_damage_to_broken_unit_increase: 'УРН по сломленным врагам',
+  equip_attr_normal_skill_damage_increase: 'УРН боевого навыка', equip_attr_physical_and_spellInfliction_enhance: 'Физ. и магические эффекты',
+  equip_attr_ultimate_sp_gain_scalar: 'Накопление энергии суперспособности', equip_fire_and_natural_damage_increase: 'Урон теплом и природой',
   equip_main: 'Основной атрибут', equip_sub: 'Второй атрибут',
 };
 const СЛОТЫ = [['bodyEquip', 'Броня'], ['armEquip', 'Перчатки'], ['firstAccessory', 'Амуниция 1'], ['secondAccessory', 'Амуниция 2']];
