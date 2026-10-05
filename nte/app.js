@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v78';
+const APP_VER = 'v79';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -4601,9 +4601,13 @@ function statEnRu(t) {
 // Бонус сетки Консоли приходит строкой вида «+8% CRIT Rate per Type III Module
 // equipped». Переводим шаблоном: смысл у неё всегда один.
 function gridRu(t) {
-  const m = String(t || '').match(/^([+\-]?[\d.]+%?)\s*(.+?)\s*per\s*Type\s*([IVX\d]+)\s*Module/i);
+  // На ntebuild между числом и знаком процента стоит пробел («6 % CRIT Rate»),
+  // а у урона стихий в конце ещё «Bonus» — раньше такая строка не переводилась.
+  const m = String(t || '').match(/^([+\-]?[\d.]+)\s*(%?)\s*(.+?)\s*per\s*Type\s*([IVX\d]+)\s*Module/i);
   if (!m) return String(t || '');
-  return m[1] + ' ' + statEnRu(m[2]) + ' за каждый модуль типа ' + m[3];
+  const стат = m[3].replace(/\s+Bonus$/i, '');
+  const имя = statEnRu(стат) !== стат ? statEnRu(стат) : (m[2] ? statEnRu(стат + '%') : стат);
+  return '+' + m[1].replace(/^\+/, '') + m[2] + ' ' + имя.replace(/, %$/, '') + ' за каждый модуль типа ' + m[4];
 }
 // Потолки. Жёсткий в игре один — крит-шанс: всё, что выше 100%, пропадает.
 // Остальные «пределы» — это сколько даёт главный стат одного модуля S на
@@ -4641,25 +4645,28 @@ function buildHtml(slug, g) {
     const v = capOne(k);
     if (v == null) return '';
     const имя = { cr:'Шанс крита', cd:'Крит. урон', atk:'Атака, %', hp:'ОЗ, %', def:'Защита, %' }[k];
-    return '<tr><td>' + statIco(k) + esc(имя) + '</td><td class="num">' + v + '%</td>' +
-      '<td>' + (CAP_HARD[k] ? 'потолок ' + CAP_HARD[k] + '%' : '—') + '</td></tr>';
+    return '<div class="capt' + (CAP_HARD[k] ? ' hard' : '') + '"><u>' + statIco(k) + esc(имя) + '</u>' +
+      '<b>' + v + '%</b><i>' + (CAP_HARD[k] ? 'потолок в игре ' + CAP_HARD[k] + '%' : 'без потолка') + '</i></div>';
   }).join('');
+  // Раскладка: три списка в ряд одной высоты, под ними бонус сетки и плитки
+  // «сколько даёт модуль» во всю ширину. Раньше всё лежало в авто-сетке:
+  // таблица на пять строк попадала в узкую колонку, подписи рвались по
+  // словам, а рядом оставалась пустая клетка.
   return '<div class="bld">' +
     (ms.length ? '<div class="box"><b>Главные статы модулей</b>' + ряд(ms, 1) + '</div>' : '') +
     (ss.length ? '<div class="box"><b>Доп. статы, по важности</b>' + ряд(ss, 2) + '</div>' : '') +
     ((nb.skillOrder || []).length
       ? '<div class="box"><b>Порядок прокачки умений</b>' + ряд(nb.skillOrder, 1) + '</div>' : '') +
-    (nb.grid ? '<div class="box"><b>Бонус сетки Консоли</b>' +
-      '<div class="verdict" style="margin:7px 0 0">' + esc(gridRu(nb.grid)) + '</div></div>' : '') +
-    '<div class="box"><b>Сколько даёт один модуль S</b>' +
-      '<table class="tbl" style="margin-top:7px"><tr><th>стат</th><th>главный стат, макс</th>' +
-      '<th>потолок в игре</th></tr>' + пределы + '</table>' +
-      '<div class="hint" style="margin-top:6px">Значения из таблиц игры: главный стат ' +
-      'модуля S на 20-м уровне. Крит-шанс выше 100% не работает — лишнее пропадает, ' +
-      'и если часть шанса даёт бафф команды, своих статов держи ровно столько, ' +
-      'чтобы с баффом выходило 100.</div>' +
+    (nb.grid ? '<div class="box bfull gridb"><b>Бонус сетки Консоли</b>' +
+      '<span>' + esc(gridRu(nb.grid)) + '</span></div>' : '') +
+    '<div class="box bfull"><b>Сколько даёт один модуль S</b>' +
+      '<em>главный стат, 20-й уровень</em>' +
+      '<div class="caps">' + пределы + '</div>' +
+      '<div class="hint" style="margin-top:8px">Значения из таблиц игры. Крит-шанс выше 100% не работает — ' +
+      'лишнее пропадает; если часть шанса даёт бафф команды, своих статов держи столько, ' +
+      'чтобы с баффом выходило ровно 100.</div>' +
     '</div>' +
-    (critNote(g) ? '<div class="box" style="grid-column:1/-1"><div class="verdict">' +
+    (critNote(g) ? '<div class="box bfull"><div class="verdict">' +
       critNote(g) + '</div></div>' : '') +
   '</div>' +
   '<div class="hint">Порядок статов и умений — разбор с ntebuild' +

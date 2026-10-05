@@ -841,9 +841,26 @@
   .rdy-s b{color:#f87171;font-family:var(--mono);font-weight:600}
   .rdy-s.ok span{color:var(--ok)}
   /* что собирать: коробки одного уровня в несколько колонок */
-  .bld{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px;
-    align-items:start}
-  .bld .box{padding:10px 11px}
+  .bld{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;align-items:stretch}
+  .bld .box{padding:11px 12px;margin:0}
+  .bld .box.bfull{grid-column:1/-1}
+  .bld .box > em{font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--tx3);display:block;margin-top:3px}
+  /* бонус сетки — одной строкой: подпись слева, сам бонус справа */
+  .bld .gridb{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .bld .gridb span{font-size:13px;font-weight:700;color:var(--acc);padding:5px 12px;border-radius:9px;
+    background:hsla(140,70%,60%,.1);border:1px solid hsla(140,70%,60%,.3)}
+  /* «сколько даёт модуль» — пять плиток в ряд вместо узкой таблицы */
+  .caps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:9px}
+  .capt{padding:9px 10px;border-radius:10px;background:#00000040;border:1px solid var(--line-soft);min-width:0}
+  .capt u{display:flex;align-items:center;gap:6px;text-decoration:none;font-size:11px;color:var(--tx2);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .capt b{display:block;font-family:var(--disp);font-size:22px;font-weight:600;line-height:1.1;
+    color:var(--gold);margin-top:5px}
+  .capt i{display:block;font-style:normal;font-size:10px;color:var(--tx3);margin-top:3px}
+  .capt.hard{border-color:#fbbf2455}
+  .capt.hard i{color:var(--warn)}
+  @media(max-width:900px){ .bld{grid-template-columns:1fr} .caps{grid-template-columns:repeat(2,minmax(0,1fr))} }
   .bld .box > b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2)}
   .pri{list-style:none;margin:7px 0 0;padding:0;display:grid;gap:3px}
   .pri li{display:flex;align-items:center;gap:7px;font-size:12px;padding:4px 7px;
@@ -1412,7 +1429,7 @@
 
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
-<script src="app.js?v=78" defer></script>
+<script src="app.js?v=79" defer></script>
 <script src="../menu.js?v=3" defer></script>
 <script src="../install.js" defer></script>
 </body>
