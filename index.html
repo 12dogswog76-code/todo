@@ -808,6 +808,189 @@
   .tag.amt { color: #8fd6a8; font-weight: 600; }
   .tag.amt.off { opacity: .5; text-decoration: line-through; }
   body.light .tag.amt { color: #2e8f5e; }
+
+  /* ═════ 17.10.2026: общий стандарт alextask (как NTE, Endfield, оболочка) ═════
+     Только оформление, поведение не трогали. Блок действует на тёмную тему:
+     у светлой свои правила выше (body.light …), они остаются как были.
+     Шрифты — те же файлы, что у NTE (nte/fonts), с урезанным набором знаков. */
+  @font-face{font-family:Oswald;src:url(nte/fonts/oswald-latin.woff2) format("woff2");font-weight:600;font-display:swap;
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:Oswald;src:url(nte/fonts/oswald-cyr.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  @font-face{font-family:Inter;src:url(nte/fonts/inter-latin.woff2) format("woff2");font-weight:400 800;font-display:swap;
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:Inter;src:url(nte/fonts/inter-cyr.woff2) format("woff2");font-weight:400 800;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  :root{
+    --bg:#111214; --pan:#1a1b1f; --pan2:#202227; --in:#0d0e11;
+    --line:hsla(0,0%,100%,.10); --line-soft:hsla(0,0%,100%,.06); --line-hard:hsla(0,0%,100%,.20);
+    --tx:#f0f0f6; --tx2:#8d90a2; --tx3:#555869;
+    --acc:#4ade80; --gold:#ffb800; --warn:#ffb800; --bad:#f87171;
+    --disp:Oswald,"Arial Narrow",Impact,sans-serif;
+    --body:Inter,"Segoe UI",Roboto,system-ui,sans-serif;
+    --mono:ui-monospace,"Cascadia Mono","Segoe UI Mono",Consolas,"Roboto Mono",monospace;
+    --glass:inset 0 0 40px hsla(0,0%,100%,.02);
+  }
+  body:not(.light){
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(900px 520px at 0% -10%,#4ade8014,transparent 70%),
+      radial-gradient(circle,hsla(0,0%,100%,.035) 1px,transparent 1.4px);
+    background-size:auto,22px 22px;
+    background-attachment:fixed;
+    color:var(--tx); font-family:var(--body);
+  }
+  body:not(.light) .hint{color:var(--tx2)}
+  body:not(.light) .empty{color:var(--tx3);font-size:10px;font-weight:800;letter-spacing:.26em;text-transform:uppercase}
+  /* шапка */
+  body:not(.light) h1{font-family:var(--disp);font-weight:600;font-size:28px;letter-spacing:.08em;text-transform:uppercase;
+    display:flex;align-items:center;gap:12px;margin-bottom:4px;line-height:1.1}
+  body:not(.light) h1::before{content:'';width:4px;height:24px;border-radius:999px;background:linear-gradient(180deg,var(--acc),#e8ff3a)}
+  body:not(.light) .stats{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--tx2);margin-bottom:16px}
+  body:not(.light) #cloudDot{width:8px;height:8px;margin-left:2px;background:var(--tx3)}
+  body:not(.light) #cloudDot.cloud-ok{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+  body:not(.light) #cloudDot.cloud-err{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+  body:not(.light) #cloudDot.cloud-sync{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+
+  /* кнопки-чипы: верхняя панель, категории, быстрые сроки */
+  body:not(.light) .topbar button, body:not(.light) .chip, body:not(.light) .pill, body:not(.light) .emtab{
+    background:var(--pan);border:1px solid var(--line-soft);border-radius:9px;color:var(--tx2);
+    font-family:var(--body);font-size:12px;font-weight:600;transition:border-color .15s,color .15s,background .15s,transform .15s}
+  body:not(.light) .topbar button{padding:6px 12px}
+  body:not(.light) .topbar button:hover, body:not(.light) .chip:hover{border-color:var(--line-hard);color:var(--tx);transform:translateY(-1px)}
+  body:not(.light) .chip.on, body:not(.light) .emtab.on{background:#4ade8014;border-color:#4ade8066;color:var(--acc)}
+  body:not(.light) .chip.cat:hover{border-color:var(--cc);color:var(--cc)}
+  body:not(.light) .pill:focus, body:not(.light) .pill.on, body:not(.light) .pill.ico.on,
+  body:not(.light) .pill.ico:focus-within{border-color:#4ade8088}
+  body:not(.light) .pill.ico.on input{color:var(--acc)}
+  body:not(.light) .pill.ico input{color:var(--tx2)}
+  body:not(.light) select.pill{background:var(--pan)}
+  body:not(.light) .topbar button.pulse{border-color:var(--acc);color:var(--tx);animation-name:pulseAcc}
+  @keyframes pulseAcc{0%,100%{box-shadow:none}50%{box-shadow:0 0 14px 4px #4ade8066}}
+  body:not(.light) #addMoreBtn{color:var(--tx2)}
+
+  /* добавление задачи */
+  body:not(.light) .addbox{background:var(--pan2);border:1px solid var(--line);border-radius:14px;box-shadow:var(--glass);padding:13px}
+  body:not(.light) #taskInput, body:not(.light) #searchInput, body:not(.light) .editInput,
+  body:not(.light) #ioText, body:not(.light) #aiInput{background:var(--in);border:1px solid var(--line);color:var(--tx);font-family:var(--body)}
+  body:not(.light) #taskInput{border-radius:11px}
+  body:not(.light) #searchInput{border-radius:11px}
+  body:not(.light) #taskInput:focus, body:not(.light) #searchInput:focus, body:not(.light) .editInput:focus{border-color:#4ade8099}
+  body:not(.light) .editInput{border-color:#4ade8066}
+  body:not(.light) #addBtn{background:var(--acc);color:#0b0c0e;border-radius:11px;font-size:20px}
+  body:not(.light) #addBtn:hover{background:#6ee79a}
+  body:not(.light) #catMgr{background:var(--in);border-color:var(--line);border-radius:11px}
+  body:not(.light) #emojiGrid{background:var(--pan);border-color:var(--line)}
+  body:not(.light) .em:hover{background:var(--pan2)}
+  body:not(.light) .em.sel{background:#4ade801f;outline-color:#4ade8088}
+  body:not(.light) .cmitem{background:var(--pan);border-color:var(--line-soft);color:var(--tx)}
+
+  /* список */
+  body:not(.light) .task{background:var(--pan);border:1px solid var(--line-soft);border-radius:13px;box-shadow:var(--glass);
+    transition:opacity .15s,border-color .15s}
+  body:not(.light) .task:hover{border-color:var(--line)}
+  body:not(.light) .task.pinned{border-color:#ffb80066;background:linear-gradient(110deg,#ffb8000c,var(--pan) 40%)}
+  body:not(.light) .task.flash{animation-name:flashAcc}
+  @keyframes flashAcc{0%,100%{box-shadow:none}50%{box-shadow:0 0 22px 6px #4ade8066;border-color:var(--acc)}}
+  body:not(.light) .check, body:not(.light) .cbox{border-color:var(--line-hard);border-radius:7px}
+  body:not(.light) .check:hover, body:not(.light) .cbox:hover{border-color:var(--acc);color:#4ade8066}
+  body:not(.light) .task.done .check, body:not(.light) .citem.cdone .cbox{background:var(--acc);border-color:var(--acc);color:#0b0c0e}
+  body:not(.light) .title{color:var(--tx)}
+  body:not(.light) .tag, body:not(.light) .due{background:hsla(0,0%,100%,.05);border-radius:6px;font-weight:600}
+  body:not(.light) .due{font-family:var(--mono);font-size:10.5px}
+  body:not(.light) .dates, body:not(.light) .stage .stageDate{font-family:var(--mono);color:var(--tx3)}
+  body:not(.light) .due.overdue{background:#f871711f;color:var(--bad)}
+  body:not(.light) .due.today{background:#ffb8001a;color:var(--warn)}
+  body:not(.light) .due.timer{background:#4ade8014;color:var(--acc)}
+  body:not(.light) .tag.amt{color:var(--gold);font-family:var(--mono)}
+  body:not(.light) .citem{color:var(--tx)}
+  body:not(.light) .dragh, body:not(.light) .mv, body:not(.light) .arcb, body:not(.light) .del{color:var(--tx3)}
+  body:not(.light) .mv:hover, body:not(.light) .arcb:hover, body:not(.light) .clr:hover, body:not(.light) .pin:hover{background:var(--pan2);color:var(--tx)}
+  body:not(.light) .del:hover{color:var(--bad);background:#f8717118}
+  body:not(.light) .palette{background:var(--pan2);border-color:var(--line);border-radius:11px}
+
+  /* баннеры, фильтры, низ страницы */
+  body:not(.light) .topbanner{background:var(--pan2);border:1px solid var(--line);border-radius:13px;color:var(--tx)}
+  body:not(.light) .topbanner button{background:var(--acc);color:#0b0c0e;font-weight:700;border-radius:9px}
+  body:not(.light) .topbanner button.x{background:none;color:var(--tx2)}
+  body:not(.light) #toggleDone{color:var(--tx2)}
+  body:not(.light) .iobar{gap:6px}
+  body:not(.light) .iobar button{text-decoration:none;background:var(--pan);border:1px solid var(--line-soft);border-radius:9px;
+    color:var(--tx2);font-weight:600;font-size:12px;padding:6px 12px;transition:border-color .15s,color .15s}
+  body:not(.light) .iobar button:hover{border-color:var(--line-hard);color:var(--tx)}
+  body:not(.light) #ioPanel, body:not(.light) #syncPanel, body:not(.light) #statsPanel{background:var(--pan2);border:1px solid var(--line);
+    border-radius:14px;box-shadow:var(--glass)}
+  body:not(.light) .iorow button, body:not(.light) .iorow label{background:var(--pan);border:1px solid var(--line-soft);color:var(--tx);font-weight:600;font-size:12px}
+  body:not(.light) .iorow button:hover, body:not(.light) .iorow label:hover{border-color:var(--line-hard);background:var(--pan)}
+  body:not(.light) .iorow .danger{background:#f871711f;border-color:#f8717166;color:var(--bad)}
+  body:not(.light) #ioMsg{color:var(--acc)}
+  body:not(.light) .statbox{background:var(--pan);border:1px solid var(--line-soft);border-radius:11px;box-shadow:var(--glass);text-align:left}
+  body:not(.light) .statnum{font-family:var(--mono);color:var(--gold);font-size:21px}
+  body:not(.light) .statlbl{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tx2)}
+
+  /* окна поверх: гайд, приветствие, вопрос про уведомления — тёмные, как панели в NTE */
+  body:not(.light) #guideOverlay, body:not(.light) #askNotif, body:not(.light) #welcome{background:#000000b3;backdrop-filter:blur(3px)}
+  body:not(.light) #guideOverlay.dock{background:transparent;backdrop-filter:none}
+  body:not(.light) #guideCard, body:not(.light) #askCard, body:not(.light) .wcard{background:var(--pan2);color:var(--tx);
+    border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px #000c,var(--glass)}
+  body:not(.light) #guideCard h2, body:not(.light) #askCard h2, body:not(.light) .wcard h2{color:var(--tx);font-family:var(--disp);
+    font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:19px}
+  body:not(.light) #guideCard h3{color:var(--gold)}
+  body:not(.light) #guideCard p, body:not(.light) #guideCard li, body:not(.light) #askCard p, body:not(.light) .wcard p{color:#c4c6d2}
+  body:not(.light) #guideClose, body:not(.light) #askYes, body:not(.light) #wYes, body:not(.light) .bmbtn{background:var(--acc);color:#0b0c0e !important}
+  body:not(.light) #guideClose:hover, body:not(.light) #askYes:hover, body:not(.light) #wYes:hover{background:#6ee79a}
+  body:not(.light) #askLater, body:not(.light) #wLater, body:not(.light) .bmcopy{background:var(--pan);color:var(--tx);border:1px solid var(--line)}
+  body:not(.light) #askLater:hover, body:not(.light) #wLater:hover, body:not(.light) .bmcopy:hover{background:var(--pan);border-color:var(--line-hard)}
+  body:not(.light) .qsel{background:var(--in);color:var(--tx);border-color:var(--line)}
+  body:not(.light) #bmMsg{color:var(--acc)}
+  body:not(.light) .gbub{background:var(--acc);color:#0b0c0e}
+  body:not(.light) .gbub::before{border-bottom-color:var(--acc)}
+
+  /* ИИ-помощник */
+  body:not(.light) .aimsg.u{background:#4ade8012;border-color:#4ade8044}
+  body:not(.light) .aimsg.a{background:var(--pan);border-color:var(--line-soft)}
+  body:not(.light) #aiSend{background:var(--acc);border-color:var(--acc);color:#0b0c0e}
+  body:not(.light) .aihead select, body:not(.light) .aihead button, body:not(.light) #aiMic{background:var(--pan);border-color:var(--line);color:var(--tx)}
+  html{background:var(--bg)}
+  html:has(body.light){background:#f4f5f8}
+  /* остальные окна-справки и кнопки в них */
+  body:not(.light) #ogCard, body:not(.light) #bgCard, body:not(.light) .subgcard{background:var(--pan2);color:var(--tx);
+    border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px #000c,var(--glass)}
+  body:not(.light) #ogCard h2, body:not(.light) #bgCard h2, body:not(.light) .subgcard h2{color:var(--tx);font-family:var(--disp);
+    font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:19px}
+  body:not(.light) #ogCard h3, body:not(.light) .subgcard h3{color:var(--gold)}
+  body:not(.light) #ogCard p, body:not(.light) #ogCard li, body:not(.light) #bgCard li,
+  body:not(.light) .subgcard p, body:not(.light) .subgcard li{color:#c4c6d2}
+  body:not(.light) .subg, body:not(.light) #basicsGuide{background:#000000b3}
+  body:not(.light) .subg.dock, body:not(.light) #basicsGuide.dock{background:transparent}
+  body:not(.light) #ogClose, body:not(.light) #bgClose, body:not(.light) .subgback,
+  body:not(.light) #wNext, body:not(.light) #wDone{background:var(--acc);color:#0b0c0e;border:0}
+  body:not(.light) #ogClose:hover, body:not(.light) #bgClose:hover, body:not(.light) .subgback:hover,
+  body:not(.light) #wNext:hover, body:not(.light) #wDone:hover{background:#6ee79a}
+  body:not(.light) #wSkip, body:not(.light) #wNotif, body:not(.light) #wInstall{background:var(--pan);color:var(--tx);border:1px solid var(--line)}
+  body:not(.light) #wSkip:hover, body:not(.light) #wNotif:hover, body:not(.light) #wInstall:hover{border-color:var(--line-hard)}
+  body:not(.light) .faqlink{background:var(--pan);border-color:var(--line-soft);color:var(--tx)}
+  body:not(.light) .faqlink:hover{background:var(--pan);border-color:#4ade8066}
+  body:not(.light) .topbar button.on, body:not(.light) .topbar button.mbell.has{border-color:#4ade8066;color:var(--acc);background:#4ade8014}
+  body:not(.light) .aibtn.aibtn{border-color:#b197fc55;color:#cbb6ff}
+  /* нижние плашки «отменить» и «выбрано» */
+  body:not(.light) #undoBar, body:not(.light) #selBar{background:var(--pan2);border-color:var(--line);border-radius:12px;box-shadow:0 12px 34px #000b}
+  body:not(.light) #undoBar button{color:var(--acc)}
+  body:not(.light) #selBar button, body:not(.light) #selBar select{background:var(--pan);border-color:var(--line-soft)}
+  body:not(.light) #selBar button:hover{border-color:#4ade8088}
+  body:not(.light) .task.selected{outline-color:var(--acc)}
+  body:not(.light) .editNote{background:var(--in);border-color:var(--line)}
+  body:not(.light) .editNote:focus{border-color:#4ade8099}
+  body:not(.light) .editOk{background:var(--acc);color:#0b0c0e}
+  body:not(.light) .note{color:var(--tx2)}
+  body:not(.light) .ckbar{background:hsla(0,0%,100%,.06)}
+  body:not(.light) .ckbarf, body:not(.light) .scbar{background:linear-gradient(90deg,var(--acc),#e8ff3a)}
+  body:not(.light) .scbar{background:linear-gradient(0deg,var(--acc),#b8f56a)}
+  body:not(.light) .schart-t{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tx2)}
+  body:not(.light) .scatrow{border-color:var(--line-soft);color:var(--tx2)}
+  body:not(.light) .scatrow b{color:var(--gold);font-family:var(--mono)}
+  body:not(.light) .catdiv{background:var(--line)}
+  /* ссылки внизу */
+  body:not(.light) .footer a{color:var(--tx3)}
+  body:not(.light) .footer a:hover{color:var(--tx2)}
 </style>
 </head>
 <body>

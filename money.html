@@ -185,18 +185,126 @@
     .sumgrid { grid-template-columns: repeat(2, 1fr); }
     .idet { padding-left: 0; }
   }
+
+  /* ═════ 17.10.2026: общий стандарт alextask (как NTE, Endfield, оболочка) ═════
+     Только оформление, поведение не трогали. Блок действует на тёмную тему:
+     у светлой свои правила выше (body.light …), они остаются как были.
+     Шрифты — те же файлы, что у NTE (nte/fonts), с урезанным набором знаков. */
+  @font-face{font-family:Oswald;src:url(nte/fonts/oswald-latin.woff2) format("woff2");font-weight:600;font-display:swap;
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:Oswald;src:url(nte/fonts/oswald-cyr.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  @font-face{font-family:Inter;src:url(nte/fonts/inter-latin.woff2) format("woff2");font-weight:400 800;font-display:swap;
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:Inter;src:url(nte/fonts/inter-cyr.woff2) format("woff2");font-weight:400 800;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  :root{
+    --bg:#111214; --pan:#1a1b1f; --pan2:#202227; --in:#0d0e11;
+    --line:hsla(0,0%,100%,.10); --line-soft:hsla(0,0%,100%,.06); --line-hard:hsla(0,0%,100%,.20);
+    --tx:#f0f0f6; --tx2:#8d90a2; --tx3:#555869;
+    --acc:#4ade80; --gold:#ffb800; --warn:#ffb800; --bad:#f87171;
+    --disp:Oswald,"Arial Narrow",Impact,sans-serif;
+    --body:Inter,"Segoe UI",Roboto,system-ui,sans-serif;
+    --mono:ui-monospace,"Cascadia Mono","Segoe UI Mono",Consolas,"Roboto Mono",monospace;
+    --glass:inset 0 0 40px hsla(0,0%,100%,.02);
+  }
+  body:not(.light){
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(900px 520px at 0% -10%,#4ade8014,transparent 70%),
+      radial-gradient(circle,hsla(0,0%,100%,.035) 1px,transparent 1.4px);
+    background-size:auto,22px 22px;
+    background-attachment:fixed;
+    color:var(--tx); font-family:var(--body);
+  }
+  body:not(.light) .hint{color:var(--tx2)}
+  body:not(.light) .empty{color:var(--tx3);font-size:10px;font-weight:800;letter-spacing:.26em;text-transform:uppercase}
+  html{background:var(--bg)}
+  html:has(body.light){background:#f4f5f8}
+  body:not(.light) a{color:var(--acc)}
+  /* шапка */
+  body:not(.light) h1{font-family:var(--disp);font-weight:600;font-size:28px;letter-spacing:.08em;text-transform:uppercase;gap:12px;line-height:1.1}
+  body:not(.light) h1::before{content:'';width:4px;height:24px;border-radius:999px;background:linear-gradient(180deg,var(--acc),#e8ff3a);order:-1}
+  body:not(.light) h1 .backlink{font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:600;font-size:12px}
+  body:not(.light) h1 .backlink a{color:var(--tx2);text-decoration:none;border:1px solid var(--line-soft);background:var(--pan);border-radius:9px;padding:6px 11px}
+  body:not(.light) h1 .backlink a:hover{color:var(--tx);border-color:var(--line-hard)}
+  body:not(.light) #cloudDot{width:8px;height:8px;background:var(--tx3)}
+  body:not(.light) #cloudDot.ok{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+  body:not(.light) #cloudDot.err{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+  body:not(.light) #cloudDot.syncing{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+  body:not(.light) .topline{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--tx2);margin-bottom:16px}
+  /* вкладки — как вкладки NTE */
+  body:not(.light) .tabs{background:hsla(0,0%,100%,.03);border:1px solid var(--line-soft);border-radius:13px;padding:5px;gap:4px}
+  body:not(.light) .tabs button{background:none;border:1px solid transparent;border-radius:9px;color:var(--tx2);
+    font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.12em;text-transform:uppercase;padding:7px 14px;transition:color .15s,border-color .15s,background .15s}
+  body:not(.light) .tabs button:hover{color:var(--tx)}
+  body:not(.light) .tabs button.on{background:#4ade8014;border-color:#4ade8066;color:var(--acc);box-shadow:0 0 14px #4ade8022}
+  body:not(.light) #editModeBtn{font-family:var(--body);font-size:12px;letter-spacing:0;text-transform:none;border-color:var(--line-soft)}
+  body:not(.light) #editModeBtn.on{border-color:#ffb80088;color:var(--warn);background:#ffb80014}
+  /* коробки */
+  body:not(.light) .card{background:var(--pan);border:1px solid var(--line-soft);border-radius:14px;box-shadow:var(--glass)}
+  body:not(.light) .card > b:first-child{color:var(--gold);font-family:var(--disp);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:14px}
+  body:not(.light) .period.plan{border-style:dashed;border-color:var(--line-hard)}
+  body:not(.light) .sumgrid{text-align:left}
+  body:not(.light) .sumgrid > div{background:var(--pan2);border:1px solid var(--line-soft);border-radius:11px;padding:9px 11px}
+  body:not(.light) .sumgrid .lbl{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tx2)}
+  body:not(.light) .sumgrid .val{font-family:var(--mono);font-size:18px;color:var(--gold)}
+  body:not(.light) .val.pos{color:var(--acc)} body:not(.light) .val.neg{color:var(--bad)} body:not(.light) .val.mid{color:var(--warn)}
+  body:not(.light) .phead b{font-family:var(--disp);font-weight:600;font-size:16px;letter-spacing:.06em;text-transform:uppercase}
+  body:not(.light) .phead .inc, body:not(.light) .phead .spent, body:not(.light) .phead .rest{font-family:var(--mono);font-size:12px}
+  body:not(.light) .phead .inc{color:var(--acc)} body:not(.light) .phead .spent{color:var(--bad)} body:not(.light) .phead .rest{color:var(--tx2)}
+  body:not(.light) .gchip{border-color:var(--line-soft);background:hsla(0,0%,100%,.03);color:var(--tx);border-radius:8px}
+  body:not(.light) .vsum, body:not(.light) .irow .isum{font-family:var(--mono);color:var(--gold)}
+  body:not(.light) .vcell{font-family:var(--mono);color:var(--tx2)}
+  body:not(.light) .vhead{color:var(--tx3);font-size:9.5px;font-weight:700;letter-spacing:.14em}
+  body:not(.light) .vfoot{border-color:var(--line);font-family:var(--mono);color:var(--gold)}
+  body:not(.light) .vfoot span:nth-child(2){font-family:var(--body);color:var(--tx2)}
+  body:not(.light) .vinf, body:not(.light) .infbtn.on{color:var(--acc);border-color:#4ade8088}
+  body:not(.light) .item, body:not(.light) .rowline{border-color:var(--line-soft)}
+  body:not(.light) .paychk{border-color:var(--line-hard);border-radius:7px}
+  body:not(.light) .paychk.on{background:var(--acc);border-color:var(--acc);color:#0b0c0e}
+  body:not(.light) .item.dragover{border-top-color:var(--acc)}
+  body:not(.light) .yearhead{font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2)}
+  body:not(.light) .yearhead .cnt{font-family:var(--body);text-transform:none;letter-spacing:0}
+  body:not(.light) .yearhead .line{background:linear-gradient(90deg,var(--line),transparent)}
+  /* поля и кнопки */
+  body:not(.light) input, body:not(.light) select{background:var(--in);border-color:var(--line);color:var(--tx);font-family:var(--body)}
+  body:not(.light) input.nmfield{background:transparent;border-color:transparent}
+  body:not(.light) input.nmfield:hover, body:not(.light) input.nmfield:focus{background:var(--in);border-color:var(--line)}
+  body:not(.light) input.amt{font-family:var(--mono)}
+  body:not(.light) input:focus, body:not(.light) select:focus{border-color:#4ade8099}
+  body:not(.light) button.act{background:var(--acc);color:#0b0c0e;font-weight:700;border-radius:9px}
+  body:not(.light) button.act:hover{background:#6ee79a}
+  body:not(.light) button.ghost{border-color:var(--line-hard);color:var(--tx2);border-radius:10px;font-weight:600}
+  body:not(.light) button.ghost:hover{border-color:#4ade8088;color:var(--tx)}
+  body:not(.light) .xbtn.confirm{border-color:var(--bad);color:var(--bad)}
+  body:not(.light) .delper{border-color:var(--line)}
+  body:not(.light) .delper:hover{border-color:var(--bad)}
+  body:not(.light) .needinc{background:#ffb80010;border-color:#ffb80077}
+  body:not(.light) .needinc b{color:var(--warn)}
+  body:not(.light) .planbadge{border-color:#ffb80088;color:var(--warn)}
+  body:not(.light) .miniask{background:var(--pan2);border-color:var(--line);border-radius:12px}
+  body:not(.light) .miniask .yes{background:var(--acc);color:#0b0c0e;font-weight:700}
+  body:not(.light) .miniask .no{border-color:var(--line);color:var(--tx2)}
+  /* цели и график */
+  body:not(.light) .gbar{background:hsla(0,0%,100%,.06);height:8px;border-radius:999px}
+  body:not(.light) .gfill{background:linear-gradient(90deg,var(--acc),#e8ff3a);border-radius:999px}
+  body:not(.light) .cbar .bi{background:#4ade8040;border-color:var(--acc)}
+  body:not(.light) .cbar .bs{background:#f8717133;border-color:var(--bad)}
+  body:not(.light) .clbl{color:var(--tx3);font-family:var(--mono)}
+  /* низ страницы */
+  body:not(.light) .footerbar button{background:var(--pan);border-color:var(--line-soft);color:var(--tx2);border-radius:9px;font-weight:600;font-size:12px}
+  body:not(.light) .footerbar button:hover{border-color:var(--line-hard);color:var(--tx)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>💰 Мои деньги <span id="cloudDot" title="облако не подключено"></span><span class="backlink"><a href="./">← к задачам</a></span></h1>
+  <h1>Мои деньги <span id="cloudDot" title="облако не подключено"></span><span class="backlink"><a href="./">← к задачам</a></span></h1>
   <div class="topline" id="topline"></div>
 
   <div class="tabs">
-    <button data-tab="periods" class="on">📆 Периоды</button>
-    <button data-tab="fixed">🔁 Постоянные</button>
-    <button data-tab="goals">🎯 Цели</button>
-    <button data-tab="chart">📊 График</button>
+    <button data-tab="periods" class="on">Периоды</button>
+    <button data-tab="fixed">Постоянные</button>
+    <button data-tab="goals">Цели</button>
+    <button data-tab="chart">График</button>
     <button id="editModeBtn" title="Включи, чтобы редактировать: появятся все поля. Выключи — чистый просмотр.">✎ Изменения</button>
   </div>
 
@@ -209,7 +317,7 @@
 
   <div id="tab-fixed" style="display:none">
     <div class="card">
-      <b>🔁 Постоянные платежи</b>
+      <b>Постоянные платежи</b>
       <div class="hint" style="margin-top:2px">Автоматически добавляются в каждый новый период. ✎ у строки — быстрая правка одного платежа; добавить новый можно в поле снизу.</div>
       <div id="tplList" style="margin-top:8px"></div>
       <div class="addrow">
@@ -224,7 +332,7 @@
 
   <div id="tab-goals" style="display:none">
     <div class="card">
-      <b>🎯 Цели и накопления</b>
+      <b>Цели и накопления</b>
       <div class="hint" style="margin-top:2px">Цель = сколько хочешь накопить. Отложил деньги — впиши сумму и нажми ＋ (снял с накоплений — ➖). Прогресс-бар покажет, сколько уже собрано.</div>
       <div id="goalList" style="margin-top:10px"></div>
       <div class="addrow">
@@ -237,7 +345,7 @@
 
   <div id="tab-chart" style="display:none">
     <div class="card">
-      <b>📊 Поступления и выплаты по периодам</b>
+      <b>Поступления и выплаты по периодам</b>
       <div class="chartrow" id="chart"></div>
       <div class="hint">Зелёное — поступило, красное — сумма трат периода. Последние 14 периодов.</div>
     </div>
@@ -257,7 +365,7 @@
   </div>
 
   <div class="card" id="notifPanel">
-    <b>🔔 Напоминания о выплатах</b>
+    <b>Напоминания о выплатах</b>
     <div class="hint" style="margin-top:4px">За день до каждой выплаты текущего периода (по полю «📅 день») придёт push — <b>даже при закрытом сайте</b>. Включай на том устройстве, куда хочешь получать (например, только на телефоне) — другие устройства получать не будут. Оплаченные (✓) не напоминаются.</div>
     <div class="iorow">
       <button class="act" id="mpushOn">Включить на этом устройстве</button>
