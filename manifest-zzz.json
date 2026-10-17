@@ -1,7 +1,7 @@
 {
-  "name": "ZZZ — трекер",
+  "name": "ZZZ",
   "short_name": "ZZZ",
-  "description": "Трекер Zenless Zone Zero: агенты, сборки, крутки, эндгейм",
+  "description": "Zenless Zone Zero: агенты, сборки, крутки, эндгейм",
   "lang": "ru",
   "start_url": "/zzz.html",
   "scope": "/zzz.html",

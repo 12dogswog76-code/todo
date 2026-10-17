@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v79';
+const APP_VER = 'v80';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -40,6 +40,7 @@ let SKL = {};
 let BRIEF = {};
 // что изменилось в данных с прошлого прогона сборщика
 let CHANGES = null;
+let BUILT_NB = '', BUILT_ART = '';   // даты прогона build-nte-build и build-nte-art — для окна «Обновление данных»
 
 // ── перевод текстов с prydwen ──────────────────────────────────────────────
 // Сами тексты приезжают с сайта по-английски и при каждом новом прогоне
@@ -146,7 +147,7 @@ const TABS = [
   ['espers', 'Эсперы'], ['arcs', 'Оружие'], ['carts', 'Картриджи'],
   ['tier', 'Тир-лист'], ['teams', 'Команды'], ['ban', 'События'],
   ['codes', 'Коды'], ['city', 'Город'], ['map', 'Карта'],
-  ['mech', 'Механики']
+  ['bid', 'Аукцион'], ['mech', 'Механики']
 ];
 
 const EL_RU = { Anima:'Анима', Chaos:'Хаос', Cosmos:'Космос',
@@ -240,6 +241,7 @@ async function load() {
   SDB = sdb || null;
   NB = (nb && nb.a) || {};
   ART = (art && art.a) || {};
+  BUILT_NB = (nb && nb.built) || ''; BUILT_ART = (art && art.built) || '';
   SKL = (sk && sk.a) || {};
   BRIEF = (sk && sk.brief) || {};
   CHANGES = ch || null;
@@ -281,14 +283,17 @@ function drawTabs() {
 // Теперь на такой случай в теле появляется сообщение с самой ошибкой.
 function draw() {
   const t = state.tab;
-  $('q').style.display = (t === 'mech') ? 'none' : '';
+  $('q').style.display = (t === 'mech' || t === 'bid') ? 'none' : '';
   // На карте всё лишнее ужимается: страница шире 1560, шапка тоньше, строка
   // фильтров схлопывается — счётчик точек переезжает в угол самой карты.
   document.body.classList.toggle('mapmode', t === 'map');
   const one = {
     espers: drawEspers, arcs: drawArcs, carts: drawCarts, tier: drawTier,
     teams: drawTeams, ban: drawBanners, codes: drawCodes, city: drawCity,
-    map: drawMap, mech: drawMech
+    map: drawMap, mech: drawMech,
+    // «Раз, два, продано!» живёт в bid.js: своя логика и свои данные (nte-bid.json)
+    bid: () => window.NTEBID ? window.NTEBID.draw()
+      : ($('filters').innerHTML = '', $('body').innerHTML = '<div class="empty">bid.js не загрузился</div>')
   }[t];
   if (!one) return;
   try { return one(); }
@@ -5028,6 +5033,7 @@ const ИНСТРУМЕНТЫ = [
   { id: 'pulls', имя: 'крутки',      под: 'сколько до гаранта и хватит ли' },
   { id: 'bak',   имя: 'мои данные',  под: 'сохранить файлом и восстановить' },
   { id: 'stat',  имя: 'скрины',      под: 'характеристики из снимков экрана' },
+  { id: 'upd',   имя: 'обновление',  под: 'команды сбора данных и их свежесть' },
 ];
 
 function открытьИнструмент(t) {
@@ -5038,6 +5044,7 @@ function открытьИнструмент(t) {
   else if (t === 'pulls') showPulls();
   else if (t === 'bak') showBak();
   else if (t === 'stat') showOcrBulk();
+  else if (t === 'upd') showFresh();
   else return;
   колонкаИнструментов(t);
 }
@@ -5701,7 +5708,7 @@ function showFresh() {
     : ((GUIDE && GUIDE.codes && GUIDE.codes.updated) || '');
   сброситьПанель(); $('sheetIn').innerHTML =
     '<div class="sh-body">' +
-      '<div class="sh-title"><h2>Откуда данные<i>и когда собирались</i></h2>' +
+      '<div class="sh-title"><h2>Обновление данных<i>откуда данные, когда собирались и как обновить</i></h2>' +
         '<div style="margin-left:auto"><button class="x" id="close">✕ закрыть</button></div>' +
       '</div>' +
       '<div class="box">' +
@@ -5710,20 +5717,93 @@ function showFresh() {
       freshRow('Оружие, картриджи, модули', GEAR && GEAR.built, 'build-nte-db.ps1', 'таблицы игры') +
       freshRow('Тир-лист, сборки, команды', GUIDE && GUIDE.built, 'nte-pryd.js в браузере', 'с prydwen.gg') +
       freshRow('Баннеры', GUIDE && GUIDE.built, 'nte-pryd.js в браузере', 'с prydwen.gg') +
+      freshRow('Пробуждения, роли', BUILT_NB, 'build-nte-build.ps1', 'с ntebuild.com') +
+      freshRow('Точки карты', SDB && SDB.built, 'build-nte-map.ps1', 'со StarDB') +
+      freshRow('Крупные арты скинов', BUILT_ART, 'build-nte-art.ps1', 'только с ключом -Всё') +
       freshRow('Коды', codes,
         codesLive ? (codesLive.cached ? 'воркер, из кэша' : 'воркер, только что') : 'воркер не ответил',
         'список кодов' + (codesLive && codesLive.updated ? ' · на источнике: ' + codesLive.updated : '')) +
       '</tbody></table></div>' +
       '<div class="hint">Автоматически обновляются только коды. Всё остальное — ровно то, ' +
-      'что собрано в последний прогон: после патча запусти <b>обновить-nte.ps1</b> ' +
-      'в папке сайта — он прогонит все сборщики и выложит результат.</div>' +
+      'что собрано в последний прогон: порядок обновления — ниже.</div>' +
     '</div>' +
+    updHtml() +
     changesHtml() +
     '</div>';
   $('sheet').classList.add('on');
   $('sheet').scrollTop = 0;
   document.body.style.overflow = 'hidden';
   if ($('close')) $('close').onclick = close;
+  $('sheetIn').querySelectorAll('.up-copy').forEach(b => b.onclick = async () => {
+    try { await navigator.clipboard.writeText(b.dataset.cmd); b.textContent = 'скопировано'; }
+    catch (e) { b.textContent = 'выдели и скопируй'; }
+    setTimeout(() => { b.textContent = 'копировать'; }, 2000);
+  });
+}
+// ── обновление данных: команды ─────────────────────────────────────────────
+// Тот же порядок и та же подача, что в обслуживании ZZZ: шаг, когда нужен,
+// команды с местом запуска и кнопкой «копировать», ниже — что именно делает.
+// Порядок важен: сначала prydwen (стихии и роли build-nte-db.ps1 берёт из
+// nte-guide.json), потом сборщики, выкладка последней.
+const NTE_DIR = 'F:\\Claude cowork\\сайт';
+function upLine(cmd, where) {
+  return '<div class="up-c"><i class="up-lab">' + esc(where) + '</i><code>' + esc(cmd) + '</code>' +
+    '<button class="fb up-copy" data-cmd="' + esc(cmd) + '">копировать</button></div>';
+}
+function upStep(title, when, lines, note) {
+  return '<div class="up-row"><div class="up-h"><b>' + title + '</b>' + (when ? '<span>' + esc(when) + '</span>' : '') + '</div>' +
+    lines.map(l => upLine(l[0], l[1])).join('') +
+    (note ? '<div class="hint" style="margin:5px 0 0">' + note + '</div>' : '') + '</div>';
+}
+function updHtml() {
+  const gAge = daysAgo(GUIDE && GUIDE.built), dAge = daysAgo(DB && DB.built);
+  const todo = [];
+  if (gAge != null && gAge > 14) todo.push('Тир-лист и сборки с prydwen — ' + gAge + ' дн. назад: начни с шага 1.');
+  if (dAge != null && dAge > 14) todo.push('Данные из игры — ' + dAge + ' дн. назад: шаг 2.');
+  const ps = 'PowerShell';
+  let n = 0;
+  return '<div class="cap"><b>Как обновить</b><span></span><em>по порядку</em></div>' +
+  '<div class="box up">' +
+    (todo.length ? '<div class="up-todo">' + todo.map(esc).join('<br>') + '</div>'
+                 : '<div class="up-ok">Всё свежее, после патча — по шагам ниже.</div>') +
+    upStep(++n + '. Тир-лист, сборки, баннеры, команды, коды', 'вручную, ~3 мин, первым', [
+      ["fetch('https://alextask.ru/nte/nte-pryd.js?v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(eval)", 'консоль браузера'],
+      [NTE_DIR + '\\nte\\nte-guide.json', 'сохранить сюда']],
+      'Открой <a href="https://www.prydwen.gg/neverness-to-everness/characters" target="_blank" rel="noopener">' +
+      'список эсперов на prydwen</a> → <b>F12</b> → вкладка <b>Console</b> → вставь первую строку, Enter. ' +
+      'Сайт закрыт проверкой Cloudflare, поэтому сбор идёт изнутри открытой вкладки. Счётчик в консоли, ' +
+      'пара минут на всех эсперов; результат сам ляжет в буфер — сохрани его в файл из второй строки, заменив старый ' +
+      '(Блокнот → Ctrl+V → Сохранить как, кодировка UTF-8). Буфер пустой — в той же консоли <code>copy(__nte)</code>. ' +
+      'Первой строкой скрипт пишет версию — сверь, что свежая. Шаг первый, потому что стихии и роли сборщик ' +
+      'из шага 2 берёт отсюда.') +
+    upStep(++n + '. Всё остальное и выкладка', 'после каждого патча, ~5 мин', [
+      ['cd "' + NTE_DIR + '"; .\\обновить-nte.ps1', ps]],
+      'Прогоняет по очереди: <b>build-nte-db.ps1</b> — эсперы, оружие, картриджи, модули, город, пробуждения, ' +
+      'описания умений и картинки из таблиц игры и вики; <b>build-nte-build.ps1</b> — приоритет пробуждений, ' +
+      'роли, статы и бонус сетки с ntebuild.com; <b>build-nte-map.ps1</b> — точки карты со StarDB; в конце ' +
+      '<b>deploy-zzz.ps1</b> — выкладка на сайт. Упавший шаг не останавливает остальные, в конце сводка. ' +
+      'Чаще всего падает сеть — просто запусти ещё раз, скачанное не перекачивается.') +
+    upStep(++n + '. Полное обновление', 'новые скины или перерисовали город', [
+      ['cd "' + NTE_DIR + '"; .\\обновить-nte.ps1 -Всё', ps]],
+      'То же самое плюс <b>build-nte-art.ps1</b> (крупные арты скинов и баннеров) и <b>build-nte-tiles.ps1</b> ' +
+      '(подробный слой карты 51×51). Ещё полчаса и около 300 МБ трафика — каждый патч не нужно.') +
+    upStep(++n + '. Ключи', 'по ситуации', [
+      ['cd "' + NTE_DIR + '"; .\\обновить-nte.ps1 -БезВыкладки', ps],
+      ['cd "' + NTE_DIR + '"; .\\обновить-nte.ps1 -Свежее', ps]],
+      '<b>-БезВыкладки</b> — собрать и проверить локально, выложить потом шагом 6. <b>-Свежее</b> — не брать ' +
+      'таблицы игры из суточного кэша: нужен, когда патч вышел в тот же день, что и прошлый прогон.') +
+    upStep(++n + '. Один сборщик отдельно', 'если упал только он', [
+      ['cd "' + NTE_DIR + '\\nte"; .\\build-nte-db.ps1', ps],
+      ['cd "' + NTE_DIR + '\\nte"; .\\build-nte-build.ps1', ps],
+      ['cd "' + NTE_DIR + '\\nte"; .\\build-nte-map.ps1', ps]],
+      'Запускаются из папки <b>nte</b>. После них — выкладка шагом 6. Список «Что приехало в прошлый прогон» ' +
+      'ниже пишет build-nte-db.ps1: сравнивает свежие данные со снимком прошлого раза.') +
+    upStep(++n + '. Только выложить', 'менялся только код', [
+      ['cd "' + NTE_DIR + '"; .\\go.ps1 -OnlyDeploy -SkipWorkflows', ps]],
+      'Без сборщиков. После выкладки страница обновится сама; если нет — Ctrl+F5, номер версии в шапке должен подрасти.') +
+    '<div class="hint">Аукцион («Раз, два, продано!», файл <b>nte-bid.json</b>) собирается из таблиц игры не ' +
+      'скриптом, а вручную через Claude: цены и вероятности меняются только с новым сезоном аукциона.</div>' +
+  '</div>';
 }
 // ── синхронизация отметок между устройствами ───────────────────────────────
 // Всё, что ты отмечаешь на сайте — свои характеристики, уровни для планировщика,

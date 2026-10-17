@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v252';
+const APP_VER = 'v253';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1620,6 +1620,15 @@ function artZoomStyle(a, kind) {
   if (!v || v === 1) return '';
   return ' style="--zoom:' + v + ';--zorig:' + (z.orig || 'top center') + '"';
 }
+// v253: широкие арты (Ремиэлла с крыльями — 1929×1200) в карточке с contain
+// ужимались до полоски посередине. Если картинка шире 1.2 к 1, карточка
+// заполняется по высоте (cover), бока с крыльями обрезаются — персонаж
+// по центру. Событие load не всплывает, поэтому слушаем на перехвате.
+document.addEventListener('load', e => {
+  const el = e.target;
+  if (!el || el.tagName !== 'IMG' || el.dataset.kind !== 'hero') return;
+  el.classList.toggle('wideart', el.naturalWidth > el.naturalHeight * 1.2);
+}, true);
 // Порядок, в котором пробуем картинку: сначала webp (старые агенты), потом png
 // (новые — webp средствами Windows не записать), в конце полный арт.
 // Раньше возвращался только webp, и у Кларет с Рокси плитка была пустой.
@@ -5794,7 +5803,7 @@ function drawMaint() {
 
   h += maintCmd(++n + '. Только выложить', 'если правился лишь код',
     'cd "' + SITE_DIR + '"; .\\go.ps1 -OnlyDeploy -SkipWorkflows',
-    'Пропускает досбор. Годится, когда данные уже собраны, а изменился сам трекер.');
+    'Пропускает досбор. Годится, когда данные уже собраны, а изменился только код.');
 
   h += '</div>';
   box.innerHTML = h;

@@ -1393,6 +1393,106 @@
     .ta img.p{width:56px;height:56px}
     .ta span{font-size:9.5px}
   }
+
+
+  /* окно «Обновление данных» — команды как в обслуживании ZZZ */
+  .up .up-todo{font-size:11.5px;line-height:1.6;color:var(--tx2);background:#ffb8000f;border:1px solid #ffb80033;border-radius:10px;padding:7px 10px;margin-bottom:10px}
+  .up .up-ok{font-size:11.5px;color:var(--acc);margin-bottom:10px}
+  .up-row{margin-bottom:13px}
+  .up-h{display:flex;align-items:baseline;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+  .up-h b{font-size:12.5px;color:var(--tx)}
+  .up-h span{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px}
+  .up-c{display:flex;align-items:stretch;gap:6px;margin-bottom:4px}
+  .up-lab{flex:0 0 120px;font-style:normal;font-size:9.5px;color:var(--tx3);text-align:right;align-self:center;text-transform:uppercase;letter-spacing:.3px}
+  .up-c code{flex:1;min-width:0;background:#0b0b0e;border:1px solid var(--line);border-radius:8px;padding:6px 9px;
+    font-family:var(--mono);font-size:11.5px;color:var(--tx);overflow-x:auto;white-space:nowrap}
+  .up-copy{flex:none;white-space:nowrap}
+  .up code{font-family:var(--mono);font-size:11px}
+  @media(max-width:700px){ .up-c{flex-wrap:wrap} .up-lab{flex-basis:100%;text-align:left} .up-c code{flex-basis:100%} }
+
+  /* ═════ v80: вкладка «Аукцион» (bid.js) — «Раз, два, продано!» ═════ */
+  .bk-q{display:inline-block;flex:none;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--qc)}
+  .bk-red{--qc:#ff4d4d}.bk-orange{--qc:#ffb800}.bk-purple{--qc:#b57bff}
+  .bk-blue{--qc:#4aa8ff}.bk-green{--qc:#4ade80}.bk-white{--qc:#c8c8d0}
+  .bk-dim{color:var(--tx3);font-size:11px;font-style:normal}
+  .bk-ctl{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .bk-wait{color:var(--tx2);font-size:12px}
+  .bk-ok{color:var(--acc)} .bk-warn{color:var(--warn)}
+  .bk-h{display:block;font-size:12.5px;color:var(--tx);margin-bottom:6px}
+  .bk-in{width:100%;background:var(--pan);border:1px solid var(--line);border-radius:9px;color:var(--tx);
+    padding:7px 10px;font:inherit;font-size:12.5px;outline:none}
+  .bk-in:focus{border-color:var(--acc)}
+  .bk-in.sm{width:120px;padding:5px 8px}
+  .bk-lb{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--tx2);margin-bottom:6px}
+  .bk-res{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:10px;align-items:start}
+  .bk-res .box{margin:0}
+  .bk-board{position:relative;width:100%;aspect-ratio:var(--W)/var(--H);border-radius:8px;
+    background-color:#0d0d10;background-image:
+      linear-gradient(90deg,hsla(0,0%,100%,.06) 1px,transparent 1px),
+      linear-gradient(180deg,hsla(0,0%,100%,.06) 1px,transparent 1px);
+    background-size:calc(100% / var(--W)) calc(100% / var(--H))}
+  .bk-pc{position:absolute;box-sizing:border-box;padding:2px;border:1px solid var(--qc);border-radius:5px;
+    background:linear-gradient(160deg,color-mix(in srgb,var(--qc) 22%,transparent),color-mix(in srgb,var(--qc) 6%,transparent));
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .bk-pimg{width:100%;height:100%;object-fit:contain}
+  .bk-sum{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .bk-kpi b{display:block;font-family:var(--disp);font-size:22px;font-weight:600;color:var(--gold);letter-spacing:.02em}
+  .bk-kpi span{font-size:10.5px;color:var(--tx2)}
+  .bk-line,.bk-pl,.bk-sum .hint{grid-column:1/-1;font-size:11.5px;color:var(--tx2)}
+  .bk-pl{display:flex;flex-direction:column;gap:3px;max-height:260px;overflow:auto}
+  .bk-pl div{display:flex;align-items:center;gap:4px}
+  .bk-pl i{color:var(--tx);font-style:normal}
+  .bk-pl em{margin-left:auto;font-style:normal;font-family:var(--mono);color:var(--tx3);font-size:11px}
+  .bk-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .bk-own{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:7px}
+  .bk-o{display:flex;align-items:center;gap:9px;background:var(--pan);border:1px solid var(--line-soft);border-radius:11px;padding:6px 8px}
+  .bk-o.on{border-color:#ff4d4d66;background:linear-gradient(120deg,#ff4d4d12,var(--pan))}
+  .bk-oi{flex:none;width:46px;height:46px;display:flex;align-items:center;justify-content:center}
+  .bk-ic{max-width:46px;max-height:46px;object-fit:contain;display:block}
+  .bk-ic.sm{max-width:26px;max-height:26px}
+  .bk-ot{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .bk-ot b{font-size:12px;color:var(--tx);line-height:1.3}
+  .bk-ot span{font-size:10.5px;color:var(--tx2)}
+  .bk-cnt{flex:none;display:flex;align-items:center;gap:2px}
+  .bk-cnt button{width:24px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--pan2);color:var(--tx);cursor:pointer;font-size:14px;line-height:1}
+  .bk-cnt button:hover{border-color:var(--acc)}
+  .bk-cnt input{width:38px;height:26px;text-align:center;background:#0d0d10;border:1px solid var(--line);border-radius:7px;color:var(--tx);font:inherit;font-size:12px;-moz-appearance:textfield}
+  .bk-cnt input::-webkit-inner-spin-button{-webkit-appearance:none}
+  .bk-cnt.sm b{min-width:22px;text-align:center;font-size:12px;color:var(--tx)}
+  .bk-cnt.sm button{width:22px;height:22px;font-size:13px}
+  .bk-kn{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+  .bk-kn>div,.bk-rar>div{display:flex;align-items:center;gap:6px;font-size:12px}
+  .bk-kn span:not(.bk-q),.bk-rar span:not(.bk-q){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bk-kn em{font-style:normal;font-family:var(--mono);color:var(--gold);font-size:11px}
+  .bk-rar{display:flex;flex-direction:column;gap:5px}
+  .bk-lot{margin-bottom:12px}
+  .bk-range{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:4px 0 8px}
+  .bk-range div{background:var(--pan);border:1px solid var(--line-soft);border-radius:10px;padding:7px 8px;text-align:center}
+  .bk-range div.mid{border-color:#ffb80066;background:linear-gradient(160deg,#ffb80014,var(--pan))}
+  .bk-range span{display:block;font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.12em}
+  .bk-range b{font-family:var(--disp);font-size:18px;font-weight:600;color:var(--tx)}
+  .bk-range .mid b{color:var(--gold)}
+  .bk-calc{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 8px;font-size:12px;color:var(--tx2)}
+  .verdict.bad{border-color:#ff4d4d47;background:linear-gradient(120deg,#ff4d4d12,var(--pan2))}
+  .verdict.bad b{color:#ff7a7a}
+  .bk-dir td{vertical-align:middle}
+  .bk-t th,.bk-t td{text-align:left}
+  .bk-t th.num,.bk-t td.num{text-align:right}
+  .bk-t td b{font-family:var(--body);font-size:12.5px}
+  .bk-t td i.bk-dim{display:inline}
+  .bk-dic div{width:52px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:8px;
+    border:1px solid color-mix(in srgb,var(--qc) 45%,transparent);background:color-mix(in srgb,var(--qc) 8%,transparent)}
+  .bk-dic .bk-ic{max-width:44px;max-height:40px}
+  .bk-as{display:flex;gap:10px;align-items:flex-start}
+  .bk-as[data-bslug]{cursor:pointer}
+  .bk-as[data-bslug]:hover{border-color:var(--acc)}
+  .bk-ap{flex:none;width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--pan)}
+  .bk-ul{margin:0;padding-left:18px;font-size:12.5px;color:var(--tx2);line-height:1.7}
+  @media(max-width:900px){
+    .bk-res{grid-template-columns:1fr}
+    .bk-range{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .bk-range div:first-child,.bk-range div:last-child{display:none}
+  }
 </style>
 </head>
 <body>
@@ -1414,6 +1514,7 @@
       <button data-tool="bak">мои данные<i>сохранить файлом и восстановить</i></button>
       <button data-tool="inst" id="instBtn" style="display:none">поставить приложением<i>иконка на рабочий стол, работает без сети</i></button>
       <button data-tool="stat">скрины<i>характеристики из снимков экрана</i></button>
+      <button data-tool="upd">обновление<i>команды сбора данных и их свежесть</i></button>
     </div>
   </div>
   <!-- Поиск убран из шапки: на широком экране он уезжал вниз отдельной
@@ -1429,7 +1530,8 @@
 
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
 
-<script src="app.js?v=79" defer></script>
+<script src="app.js?v=80" defer></script>
+<script src="bid.js?v=80" defer></script>
 <script src="../menu.js?v=3" defer></script>
 <script src="../install.js" defer></script>
 </body>

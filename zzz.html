@@ -17,7 +17,7 @@
 <meta name="theme-color" content="#08090c">
 <link rel="icon" type="image/png" sizes="512x512" href="img/zzz/ui/icon-zzz.png">
 <link rel="apple-touch-icon" href="img/zzz/ui/icon-zzz-180.png">
-<title>ZZZ Трекер</title>
+<title>ZZZ</title>
 <style>
   :root{
     color-scheme: dark;
@@ -2303,7 +2303,7 @@
   /* ═════ v247: общий стандарт alextask (как NTE, Endfield и оболочка) ═════
      Изменения намеренно лёгкие: шрифт заголовков Oswald с разрядкой, кнопка
      «☰ Инструменты» с цветной рамкой, имена агентов крупнее. Цвет раздела —
-     золотой (--gold). Название «ZZZ Трекер» и шапка без полосы — свои, ZZZ:
+     золотой (--gold). Название «ZZZ» (до 17.10 — «ZZZ Трекер») и шапка без полосы — свои, ZZZ:
      Oswald в названии и лента под шапкой пробовались и не прижились (24.09). */
   @font-face{font-family:Oswald;src:url(nte/fonts/oswald-latin.woff2) format("woff2");font-weight:600;font-display:swap;
     unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
@@ -2337,6 +2337,8 @@
     .hart .hfig{position:absolute;inset:0 0 118px 0;aspect-ratio:auto;height:auto}
     .hart .hfig img{object-fit:contain;object-position:center bottom}
     .hart .hfig::after{display:none}      /* его нижний край давал видимую ступеньку */
+    /* широкий арт (Ремиэлла): по высоте, бока обрезаются — см. wideart в zzz-app.js */
+    .hart .hfig img.wideart{object-fit:cover;object-position:50% 0}
     .hart::after{background:linear-gradient(180deg,transparent 70%,#0b0d11b3 84%,#0b0d11 94%),
                radial-gradient(60% 40% at 50% 0%,color-mix(in srgb,var(--el) 22%,transparent),transparent 70%)}
     .hart .who{margin-top:0}
@@ -2364,11 +2366,11 @@
       <button class="logo-btn" id="homeBtn" title="Наверх">
         <span class="mark"><img src="img/zzz/ui/logo.png" alt=""
           data-nf="noimg"><b>⚔</b></span>
-        <span>ZZZ Трекер<small id="stats"></small></span>
+        <span>ZZZ<small id="stats"></small></span>
       </button>
       <button class="who" id="whoAmI" hidden></button>
       <span class="bat" id="batBox" hidden></span>
-      <span class="ver" id="appVer" title="версия трекера"></span>
+      <span class="ver" id="appVer" title="версия"></span>
       <span id="cloudDot" title="облако не подключено"></span>
     </div>
     <span class="sp"></span>
@@ -2594,7 +2596,7 @@
       <span class="hint" style="margin:0;align-self:center">инструкция для новичка</span>
     </div>
     <div class="hint hlp" style="margin-top:0">
-      <b>Трекер прокачки агентов Zenless Zone Zero.</b> Данные лежат в браузере,
+      <b>Прокачка агентов Zenless Zone Zero.</b> Данные лежат в браузере,
       между устройствами едут через облако. Ничего не устанавливать, работает и без сети.
 
       <h5>С чего начать</h5>
@@ -2663,7 +2665,7 @@
      ровно про перенос аккаунта. -->
 <div id="welcome"><div class="wcard">
   <div class="wstep" data-step="1">
-    <div class="wtop"><span class="wlogo">ZZZ</span><b>Это трекер прогресса</b></div>
+    <div class="wtop"><span class="wlogo">ZZZ</span><b>Прогресс аккаунта</b></div>
     <p>Все твои агенты, их уровни, ядра, навыки, движки и диски — в одном месте.
        Трекер показывает, кто уже собран, а кого стоит доделать, считает материалы
        на прокачку, ведёт историю круток и прохождений эндгейма.</p>
@@ -2727,7 +2729,7 @@
   </div>
 </div></div>
 
-<script src="zzz-app.js?v=252" defer></script>
+<script src="zzz-app.js?v=253" defer></script>
 <script src="menu.js?v=3" defer></script>
 <script src="install.js" defer></script>
 </body>

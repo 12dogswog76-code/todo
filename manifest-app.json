@@ -1,7 +1,7 @@
 {
   "name": "alextask",
   "short_name": "alextask",
-  "description": "Задачи, деньги, трекер ZZZ и справочник NTE — в одном приложении",
+  "description": "Задачи, деньги, ZZZ и справочник NTE — в одном приложении",
   "lang": "ru",
   "id": "/app.html",
   "start_url": "/app.html",
@@ -17,7 +17,7 @@
     { "src": "img/zzz/ui/icon-zzz-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "ZZZ — трекер", "url": "/zzz.html",
+    { "name": "ZZZ", "url": "/zzz.html",
       "icons": [{ "src": "img/zzz/ui/icon-zzz-192.png", "sizes": "192x192" }] },
     { "name": "NTE — справочник", "url": "/nte/",
       "icons": [{ "src": "nte/icon-192.png", "sizes": "192x192" }] },
