@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v253';
+const APP_VER = 'v254';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5666,6 +5666,7 @@ $('homeBtn').onclick = () => {
 // в трекере; можно включить принудительно, открыв страницу с ?dev=1.
 const OWNER_UID = '1502024259';
 const SITE_DIR = 'F:\\Claude cowork\\сайт';
+const ENKA_OLD = 30;   // дней: старше — справочник Enka пора пересобрать
 function isOwner() {
   try {
     if (localStorage.getItem(LS + '_dev') === '1') return true;
@@ -5736,12 +5737,15 @@ function drawMaint() {
   h += '<div class="mt-age">' +
     '<span' + (old(gAge, 21) ? ' class="warn2"' : '') + '>сборки с prydwen: ' +
       (gAge == null ? 'нет данных' : gAge + ' ' + plural(gAge, 'день', 'дня', 'дней') + ' назад') + '</span>' +
-    '<span' + (old(dAge, 45) ? ' class="warn2"' : '') + '>справочник Enka: ' +
+    '<span' + (old(dAge, ENKA_OLD) ? ' class="warn2"' : '') + '>справочник Enka: ' +
       (dAge == null ? 'нет данных' : dAge + ' ' + plural(dAge, 'день', 'дня', 'дней') + ' назад') + '</span>' +
     '</div>';
 
-  if (missing.length || noGuide.length || noTeams || noBoo || noEnd || noMats || old(gAge, 21)) {
+  const enkaOld = old(dAge, ENKA_OLD);
+  if (missing.length || noGuide.length || noTeams || noBoo || noEnd || noMats || old(gAge, 21) || enkaOld) {
     h += '<div class="mt-todo">' +
+      (enkaOld ? '<div>Справочник Enka не обновлялся <b>' + dAge + ' ' + plural(dAge, 'день', 'дня', 'дней') +
+        '</b> — шаг «Справочник и картинки» ниже</div>' : '') +
       (missing.length ? '<div>Вышли новые агенты, их нет в справочнике: <b>' +
         esc(missing.join(', ')) + '</b></div>' : '') +
       (noGuide.length ? '<div>Без сборки с prydwen: <b>' + esc(noGuide.join(', ')) + '</b></div>' : '') +
@@ -5789,12 +5793,18 @@ function drawMaint() {
       'запускать можно после каждого сбора.');
   }
 
-  if (missing.length) {
-    h += maintCmd(++n + '. Справочник и картинки нового агента', 'нужно сейчас',
-      'cd "' + SITE_DIR + '"; .\\build-zzz-db.ps1',
-      'Заберёт с Enka нового агента, его портреты и значки. Пока агент не вышел в игру, ' +
-      'данных о нём нет и в Enka — запускать раньше смысла нет.');
-  }
+  // Справочник Enka (агенты, движки, диски, картинки) в go.ps1 не входит —
+  // поэтому шаг показывается всегда, а «нужно сейчас» — когда вышел новый
+  // агент или справочнику больше ENKA_OLD дней. Раньше команда появлялась
+  // только при новом агенте, а плашка про старые данные отсылала к
+  // несуществующему обновить-zzz.ps1.
+  h += maintCmd(++n + '. Справочник и картинки (Enka)',
+    missing.length ? 'нужно сейчас — новый агент' : enkaOld ? 'нужно сейчас — ' + dAge + ' дн.' : 'раз в патч, ~3 мин',
+    'cd "' + SITE_DIR + '"; .\\build-zzz-db.ps1',
+    'PowerShell. Качает с Enka справочники агентов, движков, дисков и характеристик с русской ' +
+    'локализацией, пересобирает <b>zzz-db.json</b> и докачивает картинки в <b>img\\zzz</b> ' +
+    '(уже скачанные пропускает; ключ <b>-Force</b> — перекачать все). Пока агент не вышел в игру, ' +
+    'в Enka его нет — раньше релиза запускать смысла нет. Потом — шаг «Досбор и выкладка».');
 
   h += maintCmd(++n + '. Досбор и выкладка', 'одной командой',
     'cd "' + SITE_DIR + '"; .\\go.ps1',
@@ -7555,6 +7565,7 @@ function toast(title, text, kind, life) {
     setTimeout(() => el.remove(), 220);
   };
   api.set(title, text, kind, life);
+  api.el = el;                 // нужен, чтобы плашку можно было сделать кликабельной
   box.appendChild(el);
   return api;
 }
@@ -10556,14 +10567,17 @@ if ('serviceWorker' in navigator) {
   };
 
   function проверить() {
+    // Гостям команды ни к чему — запускать их негде.
+    if (typeof isOwner === 'function' && !isOwner()) return;
+    // [что, когда собрано, чем обновлять, порог в днях]
     const источники = [
-      ['агенты и картинки', (DB || {}).built],
-      ['тир-лист и сборки', (GUIDE || {}).built],
-      ['оценки Шиюй', (TIER || {}).built],
+      ['справочник агентов (Enka)', (DB || {}).built, 'build-zzz-db.ps1', ENKA_OLD],
+      ['тир-лист и сборки (prydwen)', (GUIDE || {}).built, 'pryd.js в консоли браузера', СТАРО],
+      ['оценки Шиюй', (TIER || {}).built, 'go.ps1', СТАРО],
     ];
     const стухло = источники
-      .map(([имя, когда]) => ({ имя, д: дней(когда) }))
-      .filter(x => x.д != null && x.д > СТАРО)
+      .map(([имя, когда, чем, порог]) => ({ имя, чем, порог, д: дней(когда) }))
+      .filter(x => x.д != null && x.д > x.порог)
       .sort((a, b) => b.д - a.д);
     if (!стухло.length) return;
 
@@ -10575,9 +10589,21 @@ if ('serviceWorker' in navigator) {
     } catch (e) {}
 
     const х = стухло[0];
-    toast('Данные устарели',
-      х.имя + ' не обновлялись ' + х.д + ' дн. — запусти обновить-zzz.ps1',
-      'err', 12000);
+    const t = toast('Данные устарели',
+      х.имя + ' — ' + х.д + ' дн. Обновляется: ' + х.чем +
+      (стухло.length > 1 ? ' (и ещё ' + (стухло.length - 1) + ')' : '') +
+      '. Нажми — открою команды для копирования.', 'err', 15000);
+    // Клик по плашке ведёт в «Импорт из игры» → «Обслуживание»: там все
+    // команды с кнопкой «копировать» и место, где их запускать.
+    if (t && t.el) {
+      t.el.style.cursor = 'pointer';
+      t.el.addEventListener('click', e => {
+        if (e.target.tagName === 'S') return;
+        t.close();
+        menuOpen('enka');
+        setTimeout(() => { const m = $('maint'); if (m) m.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250);
+      });
+    }
   }
 
   // Ждём, пока базы загрузятся: они приходят отдельными запросами.
