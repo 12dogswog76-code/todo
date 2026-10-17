@@ -27,7 +27,7 @@
       "purpose": "any"
     },
     {
-      "src": "img/zzz/ui/icon-zzz-512.png",
+      "src": "img/zzz/ui/icon-zzz-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

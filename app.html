@@ -153,6 +153,9 @@
   a.mt:hover{border-color:#3f3f49;background:#19191ee6;transform:translateY(-1px)}
   .mt i{width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center;font-style:normal;
     font-family:var(--disp);font-size:22px;background:#0d0d10;border:1px solid var(--line2);color:var(--acc)}
+  /* значки разделов — иконки набора 17.10, на всю плашку */
+  .mt i.mic{background:none;border:0;padding:0}
+  .mt i.mic img{width:44px;height:44px;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35))}
   .mt b{display:block;font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:.1em;text-transform:uppercase}
   .mt span{display:block;font-size:11.5px;color:var(--tx2);margin-top:3px}
   .mt em{margin-left:auto;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.2em;color:var(--tx3)}
@@ -318,8 +321,8 @@
   </div>
 
   <div class="mine">
-    <a class="mt" href="index.html"><i>✓</i><div><b>Мои дела</b><span>задачи, напоминания, синхронизация</span></div><em>04</em></a>
-    <a class="mt" href="money.html"><i>₽</i><div><b>Мои деньги</b><span>расходы, доходы, периоды</span></div><em>05</em></a>
+    <a class="mt" href="index.html"><i class="mic"><img src="img/app/dela.svg" alt=""></i><div><b>Мои дела</b><span>задачи, напоминания, синхронизация</span></div><em>04</em></a>
+    <a class="mt" href="money.html"><i class="mic"><img src="img/app/dengi.svg" alt=""></i><div><b>Мои деньги</b><span>расходы, доходы, периоды</span></div><em>05</em></a>
   </div>
 
   <div class="cap"><b>Новости</b><span class="ln"></span><small>из Telegram-каналов</small></div>

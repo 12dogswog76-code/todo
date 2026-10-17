@@ -46,7 +46,8 @@
       "icons": [
         {
           "src": "img/zzz/ui/icon-zzz-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     },
@@ -56,17 +57,43 @@
       "icons": [
         {
           "src": "nte/icon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Endfield — справочник",
+      "url": "/ef/",
+      "icons": [
+        {
+          "src": "ef/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     },
     {
       "name": "Мои дела",
-      "url": "/index.html"
+      "url": "/index.html",
+      "icons": [
+        {
+          "src": "img/app/dela-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Мои деньги",
-      "url": "/money.html"
+      "url": "/money.html",
+      "icons": [
+        {
+          "src": "img/app/dengi-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
