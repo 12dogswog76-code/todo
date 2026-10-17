@@ -20,6 +20,8 @@
   const LS_CACHE = 'alextask_news_cache';
   const LS_SEEN = 'alextask_news_seen';
   const LS_F = 'alextask_news_filter';
+  const LS_GLOB = 'alextask_news_glob';   // общий список каналов из воркера — копия на случай без сети
+  const LS_KEY = 'alextask_news_key';     // ключ владельца: им сохраняется общий список
   const ИГРЫ = { zzz: 'ZZZ', nte: 'NTE', ef: 'Endfield' };
   const СВЕЖЕСТЬ = 15 * 60 * 1000;
   const ПОРЦИЯ = 12;
@@ -36,6 +38,26 @@
     $('dt').textContent = ДН[d.getDay()] + ' · ' + d.getDate() + ' ' + МЕС[d.getMonth()];
   }
   часы(); setInterval(часы, 15000);
+
+  // ── знак = F5 ──────────────────────────────────────────────────────────────
+  // Клик по знаку: спросить у service worker свежую версию сайта (новый sw.js
+  // сменит кэш, и ZZZ, NTE, Endfield откроются уже новыми), сбросить отметку
+  // свежести ленты — после перезагрузки новости придут с сервера, — и
+  // перезагрузить страницу, как F5.
+  const знак = $('reload');
+  if (знак) знак.onclick = async () => {
+    if (знак.classList.contains('spin')) return;
+    знак.classList.add('spin');
+    try {
+      const c = чит(LS_CACHE, null);
+      if (c) { c.t = 0; пиши(LS_CACHE, c); }
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) await Promise.race([reg.update(), new Promise(r => setTimeout(r, 2500))]);
+      }
+    } catch (e) {}
+    location.reload();
+  };
 
   // ── перенос из Chrome (только в окне alextask.exe) ─────────────────────────
   // Окно на WebView2 держит своё хранилище. Кнопка просит окно прочитать
@@ -66,8 +88,13 @@
   // Каналы по умолчанию — стандарт, вводить их не нужно. Своё, заданное
   // кнопкой «Каналы», их заменяет; если список игры пустой — берётся стандарт.
   const СТАНДАРТ = { zzz: ['zenlessleak'], nte: ['NTE_MIUMIU'], ef: ['ArknightsEndfieldleaks'] };
-  let каналы = чит(LS_CH, {});
-  Object.keys(СТАНДАРТ).forEach(g => { if (!Array.isArray(каналы[g]) || !каналы[g].length) каналы[g] = СТАНДАРТ[g].slice(); });
+  // Список каналов один на всех и лежит в воркере (/api/news/ch): любой, кто
+  // открыл сайт или приложение, видит те же каналы. Пока общего списка нет
+  // (воркер не обновлён или ещё не сохраняли) — свой старый из localStorage,
+  // а у гостя — стандарт. Сохраняет общий список только владелец, по ключу.
+  const дополнить = к => { const н = {}; Object.keys(СТАНДАРТ).forEach(g => { н[g] = Array.isArray(к && к[g]) && к[g].length ? к[g].slice() : СТАНДАРТ[g].slice(); }); return н; };
+  const глоб = чит(LS_GLOB, null);
+  let каналы = дополнить(глоб && глоб.ch ? глоб.ch : чит(LS_CH, {}));
   const всеКаналы = () => Object.keys(ИГРЫ).reduce((a, g) => a.concat((каналы[g] || []).map(c => [g, c])), []);
 
   function настройкаОткрыть(on) {
@@ -78,21 +105,61 @@
   }
   $('nSet').onclick = () => настройкаОткрыть(!$('chset').classList.contains('on'));
   $('chCancel').onclick = () => настройкаОткрыть(false);
-  $('chSave').onclick = () => {
+  const ключ = $('chKey');
+  if (ключ) ключ.value = чит(LS_KEY, '');
+  const сообщ = (t, плохо) => { const m = $('chMsg'); if (m) { m.textContent = t; m.classList.toggle('bad', !!плохо); } };
+  $('chSave').onclick = async () => {
     const н = {};
     document.querySelectorAll('[data-ch]').forEach(i => { н[i.dataset.ch] = разобрать(i.value); });
-    Object.keys(СТАНДАРТ).forEach(g => { if (!н[g] || !н[g].length) н[g] = СТАНДАРТ[g].slice(); });
-    каналы = н; пиши(LS_CH, н);
-    настройкаОткрыть(false);
-    забрать(true);
+    const k = (ключ && ключ.value || '').trim();
+    if (!k) { сообщ('Впиши ключ владельца — без него общий список не сохранить.', true); return; }
+    сообщ('сохраняю для всех…');
+    let ош = '';
+    for (const base of API) {
+      try {
+        const r = await fetch(base + '/api/news/ch', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: k, ch: н }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 403 && /ключ/i.test(d.error || '')) { сообщ('Неверный ключ.', true); return; }
+        if (!r.ok || !d.ok) throw new Error(d.error || ('HTTP ' + r.status));
+        пиши(LS_KEY, k);
+        пиши(LS_GLOB, { ch: d.ch, t: d.t });
+        каналы = дополнить(d.ch);
+        сообщ('Сохранено — эти каналы теперь видят все.');
+        setTimeout(() => { настройкаОткрыть(false); сообщ(''); }, 900);
+        забрать(true);
+        return;
+      } catch (e) { ош = (e && e.message) || String(e); }
+    }
+    сообщ('Не сохранилось: ' + ош, true);
   };
+
+  // Сверка с общим списком при каждом открытии: если владелец поменял каналы,
+  // у всех остальных лента перестроится сама.
+  async function общий() {
+    for (const base of API) {
+      try {
+        const r = await fetch(base + '/api/news/ch', { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        if (!d.ch) return;                       // общего списка ещё нет
+        const н = дополнить(d.ch);
+        пиши(LS_GLOB, { ch: d.ch, t: d.t });
+        if (JSON.stringify(н) === JSON.stringify(каналы)) return;
+        каналы = н;
+        кеш = { t: 0, list: [] };
+        забрать(false);
+        return;
+      } catch (e) {}
+    }
+  }
 
   // ── данные ─────────────────────────────────────────────────────────────────
   let кеш = чит(LS_CACHE, { t: 0, list: [] });   // list: [{g, ch, title, photo, error, posts:[]}]
   const видели = чит(LS_SEEN, {});
   let фильтр = чит(LS_F, 'all');
   let показано = ПОРЦИЯ;
-  let идёт = false;
+  let идёт = false, повтор = false;
 
   async function запрос(список, свежее) {
     const q = '/api/tg?c=' + encodeURIComponent(список.join(',')) + (свежее ? '&fresh=1' : '');
@@ -112,7 +179,9 @@
   async function забрать(свежее) {
     const пары = всеКаналы();
     if (!пары.length) { кеш = { t: 0, list: [] }; нарисовать(); return; }
-    if (идёт) return;
+    // Пока идёт прошлый запрос, новый не запускаем, но запоминаем: список
+    // каналов мог смениться (пришёл общий из воркера) — догоним после.
+    if (идёт) { повтор = true; return; }
     идёт = true;
     $('nst').textContent = 'обновляю…';
     try {
@@ -126,10 +195,13 @@
       пиши(LS_CACHE, кеш);
     } catch (e) {
       $('nst').textContent = 'не обновилось: ' + (e && e.message || e) + (кеш.t ? ' · показано сохранённое' : '');
-      идёт = false; нарисовать(true); return;
+      идёт = false; нарисовать(true);
+      if (повтор) { повтор = false; забрать(свежее); }
+      return;
     }
     идёт = false;
     нарисовать();
+    if (повтор) { повтор = false; забрать(свежее); }
   }
 
   // ── вывод ──────────────────────────────────────────────────────────────────
@@ -238,6 +310,7 @@
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') отметить(); });
 
   нарисовать();
+  общий();
   if (всеКаналы().length && Date.now() - (кеш.t || 0) > СВЕЖЕСТЬ) забрать(false).then(() => {
     if (!Object.keys(видели).length) отметить();
   });

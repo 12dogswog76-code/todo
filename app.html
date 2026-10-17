@@ -79,8 +79,12 @@
     padding-bottom:18px;border-bottom:1px solid var(--line);position:relative}
   .hd:after{content:'';position:absolute;left:0;bottom:-1px;width:140px;height:2px;
     background:linear-gradient(90deg,var(--acc),var(--gold))}
-  .mark{width:58px;height:58px;flex:none;filter:drop-shadow(0 6px 18px rgba(74,222,128,.25));transition:filter .25s,transform .25s}
-  .hd:hover .mark{filter:drop-shadow(0 6px 22px rgba(232,255,58,.45));transform:rotate(-4deg)}
+  .mark{display:block;width:58px;height:58px;flex:none;filter:drop-shadow(0 6px 18px rgba(155,231,196,.22));transition:filter .25s,transform .25s}
+  .markbtn{flex:none;padding:0;border:0;background:none;cursor:pointer;border-radius:14px}
+  .markbtn:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+  .markbtn:hover .mark{filter:drop-shadow(0 6px 22px rgba(155,231,196,.5));transform:rotate(-6deg) scale(1.04)}
+  .markbtn.spin .mark{animation:mkSpin .7s linear infinite}
+  @keyframes mkSpin{to{transform:rotate(360deg)}}
   .ttl{flex:1;min-width:220px}
   .ttl h1{margin:0;font-family:var(--disp);font-weight:600;font-size:34px;line-height:1;
     letter-spacing:.14em;text-transform:uppercase}
@@ -199,6 +203,8 @@
     padding:9px 12px;font-family:var(--mono);font-size:12px;outline:none}
   .chset input:focus{border-color:var(--acc)}
   .chset .hint{margin-top:4px}
+  .chset .chmsg{align-self:center;font-size:11.5px;color:var(--acc)}
+  .chset .chmsg.bad{color:#ff7a7a}
 
   /* ── офлайн (свёрнут по умолчанию) ─────────────────────────────────────── */
   details.off{margin-top:34px;border:1px solid var(--line);border-radius:16px;background:#131316d9;backdrop-filter:blur(6px)}
@@ -257,21 +263,11 @@
 
 <div class="wrap">
   <header class="hd">
-    <!-- Знак: «A» с галочкой вместо перекладины (задачи), обводка из трёх
-         цветов игр, «предупреждающая» полоса снизу (ZZZ), загнутый угол (EF). -->
-    <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
-  <defs>
-    <linearGradient id="mkG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4ade80"/><stop offset=".55" stop-color="#e8ff3a"/><stop offset="1" stop-color="#ffd54a"/></linearGradient>
-    <pattern id="mkH" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="8" fill="#ffd54a"/></pattern>
-    <clipPath id="mkC"><path d="M9 3h38l14 14v38a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6V9a6 6 0 0 1 6-6z"/></clipPath>
-  </defs>
-  <path d="M9 3h38l14 14v38a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6V9a6 6 0 0 1 6-6z" fill="#101013"/>
-  <g clip-path="url(#mkC)"><rect x="0" y="52" width="64" height="12" fill="url(#mkH)" opacity=".85"/></g>
-  <path d="M47 3v14h14" fill="url(#mkG)"/>
-  <path d="M18 46L32 15L46 46" fill="none" stroke="#f1f3f7" stroke-width="6.5" stroke-linecap="square" stroke-linejoin="miter"/>
-  <path d="M21.5 35.5L29 42L45 25" fill="none" stroke="url(#mkG)" stroke-width="5.5" stroke-linecap="square"/>
-  <path d="M9 3h38l14 14v38a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6V9a6 6 0 0 1 6-6z" fill="none" stroke="url(#mkG)" stroke-width="2"/>
-    </svg>
+    <!-- Знак alextask (шестигранник с «Λ», 17.10). Это кнопка: обновляет
+         страницу как F5, заодно проверяет новую версию сайта — после неё ZZZ,
+         NTE и Endfield открываются уже свежими. -->
+    <button class="markbtn" id="reload" title="Обновить (F5) — страница и разделы ZZZ, NTE, Endfield">
+      <img class="mark" src="img/app/icon.svg" alt="alextask"></button>
     <div class="ttl">
       <h1>alex<i>task</i></h1>
       <div class="sub" id="state">проверяю, что готово к работе без сети…</div>
@@ -341,9 +337,12 @@
     <div class="r"><label data-g="zzz">ZZZ</label><input data-ch="zzz" placeholder="@канал, @ещё_канал" spellcheck="false"></div>
     <div class="r"><label data-g="nte">NTE</label><input data-ch="nte" placeholder="@канал" spellcheck="false"></div>
     <div class="r"><label data-g="ef">Endfield</label><input data-ch="ef" placeholder="@канал" spellcheck="false"></div>
-    <div class="row" style="margin-top:12px"><button class="go" id="chSave">Сохранить</button><button id="chCancel">Отмена</button></div>
-    <div class="hint">Только открытые каналы: у них есть веб-витрина <b>t.me/s/имя</b>. Имя — как в ссылке на канал,
-      можно с @ или целой ссылкой; несколько — через запятую. Пустое поле — стандартный канал игры (@zenlessleak, @NTE_MIUMIU, @ArknightsEndfieldleaks).</div>
+    <div class="r"><label>Ключ</label><input id="chKey" type="password" placeholder="ключ владельца (NEWS_KEY)" autocomplete="off" spellcheck="false"></div>
+    <div class="row" style="margin-top:12px"><button class="go" id="chSave">Сохранить для всех</button><button id="chCancel">Отмена</button><span class="chmsg" id="chMsg"></span></div>
+    <div class="hint">Список каналов общий: его видит каждый, кто открыл сайт или приложение. Сохранить может только
+      владелец — с ключом, он запоминается в этом окне. Только открытые каналы: у них есть веб-витрина <b>t.me/s/имя</b>.
+      Имя — как в ссылке на канал, можно с @ или целой ссылкой; несколько — через запятую. Пустое поле — стандартный
+      канал игры (@zenlessleak, @NTE_MIUMIU, @ArknightsEndfieldleaks).</div>
   </div>
   <div class="news" id="news"></div>
   <button class="more" id="nMore" hidden>Показать ещё</button>
@@ -365,7 +364,7 @@
   </details>
 </div>
 <script src="app-shell.js?v=2" defer></script>
-<script src="app-news.js?v=3" defer></script>
+<script src="app-news.js?v=4" defer></script>
 <!-- menu.js здесь ничего не рисует, только запоминает «вошли через оболочку» -
      по этой метке разделы показывают кнопку «← Разделы». -->
 <script src="menu.js?v=3" defer></script>
