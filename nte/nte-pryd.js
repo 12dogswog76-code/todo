@@ -1,5 +1,5 @@
 /**
- * nte-pryd.js v1.7 — забирает с prydwen.gg данные по Neverness to Everness:
+ * nte-pryd.js v1.9 — забирает с prydwen.gg данные по Neverness to Everness:
  *                    список эсперов, тир-лист, сборки, Arc'и, картриджи,
  *                    баннеры, команды, синергии и коды активации.
  *

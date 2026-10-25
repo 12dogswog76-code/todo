@@ -19,12 +19,20 @@
 // v14: появился обработчик push. Без него уведомления не показывались вовсе:
 // воркер их исправно отправлял, браузер исправно получал, а показать было
 // некому — сюда доезжало событие, которое никто не слушал.
-const CACHE = 'moi-dela-v35';
+const CACHE = 'moi-dela-v36';
 // Картинки — в отдельном кэше без номера версии. Раньше они лежали вместе со
 // страницами, и при каждом обновлении сайта старый кэш удалялся целиком: браузер
 // заново тянул около десяти мегабайт артов и значков. На хорошем канале это
 // незаметно, на плохом — минуты пустых карточек.
 const IMG_CACHE = 'moi-dela-img';
+// Побочный эффект: картинка, заменённая под тем же именем, не обновлялась
+// никогда — кэш картинок cache-first и смену CACHE переживает (так застряли
+// card_/hero_*.webp от 24.10). Сносить кэш целиком нельзя: в нём докачанный
+// офлайн на сотни мегабайт. Поэтому при активации из него удаляется только
+// перечисленное здесь: полный путь файла или папка со слэшем на конце. Список
+// пополняет агент (агент.ps1) при выкладке, когда меняется существующая
+// картинка; вместе с ним поднимается CACHE, иначе активации не будет.
+const IMG_STALE = ['/img/zzz/agents/'];
 const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json',
                 './zzz-extra.json', './zzz-guide.json', './manifest.json', './icon.svg',
                 './manifest-zzz.json',
@@ -62,7 +70,13 @@ self.addEventListener('activate', e => {
     caches.keys().then(keys =>
       // кэш картинок переживает смену версии, чистим только старые оболочки
       Promise.all(keys.filter(k => k !== CACHE && k !== IMG_CACHE).map(k => caches.delete(k)))
-    ).then(() => clients.claim())
+    ).then(() => caches.open(IMG_CACHE)).then(c => c.keys().then(reqs => Promise.all(
+      // заменённые картинки — вон из кэша, остальной офлайн не трогаем
+      reqs.filter(r => {
+        const p = new URL(r.url).pathname;
+        return IMG_STALE.some(s => s.endsWith('/') ? p.indexOf(s) === 0 : p === s);
+      }).map(r => c.delete(r))
+    ))).catch(() => {}).then(() => clients.claim())
   );
 });
 
@@ -135,7 +149,9 @@ self.addEventListener('fetch', e => {
 
   // данные трекера: сеть в приоритете. Раньше они отдавались из кэша, и после
   // пересборки zzz-extra.json на сайте ещё сутки могли жить старые прибавки ядра
-  if (/zzz-(db|extra|guide|tier)\.json$/.test(url.pathname) ||
+  // zzz-mats и zzz-mat-icons сюда добавлены 25.10: раньше шли веткой «кэш,
+  // потом фон», и первое открытие после пересборки показывало старые цены
+  if (/zzz-(db|extra|guide|tier|mats|mat-icons)\.json$/.test(url.pathname) ||
       /\/nte\/nte-[a-z-]+\.json$/.test(url.pathname) ||
       /-?app\.js$/.test(url.pathname) ||
       url.pathname.indexOf('/ef/data/') === 0 || /\/ef\/[a-z-]+\.js$/.test(url.pathname)) {
