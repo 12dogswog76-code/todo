@@ -110,6 +110,8 @@
   .logo .mark img{height:34px;width:auto;max-width:150px;object-fit:contain;display:block;
     filter:drop-shadow(0 2px 6px #000a)}
   .logo .mark b{display:none}
+  /* с 17.10 знак — иконка ZZZ из общего набора (logo.svg), квадратная */
+  .logo .mark img[src$=".svg"]{width:38px;height:38px;filter:drop-shadow(0 3px 10px #000b)}
   .logo .mark.noimg{width:30px;height:30px;
     background:linear-gradient(135deg,#4ade80,#166534);box-shadow:0 0 14px #4ade8040}
   .logo .mark.noimg b{display:block;font-weight:400}
@@ -2365,7 +2367,7 @@
       <!-- Логотип — кнопка возврата к началу. Плашка ника рядом, а не внутри:
            кнопку в кнопку не вложить, а клик по нику должен звать импорт. -->
       <button class="logo-btn" id="homeBtn" title="Наверх">
-        <span class="mark"><img src="img/zzz/ui/logo.png" alt=""
+        <span class="mark"><img src="img/zzz/ui/logo.svg" alt=""
           data-nf="noimg"><b>⚔</b></span>
         <span>ZZZ<small id="stats"></small></span>
       </button>
@@ -2730,7 +2732,7 @@
   </div>
 </div></div>
 
-<script src="zzz-app.js?v=254" defer></script>
+<script src="zzz-app.js?v=255" defer></script>
 <script src="menu.js?v=3" defer></script>
 <script src="install.js" defer></script>
 </body>

@@ -396,6 +396,8 @@ body{background:transparent}
 .logo i{width:34px;height:34px;flex:none;background:var(--acid);clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%);
   display:grid;place-items:center;font:900 15px/1 var(--head);color:var(--ink);font-style:normal}
 .logo span{font:600 24px/1 var(--disp);letter-spacing:.1em;text-transform:uppercase}
+/* знак раздела — иконка ARK из общего набора (17.10) вместо жёлтого уголка с «EF» */
+.logo .lmark{width:36px;height:36px;flex:none;display:block;filter:drop-shadow(0 3px 10px #000b)}
 .ver{font:700 10px/1 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--tx3);background:none;cursor:pointer;
   border:1px solid var(--ln2);border-radius:999px;padding:5px 9px}
 .ver:hover{color:var(--tx);border-color:var(--tx3)}
@@ -505,7 +507,7 @@ body{background:transparent}
 </div>
 
 <header class="ehead"><div class="top-in">
-  <button class="logo" id="logo" title="К операторам"><i>EF</i><span>Endfield</span></button>
+  <button class="logo" id="logo" title="К операторам"><img class="lmark" src="logo.svg" alt=""><span>Endfield</span></button>
   <button class="ver" id="ver" title="Откуда данные">v9</button>
   <nav class="tabs" id="nav"></nav>
   <div class="top-sp"></div>

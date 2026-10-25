@@ -92,6 +92,9 @@
   .logo{font-family:var(--disp);font-size:24px;font-weight:600;letter-spacing:1.2px;
     display:flex;align-items:center;gap:9px;line-height:1}
   .logo b{color:var(--acc)}
+  /* знак раздела — иконка NTE из общего набора (17.10) */
+  .logo .lmark{width:36px;height:36px;flex:none;display:block;filter:drop-shadow(0 3px 10px #000b)}
+  body.mapmode .logo .lmark{width:30px;height:30px}
   .logo i{font-family:var(--body);font-style:normal;font-size:9px;font-weight:800;
     letter-spacing:.22em;text-transform:uppercase;color:var(--tx2);
     border:1px solid var(--line);border-radius:999px;padding:3px 9px}
@@ -1499,7 +1502,7 @@
 <body>
 
 <div class="top"><div class="wrap top-in">
-  <div class="logo">NTE<b>·</b><i id="ver"></i></div>
+  <div class="logo"><img class="lmark" src="icon.svg" alt="">NTE<b>·</b><i id="ver"></i></div>
   <div class="tabs" id="tabs"></div>
   <div class="top-sp"></div>
   <!-- Панели собраны в одно меню: четырьмя кнопками в ряд шапка перерастала

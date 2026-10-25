@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v254';
+const APP_VER = 'v255';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1627,7 +1627,8 @@ function artZoomStyle(a, kind) {
 document.addEventListener('load', e => {
   const el = e.target;
   if (!el || el.tagName !== 'IMG' || el.dataset.kind !== 'hero') return;
-  el.classList.toggle('wideart', el.naturalWidth > el.naturalHeight * 1.2);
+  // 24.10: порог 1.0 — у Пироиса (1272×1200, копьё вбок) с contain фигура выходила мелкой
+  el.classList.toggle('wideart', el.naturalWidth > el.naturalHeight);
 }, true);
 // Порядок, в котором пробуем картинку: сначала webp (старые агенты), потом png
 // (новые — webp средствами Windows не записать), в конце полный арт.
