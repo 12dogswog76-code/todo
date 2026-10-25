@@ -32,7 +32,7 @@ const IMG_CACHE = 'moi-dela-img';
 // перечисленное здесь: полный путь файла или папка со слэшем на конце. Список
 // пополняет агент (агент.ps1) при выкладке, когда меняется существующая
 // картинка; вместе с ним поднимается CACHE, иначе активации не будет.
-const IMG_STALE = ['/img/zzz/agents/'];
+const IMG_STALE = [];
 const ASSETS = ['./', './index.html', './money.html', './zzz.html', './zzz-db.json',
                 './zzz-extra.json', './zzz-guide.json', './manifest.json', './icon.svg',
                 './manifest-zzz.json',
