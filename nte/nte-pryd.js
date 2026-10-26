@@ -567,6 +567,7 @@
       agents[b.slug] = a;
       const gk = Object.keys(a.goals).length;
       if (!a.arcs.length || !a.carts.length) thin.push(b.slug);
+      window.__alextaskХод = (i + 1) + '/' + list.length;   // счётчик для расширения
       console.log('  ' + (i + 1) + '/' + list.length + '  ' + b.slug.padEnd(20) +
         ' тир ' + (a.tier || '·').padEnd(3) +
         ' arc ' + String(a.arcs.length).padEnd(2) +

@@ -679,6 +679,8 @@
       // шиюй и DA пишем раздельно: если разделение блоков сломается, перекос
       // вида «0 / 20» видно сразу, а не после разбора готового файла
       const tm = a.teams ? (a.teams.shiyu.length + ' / ' + a.teams.da.length) : '·';
+      // счётчик для расширения «alextask — сбор» (значок «Z52», подсказка)
+      window.__alextaskХод = (i + 1) + '/' + slugs.length;
       console.log('  ' + (i + 1) + '/' + slugs.length + '  ' + slug +
                   '  диски ' + (a.disk5 ? '✓' : '·') +
                   '  цели ' + (Object.keys(a.goals).length || '·') +
