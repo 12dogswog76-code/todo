@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v263';
+const APP_VER = 'v264';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1168,6 +1168,70 @@ function matsNeed(id) {
   res.parts = res.parts.filter(x => x.gold || x.exp || Object.keys(x.items).length);
   return res.has ? res : null;
 }
+// ─────────────── сколько батареи на недостающее (27.10.2026) ───────────────
+// Формула как у zenless.tools/leveling-calculator: всё нужное переводится в
+// «младшие единицы» своей ветки фарма (жетоны 1/3/9, чипы 1/3/9, журналы
+// опыта — в журналы новичка), складывается по месту фарма, делится на
+// выпадение за бой. Выпадение зависит от уровня Интер-нота и дано «от–до» —
+// отсюда диапазон: боёв от ⌈нужно / макс⌉ до ⌈нужно / мин⌉, батарея = бои ×
+// цена боя. Охота — 60 за бой, но первые три в неделю идут со скидкой, поэтому
+// в нижнюю границу её не кладём (так же делает zenless.tools).
+// Таблицы выпадения — их, сверены с вики (fandom/game8), 27.10.2026.
+// Уровень Интер-нота — ui.ikLvl (по умолчанию 60).
+const BAT = {
+  bounty: { c: 20, d: [[10, 1e4, 1e4], [20, 15e3, 15e3], [30, 2e4, 2e4], [40, 22500, 22500], [50, 25e3, 25e3]] },
+  exp:    { c: 20, d: [[10, 40, 47], [20, 66, 73], [30, 84, 120], [40, 96, 132], [50, 108, 144]] },
+  drill:  { c: 20, d: [[10, 6, 7], [20, 7, 11], [30, 8, 12], [40, 9, 22], [50, 12, 15]] },
+  test:   { c: 20, d: [[10, 7, 8], [20, 8, 12], [30, 10, 14], [40, 11, 24], [50, 15, 18]] },
+  expert: { c: 40, d: [[25, 2, 2], [35, 3, 3], [45, 4, 4], [55, 5, 5]] },
+  hunt:   { c: 60, d: [[30, 1, 1]] },
+};
+const BAT_ROLE = { 1: 'Нападение', 2: 'Устрашение', 3: 'Аномалия', 4: 'Поддержка', 5: 'Оборона', 6: 'Разрушение', 7: 'Оружейник' };
+const BAT_EL = { 0: 'физ.', 1: 'поджог', 2: 'заморозка', 3: 'шок', 5: 'эфир', 6: 'выветривание', 7: 'люмен' };
+const BAT_DAY = 240;   // батарея восстанавливается на 240 в сутки
+// предмет → { ключ места фарма, вид таблицы, сколько младших единиц в штуке, подпись }
+function batSlot(id) {
+  const s = String(id);
+  let m;
+  if (s === '10') return { k: 'bounty', t: 'bounty', u: 1, n: 'Симуляция: денни' };
+  if ((m = /^1002([123])(\d)$/.exec(s))) return { k: 'drill' + m[2], t: 'drill', u: [0, 1, 3, 9][+m[1]], n: 'Тренировка: жетоны — ' + (BAT_ROLE[m[2]] || m[2]) };
+  if ((m = /^1001([123])(\d)$/.exec(s))) return { k: 'test' + m[2], t: 'test', u: [0, 1, 3, 9][+m[1]], n: 'Испытание: чипы — ' + (BAT_EL[m[2]] || m[2]) };
+  if (/^1105\d\d$/.test(s)) return { k: 'exp' + s, t: 'expert', u: 1, n: 'Испытание экспертов: ' + ((MATS.items && MATS.items[s]) || s).replace(/^Высокоразмерные данные:\s*/i, '') };
+  if (/^1100\d\d$/.test(s) || s === '100941') return { k: 'hunt' + s, t: 'hunt', u: 1, n: 'Охота: ' + ((MATS.items && MATS.items[s]) || s) };
+  return null;
+}
+function batDrop(t) {
+  const L = ui.ikLvl || 60, d = BAT[t].d;
+  let r = d[0];
+  d.forEach(x => { if (x[0] <= L) r = x; });
+  return r;
+}
+// n — то, что вернул matsNeed (или сумма по агентам): { gold, exp, items }
+function batteryFor(n) {
+  const места = {};
+  const положить = (k, t, u, имя) => { if (!(u > 0)) return; const м = места[k] || (места[k] = { t, имя, u: 0 }); м.u += u; };
+  if (n.gold) положить('bounty', 'bounty', n.gold, 'Симуляция: денни');
+  if (n.exp && MATS && MATS.exp) {
+    // журнал новичка — младшая единица опыта
+    const малый = Math.min(...Object.values(MATS.exp).map(Number).filter(x => x > 0));
+    if (малый) положить('exp', 'exp', Math.ceil(n.exp / малый), 'Симуляция: опыт агентов');
+  }
+  Object.keys(n.items || {}).forEach(id => {
+    const с = batSlot(id);
+    if (с) положить(с.k, с.t, n.items[id] * с.u, с.n);
+  });
+  let мин = 0, макс = 0;
+  const строки = Object.keys(места).map(k => {
+    const м = места[k], [, dMin, dMax] = batDrop(м.t), c = BAT[м.t].c;
+    const боиМин = Math.ceil(м.u / dMax), боиМакс = Math.ceil(м.u / dMin);
+    const лоу = м.t === 'hunt' ? 0 : боиМин * c, хай = боиМакс * c;
+    мин += лоу; макс += хай;
+    return { имя: м.имя, боиМин, боиМакс, мин: лоу, макс: хай, охота: м.t === 'hunt' };
+  }).sort((a, b) => b.макс - a.макс);
+  return { мин, макс, строки };
+}
+const batRange = b => b.мин === b.макс ? nfmt(b.макс) : nfmt(b.мин) + '–' + nfmt(b.макс);
+
 // Журналы опыта: сколько понадобится, если брать самые крупные.
 // Остаток добиваем меньшими — так и делают в игре.
 function expBooks(exp) {
@@ -6133,6 +6197,29 @@ function drawMats() {
       ' — журналы посчитаны от самых крупных, остаток добит мелкими.</div>' : '') +
   '</div>';
 
+  // батарея на всё недостающее — как у zenless.tools
+  const bat = batteryFor(total);
+  if (bat.макс) {
+    const дн = x => Math.ceil(x / BAT_DAY);
+    h += '<div class="mt-sum" style="margin-top:10px">' +
+      '<div class="cap2" style="margin:0 0 7px">БАТАРЕЯ НА ФАРМ</div>' +
+      '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">' +
+        '<b style="font-size:24px">⚡ ' + batRange(bat) + '</b>' +
+        '<span class="hint" style="margin:0">≈ ' + (дн(bat.мин) === дн(bat.макс) ? дн(bat.макс) : дн(bat.мин) + '–' + дн(bat.макс)) + ' ' +
+          plural(дн(bat.макс), 'день', 'дня', 'дней') + ' восстановления (' + BAT_DAY + ' в сутки)</span>' +
+        '<label class="hint" style="margin:0 0 0 auto">уровень Интер-нота ' +
+          '<select id="batLvl">' + [10, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(l => '<option' + ((ui.ikLvl || 60) === l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
+      '</div>' +
+      '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв</summary>' +
+        '<table class="tbl" style="margin-top:6px">' + bat.строки.map(s => '<tr><td>' + esc(s.имя) + '</td>' +
+          '<td style="text-align:right;white-space:nowrap">' + (s.боиМин === s.боиМакс ? s.боиМакс : s.боиМин + '–' + s.боиМакс) + ' ' + plural(s.боиМакс, 'бой', 'боя', 'боёв') + '</td>' +
+          '<td style="text-align:right;white-space:nowrap">⚡ ' + (s.охота ? 'до ' + nfmt(s.макс) : (s.мин === s.макс ? nfmt(s.макс) : nfmt(s.мин) + '–' + nfmt(s.макс))) + '</td></tr>').join('') +
+        '</table>' +
+        '<div class="hint">Без учёта того, что уже лежит в сумке: считается всё, что нужно до целей. Охота — 60 за бой, ' +
+          'но три в неделю со скидкой, поэтому в нижнюю границу не входит. Выпадение — таблицы zenless.tools.</div>' +
+      '</details></div>';
+  }
+
   h += '<div class="cap2" style="margin:14px 0 6px">ПО АГЕНТАМ</div><div class="td-list">' +
     rows.sort((x, y) => y.n.gold - x.n.gold).map(r => {
       const its = Object.keys(r.n.items).sort((x, y) => order(x) - order(y));
@@ -6142,6 +6229,7 @@ function drawMats() {
         '<b>' + esc(r.a.ru) + '</b>' +
         '<span class="td-w">' + esc(txt) + (its.length > 3 ? ' и ещё ' + (its.length - 3) : '') + '</span>' +
         '<em class="td-h">' + nfmt(r.n.gold) + ' денни</em>' +
+        (function () { const b = batteryFor(r.n); return b.макс ? '<em class="td-h" title="батарея на фарм этого агента">⚡ ' + batRange(b) + '</em>' : ''; })() +
         '</div>';
     }).join('') + '</div>';
 
@@ -6155,6 +6243,7 @@ function drawMats() {
     ui.matsMode = b.dataset.m; save(); drawMats();
   });
   if ($('pickEdit')) $('pickEdit').onclick = () => { pickEdit = true; drawMats(); };
+  if ($('batLvl')) $('batLvl').onchange = e => { ui.ikLvl = +e.target.value; save(); drawMats(); };
 }
 
 function drawTodo() {
