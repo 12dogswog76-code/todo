@@ -277,6 +277,8 @@
     </div>
     <!-- Видна только в окне alextask.exe: забирает данные сайта из Chrome. -->
     <button class="chip imp" id="imp" hidden title="Забрать отметки и коды облака из Chrome">Перенести из Chrome</button>
+    <!-- Тоже только в окне: запускать alextask вместе с Windows (сразу в трей). -->
+    <button class="chip imp" id="auto" hidden title="Запускать alextask вместе с Windows — свёрнутым в трей">Автозапуск</button>
     <div class="clock"><b id="clk">--:--</b><span id="dt"></span></div>
   </header>
 
@@ -367,7 +369,7 @@
   </details>
 </div>
 <script src="app-shell.js?v=2" defer></script>
-<script src="app-news.js?v=5" defer></script>
+<script src="app-news.js?v=6" defer></script>
 <!-- menu.js здесь ничего не рисует, только запоминает «вошли через оболочку» -
      по этой метке разделы показывают кнопку «← Разделы». -->
 <script src="menu.js?v=3" defer></script>

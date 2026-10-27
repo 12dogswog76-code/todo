@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v261';
+const APP_VER = 'v262';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10641,6 +10641,11 @@ function codesHtml() {
         esc(c.code) + '</code>' +
       '<span class="crew">' + esc(c.rew || '') + '</span>' +
       (c.note ? '<i class="cnote">' + esc(c.note) + '</i>' : '') +
+      // официальная страница активации с подставленным кодом: остаётся
+      // выбрать сервер и нажать «Активировать»; клик сразу отмечает код
+      '<a class="cgo" data-go="' + esc(c.code) + '" target="_blank" rel="noopener" ' +
+        'href="https://zenless.hoyoverse.com/redemption?code=' + encodeURIComponent(c.code) + '" ' +
+        'title="открыть страницу активации HoYoverse с этим кодом">ввести →</a>' +
       '</div>';
   };
   const свежие = список.filter(c => !было[c.code]);
@@ -10675,6 +10680,11 @@ function drawCodes() {
     codesMark(b.dataset.code, !было[b.dataset.code]);
     drawCodes();
   });
+  // не перерисовываем сразу: ссылка должна успеть открыться
+  тело.querySelectorAll('[data-go]').forEach(a => a.addEventListener('click', () => {
+    codesMark(a.dataset.go, true);
+    setTimeout(drawCodes, 300);
+  }));
   тело.querySelectorAll('[data-copy]').forEach(el => el.onclick = async () => {
     try {
       await navigator.clipboard.writeText(el.dataset.copy);

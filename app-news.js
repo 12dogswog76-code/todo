@@ -71,8 +71,22 @@
       b.disabled = true; b.textContent = 'переношу…';
       wv.postMessage('import-chrome');
     };
+    // автозапуск с Windows (exe 2.1): окно само пишет ключ в реестр и отвечает
+    const ав = $('auto');
+    let авВкл = false;
+    if (ав) {
+      ав.hidden = false;
+      ав.onclick = () => wv.postMessage(авВкл ? 'autostart:off' : 'autostart:on');
+      wv.postMessage('autostart?');
+    }
     wv.addEventListener('message', e => {
       let d; try { d = JSON.parse(e.data); } catch (x) { return; }
+      if (d.autostart != null && ав) {
+        авВкл = !!d.autostart;
+        ав.textContent = 'Автозапуск: ' + (авВкл ? 'вкл' : 'выкл');
+        ав.classList.toggle('ok', авВкл);
+        return;
+      }
       if (d.import == null) return;
       b.disabled = false;
       if (d.error) { b.textContent = 'не вышло: ' + d.error; return; }
@@ -264,11 +278,15 @@
     const пары = всеКаналы();
     // счётчики новых на плитках игр
     const список = все();
+    let всегоНовых = 0;
     Object.keys(ИГРЫ).forEach(g => {
       const n = (видели[g] || 0) ? список.filter(p => p.g === g && Date.parse(p.t) > видели[g]).length : 0;
+      всегоНовых += n;
       const b = document.querySelector('[data-new="' + g + '"]');
       if (b) { b.classList.toggle('on', n > 0); b.lastChild.textContent = n + ' ' + (n === 1 ? 'новость' : n < 5 ? 'новости' : 'новостей'); }
     });
+    // окно alextask.exe рисует это число на значке в панели задач
+    if (wv) try { wv.postMessage('{"news":' + всегоНовых + '}'); } catch (e) {}
     if (!пары.length) {
       const e = эл('div', 'empty');
       e.innerHTML = '<b>Каналы не заданы.</b> Нажми «Каналы» и впиши открытые Telegram-каналы по каждой игре — ' +
@@ -318,7 +336,8 @@
   });
   // окно висит открытым — подтягиваем раз в 15 минут; вернулся в свёрнутое
   // окно или вкладку, а лента старше 15 минут — подтягиваем сразу
-  setInterval(() => { if (document.visibilityState === 'visible' && navigator.onLine) забрать(false); }, СВЕЖЕСТЬ);
+  // в окне exe — и спрятанным в трей: счётчик на значке должен жить
+  setInterval(() => { if ((document.visibilityState === 'visible' || wv) && navigator.onLine) забрать(false); }, СВЕЖЕСТЬ);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && navigator.onLine && Date.now() - (кеш.t || 0) > СВЕЖЕСТЬ) забрать(false);
   });

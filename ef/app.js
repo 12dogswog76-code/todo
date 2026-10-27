@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v13';
+const APP_VER = 'v14';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -134,6 +134,8 @@ const ВМЕНЮ = [
   ['daily', 'Ежедневные и еженедельные'],
   ['ach', 'Прогресс по достижениям'],
   ['gacha', 'Гарант, история, симулятор'],
+  ['cal', 'Баннеры и события со сроками'],
+  ['forge', 'Перековка снаряжения: что крутить и почём'],
   ['codes', 'Рабочие коды, отметки введённых'],
   ['prof', 'Витрина аккаунта по UID'],
   ['chr', 'Регионы, база, эндгейм из SKPORT'],
@@ -961,6 +963,71 @@ EF.раздел('codes', {
   },
 });
 
+// ── календарь: баннеры и события ────────────────────────────────────────────
+// /api/ef/events (воркер 48): сроки баннеров с game8, события с вики
+// endfield.wiki.gg (сервер Americas / Europe). Кто на баннере — ищем имена
+// операторов и оружия из своей базы в строке «Rate-Up», русское имя баннера —
+// по фокусу из ef-tools.json, если он там есть.
+let КАЛ = null, КАЛош = '';
+async function календарьЗабрать(свежее) {
+  const один = b => fetch(b + '/api/ef/events' + (свежее ? '?fresh=1' : ''), { cache: 'no-store', signal: AbortSignal.timeout(15000) })
+    .then(r => r.json()).then(j => (j && j.ok) ? j : Promise.reject(new Error(j && j.error || 'пусто')));
+  try { КАЛ = await Promise.any(API.map(один)); КАЛош = ''; }
+  catch (e) { КАЛош = 'воркер не отдал календарь'; }
+  if (ВКЛ === 'cal') рисовать();
+}
+const ТИП_СОБ = { 'Camera Event': 'фото', 'Challenge Event': 'испытание', 'Echoes of War Event': 'эхо войны', 'Sign-In Event': 'вход',
+  'Guide Event': 'обучение', 'Fun & Games Event': 'мини-игры', 'Story Event': 'сюжет', 'Login Event': 'вход' };
+function сроки(from, to) {
+  const ф = Date.parse(from), т = to ? Date.parse(to.length === 10 ? to + 'T23:59:00' : to) : 0, н = Date.now();
+  const дн = мс => Math.max(0, Math.ceil(мс / 864e5));
+  const дата = x => new Date(x).toLocaleDateString('ru', { day: 'numeric', month: 'short' });
+  if (ф > н) return { скоро: true, текст: 'с ' + дата(ф) + ' · через ' + дн(ф - н) + ' дн.' };
+  if (т && т < н) return null;
+  return { скоро: false, горит: т && т - н < 3 * 864e5, текст: т ? 'до ' + дата(т) + ' · осталось ' + дн(т - н) + ' дн.' : 'без даты окончания' };
+}
+function кальБаннер(б) {
+  const с = сроки(б.from, б.to);
+  if (!с) return '';
+  const есть = (имя) => new RegExp('(^|[^A-Za-z])' + имя.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^A-Za-z]|$)').test(б.rate + ' ' + б.name);
+  const опы = EF.БАЗА.персонажи.filter(c => есть(c.имя));
+  const ору = EF.БАЗА.оружие.filter(w => w.редкость >= 6 && есть(w.имя));
+  const наш = EF.ТУЛЫ && EF.ТУЛЫ.баннеры ? EF.ТУЛЫ.баннеры.find(x => x.огр && опы.length && x.фокус && x.фокус[0] === опы[0].id) : null;
+  return '<tr><td><b>' + эк(наш ? наш.н : б.name) + '</b>' + (наш ? '<br><i>' + эк(б.name) + '</i>' : '') + '</td>' +
+    '<td>' + опы.map(c => '<span class="calop" data-op="' + эк(c.id) + '"><img src="' + эк(c.значок) + '" alt="">' + эк(c.имяРу) + '</span>').join('') +
+      ору.map(w => '<span class="calop w" data-wpn="' + эк(w.id) + '"><img src="' + эк(w.значок) + '" alt="">' + эк(w.имяРу) + '</span>').join('') +
+      (!опы.length && !ору.length ? эк(б.rate) : '') + '</td>' +
+    '<td style="white-space:nowrap"' + (с.горит ? ' class="hot"' : '') + '>' + эк(с.текст) + '</td></tr>';
+}
+function кальСобытие(е) {
+  const с = сроки(е.from, е.to);
+  if (!с) return '';
+  return '<tr><td><b>' + (е.url ? '<a class="lnk" href="' + эк(е.url) + '" target="_blank" rel="noopener">' + эк(е.name) + '</a>' : эк(е.name)) + '</b></td>' +
+    '<td>' + эк(ТИП_СОБ[е.type] || е.type) + '</td>' +
+    '<td style="white-space:nowrap"' + (с.горит ? ' class="hot"' : '') + '>' + эк(с.текст) + '</td></tr>';
+}
+EF.раздел('cal', {
+  имя: 'Календарь', буква: '◷',
+  рисовать() {
+    EF.шапка('banners.events', 'Календарь', КАЛ ? (КАЛ.banners || []).filter(б => (с => с && !с.скоро)(сроки(б.from, б.to))).length : null, КАЛ ? 'баннеров идёт' : '');
+    $('fbar').innerHTML = '<button class="btn sm gh" data-act="cal-upd">обновить сейчас</button><span class="fcnt">' +
+      (КАЛ ? 'обновлено ' + new Date(КАЛ.t).toLocaleString('ru', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) +
+        (КАЛ.stale ? ' · источники молчат, показан прошлый снимок' : '') : (КАЛош || 'загружаю…')) + '</span>';
+    if (!КАЛ) { $('body').innerHTML = '<div class="empty">' + (КАЛош || 'Загружаю…') + '</div>'; if (!КАЛош) календарьЗабрать(false); return; }
+    if (!EF.ТУЛЫ && EF.тл) { EF.тл().then(() => { if (ВКЛ === 'cal') рисовать(); }).catch(() => {}); }
+    const раздел = (заг, строки, шапка) => строки.length ? EF.блок(заг) + '<table class="tbl"><tr>' + шапка.map(х => '<th>' + х + '</th>').join('') + '</tr>' + строки.join('') + '</table>' : '';
+    const по = (спис, ф, скоро) => спис.filter(x => (с => с && с.скоро === скоро)(сроки(x.from, x.to))).sort((a, b) => Date.parse(a.from) - Date.parse(b.from)).map(ф);
+    const б = КАЛ.banners || [], е = КАЛ.events || [];
+    $('body').innerHTML =
+      раздел('Баннеры — сейчас', по(б, кальБаннер, false), ['баннер', 'на баннере', 'срок']) +
+      раздел('Баннеры — скоро', по(б, кальБаннер, true), ['баннер', 'на баннере', 'срок']) +
+      раздел('События — сейчас', по(е, кальСобытие, false), ['событие', 'тип', 'срок']) +
+      раздел('События — скоро', по(е, кальСобытие, true), ['событие', 'тип', 'срок']) ||
+      '<div class="empty">Ничего не идёт.</div>';
+    EF.подвал('Сроки баннеров — game8.co, события — endfield.wiki.gg (CC BY-SA), сервер Americas / Europe. Собирает воркер alextask раз в 6 часов. Клик по оператору — карточка.');
+  },
+});
+
 // ── аккаунт SKPORT («Хроника») ──────────────────────────────────────────────
 // С v6: ключи skport к нам больше не копируются. Человек запускает скрипт
 // (sk-export.js, функция skЭкспорт) в консоли на www.skport.com — там
@@ -1489,6 +1556,7 @@ document.addEventListener('click', e => {
       return;
     }
     case 'codes-upd': т.textContent = 'обновляю…'; кодыЗабрать(true); return;
+    case 'cal-upd': т.textContent = 'обновляю…'; календарьЗабрать(true); return;
     case 'code-copy':
       navigator.clipboard.writeText(д.code).then(() => { т.textContent = 'скопировано'; }, () => { т.textContent = 'выдели сам'; });
       return;

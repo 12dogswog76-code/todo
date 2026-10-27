@@ -10,7 +10,8 @@
 'use strict';
 const { $, эк, чис } = EF;
 let ТЛ = null;
-async function тл() { if (!ТЛ) ТЛ = await EF.грузить('ef-tools.json'); return ТЛ; }
+async function тл() { if (!ТЛ) { ТЛ = await EF.грузить('ef-tools.json'); EF.ТУЛЫ = ТЛ; } return ТЛ; }
+EF.тл = тл;   // календарь (app.js) берёт отсюда русские имена баннеров
 
 // Опыт — не предмет, но в списке материалов он нужен наравне с остальным.
 function псевдо() {
