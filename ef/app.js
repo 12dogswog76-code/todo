@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v15';
+const APP_VER = 'v16';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -974,8 +974,12 @@ async function календарьЗабрать(свежее) {
     .then(r => r.json()).then(j => (j && j.ok) ? j : Promise.reject(new Error(j && j.error || 'пусто')));
   try { КАЛ = await Promise.any(API.map(один)); КАЛош = ''; }
   catch (e) { КАЛош = 'воркер не отдал календарь'; }
+  // русские имена: словарь из базы (build-ef-eft.py) и свой перевод событий
+  try { [КАЛРУ, КАЛЕВ] = await Promise.all([EF.грузить('ef-names.json'), EF.грузить('ef-ev-ru.json')]); } catch (e) {}
   if (ВКЛ === 'cal') рисовать();
 }
+let КАЛРУ = null, КАЛЕВ = null;
+const прям = s => String(s || '').replace(/’/g, "'");
 const ТИП_СОБ = { 'Camera Event': 'фото', 'Challenge Event': 'испытание', 'Echoes of War Event': 'эхо войны', 'Sign-In Event': 'вход',
   'Guide Event': 'обучение', 'Fun & Games Event': 'мини-игры', 'Story Event': 'сюжет', 'Login Event': 'вход' };
 function сроки(from, to) {
@@ -997,7 +1001,9 @@ function кальБаннер(б) {
   // по ним выходило чужое имя «Преображение»
   const глав = опы.find(c => c.имя === б.name);
   const наш = глав && EF.ТУЛЫ && EF.ТУЛЫ.баннеры ? EF.ТУЛЫ.баннеры.find(x => x.огр && x.фокус && x.фокус[0] === глав.id) : null;
-  return '<tr><td><b>' + эк(наш ? наш.н : б.name) + '</b>' + (наш ? '<br><i>' + эк(б.name) + '</i>' : '') + '</td>' +
+  const р = КАЛРУ || {}, и = прям(б.name);
+  const ру = наш ? наш.н : ((р.банн || {})[и] || (р.ор || {})[и] || (р.оп || {})[и] || '');
+  return '<tr><td><b>' + эк(ру || б.name) + '</b>' + (ру ? '<br><i>' + эк(б.name) + '</i>' : '') + '</td>' +
     '<td>' + опы.map(c => '<span class="calop" data-op="' + эк(c.id) + '"><img src="' + эк(c.значок) + '" alt="">' + эк(c.имяРу) + '</span>').join('') +
       ору.map(w => '<span class="calop w" data-wpn="' + эк(w.id) + '"><img src="' + эк(w.значок) + '" alt="">' + эк(w.имяРу) + '</span>').join('') +
       (!опы.length && !ору.length ? эк(б.rate) : '') + '</td>' +
@@ -1006,8 +1012,10 @@ function кальБаннер(б) {
 function кальСобытие(е) {
   const с = сроки(е.from, е.to);
   if (!с) return '';
-  return '<tr><td><b>' + (е.url ? '<a class="lnk" href="' + эк(е.url) + '" target="_blank" rel="noopener">' + эк(е.name) + '</a>' : эк(е.name)) + '</b></td>' +
-    '<td>' + эк(ТИП_СОБ[е.type] || е.type) + '</td>' +
+  const ев = КАЛЕВ || {}, ру = (ев.ev || {})[е.name] || '';
+  return '<tr><td><b>' + (е.url ? '<a class="lnk" href="' + эк(е.url) + '" target="_blank" rel="noopener">' + эк(ру || е.name) + '</a>' : эк(ру || е.name)) + '</b>' +
+      (ру ? '<br><i>' + эк(е.name) + '</i>' : '') + '</td>' +
+    '<td>' + эк((ев.тип || {})[е.type] || ТИП_СОБ[е.type] || е.type) + '</td>' +
     '<td style="white-space:nowrap"' + (с.горит ? ' class="hot"' : '') + '>' + эк(с.текст) + '</td></tr>';
 }
 EF.раздел('cal', {

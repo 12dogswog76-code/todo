@@ -1,0 +1,24 @@
+{
+  "note": "Русские названия событий Endfield для календаря (вкладка «Календарь» и команда /cal бота). Вики endfield.wiki.gg пишет события по-английски, в выгрузке endfieldtools их нет — перевод наш, не официальный: где в игре названо иначе, правь прямо здесь. Ключ — английское имя с вики. Нового события здесь нет — агент напишет «инфо» в ежедневной проверке.",
+  "ev": {
+    "Carly's Verdant Anthology": "Зелёная антология Карли",
+    "Monumental Etching: Forest of Maras": "Вековые письмена: Лес Марас",
+    "Season of Phantasia": "Сезон фантазий",
+    "Spirit's Restoration": "Восстановление духа",
+    "All the Inky Hues": "Все оттенки туши",
+    "Yuanyuan's Blazing Stoves": "Жаркие печи Юаньюань",
+    "Arena of Games": "Арена игр",
+    "New Era for the Myriad Souls": "Новая эра мириад душ"
+  },
+  "тип": {
+    "Camera Event": "фото",
+    "Challenge Event": "испытание",
+    "Echoes of War Event": "эхо войны",
+    "Sign-In Event": "вход",
+    "Guide Event": "обучение",
+    "Fun & Games Event": "мини-игры",
+    "Story Event": "сюжет",
+    "Login Event": "вход",
+    "Limited-Time Event": "временное"
+  }
+}
