@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v262';
+const APP_VER = 'v263';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -10225,6 +10225,10 @@ async function runsLoad(btn, msgEl) {
     return;
   }
   const a = runsPut('mem', d.mem), b = runsPut('shiyu', d.shiyu);
+  // текущие периоды — отдельно: пустые (не пройденные) в архив не попадают,
+  // а «не пройдено» как раз и надо показать
+  const тек = l => { const p = (l || []).find(x => x.ph === 1); return p ? { to: p.to, n: (p.layers || p.runs || []).length } : null; };
+  RUNS.cur = { shiyu: тек(d.shiyu), mem: тек(d.mem) };
   RUNS.at = Date.now();
   runsSave();
   scheduleSync();
@@ -10357,6 +10361,25 @@ function runsShiyu(p) {
     '</div>';
 }
 
+// Текущие периоды сверху: когда сброс и закрыт ли период (27.10.2026). Период
+// «текущий», если его конец ещё не наступил; прохождения в нём есть — пройден.
+// Напоминание «не пройдено, до сброса меньше двух суток» шлёт Telegram-бот
+// (крон воркера смотрит ту же хронику по секрету HOYO_COOKIE).
+function runsNow(mem, sh) {
+  const сейчас = Date.now();
+  const конец = p => { const m = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)/.exec(p.to || ''); return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5]).getTime() : 0; };
+  const строка = (имя, p) => {
+    const к = конец(p), ч = Math.round((к - сейчас) / 3600000);
+    const пройден = p.n != null ? p.n > 0 : (p.layers || p.runs || []).length > 0;
+    return '<div class="eg-head" style="margin:8px 0 0">' + имя + ': сброс ' + esc(runDate(p.to)) + ' — через ' +
+      (ч < 48 ? ч + ' ч' : Math.round(ч / 24) + ' дн.') + ' · ' +
+      (пройден ? '<b style="color:var(--acc)">пройдено</b>' : '<b style="color:#f87171">не пройдено</b>') + '</div>';
+  };
+  const тек = (сп) => сп.filter(p => конец(p) > сейчас).sort((a, b) => конец(a) - конец(b))[0];
+  const c = RUNS.cur || {};
+  const s = (c.shiyu && конец(c.shiyu) > сейчас && c.shiyu) || тек(sh), m = (c.mem && конец(c.mem) > сейчас && c.mem) || тек(mem);
+  return (s ? строка('Оборона Шиюй', s) : '') + (m ? строка('Опасный штурм', m) : '');
+}
 function drawRuns() {
   RUN_TEAMS = [];                       // сбрасываем перед сборкой разметки
   const mem = runsList('mem'), sh = runsList('shiyu');
@@ -10367,7 +10390,7 @@ function drawRuns() {
         ? 'В архиве периодов: ' + runsCount() + ', обновлено ' +
           esc(new Date(RUNS.at).toLocaleDateString('ru-RU'))
         : 'Данных пока нет — нажми кнопку.') + '</span>' +
-    '</div>';
+    '</div>' + runsNow(mem, sh);
   if (!mem.length && !sh.length) {
     return head + '<div class="hint" style="margin-top:10px">Бои приезжают из боевой хроники ' +
       'HoYoLab по твоему UID. Хроника помнит только текущий период и прошлый, поэтому трекер ' +
@@ -10719,3 +10742,11 @@ async function loadCodes(fresh) {
   const b = document.getElementById('codeRefresh');
   if (b) b.onclick = () => loadCodes(true);
 })();
+
+// Раздел меню по адресу: zzz.html#codes, #end — так открывают меню значка и
+// окно поверх игры в alextask.exe (27.10.2026). Ждём загрузки: меню строится
+// после базы.
+window.addEventListener('load', () => {
+  const k = location.hash.slice(1);
+  if (k && MENU.some(m => m.k === k)) setTimeout(() => menuOpen(k), 400);
+});

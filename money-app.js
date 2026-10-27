@@ -727,8 +727,10 @@ document.querySelectorAll('.tabs button[data-tab]').forEach(b => {
   b.onclick = () => {
     document.querySelectorAll('.tabs button[data-tab]').forEach(x => x.classList.remove('on'));
     b.classList.add('on');
-    ['periods', 'fixed', 'goals', 'chart'].forEach(t => { $('tab-' + t).style.display = (b.dataset.tab === t) ? '' : 'none'; });
+    ['periods', 'fixed', 'goals', 'chart', 'budget', 'games'].forEach(t => { $('tab-' + t).style.display = (b.dataset.tab === t) ? '' : 'none'; });
     if (b.dataset.tab === 'chart') renderChart();
+    if (b.dataset.tab === 'budget') renderBudget();
+    if (b.dataset.tab === 'games') renderGames();
   };
 });
 
@@ -923,3 +925,68 @@ if (sync) cloudPull();
 setInterval(() => { if (sync && !document.hidden) cloudPull(); }, 45000);
 window.addEventListener('focus', () => { if (sync) cloudPull(); });
 window.addEventListener('pagehide', () => { if (sync) { clearTimeout(pushT); cloudPush(); } });
+
+// ── бюджет по группам (с 27.10.2026) ────────────────────────────────────────
+// data.budget = { группа: лимит в месяц }. «Потрачено» — сумма строк этой
+// группы во всех периодах текущего месяца (месяц — по названию периода, как в
+// migrateYears); оплаченные (✓) — отдельно, темнее.
+function monthPeriods() {
+  const d = new Date(), m = d.getMonth(), y = d.getFullYear();
+  return data.periods.filter(p => !p.plan && firstMonth(p.title) === m && (p.year || y) === y);
+}
+function renderBudget() {
+  if (!data.budget) data.budget = {};
+  const box = $('budgetList'); box.innerHTML = '';
+  const пер = monthPeriods();
+  (data.groups || DEFAULT_GROUPS).forEach(g => {
+    const план = пер.reduce((s, p) => s + p.items.filter(i => (i.group || 'Прочее') === g).reduce((a, i) => a + (i.amount || 0), 0), 0);
+    const опл = пер.reduce((s, p) => s + p.items.filter(i => (i.group || 'Прочее') === g && i.paid).reduce((a, i) => a + (i.amount || 0), 0), 0);
+    const лим = data.budget[g] || 0;
+    const row = document.createElement('div'); row.className = 'goal';
+    const pct = лим > 0 ? Math.min(100, Math.round(план / лим * 100)) : 0, ppct = лим > 0 ? Math.min(100, Math.round(опл / лим * 100)) : 0;
+    const over = лим > 0 && план > лим;
+    row.innerHTML = '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="color:' + gcolor(g) + '">' + esc(g) + '</b>' +
+      '<span>' + fmt(план) + (лим ? ' / ' + fmt(лим) + ' ₽' + (over ? ' — <b style="color:#ff8f8f">сверх на ' + fmt(план - лим) + '</b>' : ' · осталось ' + fmt(лим - план)) : ' ₽ · лимит не задан') + '</span></div>' +
+      (лим ? '<div class="gbar" style="position:relative"><div class="gfill" style="width:' + pct + '%;opacity:.45' + (over ? ';background:#ff8f8f' : '') + '"></div>' +
+        '<div class="gfill" style="position:absolute;left:0;top:0;width:' + ppct + '%' + (over ? ';background:#ff8f8f' : '') + '"></div></div>' : '');
+    const inp = document.createElement('input'); inp.className = 'amt'; inp.type = 'number'; inp.placeholder = 'лимит ₽'; inp.value = лим || '';
+    inp.onchange = () => { const v = parseFloat(inp.value) || 0; if (v) data.budget[g] = v; else delete data.budget[g]; save(); renderBudget(); };
+    const r2 = document.createElement('div'); r2.className = 'addrow'; r2.append(inp); row.appendChild(r2);
+    box.appendChild(row);
+  });
+  if (!пер.length) box.insertAdjacentHTML('afterbegin', '<div class="hint">В этом месяце периодов ещё нет — «Потрачено» появится, когда заведёшь период.</div>');
+}
+
+// ── донат в игры (с 27.10.2026) ─────────────────────────────────────────────
+// data.games = [{ id, date:'ГГГГ-ММ-ДД', game, amount, what }] — отдельный учёт,
+// с периодами не смешивается. Итог по каждой игре за этот месяц, год и всё время.
+function renderGames() {
+  if (!data.games) data.games = [];
+  if (!$('gmDate').value) $('gmDate').value = new Date().toISOString().slice(0, 10);
+  const сейчас = new Date(), мес = сейчас.toISOString().slice(0, 7), год = String(сейчас.getFullYear());
+  const игры = [...new Set(data.games.map(x => x.game))];
+  const сум = (f) => data.games.filter(f).reduce((s, x) => s + (x.amount || 0), 0);
+  const ячП = 'style="text-align:right"';
+  $('gmSum').innerHTML = игры.length ? '<table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">игра</th><th ' + ячП + '>этот месяц</th><th ' + ячП + '>' + год + '</th><th ' + ячП + '>всего</th></tr>' +
+    игры.map(g => '<tr><td>' + esc(g) + '</td><td ' + ячП + '>' + fmt(сум(x => x.game === g && x.date.slice(0, 7) === мес)) + '</td>' +
+      '<td ' + ячП + '>' + fmt(сум(x => x.game === g && x.date.slice(0, 4) === год)) + '</td><td ' + ячП + '>' + fmt(сум(x => x.game === g)) + '</td></tr>').join('') +
+    '<tr><td><b>итого</b></td><td ' + ячП + '><b>' + fmt(сум(x => x.date.slice(0, 7) === мес)) + '</b></td><td ' + ячП + '><b>' + fmt(сум(x => x.date.slice(0, 4) === год)) + '</b></td><td ' + ячП + '><b>' + fmt(сум(() => true)) + '</b></td></tr></table>'
+    : '<div class="hint">Покупок пока нет.</div>';
+  const box = $('gmList'); box.innerHTML = '';
+  data.games.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60).forEach(x => {
+    const r = document.createElement('div'); r.className = 'addrow';
+    r.innerHTML = '<span style="min-width:80px">' + esc(x.date.split('-').reverse().join('.')) + '</span><b style="min-width:70px">' + esc(x.game) + '</b>' +
+      '<span style="min-width:80px;text-align:right">' + fmt(x.amount) + ' ₽</span><span class="hint" style="margin:0;flex:1">' + esc(x.what || '') + '</span>';
+    const del = document.createElement('button'); del.className = 'xbtn'; del.textContent = '✕';
+    twoStepDel(del, '✕', () => { data.games = data.games.filter(y => y.id !== x.id); save(); renderGames(); });
+    r.appendChild(del); box.appendChild(r);
+  });
+}
+$('gmAdd').onclick = () => {
+  const v = parseFloat($('gmAmt').value);
+  if (isNaN(v) || v <= 0) return;
+  if (!data.games) data.games = [];
+  data.games.push({ id: uid('d'), date: $('gmDate').value || new Date().toISOString().slice(0, 10), game: $('gmGame').value, amount: v, what: $('gmWhat').value.trim().slice(0, 80) });
+  $('gmAmt').value = ''; $('gmWhat').value = '';
+  save(); renderGames();
+};

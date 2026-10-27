@@ -24,7 +24,11 @@ const Q_RU = { red: 'красный', orange: 'золотой', purple: 'фио�
 const TYPE_RU = { antique: 'антиквариат', jewel: 'самоцветы', technology: 'техника',
                   food: 'еда', commodity: 'повседневное', superpower: 'аномалии' };
 const SIZE_RU = { few: 'крошечный', small: 'малый', middle: 'средний', big: 'больше среднего', large: 'большой' };
-const SUBS = [['show', 'Витрина'], ['lot', 'Оценка лота'], ['dir', 'Справочник'], ['tips', 'Подсказки']];
+const SUBS = [['show', 'Витрина'], ['lot', 'Оценка лота'], ['log', 'Журнал'], ['dir', 'Справочник'], ['tips', 'Подсказки']];
+// Журнал торгов (с 27.10.2026): каждый выигранный или проигранный лот — строка
+// {t, venue, rule, bid, sold, note}. Прибыль = выручка − ставка. Ключ nte-bid-log
+// уезжает в облако вместе с остальным справочником.
+const LS_LOG = 'nte-bid-log';
 
 const fmt = n => (n == null || !isFinite(n)) ? '—' : Math.round(n).toLocaleString('ru-RU');
 const kfmt = n => {
@@ -82,6 +86,7 @@ function draw() {
     return;
   }
   if (ui.sub === 'lot') drawLot();
+  else if (ui.sub === 'log') drawLog();
   else if (ui.sub === 'dir') drawDir();
   else if (ui.sub === 'tips') drawTips();
   else drawShow();
@@ -619,6 +624,67 @@ function drawTips() {
   $('body').innerHTML = h;
   $('body').querySelectorAll('[data-bslug]').forEach(el => el.onclick = () => {
     if (typeof open === 'function') open(el.dataset.bslug);
+  });
+}
+
+// ═════ ЖУРНАЛ ═══════════════════════════════════════════════════════════════
+// Сколько реально заработал: вписываешь лот после торгов — сводка по неделе,
+// месяцу, залам и условиям площадки. «Не выиграл» — ставка 0, выручка 0, это
+// тоже полезно: видно, в каких залах чаще уходишь пустым.
+function drawLog() {
+  const лог = lsGet(LS_LOG, []);
+  const сейчас = Date.now(), неделя = 7 * 864e5, месяц = 30 * 864e5;
+  const сумм = список => список.reduce((s, x) => { s.n++; s.bid += +x.bid || 0; s.sold += +x.sold || 0; return s; }, { n: 0, bid: 0, sold: 0 });
+  const плитка = (имя, с) => '<div class="box"><b class="bk-h">' + esc(имя) + '</b><div style="font-size:20px;font-weight:700;margin-top:4px;color:' +
+    (с.sold - с.bid >= 0 ? 'var(--acc,#4ade80)' : '#f87171') + '">' + (с.sold - с.bid >= 0 ? '+' : '') + kfmt(с.sold - с.bid) + '</div>' +
+    '<div class="hint" style="margin:2px 0 0">лотов ' + с.n + ' · потрачено ' + kfmt(с.bid) + ' · выручка ' + kfmt(с.sold) + '</div></div>';
+  const поЗалу = {}, поУсл = {};
+  лог.forEach(x => { (поЗалу[x.venue] = поЗалу[x.venue] || []).push(x); (поУсл[x.rule] = поУсл[x.rule] || []).push(x); });
+  const залРу = id => ((BD.venues || []).filter(v => v.id === id)[0] || {}).ru || id || '—';
+  const услРу = id => ((BD.ruleTypes || {})[id] || {}).ru || id || '—';
+  const сред = с => с.n ? kfmt((с.sold - с.bid) / с.n) : '—';
+  let h = '<div class="cap"><b>Записать лот</b><span></span><em>после торгов</em></div>' +
+    '<div class="box"><div class="fgrp" style="flex-wrap:wrap;gap:8px;align-items:center">' +
+      '<select id="lgV">' + (BD.venues || []).map(v => '<option value="' + esc(v.id) + '"' + (v.id === ui.venue ? ' selected' : '') + '>' + esc(v.ru) + '</option>').join('') + '</select>' +
+      '<select id="lgR">' + Object.keys(BD.ruleTypes || {}).map(k => '<option value="' + esc(k) + '"' + (k === ui.rule ? ' selected' : '') + '>' + esc(BD.ruleTypes[k].ru) + '</option>').join('') + '</select>' +
+      '<input id="lgB" type="number" min="0" placeholder="ставка" style="width:110px">' +
+      '<input id="lgS" type="number" min="0" placeholder="выручка" style="width:110px">' +
+      '<input id="lgN" placeholder="заметка" style="width:160px">' +
+      '<button class="fb on" id="lgAdd">записать</button>' +
+    '</div><div class="hint" style="margin:6px 0 0">Не выиграл — оставь ставку и выручку пустыми: лот попадёт в счёт как пустой.</div></div>';
+  if (лог.length) {
+    h += '<div class="cap"><b>Итог</b><span></span></div><div class="bld">' +
+      плитка('За неделю', сумм(лог.filter(x => сейчас - x.t < неделя))) +
+      плитка('За месяц', сумм(лог.filter(x => сейчас - x.t < месяц))) +
+      плитка('За всё время', сумм(лог)) + '</div>';
+    h += '<div class="cap"><b>По залам</b><span></span><em>средняя прибыль за лот</em></div><div class="mtab bk-t"><table class="tbl" style="margin:0"><thead><tr><th>зал</th><th class="num">лотов</th><th class="num">выиграно</th><th class="num">средняя</th><th class="num">всего</th></tr></thead><tbody>' +
+      Object.keys(поЗалу).map(k => { const с = сумм(поЗалу[k]); const выигр = поЗалу[k].filter(x => +x.bid > 0).length;
+        return '<tr><td><b>' + esc(залРу(k)) + '</b></td><td class="num">' + с.n + '</td><td class="num">' + выигр + '</td><td class="num">' + сред(с) + '</td><td class="num">' + kfmt(с.sold - с.bid) + '</td></tr>'; }).join('') +
+      '</tbody></table></div>';
+    h += '<div class="cap"><b>По условиям площадки</b><span></span></div><div class="mtab bk-t"><table class="tbl" style="margin:0"><thead><tr><th>условие</th><th class="num">лотов</th><th class="num">средняя</th></tr></thead><tbody>' +
+      Object.keys(поУсл).map(k => { const с = сумм(поУсл[k]); return '<tr><td>' + esc(услРу(k)) + '</td><td class="num">' + с.n + '</td><td class="num">' + сред(с) + '</td></tr>'; }).join('') +
+      '</tbody></table></div>';
+    h += '<div class="cap"><b>Последние</b><span></span><em>' + лог.length + '</em></div><div class="mtab bk-t"><table class="tbl" style="margin:0"><thead><tr><th>когда</th><th>зал</th><th>условие</th><th class="num">ставка</th><th class="num">выручка</th><th class="num">итог</th><th></th></tr></thead><tbody>' +
+      лог.slice().reverse().slice(0, 40).map(x => '<tr><td>' + esc(new Date(x.t).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) + '</td>' +
+        '<td>' + esc(залРу(x.venue)) + '</td><td>' + esc(услРу(x.rule)) + (x.note ? ' · <i>' + esc(x.note) + '</i>' : '') + '</td>' +
+        '<td class="num">' + kfmt(+x.bid || 0) + '</td><td class="num">' + kfmt(+x.sold || 0) + '</td>' +
+        '<td class="num" style="color:' + ((+x.sold || 0) - (+x.bid || 0) >= 0 ? 'inherit' : '#f87171') + '">' + kfmt((+x.sold || 0) - (+x.bid || 0)) + '</td>' +
+        '<td><button class="fb" data-lgdel="' + x.t + '" title="удалить запись">✕</button></td></tr>').join('') +
+      '</tbody></table></div>';
+  } else h += '<div class="hint">Записей пока нет. После каждого лота — пара цифр, и здесь появится, сколько приносит неделя и какой зал выгоднее.</div>';
+  $('body').innerHTML = h;
+  $('lgAdd').onclick = () => {
+    const з = lsGet(LS_LOG, []);
+    з.push({ t: Date.now(), venue: $('lgV').value, rule: $('lgR').value, bid: +$('lgB').value || 0, sold: +$('lgS').value || 0, note: $('lgN').value.trim().slice(0, 60) });
+    ui.venue = $('lgV').value; ui.rule = $('lgR').value; saveUi();
+    lsSet(LS_LOG, з.slice(-2000));
+    if (typeof scheduleSync === 'function') scheduleSync();
+    drawLog();
+  };
+  $('body').querySelectorAll('[data-lgdel]').forEach(b => b.onclick = () => {
+    if (!confirm('Удалить эту запись?')) return;
+    lsSet(LS_LOG, lsGet(LS_LOG, []).filter(x => String(x.t) !== b.dataset.lgdel));
+    drawLog();
   });
 }
 

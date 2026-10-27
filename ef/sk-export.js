@@ -22,7 +22,13 @@
 
 'use strict';
 
-async function skЭкспорт() {
+// С 27.10.2026 тот же скрипт зовёт расширение «alextask — сбор» (кнопка
+// «Обновить из SKPORT» на сайте): skЭкспорт({ вернуть: true }) не трогает буфер
+// и не показывает окон, а возвращает текст выгрузки или бросает ошибку —
+// расширение само отдаёт его вкладке alextask.
+async function skЭкспорт(опц) {
+  const вернуть = !!(опц && опц.вернуть);
+  const alert = т => { if (вернуть) throw new Error(String(т).replace(/^alextask:\s*/, '')); window.alert(т); };
   const HOST = 'https://zonai.skport.com';
   const cookie = n => { const m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; };
   const ls = k => { try { return (localStorage.getItem(k) || '').replace(/^"|"$/g, ''); } catch (e) { return ''; } };
@@ -105,6 +111,10 @@ async function skЭкспорт() {
   }
 
   const текст = JSON.stringify(out);
+  if (вернуть) {
+    if (!out.data.card) throw new Error('карточка аккаунта не пришла: ' + log.slice(-2).join('; '));
+    return текст;
+  }
   let ok = false;
   try { if (typeof copy === 'function') { copy(текст); ok = true; } } catch (e) {}
   if (!ok) try { await navigator.clipboard.writeText(текст); ok = true; } catch (e) {}

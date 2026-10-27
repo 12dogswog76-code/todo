@@ -120,7 +120,11 @@ function themedColor(c) {
   if (!c) return c;
   return isLight() ? (LIGHT_TEXT[c.toLowerCase()] || c) : c;
 }
-const REP_NAME = { d: 'каждый день', w: 'каждую неделю', m: 'каждый месяц' };
+// wd, me, y — с 27.10.2026: по будням, в последний день месяца, раз в год
+const REP_NAME = { d: 'каждый день', wd: 'по будням', w: 'каждую неделю', m: 'каждый месяц', me: 'в последний день месяца', y: 'каждый год' };
+const REP_OPTIONS = '<option value="">Без повтора</option><option value="d">🔁 каждый день</option><option value="wd">🔁 по будням</option>' +
+  '<option value="w">🔁 каждую неделю</option><option value="m">🔁 каждый месяц</option><option value="me">🔁 последний день месяца</option>' +
+  '<option value="y">🔁 каждый год</option><option value="c">🔁 свой период…</option>';
 function repName(r) {
   if (!r) return '';
   if (REP_NAME[r]) return REP_NAME[r];
@@ -266,6 +270,14 @@ function nextDue(due, rep) {
   const today = new Date(todayStr() + 'T00:00');
   do {
     if (rep === 'd') d.setDate(d.getDate() + 1);
+    else if (rep === 'wd') { do d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6); }
+    else if (rep === 'me') {
+      // до конца этого месяца, а если уже в последний день — до конца следующего
+      const конец = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      if (d < конец) d.setTime(конец.getTime());
+      else { d.setDate(1); d.setMonth(d.getMonth() + 1); d.setDate(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()); }
+    }
+    else if (rep === 'y') d.setFullYear(d.getFullYear() + 1);
     else if (rep === 'w') d.setDate(d.getDate() + 7);
     else if (rep && rep.indexOf('c:') === 0) d.setDate(d.getDate() + (parseInt(rep.slice(2), 10) || 1));
     else d.setMonth(d.getMonth() + 1);
@@ -890,7 +902,7 @@ function render() {
       // повтор
       const repEl = document.createElement('select');
       repEl.className = 'pill';
-      repEl.innerHTML = '<option value="">Без повтора</option><option value="d">🔁 каждый день</option><option value="w">🔁 каждую неделю</option><option value="m">🔁 каждый месяц</option><option value="c">🔁 свой период…</option>';
+      repEl.innerHTML = REP_OPTIONS;
       if (t.repeat && t.repeat.indexOf('c:') === 0) {
         const co = repEl.querySelector('option[value="c"]');
         if (co) co.text = '🔁 каждые ' + t.repeat.slice(2) + ' дн.';
@@ -949,6 +961,16 @@ function render() {
         save(); render();
       };
       row.appendChild(pin);
+
+      // фокус-режим: одна задача на экране, таймер, чек-лист (27.10.2026)
+      if (!t.done) {
+        const fc = document.createElement('button');
+        fc.className = 'pin';
+        fc.textContent = '◎';
+        fc.title = 'Фокус: только эта задача и таймер';
+        fc.onclick = (e) => { e.stopPropagation(); focusOpen(t); };
+        row.appendChild(fc);
+      }
 
       const clr = document.createElement('button');
       clr.className = 'clr';
@@ -2732,3 +2754,124 @@ setInterval(() => {
     };
   }
 })();
+
+// ── входящие из Telegram-бота (с 27.10.2026) ───────────────────────────────
+// Любое сообщение боту @alextaskalarm_bot без команды кладётся воркером во
+// входящие (KV todo:inbox). Здесь забираем их при открытии, при возврате на
+// вкладку и раз в 5 минут, превращаем в задачи и подтверждаем — воркер удаляет.
+// Доступ — по ключу: сайт открыт всем, задачи личные. Ключ приходит ссылкой
+// из бота (/tasklink), #inbox=<ключ> открывается один раз на устройстве.
+// id задачи = id из входящих: если два устройства заберут одно и то же,
+// облако сведёт их в одну задачу.
+const LS_INBOX = LS + '_inbox_key';
+(() => {
+  const m = /#inbox=([0-9a-f]{32})/.exec(location.hash);
+  if (!m) return;
+  try { localStorage.setItem(LS_INBOX, m[1]); } catch (e) {}
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+let inboxBusy = false;
+async function inboxPull() {
+  const k = localStorage.getItem(LS_INBOX);
+  if (!k || inboxBusy) return;
+  inboxBusy = true;
+  try {
+    const r = await fetch(PUSH_API + '/api/todo/inbox', { headers: { 'X-Inbox-Key': k }, cache: 'no-store' });
+    const d = await r.json();
+    if (!d || !d.ok || !(d.list || []).length) return;
+    d.list.forEach(x => {
+      if (tasks.some(t => t.id === x.id)) return;
+      let text = String(x.text || '').trim(), due = null;
+      const м = /^(сегодня|завтра)[\s,:—-]+/i.exec(text);
+      if (м) {
+        due = м[1].toLowerCase() === 'сегодня' ? todayStr() : _ymd(new Date(Date.now() + 86400000));
+        text = text.slice(м[0].length);
+      }
+      const minPos = tasks.length ? Math.min(...tasks.map(t => t.pos || 0)) : 0;
+      tasks.push({ id: x.id, title: text || '(пусто)', cat: null, sub: null, due: due, dueTime: null, repeat: null,
+                   done: false, created: x.id, updatedAt: null, mod: Date.now(), pos: minPos - 1, fromBot: true });
+    });
+    save(); render();
+    await fetch(PUSH_API + '/api/todo/inbox/ack', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Inbox-Key': k }, body: JSON.stringify({ ids: d.list.map(x => x.id) }) });
+  } catch (e) {} finally { inboxBusy = false; }
+}
+inboxPull();
+setInterval(inboxPull, 5 * 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') inboxPull(); });
+
+// ── фокус-режим (с 27.10.2026) ──────────────────────────────────────────────
+// Кнопка ◎ у задачи: экран закрывается тёмным слоем, на нём только эта задача,
+// её чек-лист и таймер — 25 / 50 минут или секундомер. Время кончилось —
+// звук и уведомление. «Готово» отмечает задачу как обычная галочка (повтор
+// заведётся сам). Esc — выйти. Сколько просидел в фокусе — t.focusMin.
+let focusTimer = 0;
+function focusOpen(t) {
+  focusClose();
+  const o = document.createElement('div');
+  o.id = 'focusLayer';
+  o.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(8,9,11,.97);display:flex;align-items:center;justify-content:center;padding:16px';
+  const box = document.createElement('div');
+  box.style.cssText = 'width:min(640px,100%);max-height:100%;overflow:auto;text-align:center;font-family:inherit;color:#e9ecf3';
+  o.appendChild(box);
+  let конец = 0, старт = 0, режим = '';
+  const нач = Date.now();
+  const рис = () => {
+    const ост = режим === 'т' ? Math.max(0, конец - Date.now()) : (режим === 'с' ? Date.now() - старт : 0);
+    const мм = Math.floor(ост / 60000), сс = Math.floor(ост % 60000 / 1000);
+    box.innerHTML =
+      '<div style="font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#8b92a3">фокус</div>' +
+      '<div style="font-size:clamp(22px,4vw,34px);font-weight:700;margin:10px 0 18px;line-height:1.25">' + linkify(t.title) + '</div>' +
+      (t.stage ? '<div style="color:#8b92a3;margin:-8px 0 14px">↳ ' + linkify(t.stage) + '</div>' : '') +
+      '<div id="focusClock" style="font:700 clamp(54px,12vw,96px)/1 ui-monospace,Consolas,monospace;margin:6px 0 16px;color:' + (режим ? '#4ade80' : '#3a3f4b') + '">' +
+        String(мм).padStart(2, '0') + ':' + String(сс).padStart(2, '0') + '</div>' +
+      '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:18px">' +
+        ['25', '50', 'с'].map(k => '<button data-fk="' + k + '" class="pill">' + (k === 'с' ? 'секундомер' : k + ' мин') + '</button>').join('') +
+        (режим ? '<button data-fk="стоп" class="pill">стоп</button>' : '') + '</div>' +
+      ((t.checks || []).length ? '<div style="text-align:left;max-width:460px;margin:0 auto 18px">' + t.checks.map((c, i) =>
+        '<label style="display:flex;gap:10px;align-items:center;padding:6px 0;cursor:pointer;' + (c.d ? 'opacity:.5;text-decoration:line-through' : '') + '">' +
+        '<input type="checkbox" data-fc="' + i + '"' + (c.d ? ' checked' : '') + '> <span>' + linkify(c.t) + '</span></label>').join('') + '</div>' : '') +
+      '<div style="display:flex;gap:10px;justify-content:center">' +
+        '<button data-fk="done" class="pill" style="border-color:#4ade80;color:#4ade80">✓ готово</button>' +
+        '<button data-fk="выйти" class="pill">выйти (Esc)</button></div>';
+  };
+  const сигнал = () => {
+    try { const a = new (window.AudioContext || window.webkitAudioContext)(), g = a.createGain(); g.connect(a.destination);
+      [0, .35, .7].forEach(d => { const s = a.createOscillator(); s.frequency.value = 880; s.connect(g); s.start(a.currentTime + d); s.stop(a.currentTime + d + .2); }); } catch (e) {}
+    try { if (Notification.permission === 'granted') new Notification('Фокус: время вышло', { body: t.title }); } catch (e) {}
+  };
+  const тик = () => {
+    рис();
+    if (режим === 'т' && Date.now() >= конец) { режим = ''; сигнал(); рис(); }
+  };
+  o.addEventListener('click', e => {
+    const b = e.target.closest('[data-fk]');
+    const ch = e.target.closest('[data-fc]');
+    if (ch) { const c = t.checks[+ch.dataset.fc]; c.d = ch.checked; t.mod = Date.now(); save(); render(); рис(); return; }
+    if (!b) return;
+    const k = b.dataset.fk;
+    if (k === '25' || k === '50') { режим = 'т'; конец = Date.now() + (+k) * 60000;
+      try { if (Notification.permission === 'default') Notification.requestPermission(); } catch (x) {} }
+    else if (k === 'с') { режим = 'с'; старт = Date.now(); }
+    else if (k === 'стоп') режим = '';
+    else if (k === 'done') {
+      t.done = true; t.completedAt = Date.now(); t.mod = Date.now(); spawnRepeat(t);
+      focusClose(t, нач); save(); render(); return;
+    } else if (k === 'выйти') { focusClose(t, нач); save(); return; }
+    рис();
+  });
+  document.body.appendChild(o);
+  рис();
+  focusTimer = setInterval(тик, 1000);
+  o._esc = e => { if (e.key === 'Escape') { focusClose(t, нач); save(); } };
+  document.addEventListener('keydown', o._esc);
+}
+function focusClose(t, нач) {
+  clearInterval(focusTimer);
+  const o = document.getElementById('focusLayer');
+  if (!o) return;
+  document.removeEventListener('keydown', o._esc);
+  o.remove();
+  // учёт: сколько минут задача была в фокусе
+  if (t && нач) { const мин = Math.round((Date.now() - нач) / 60000); if (мин > 0) { t.focusMin = (t.focusMin || 0) + мин; t.mod = Date.now(); } }
+}

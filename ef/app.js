@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v16';
+const APP_VER = 'v17';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -1242,6 +1242,64 @@ function аватар(id, подпись) {
   return '<span class="mem me" data-op="' + эк(id) + '"><img src="' + эк(c.значок || '') + '" alt="" data-nf="hide">' +
     '<span class="who">' + эк(c.имяРу || id) + (подпись ? '<br>' + подпись : '') + '</span></span>';
 }
+// ── чего не хватает (27.10.2026) ────────────────────────────────────────────
+// Твои операторы из выгрузки против разборов prydwen: уровень до 90, навыки не
+// на максимуме, оружие не из рекомендованных, набор снаряжения не тот или не
+// собран (бонус — от 3 вещей). Порядок — по тиру: сначала сильные.
+const ТИРПОР = { 'T0': 0, 'T0.5': 1, 'T1': 2, 'T1.5': 3, 'T2': 4, 'T3': 5 };
+function недостачи(х) {
+  const строки = [];
+  Object.entries(х.оп || {}).forEach(([id, v]) => {
+    const c = EF.оп(id);
+    if (!c) return;
+    const что = [];
+    if ((v.ур || 0) < 90) что.push('уровень ' + (v.ур || 0) + '/90');
+    const нав = (v.навыки || []).filter(н => н.макс && н.ур < н.макс);
+    if (нав.length) что.push('навыки не на максимуме: ' + нав.map(н => эк(н.имя) + ' ' + н.ур + '/' + н.макс).join(', '));
+    const лучш = (c.лучшееОружие || []).map(o => o.split('|')[0]);
+    if (лучш.length && v.оружие) {
+      const ру = лучш.map(en => (EF.БАЗА.оружие.find(w => w.имя === en) || {}).имяРу || en);
+      const есть = ру.concat(лучш).some(n => простоИмя(n) === простоИмя(v.оружие.имя));
+      if (!есть) что.push('оружие: сейчас ' + эк(v.оружие.имя) + ', лучше ' + эк(ру.slice(0, 2).join(' или ')));
+    } else if (!v.оружие) что.push('нет оружия');
+    const наб = (c.лучшиеНаборы || []).map(найтиНабор).filter(Boolean);
+    if (наб.length) {
+      const надето = (v.снар || []).filter(e => e.набор && наб.some(n => простоИмя(n.имяРу) === простоИмя(e.набор.имя) || простоИмя(n.имя) === простоИмя(e.набор.имя))).length;
+      if (надето < 3) что.push('набор ' + эк(наб[0].имяРу) + ': надето ' + надето + ' из 3');
+    }
+    if (что.length) строки.push({ c, что });
+  });
+  if (!строки.length) return Object.keys(х.оп || {}).length ? EF.блок('Чего не хватает', '') + '<p class="hint">Всё по рекомендациям — придраться не к чему.</p>' : '';
+  строки.sort((a, b) => (ТИРПОР[a.c.тир] ?? 9) - (ТИРПОР[b.c.тир] ?? 9));
+  return EF.блок('Чего не хватает', 'по разборам prydwen · ' + строки.length) + '<table class="tbl">' +
+    строки.map(s => '<tr><td style="white-space:nowrap"><span class="calop" data-op="' + эк(s.c.id) + '"><img src="' + эк(s.c.значок) + '" alt="">' + эк(s.c.имяРу) + '</span>' +
+      (s.c.тир ? ' <i>' + эк(s.c.тир) + '</i>' : '') + '</td><td>' + s.что.join('<br>') + '</td></tr>').join('') + '</table>';
+}
+// ── команды из своего ростера ────────────────────────────────────────────────
+// Составы из разборов prydwen (у каждого оператора по нескольку): собраны
+// целиком из тех, кто у тебя есть, и «не хватает одного».
+function командыРостера(х) {
+  const есть = new Set(Object.keys(х.оп || {}));
+  if (!есть.size) return '';
+  const кто = имя => { const п = простоИмя(имя); return EF.БАЗА.персонажи.find(c => простоИмя(c.имя) === п || простоИмя(c.имяРу) === п); };
+  const все = new Map();
+  EF.БАЗА.персонажи.forEach(c => (c.команды || []).forEach(с => {
+    const члены = String(с).split(',').map(s => кто(s.trim())).filter(Boolean);
+    if (члены.length < 3) return;
+    const ключ = члены.map(x => x.id).sort().join('|');
+    if (!все.has(ключ)) все.set(ключ, члены);
+  }));
+  const полные = [], почти = [];
+  все.forEach(члены => {
+    const нет = члены.filter(c => !есть.has(c.id));
+    if (!нет.length) полные.push(члены); else if (нет.length === 1) почти.push({ члены, нет: нет[0] });
+  });
+  const ряд = члены => '<div class="team">' + члены.map(c => аватар(c.id, есть.has(c.id) ? 'ур. ' + ((х.оп[c.id] || {}).ур || '?') : '<b style="color:#f87171">нет</b>')).join('') + '</div>';
+  let h = EF.блок('Команды из твоего ростера', полные.length + ' собираются целиком');
+  h += полные.length ? полные.map(ряд).join('') : '<p class="hint">Ни один рекомендованный состав пока не собирается целиком.</p>';
+  if (почти.length) h += EF.блок('Не хватает одного', почти.length + '') + почти.slice(0, 12).map(п => ряд(п.члены)).join('');
+  return h;
+}
 function рисоватьХронику() {
   if (!ХРОНИКА) return '';
   const х = ХРОНИКА, а = х.акк || {}, б = х.база || {};
@@ -1261,6 +1319,8 @@ function рисоватьХронику() {
   const оп = Object.entries(х.оп || {}).sort((a, b) => (b[1].ур || 0) - (a[1].ур || 0));
   if (оп.length) h += EF.блок('Операторы', оп.length + '') + '<div class="team">' +
     оп.map(([id, v]) => аватар(id, 'ур. ' + (v.ур || '?') + (v.фаза != null ? ' · Э' + v.фаза : '') + (v.пот ? ' · P' + v.пот : ''))).join('') + '</div>';
+
+  h += недостачи(х) + командыРостера(х);
 
   // регионы
   (б.регионы || []).forEach(р => {
@@ -1319,6 +1379,12 @@ EF.раздел('chr', {
   рисовать() {
     ХРОНИКА = ХРОНИКА || хроникаИзХранилища();
     EF.шапка('skport.account', 'Аккаунт SKPORT', ХРОНИКА ? Object.keys(ХРОНИКА.оп || {}).length : null, 'операторов');
+    // одной кнопкой — через расширение Chrome «alextask — сбор» 1.7 (в окне exe расширений нет)
+    const вОкне = !!(window.chrome && window.chrome.webview);
+    const кнопка = вОкне ? '' : '<div class="box brk" style="max-width:980px;margin-bottom:12px"><b>одной кнопкой</b>' +
+      '<div class="fld"><button class="btn" data-act="sk-ext">Обновить из SKPORT</button>' +
+      '<span class="say" id="skextsay">откроется skport.com (нужен вход), расширение заберёт данные и закроет вкладку — около 10 секунд</span></div>' +
+      '<div class="say">Нужно расширение «alextask — сбор» 1.7 в Chrome. Без него — ручной способ ниже.</div></div>';
     const импорт = '<b>' + (ХРОНИКА ? 'обновить данные' : 'подключить за три шага') + '</b>' +
       '<div class="node"><span class="tag">1</span><div style="flex:1">Открой <a class="lnk" href="https://www.skport.com/" target="_blank" rel="noopener">www.skport.com</a> и войди в аккаунт.</div></div>' +
       '<div class="node"><span class="tag">2</span><div style="flex:1">Там же: F12 → Console, вставь скрипт и нажми Enter. Если Chrome просит — сначала напиши <span class="hl">allow pasting</span> и Enter. ' +
@@ -1331,12 +1397,21 @@ EF.раздел('chr', {
         (ХРОНИКА ? '<button class="btn sec" data-act="sk-dl" title="Файл без ключей — можно отдать на разбор">Скачать выжимку</button>' +
                    '<button class="btn gh" data-act="sk-forget">Забыть</button>' : '') + '</div>' +
       '<div class="say" id="skstatus"></div>';
-    $('body').innerHTML = (ХРОНИКА
-        ? '<div id="skbody">' + рисоватьХронику() + '</div><details class="dd" style="margin-top:18px"><summary><span class="nm2"><b>Обновить из SKPORT</b>' +
+    $('body').innerHTML = кнопка + (ХРОНИКА
+        ? '<div id="skbody">' + рисоватьХронику() + '</div><details class="dd" style="margin-top:18px"><summary><span class="nm2"><b>Обновить вручную</b>' +
           '<i>скрипт для консоли на skport.com</i></span></summary><div class="dd-in">' + импорт + '</div></details>'
         : '<div class="box brk" style="max-width:980px">' + импорт + '</div><div id="skbody"></div>');
   },
 });
+// Ответ расширения (background.js, выгрузкаSk): текст выгрузки или ошибка.
+EF.skПринять = function (текст, ошибка) {
+  const say = t => { const s = $('skextsay'); if (s) s.textContent = t; };
+  if (!текст) { say('не вышло: ' + (ошибка || 'нет данных') + (/вход|cred|token/i.test(ошибка || '') ? ' — войди на skport.com и нажми снова' : '')); return; }
+  const итог = принятьХронику(текст);
+  if (ВКЛ === 'chr') рисовать();
+  say(итог);
+  EF.облакоСкоро && EF.облакоСкоро();
+};
 
 // ── инструменты: облако, бэкап, откуда данные ───────────────────────────────
 // Меню одинаковое во всех разделах сайта: колонка пунктов слева, содержимое
@@ -1569,6 +1644,14 @@ document.addEventListener('click', e => {
     }
     case 'codes-upd': т.textContent = 'обновляю…'; кодыЗабрать(true); return;
     case 'cal-upd': т.textContent = 'обновляю…'; календарьЗабрать(true); return;
+    case 'sk-ext': {
+      т.textContent = 'жду расширение…';
+      window.open('https://www.skport.com/#alextask-sk', '_blank');
+      // нет ответа за полминуты — скорее всего, расширения нет или оно старое
+      setTimeout(() => { if (т.textContent === 'жду расширение…') { т.textContent = 'Обновить из SKPORT';
+        const s = $('skextsay'); if (s) s.textContent = 'расширение не ответило — проверь «alextask — сбор» 1.7 в chrome://extensions или используй ручной способ'; } }, 30000);
+      return;
+    }
     case 'code-copy':
       navigator.clipboard.writeText(д.code).then(() => { т.textContent = 'скопировано'; }, () => { т.textContent = 'выдели сам'; });
       return;

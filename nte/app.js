@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v87';
+const APP_VER = 'v88';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -259,8 +259,32 @@ async function load() {
   $('toolsBtn').classList.toggle('on', !!syncCfg().np);
   workerVer();
   swStart();
+  // вкладка по адресу: nte/#map, nte/#bid — так открывают меню значка и окно
+  // поверх игры в alextask.exe (27.10.2026)
+  const хеш = location.hash.slice(1);
+  if (хеш && TABS.some(t => t[0] === хеш)) state.tab = хеш;
   drawTabs();
   draw();
+  shotsReady();
+}
+
+// Скрины из окна alextask.exe (меню значка → «Скрины из буфера → NTE»): окно
+// ловит картинку в буфере после Print Screen / Win+Shift+S и шлёт сюда
+// {"shot":"<png base64>"} — она уходит в тот же разбор, что «Скрины скопом».
+function shotsReady() {
+  const wv = window.chrome && window.chrome.webview;
+  if (!wv || window.__shots) return;
+  window.__shots = true;
+  wv.addEventListener('message', e => {
+    let d; try { d = JSON.parse(e.data); } catch (x) { return; }
+    if (!d || !d.shot) return;
+    const bin = atob(d.shot), b = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+    const f = new File([b], 'скрин ' + new Date().toLocaleTimeString('ru-RU') + '.png', { type: 'image/png' });
+    if (!$('ocrDrop')) showOcrBulk();
+    ocrAdd([f]);
+  });
+  wv.postMessage('nte-ready');
 }
 
 function drawTabs() {
@@ -1423,6 +1447,7 @@ function evDraw() {
       : '') +
     (q && !идут.length && !скоро.length && !пост.length && !прошли.length
       ? '<div class="hint">По запросу среди событий ничего не нашлось.</div>' : '');
+  startBanTick();
 }
 // ── карточки событий ───────────────────────────────────────────────────────
 function evSort(a, b) {
@@ -1454,6 +1479,8 @@ function evCard(e) {
       (e.kind ? '<u>' + esc(EV_KIND[e.kind] || e.kind) + '</u>' : '') +
     '</div>' +
     '<div class="evc-d">' + esc(evDays(e)) + esc(evTail(e, дней)) + '</div>' +
+    // живой отсчёт до часа и секунды, как у баннеров (27.10.2026)
+    (!e.perm && (e.live || e.soon) && e.to ? '<div class="evc-d">' + banClock(e) + '</div>' : '') +
     (evName(e) !== unent(e.name) ? '<div class="evc-en">' + esc(unent(e.name)) + '</div>' : '') +
     (e.rew ? '<div class="evc-r">' + evRew(e.rew) + '</div>' : '') +
   '</div>';

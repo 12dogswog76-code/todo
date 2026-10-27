@@ -306,6 +306,8 @@
     <button data-tab="fixed">Постоянные</button>
     <button data-tab="goals">Цели</button>
     <button data-tab="chart">График</button>
+    <button data-tab="budget">Бюджет</button>
+    <button data-tab="games">Донат</button>
     <button id="editModeBtn" title="Включи, чтобы редактировать: появятся все поля. Выключи — чистый просмотр.">✎ Изменения</button>
   </div>
 
@@ -357,12 +359,36 @@
     </div>
   </div>
 
+  <div id="tab-budget" style="display:none">
+    <div class="card">
+      <b>Бюджет на месяц по группам</b>
+      <div class="hint" style="margin-top:2px">Лимит на группу в месяц. Полоска — сколько уже запланировано в периодах этого месяца (оплаченное — темнее). Красная — вышел за лимит.</div>
+      <div id="budgetList" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div id="tab-games" style="display:none">
+    <div class="card">
+      <b>Донат в игры</b>
+      <div class="hint" style="margin-top:2px">Каждая покупка — строка: игра, сумма, что взял. Ниже — итог за месяц и год по каждой игре.</div>
+      <div class="addrow">
+        <select id="gmGame"><option>ZZZ</option><option>NTE</option><option>Endfield</option><option>Другое</option></select>
+        <input class="amt" id="gmAmt" type="number" placeholder="₽">
+        <input class="nm" id="gmWhat" placeholder="что взял (пропуск, кристаллы…)">
+        <input class="mini" id="gmDate" type="date">
+        <button class="act" id="gmAdd">＋</button>
+      </div>
+      <div id="gmSum" style="margin-top:10px"></div>
+      <div id="gmList" style="margin-top:10px"></div>
+    </div>
+  </div>
+
   <div class="footerbar">
     <button id="themeBtn">☀️ Тема</button>
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v19</span>
+    <span class="hint" style="align-self:center; margin:0">v20</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -412,7 +438,7 @@
   <datalist id="names"></datalist>
 </div>
 
-<script src="money-app.js?v=1" defer></script>
+<script src="money-app.js?v=2" defer></script>
 <script src="menu.js?v=3" defer></script>
 <script src="install.js?v=2" defer></script>
 </body>
