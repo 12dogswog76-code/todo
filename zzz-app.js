@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v267';
+const APP_VER = 'v268';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1273,15 +1273,111 @@ function batBlock(n) {
     '<div class="cap2" style="margin:0 0 7px">БАТАРЕЯ НА ФАРМ</div>' +
     '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">' +
       '<span><b style="font-size:22px">⚡ ' + batRange(все) + '</b> <span class="hint" style="margin:0">на всё до целей · ≈ ' + дни(все) + '</span></span>' +
-      (сумка ? '<span><b style="font-size:22px;color:var(--acc)">⚡ ' + (нет.макс ? batRange(нет) : '0') + '</b> <span class="hint" style="margin:0">с учётом сумки' +
+      (сумка ? '<span><b style="font-size:22px;color:var(--acc)">⚡ ' + (нет.макс ? batRange(нет) : '0') + '</b> <span class="hint" style="margin:0">без того, что уже есть' +
         (нет.макс ? ' · ≈ ' + дни(нет) : ' — всё уже есть') + '</span></span>' : '') +
     '</div>' +
-    '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв' + (сумка ? ' (с учётом сумки)' : '') + '</summary>' +
+    '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв' + (сумка ? ' (без того, что уже есть)' : '') + '</summary>' +
       '<table class="tbl" style="margin-top:6px">' + нет.строки.map(batRow).join('') +
       '</table>' +
-      '<div class="hint">Уровень Интер-нота ' + (ui.ikLvl || 60) + ' (меняется в «Материалах»). Сумка — тоже там; здесь она целиком отнесена к этому агенту.</div>' +
+      '<div class="hint">Уровень Интер-нота ' + (ui.ikLvl || 60) + ' (меняется в «Материалах»). Отметки «уже есть» общие на аккаунт; здесь они целиком отнесены к этому агенту.</div>' +
     '</details></div>';
 }
+
+// ─────────────── «что уже есть» прямо на материалах (28.10.2026) ───────────────
+// Полей ввода нет: нажал на материал — он считается собранным целиком (часто
+// так и есть), под строкой открывается полоска «есть X из Y», её можно сдвинуть.
+// Пишется в ту же сумку ui.bag — она общая на аккаунт, поэтому отметка в
+// карточке агента видна и в «Материалах», и наоборот. Денни не отмечаются:
+// в батарею они не входят.
+let haveOpen = null;   // id материала, у которого открыта полоска
+const вСумке = id => Math.max(0, +((ui.bag || {})[id]) || 0);
+const полноеИмя = id => (MATS && MATS.items && MATS.items[id]) || ('#' + id);
+function setBag(id, v) {
+  if (!ui.bag) ui.bag = {};
+  v = Math.max(0, Math.floor(v || 0));
+  if (v) ui.bag[id] = v; else delete ui.bag[id];
+  ui.bagT = Date.now();
+}
+// батарея на недостающее по одному материалу — для подписи в полоске
+function batOne(id, сколько) {
+  if (!(сколько > 0)) return null;
+  const n = MATS.exp && MATS.exp[id] ? { exp: сколько * MATS.exp[id], items: {} } : { items: { [id]: сколько } };
+  const b = batteryFor(n);
+  return b.макс ? b : null;
+}
+function hvTxt(h, need, b) {
+  return 'есть <b>' + nfmt(h) + '</b> из ' + nfmt(need) +
+    (h >= need ? ' · хватает' : ' · не хватает ' + nfmt(need - h) + (b ? ' · ⚡ ' + batRange(b) : ''));
+}
+// list — [[id, нужно]], имя — короткое название для чипа.
+// Возвращает чипы и полоску под ними (если открыт один из этих материалов).
+function haveItems(list, имя) {
+  const чипы = list.map(([id, need]) => {
+    const h = вСумке(id), p = Math.min(100, Math.round(h / need * 100));
+    return '<button type="button" class="mt-i mt-t' + (h >= need ? ' ok' : h ? ' part' : '') + (haveOpen === id ? ' on' : '') +
+      '" data-have="' + id + '" data-need="' + need + '" style="--p:' + p + '%" title="' + esc(полноеИмя(id)) + '">' +
+      matIcon(id, полноеИмя(id)) +
+      (h >= need ? '<b>✓</b>' : '<b>' + nfmt(need - h) + '</b>' + (h ? '<em>/' + nfmt(need) + '</em>' : '')) +
+      esc(имя(id)) + '</button>';
+  }).join('');
+  const о = list.find(x => x[0] === haveOpen);
+  let пол = '';
+  if (о) {
+    const [id, need] = о, h = вСумке(id), max = Math.max(need, h);
+    пол = '<div class="hv-ed" data-ed="' + id + '" data-need="' + need + '">' +
+      '<div class="hv-top">' + matIcon(id, полноеИмя(id)) + '<span>' + esc(полноеИмя(id)) + '</span>' +
+        '<span class="hv-txt">' + hvTxt(h, need, batOne(id, need - h)) + '</span></div>' +
+      '<div class="hv-row">' +
+        '<button type="button" class="hv-st" data-st="-1" aria-label="на одну меньше">−</button>' +
+        '<input type="range" class="hv-rng" min="0" max="' + max + '" step="1" value="' + h + '" style="--p:' + Math.round(h / max * 100) + '%" aria-label="сколько уже есть">' +
+        '<button type="button" class="hv-st" data-st="1" aria-label="на одну больше">+</button>' +
+        '<button type="button" class="hv-q" data-q="all">всё есть</button>' +
+        '<button type="button" class="hv-q" data-q="0">нет ничего</button>' +
+      '</div></div>';
+  }
+  return { чипы, пол };
+}
+// клики по чипам и полоске; redraw — перерисовать то, где они лежат
+function bindHave(root, redraw) {
+  root.querySelectorAll('[data-have]').forEach(c => c.onclick = () => {
+    const id = c.dataset.have;
+    if (haveOpen === id) { haveOpen = null; redraw(); return; }
+    haveOpen = id;
+    // первое нажатие — «всё есть»: материал сразу пропадает из расчёта
+    if (!вСумке(id)) { setBag(id, +c.dataset.need); save(); }
+    redraw();
+  });
+  const ed = root.querySelector('.hv-ed');
+  if (!ed) return;
+  const id = ed.dataset.ed, need = +ed.dataset.need, rng = ed.querySelector('.hv-rng');
+  // пока тянешь — только подпись и заливка, сохраняем по отпусканию
+  rng.oninput = () => {
+    const h = +rng.value;
+    rng.style.setProperty('--p', Math.round(h / (+rng.max || 1) * 100) + '%');
+    ed.querySelector('.hv-txt').innerHTML = hvTxt(h, need, batOne(id, need - h));
+  };
+  rng.onchange = () => { setBag(id, +rng.value); save(); redraw(); };
+  ed.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { setBag(id, вСумке(id) + +b.dataset.st); save(); redraw(); });
+  ed.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { setBag(id, b.dataset.q === 'all' ? need : 0); save(); redraw(); });
+}
+// Выключенные части агента (28.10.2026): «последние уровни навыка пока не
+// качаю» — часть остаётся в списке бледной, но в итог и батарею не идёт.
+// ui.partOff = { [agentId]: { [имя части]: 1 } }, синхронизируется с сумкой.
+const partOff = aid => (ui.partOff && ui.partOff[aid]) || {};
+function needOn(aid) {
+  const n = matsNeed(aid);
+  if (!n) return null;
+  const off = partOff(aid);
+  if (!n.parts.some(x => off[x.n])) return n;
+  const r = { gold: 0, exp: 0, items: {}, has: n.has, parts: n.parts };
+  n.parts.forEach(x => {
+    if (off[x.n]) return;
+    r.gold += x.gold; r.exp += x.exp;
+    Object.keys(x.items).forEach(k => { r.items[k] = (r.items[k] || 0) + x.items[k]; });
+  });
+  return r;
+}
+const needEmpty = n => !n || (!n.gold && !n.exp && !Object.keys(n.items).length);
 
 // Журналы опыта: сколько понадобится, если брать самые крупные.
 // Остаток добиваем меньшими — так и делают в игре.
@@ -2442,7 +2538,7 @@ function planProg(p) {
                                      br: q.br != null ? q.br : 5, phase: q.phase || 1 } });
 }
 
-function openAgent(id) { curId = id; curTab = 'now'; editing = null; info = null; cbOpen = false; modOpen = false; tgtOpen = false; renderSheet(); }
+function openAgent(id) { curId = id; curTab = 'now'; haveOpen = null; editing = null; info = null; cbOpen = false; modOpen = false; tgtOpen = false; renderSheet(); }
 
 // ─────────────── вкладка «Гайд» ───────────────
 // Показываем сборку так, как её даёт prydwen: диапазоны характеристик остаются
@@ -2724,29 +2820,33 @@ function matsHtml(a) {
     return '<span class="mt-i" title="' + esc(full) + '">' + matIcon(id, full) +
       '<b>' + nfmt(cnt) + '</b>' + esc(short(id)) + '</span>';
   };
-  const books = expBooks(n.exp);
+  // итог и батарея — без выключенных частей; сами части показываем все
+  const nn = needOn(a.id), off = partOff(a.id);
+  const books = expBooks(nn.exp);
+  const есть = haveItems(books.concat(Object.keys(nn.items).map(id => [id, nn.items[id]])), short);
 
   let h = '<div class="mt-sum">' +
-    '<div class="cap2" style="margin:0 0 7px">ВСЕГО ДО ЦЕЛЕЙ</div>' +
+    '<div class="cap2 mt-cap" style="margin:0 0 7px">ВСЕГО ДО ЦЕЛЕЙ<span>нажми на материал — отметить, что уже есть</span></div>' +
     '<div class="mt-items">' +
-      (n.gold ? chip('10', n.gold) : '') +
-      books.map(b => chip(b[0], b[1])).join('') +
-      Object.keys(n.items).map(id => chip(id, n.items[id])).join('') +
-    '</div></div>';
-  // батарея на фарм этого агента (27.10.2026) — с сумкой и без
-  h += batBlock(n);
+      (nn.gold ? chip('10', nn.gold) : '') + есть.чипы +
+    '</div>' + есть.пол +
+    (needEmpty(nn) ? '<div class="hint" style="margin:0">Все части выключены — считать нечего.</div>' : '') +
+  '</div>';
+  // батарея на фарм этого агента (27.10.2026) — с тем, что уже есть, и без
+  h += batBlock(nn);
 
   // по частям: слева что качаем и с какого на какое, справа — цена
-  h += '<div class="cap2" style="margin:14px 0 6px">ПО ЧАСТЯМ</div><div class="mp-list">' +
+  h += '<div class="cap2 mt-cap" style="margin:14px 0 6px">ПО ЧАСТЯМ<span>нажми на часть — не считать её</span></div><div class="mp-list">' +
     n.parts.map(x => {
       const bk = expBooks(x.exp);
       const cells = (x.gold ? [chip('10', x.gold)] : [])
         .concat(bk.map(b => chip(b[0], b[1])))
         .concat(Object.keys(x.items).map(id => chip(id, x.items[id])));
       const бат = batteryFor(x);
-      return '<div class="mp-row">' +
+      return '<div class="mp-row mp-t' + (off[x.n] ? ' off' : '') + '" data-part="' + esc(x.n) + '" role="button" tabindex="0"' +
+        ' title="' + (off[x.n] ? 'не считается — нажми, чтобы вернуть' : 'нажми, чтобы не считать') + '">' +
         '<div class="mp-n"><b>' + esc(x.n) + '</b><i>' + x.from + ' → ' + x.to +
-          (бат.макс ? ' · ⚡ ' + batRange(бат) : '') + '</i></div>' +
+          (off[x.n] ? ' · не считается' : бат.макс ? ' · ⚡ ' + batRange(бат) : '') + '</i></div>' +
         '<div class="mt-items">' + cells.join('') + '</div></div>';
     }).join('') + '</div>';
 
@@ -3451,6 +3551,21 @@ function bindSheet() {
   };
   const ft = $('favTog');
   if (ft) ft.onclick = () => { p.fav = !p.fav; p.mod = Date.now(); save(curId); renderSheet(); render(); };
+  // вкладка «Фарм»: что уже есть и выключенные части (28.10.2026)
+  if (curTab === 'mats') {
+    bindHave($('sheet'), renderSheet);
+    $('sheet').querySelectorAll('[data-part]').forEach(r => {
+      const tog = () => {
+        if (!ui.partOff) ui.partOff = {};
+        const o = ui.partOff[curId] || (ui.partOff[curId] = {});
+        if (o[r.dataset.part]) delete o[r.dataset.part]; else o[r.dataset.part] = 1;
+        if (!Object.keys(o).length) delete ui.partOff[curId];
+        ui.bagT = Date.now(); save(); renderSheet();
+      };
+      r.onclick = tog;
+      r.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tog(); } };
+    });
+  }
   const cb = $('cardBtn');
   if (cb) cb.onclick = () => cardSave(curId);
   // помним, развёрнута сверка или свёрнута
@@ -5101,6 +5216,7 @@ function payload() {
            pass: (ui && ui.pass) || null, shop: (ui && ui.shop) || null,
            pick: (ui && ui.pick) || null, pickT: (ui && ui.pickT) || 0,
            bag: (ui && ui.bag) || null, bagT: (ui && ui.bagT) || 0,
+           partOff: (ui && ui.partOff) || null,
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            pullsFull: !!(PULLS && PULLS.full),
            chron: (CHRON && CHRON.log) || [], chronT: (CHRON && CHRON.at) || 0,
@@ -5357,6 +5473,8 @@ function mergeProg(remote) {
   if (remote.bag && (remote.bagT || 0) > (ui.bagT || 0)) {
     ui.bag = remote.bag;
     ui.bagT = remote.bagT || 0;
+    // выключенные части агентов едут вместе с сумкой, под её же отметкой времени
+    if (remote.partOff) ui.partOff = remote.partOff;
     try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
     changed = true;
     if (menuCur === 'mats') drawMats();
@@ -6178,8 +6296,9 @@ function drawMats() {
   const total = { gold: 0, exp: 0, items: {} };
   const rows = [];
   list.forEach(a => {
-    const n = matsNeed(a.id);
-    if (!n) return;
+    // без частей, выключенных в карточке агента
+    const n = needOn(a.id);
+    if (needEmpty(n)) return;
     total.gold += n.gold; total.exp += n.exp;
     Object.keys(n.items).forEach(k => { total.items[k] = (total.items[k] || 0) + n.items[k]; });
     rows.push({ a: a, n: n });
@@ -6254,49 +6373,18 @@ function drawMats() {
   // ui.bag = { id предмета: штук }, денни под '10', журналы опыта — под своими
   // id (300001–300003) и идут в зачёт опыта по их цене. Сумка общая на всех
   // агентов, поэтому вычитается из итога; строки «по агентам» — без неё.
-  const bag = ui.bag || {};
-  const есть = id => Math.max(0, +bag[id] || 0);
-  const опытВСумке = MATS.exp ? Object.keys(MATS.exp).reduce((s, id) => s + есть(id) * (+MATS.exp[id] || 0), 0) : 0;
-  const нет = {
-    gold: Math.max(0, total.gold - есть('10')),
-    exp: Math.max(0, total.exp - опытВСумке),
-    items: {},
-  };
-  items.forEach(id => { const x = total.items[id] - есть(id); if (x > 0) нет.items[id] = x; });
-  const сумкаЕсть = Object.keys(bag).some(k => +bag[k] > 0);
-
-  const books = expBooks(нет.exp);
-  const нетItems = items.filter(id => нет.items[id]);
+  // Полей ввода больше нет (28.10.2026): нажал на материал — отметил, что
+  // уже есть (см. haveItems). Денни в отметки не входят.
+  const нет = bagMissing(total);
+  const сумкаЕсть = bagFilled();
+  const есть = haveItems(expBooks(total.exp).concat(items.map(id => [id, total.items[id]])), short);
   h += '<div class="mt-sum">' +
-    '<div class="cap2" style="margin:0 0 7px">' + (сумкаЕсть ? 'НЕ ХВАТАЕТ (с учётом сумки)' : 'ВСЕГО ПОНАДОБИТСЯ') + '</div>' +
+    '<div class="cap2 mt-cap" style="margin:0 0 7px">ВСЕГО ПОНАДОБИТСЯ<span>нажми на материал — отметить, что уже есть</span></div>' +
     '<div class="mt-items">' +
-      (нет.gold ? chip('10', нет.gold) : '') +
-      books.map(b => chip(b[0], b[1])).join('') +
-      нетItems.map(id => chip(id, нет.items[id])).join('') +
-    '</div>' +
-    (!нет.gold && !books.length && !нетItems.length ? '<div class="hint" style="margin:0">Всё уже есть в сумке — можно качать.</div>' : '') +
-    (нет.exp ? '<div class="hint" style="margin-top:8px">Опыта не хватает ' + nfmt(нет.exp) +
-      ' — журналы посчитаны от самых крупных, остаток добит мелкими.</div>' : '') +
+      (total.gold ? chip('10', total.gold) : '') + есть.чипы +
+    '</div>' + есть.пол +
+    (сумкаЕсть ? '<button class="hv-q" id="bagClear" style="margin-top:9px">сбросить отметки «есть»</button>' : '') +
   '</div>';
-
-  // ввод сумки: всё, что нужно агентам, плюс денни и журналы опыта
-  const полеСумки = (id, нужно) => {
-    const full = (MATS.items && MATS.items[id]) || ('#' + id);
-    return '<label class="mt-i" title="' + esc(full) + (нужно ? ' — нужно ' + nfmt(нужно) : '') + '">' + matIcon(id, full) +
-      '<input type="number" min="0" inputmode="numeric" data-bag="' + id + '" value="' + (есть(id) || '') + '" placeholder="0" ' +
-        'style="width:' + (id === '10' ? 92 : 58) + 'px;background:transparent;border:1px solid var(--line,#333);border-radius:6px;color:inherit;padding:2px 4px;font:inherit">' +
-      esc(short(id)) + '</label>';
-  };
-  const журналы = MATS.exp ? Object.keys(MATS.exp).sort((a, b) => MATS.exp[b] - MATS.exp[a]) : [];
-  h += '<details class="mt-sum" id="bagBox" style="margin-top:10px"' + (ui.bagOpen ? ' open' : '') + '>' +
-    '<summary class="cap2" style="margin:0;cursor:pointer">ЧТО УЖЕ ЕСТЬ В СУМКЕ' + (сумкаЕсть ? ' · заполнено' : '') + '</summary>' +
-    '<div class="hint" style="margin:6px 0 8px">Впиши, сколько лежит в игре (Сумка → Материалы). Сохраняется у тебя и в облаке трекера.</div>' +
-    '<div class="mt-items">' +
-      полеСумки('10', total.gold) + журналы.map(id => полеСумки(id, 0)).join('') +
-      items.map(id => полеСумки(id, total.items[id])).join('') +
-    '</div>' +
-    (сумкаЕсть ? '<button class="ghost2" id="bagClear" style="margin-top:8px">очистить сумку</button>' : '') +
-  '</details>';
 
   // батарея на недостающее — как у zenless.tools
   const bat = batteryFor(нет);
@@ -6314,7 +6402,7 @@ function drawMats() {
       '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв</summary>' +
         '<table class="tbl" style="margin-top:6px">' + bat.строки.map(batRow).join('') +
         '</table>' +
-        '<div class="hint">' + (сумкаЕсть ? 'Считается только недостающее — сумка вычтена. ' : 'Сумка не заполнена: считается всё, что нужно до целей. ') + 'Охота — 60 за бой, ' +
+        '<div class="hint">' + (сумкаЕсть ? 'Считается только недостающее — отмеченное «есть» вычтено. ' : 'Ничего не отмечено: считается всё, что нужно до целей. ') + 'Охота — 60 за бой, ' +
           'но три в неделю со скидкой, поэтому в нижнюю границу не входит. Денни и пропуск в «Хомячью клетку» в батарею не входят. Выпадение — таблицы zenless.tools.</div>' +
       '</details></div>';
   }
@@ -6343,20 +6431,8 @@ function drawMats() {
   });
   if ($('pickEdit')) $('pickEdit').onclick = () => { pickEdit = true; drawMats(); };
   if ($('batLvl')) $('batLvl').onchange = e => { ui.ikLvl = +e.target.value; save(); drawMats(); };
-  // сумка: перерисовываем по change (не по input — иначе теряется фокус на каждой цифре)
-  if ($('bagBox')) $('bagBox').addEventListener('toggle', e => { ui.bagOpen = e.target.open; save(); });
-  box.querySelectorAll('[data-bag]').forEach(inp => inp.onchange = () => {
-    if (!ui.bag) ui.bag = {};
-    const v = Math.max(0, Math.floor(+inp.value || 0));
-    if (v) ui.bag[inp.dataset.bag] = v; else delete ui.bag[inp.dataset.bag];
-    ui.bagT = Date.now();
-    // перерисовка сносит поля — вернуть фокус туда, куда ушёл Tab
-    const ушёл = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.bag;
-    save(); drawMats();
-    const вернуть = ушёл && box.querySelector('[data-bag="' + ушёл + '"]');
-    if (вернуть) вернуть.focus();
-  });
-  if ($('bagClear')) $('bagClear').onclick = () => { if (confirm('Очистить сумку?')) { ui.bag = {}; ui.bagT = Date.now(); save(); drawMats(); } };
+  bindHave(box, drawMats);
+  if ($('bagClear')) $('bagClear').onclick = () => { if (confirm('Сбросить все отметки «уже есть»?')) { ui.bag = {}; ui.bagT = Date.now(); haveOpen = null; save(); drawMats(); } };
 }
 
 function drawTodo() {
