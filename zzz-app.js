@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v264';
+const APP_VER = 'v265';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5045,6 +5045,7 @@ function payload() {
            cmpList: (ui && ui.cmpList) || [], cmpT: (ui && ui.cmpT) || 0,
            pass: (ui && ui.pass) || null, shop: (ui && ui.shop) || null,
            pick: (ui && ui.pick) || null, pickT: (ui && ui.pickT) || 0,
+           bag: (ui && ui.bag) || null, bagT: (ui && ui.bagT) || 0,
            pulls: (PULLS && PULLS.list) || [], pullsT: (PULLS && PULLS.at) || 0,
            pullsFull: !!(PULLS && PULLS.full),
            chron: (CHRON && CHRON.log) || [], chronT: (CHRON && CHRON.at) || 0,
@@ -5297,6 +5298,14 @@ function mergeProg(remote) {
     changed = true;
     if (menuCur === 'pull') drawPulls();
   }
+  // сумка материалов: побеждает свежее, как у выбора агентов
+  if (remote.bag && (remote.bagT || 0) > (ui.bagT || 0)) {
+    ui.bag = remote.bag;
+    ui.bagT = remote.bagT || 0;
+    try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
+    changed = true;
+    if (menuCur === 'mats') drawMats();
+  }
   if (Array.isArray(remote.cmpList) && (remote.cmpT || 0) > (ui.cmpT || 0)) {
     ui.cmpList = remote.cmpList;
     ui.cmpT = remote.cmpT || 0;
@@ -5367,6 +5376,7 @@ function hasNewerLocal(rec) {
   // на одном устройстве.
   if ((ui.booT || 0) > (rec && rec.booT || 0)) return true;
   if ((ui.cmpT || 0) > (rec && rec.cmpT || 0)) return true;
+  if ((ui.bagT || 0) > (rec && rec.bagT || 0)) return true;
   // своих круток больше, чем в облаке — значит есть что отдать
   if ((PULLS.list || []).length > (((rec && rec.pulls) || []).length)) return true;
   if ((CHRON.log || []).length > (((rec && rec.chron) || []).length)) return true;
@@ -6185,20 +6195,56 @@ function drawMats() {
     return;
   }
 
-  const books = expBooks(total.exp);
+  // ── сумка (27.10.2026): что уже есть — вычитаем, считаем только недостающее.
+  // ui.bag = { id предмета: штук }, денни под '10', журналы опыта — под своими
+  // id (300001–300003) и идут в зачёт опыта по их цене. Сумка общая на всех
+  // агентов, поэтому вычитается из итога; строки «по агентам» — без неё.
+  const bag = ui.bag || {};
+  const есть = id => Math.max(0, +bag[id] || 0);
+  const опытВСумке = MATS.exp ? Object.keys(MATS.exp).reduce((s, id) => s + есть(id) * (+MATS.exp[id] || 0), 0) : 0;
+  const нет = {
+    gold: Math.max(0, total.gold - есть('10')),
+    exp: Math.max(0, total.exp - опытВСумке),
+    items: {},
+  };
+  items.forEach(id => { const x = total.items[id] - есть(id); if (x > 0) нет.items[id] = x; });
+  const сумкаЕсть = Object.keys(bag).some(k => +bag[k] > 0);
+
+  const books = expBooks(нет.exp);
+  const нетItems = items.filter(id => нет.items[id]);
   h += '<div class="mt-sum">' +
-    '<div class="cap2" style="margin:0 0 7px">ВСЕГО ПОНАДОБИТСЯ</div>' +
+    '<div class="cap2" style="margin:0 0 7px">' + (сумкаЕсть ? 'НЕ ХВАТАЕТ (с учётом сумки)' : 'ВСЕГО ПОНАДОБИТСЯ') + '</div>' +
     '<div class="mt-items">' +
-      (total.gold ? chip('10', total.gold) : '') +
+      (нет.gold ? chip('10', нет.gold) : '') +
       books.map(b => chip(b[0], b[1])).join('') +
-      items.map(id => chip(id, total.items[id])).join('') +
+      нетItems.map(id => chip(id, нет.items[id])).join('') +
     '</div>' +
-    (total.exp ? '<div class="hint" style="margin-top:8px">Опыта нужно ' + nfmt(total.exp) +
+    (!нет.gold && !books.length && !нетItems.length ? '<div class="hint" style="margin:0">Всё уже есть в сумке — можно качать.</div>' : '') +
+    (нет.exp ? '<div class="hint" style="margin-top:8px">Опыта не хватает ' + nfmt(нет.exp) +
       ' — журналы посчитаны от самых крупных, остаток добит мелкими.</div>' : '') +
   '</div>';
 
-  // батарея на всё недостающее — как у zenless.tools
-  const bat = batteryFor(total);
+  // ввод сумки: всё, что нужно агентам, плюс денни и журналы опыта
+  const полеСумки = (id, нужно) => {
+    const full = (MATS.items && MATS.items[id]) || ('#' + id);
+    return '<label class="mt-i" title="' + esc(full) + (нужно ? ' — нужно ' + nfmt(нужно) : '') + '">' + matIcon(id, full) +
+      '<input type="number" min="0" inputmode="numeric" data-bag="' + id + '" value="' + (есть(id) || '') + '" placeholder="0" ' +
+        'style="width:' + (id === '10' ? 92 : 58) + 'px;background:transparent;border:1px solid var(--line,#333);border-radius:6px;color:inherit;padding:2px 4px;font:inherit">' +
+      esc(short(id)) + '</label>';
+  };
+  const журналы = MATS.exp ? Object.keys(MATS.exp).sort((a, b) => MATS.exp[b] - MATS.exp[a]) : [];
+  h += '<details class="mt-sum" id="bagBox" style="margin-top:10px"' + (ui.bagOpen ? ' open' : '') + '>' +
+    '<summary class="cap2" style="margin:0;cursor:pointer">ЧТО УЖЕ ЕСТЬ В СУМКЕ' + (сумкаЕсть ? ' · заполнено' : '') + '</summary>' +
+    '<div class="hint" style="margin:6px 0 8px">Впиши, сколько лежит в игре (Сумка → Материалы). Сохраняется у тебя и в облаке трекера.</div>' +
+    '<div class="mt-items">' +
+      полеСумки('10', total.gold) + журналы.map(id => полеСумки(id, 0)).join('') +
+      items.map(id => полеСумки(id, total.items[id])).join('') +
+    '</div>' +
+    (сумкаЕсть ? '<button class="ghost2" id="bagClear" style="margin-top:8px">очистить сумку</button>' : '') +
+  '</details>';
+
+  // батарея на недостающее — как у zenless.tools
+  const bat = batteryFor(нет);
   if (bat.макс) {
     const дн = x => Math.ceil(x / BAT_DAY);
     h += '<div class="mt-sum" style="margin-top:10px">' +
@@ -6215,7 +6261,7 @@ function drawMats() {
           '<td style="text-align:right;white-space:nowrap">' + (s.боиМин === s.боиМакс ? s.боиМакс : s.боиМин + '–' + s.боиМакс) + ' ' + plural(s.боиМакс, 'бой', 'боя', 'боёв') + '</td>' +
           '<td style="text-align:right;white-space:nowrap">⚡ ' + (s.охота ? 'до ' + nfmt(s.макс) : (s.мин === s.макс ? nfmt(s.макс) : nfmt(s.мин) + '–' + nfmt(s.макс))) + '</td></tr>').join('') +
         '</table>' +
-        '<div class="hint">Без учёта того, что уже лежит в сумке: считается всё, что нужно до целей. Охота — 60 за бой, ' +
+        '<div class="hint">' + (сумкаЕсть ? 'Считается только недостающее — сумка вычтена. ' : 'Сумка не заполнена: считается всё, что нужно до целей. ') + 'Охота — 60 за бой, ' +
           'но три в неделю со скидкой, поэтому в нижнюю границу не входит. Выпадение — таблицы zenless.tools.</div>' +
       '</details></div>';
   }
@@ -6229,7 +6275,7 @@ function drawMats() {
         '<b>' + esc(r.a.ru) + '</b>' +
         '<span class="td-w">' + esc(txt) + (its.length > 3 ? ' и ещё ' + (its.length - 3) : '') + '</span>' +
         '<em class="td-h">' + nfmt(r.n.gold) + ' денни</em>' +
-        (function () { const b = batteryFor(r.n); return b.макс ? '<em class="td-h" title="батарея на фарм этого агента">⚡ ' + batRange(b) + '</em>' : ''; })() +
+        (function () { const b = batteryFor(r.n); return b.макс ? '<em class="td-h" title="батарея на фарм этого агента без учёта сумки">⚡ ' + batRange(b) + '</em>' : ''; })() +
         '</div>';
     }).join('') + '</div>';
 
@@ -6244,6 +6290,20 @@ function drawMats() {
   });
   if ($('pickEdit')) $('pickEdit').onclick = () => { pickEdit = true; drawMats(); };
   if ($('batLvl')) $('batLvl').onchange = e => { ui.ikLvl = +e.target.value; save(); drawMats(); };
+  // сумка: перерисовываем по change (не по input — иначе теряется фокус на каждой цифре)
+  if ($('bagBox')) $('bagBox').addEventListener('toggle', e => { ui.bagOpen = e.target.open; save(); });
+  box.querySelectorAll('[data-bag]').forEach(inp => inp.onchange = () => {
+    if (!ui.bag) ui.bag = {};
+    const v = Math.max(0, Math.floor(+inp.value || 0));
+    if (v) ui.bag[inp.dataset.bag] = v; else delete ui.bag[inp.dataset.bag];
+    ui.bagT = Date.now();
+    // перерисовка сносит поля — вернуть фокус туда, куда ушёл Tab
+    const ушёл = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.bag;
+    save(); drawMats();
+    const вернуть = ушёл && box.querySelector('[data-bag="' + ушёл + '"]');
+    if (вернуть) вернуть.focus();
+  });
+  if ($('bagClear')) $('bagClear').onclick = () => { if (confirm('Очистить сумку?')) { ui.bag = {}; ui.bagT = Date.now(); save(); drawMats(); } };
 }
 
 function drawTodo() {
