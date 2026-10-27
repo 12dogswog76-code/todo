@@ -727,7 +727,8 @@ document.querySelectorAll('.tabs button[data-tab]').forEach(b => {
   b.onclick = () => {
     document.querySelectorAll('.tabs button[data-tab]').forEach(x => x.classList.remove('on'));
     b.classList.add('on');
-    ['periods', 'fixed', 'goals', 'chart', 'budget', 'games'].forEach(t => { $('tab-' + t).style.display = (b.dataset.tab === t) ? '' : 'none'; });
+    ['periods', 'fixed', 'goals', 'chart', 'spend', 'budget', 'games'].forEach(t => { $('tab-' + t).style.display = (b.dataset.tab === t) ? '' : 'none'; });
+    if (b.dataset.tab === 'spend') { renderSpend(); spendPull(); }
     if (b.dataset.tab === 'chart') renderChart();
     if (b.dataset.tab === 'budget') renderBudget();
     if (b.dataset.tab === 'games') renderGames();
@@ -990,3 +991,120 @@ $('gmAdd').onclick = () => {
   $('gmAmt').value = ''; $('gmWhat').value = '';
   save(); renderGames();
 };
+
+// ── траты из уведомлений банка (с 27.10.2026) ───────────────────────────────
+// Телефон (MacroDroid) пересылает уведомления банка в воркер, тот разбирает
+// сумму и магазин и держит во входящих money:inbox. Здесь забираем их по ключу
+// (ссылка money.html#mkey=<ключ> из бота, команда /moneylink) в data.spend и
+// подтверждаем — воркер удаляет. Категория: сначала запомненная для магазина
+// (data.spendMap), потом по словам в названии. Игры («Игры») сами попадают и
+// в «Донат». id траты = id из входящих: два устройства не задвоят.
+const LS_MKEY = LSM + '_mkey';
+(() => {
+  const m = /#mkey=([0-9a-f]{32})/.exec(location.hash);
+  if (!m) return;
+  try { localStorage.setItem(LS_MKEY, m[1]); } catch (e) {}
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+const SP_CATS = ['Продукты', 'Кафе и доставка', 'Транспорт', 'Маркетплейсы', 'Подписки', 'Игры', 'Связь', 'Здоровье', 'Дом', 'Одежда', 'Переводы', 'Поступления', 'Прочее'];
+const SP_RULES = [
+  [/вкусвилл|пят[её]роч|pyaterochka|перекр[её]ст|perekrestok|магнит|magnit|лента|lenta|ашан|auchan|дикси|dixy|метро кэш|глобус|spar|самбери|азбука вкуса|лавка/i, 'Продукты'],
+  [/еда|eda|delivery|самокат|кофе|coffee|кафе|cafe|ресторан|бургер|burger|kfc|rostic|вкусно|додо|dodo|шоколадниц|starbucks|кулинар|пицц|pizza|суши|sushi/i, 'Кафе и доставка'],
+  [/такси|taxi|uber|метро|metro|транспорт|тройка|troika|ржд|rzd|аэрофлот|азс|лукойл|lukoil|газпромнефть|роснефть|shell|каршер|делимобиль|ситидрайв|самокат-шеринг|whoosh|urent|go\b/i, 'Транспорт'],
+  [/ozon|озон|wildberries|вайлдберри|wb\b|маркет|market|aliexpress|алиэкспресс|lamoda|мегамаркет/i, 'Маркетплейсы'],
+  [/плюс|plus|кинопоиск|kinopoisk|spotify|youtube|apple\.com|itunes|google|яндекс музык|ivi|okko|wink|premier|telegram premium|boosty|patreon/i, 'Подписки'],
+  [/steam|hoyoverse|mihoyo|hoyolab|playstation|xbox|nintendo|xsolla|codashop|epic games|gryphline|hypergryph|perfect world|game/i, 'Игры'],
+  [/мтс|mts|билайн|beeline|мегафон|megafon|теле2|tele2|t2\b|yota|ростелеком|интернет|дом\.ру/i, 'Связь'],
+  [/аптек|apteka|клиник|стоматолог|здоров|медси|инвитро|гемотест|eapteka/i, 'Здоровье'],
+  [/леруа|leroy|икеа|ikea|hoff|obi|жкх|жку|квартплат|мосэнерго|электроэнерг/i, 'Дом'],
+  [/zara|uniqlo|h&m|спортмастер|befree|gloria|o'stin|adidas|nike|ламода/i, 'Одежда'],
+];
+function spendCat(x) {
+  if (x.sign > 0) return 'Поступления';
+  const k = String(x.merchant || '').toLowerCase();
+  if (data.spendMap && data.spendMap[k]) return data.spendMap[k];
+  if (/^(перевод|перевели)|[а-я]+ [а-я]\.?$/i.test(x.merchant || '')) return 'Переводы';
+  const r = SP_RULES.find(([re]) => re.test(k));
+  return r ? r[1] : 'Прочее';
+}
+let spendBusy = false;
+async function spendPull() {
+  const k = localStorage.getItem(LS_MKEY);
+  const say = t => { const s = $('spSay'); if (s) s.textContent = t; };
+  if (!k) { say('не подключено: в боте /moneylink — открой ссылку оттуда'); return; }
+  if (spendBusy) return;
+  spendBusy = true;
+  try {
+    const r = await fetch(PUSH_API + '/api/money/inbox', { headers: { 'X-Money-Key': k }, cache: 'no-store', signal: abortIn(12000) });
+    const d = await r.json();
+    if (!d || !d.ok) { say('воркер: ' + ((d && d.error) || r.status)); return; }
+    if (!data.spend) data.spend = [];
+    let n = 0;
+    (d.list || []).forEach(x => {
+      if (data.spend.some(y => y.id === x.id)) return;
+      const rec = { id: x.id, t: x.t, amount: x.amount, sign: x.sign, merchant: x.merchant || '', balance: x.balance };
+      rec.cat = spendCat(rec);
+      data.spend.push(rec);
+      // игры — заодно в «Донат»
+      if (rec.cat === 'Игры' && rec.sign < 0) {
+        if (!data.games) data.games = [];
+        data.games.push({ id: 'n' + rec.id, date: new Date(rec.t).toISOString().slice(0, 10), game: 'Другое', amount: rec.amount, what: rec.merchant + ' (из уведомления)' });
+      }
+      n++;
+    });
+    if (n) { save(); renderSpend(); }
+    if ((d.list || []).length) await fetch(PUSH_API + '/api/money/inbox/ack', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Money-Key': k }, body: JSON.stringify({ ids: d.list.map(x => x.id) }) });
+    say(n ? 'новых: ' + n : 'новых нет · ' + new Date().toTimeString().slice(0, 5));
+  } catch (e) { say('не вышло: ' + e.message); } finally { spendBusy = false; }
+}
+function renderSpend() {
+  if (!data.spend) data.spend = [];
+  const месяцы = [...new Set(data.spend.map(x => new Date(x.t).toISOString().slice(0, 7)))].sort().reverse();
+  const тек = new Date().toISOString().slice(0, 7);
+  if (!месяцы.includes(тек)) месяцы.unshift(тек);
+  const sel = $('spMonth');
+  const выбран = sel.value || тек;
+  sel.innerHTML = месяцы.map(m => '<option value="' + m + '"' + (m === выбран ? ' selected' : '') + '>' + MONTHS[+m.slice(5) - 1] + ' ' + m.slice(0, 4) + '</option>').join('');
+  const мес = data.spend.filter(x => new Date(x.t).toISOString().slice(0, 7) === выбран);
+  const расход = мес.filter(x => x.sign < 0), приход = мес.filter(x => x.sign > 0);
+  const сумма = l => l.reduce((s, x) => s + x.amount, 0);
+  const поКат = {};
+  расход.forEach(x => { поКат[x.cat] = (поКат[x.cat] || 0) + x.amount; });
+  const всего = сумма(расход) || 1;
+  const цвет = c => PALETTE[SP_CATS.indexOf(c) % PALETTE.length] || '#a3a8b8';
+  $('spSum').innerHTML = '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px"><span>потрачено <b>' + fmt(сумма(расход)) + ' ₽</b></span>' +
+    '<span>поступило <b style="color:#8fd6a8">' + fmt(сумма(приход)) + ' ₽</b></span><span class="hint" style="margin:0">операций ' + мес.length + '</span></div>' +
+    Object.entries(поКат).sort((a, b) => b[1] - a[1]).map(([c, s]) =>
+      '<div style="display:flex;align-items:center;gap:8px;margin:3px 0"><span style="min-width:130px">' + esc(c) + '</span>' +
+      '<div class="gbar" style="flex:1;margin:0"><div class="gfill" style="width:' + Math.round(s / всего * 100) + '%;background:' + цвет(c) + '"></div></div>' +
+      '<span style="min-width:90px;text-align:right">' + fmt(s) + ' ₽</span></div>').join('');
+  const box = $('spList'); box.innerHTML = '';
+  мес.slice().sort((a, b) => b.t - a.t).forEach(x => {
+    const r = document.createElement('div'); r.className = 'addrow';
+    const д = new Date(x.t);
+    r.innerHTML = '<span style="min-width:92px" class="hint">' + String(д.getDate()).padStart(2, '0') + '.' + String(д.getMonth() + 1).padStart(2, '0') + ' ' + д.toTimeString().slice(0, 5) + '</span>' +
+      '<span style="flex:1;min-width:120px">' + esc(x.merchant || '—') + '</span>' +
+      '<b style="min-width:90px;text-align:right;color:' + (x.sign > 0 ? '#8fd6a8' : 'inherit') + '">' + (x.sign > 0 ? '+' : '−') + fmt(x.amount) + ' ₽</b>';
+    const s = document.createElement('select'); s.className = 'gsel';
+    s.innerHTML = SP_CATS.map(c => '<option' + (c === x.cat ? ' selected' : '') + '>' + c + '</option>').join('');
+    s.onchange = () => {
+      x.cat = s.value;
+      // запомнить для этого магазина и разнести на его прошлые траты
+      if (!data.spendMap) data.spendMap = {};
+      const k = String(x.merchant || '').toLowerCase();
+      if (k) { data.spendMap[k] = s.value; data.spend.forEach(y => { if (String(y.merchant || '').toLowerCase() === k && y.sign < 0) y.cat = s.value; }); }
+      save(); renderSpend();
+    };
+    const del = document.createElement('button'); del.className = 'xbtn'; del.textContent = '✕';
+    twoStepDel(del, '✕', () => { data.spend = data.spend.filter(y => y.id !== x.id); save(); renderSpend(); });
+    r.append(s, del); box.appendChild(r);
+  });
+  if (!мес.length) box.innerHTML = '<div class="hint">В этом месяце трат из уведомлений нет.</div>';
+}
+$('spMonth').onchange = renderSpend;
+$('spPull').onclick = spendPull;
+// забирать и без открытой вкладки: при входе, при возврате, раз в 10 минут
+spendPull();
+setInterval(spendPull, 10 * 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') spendPull(); });

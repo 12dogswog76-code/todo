@@ -306,6 +306,7 @@
     <button data-tab="fixed">Постоянные</button>
     <button data-tab="goals">Цели</button>
     <button data-tab="chart">График</button>
+    <button data-tab="spend">Траты</button>
     <button data-tab="budget">Бюджет</button>
     <button data-tab="games">Донат</button>
     <button id="editModeBtn" title="Включи, чтобы редактировать: появятся все поля. Выключи — чистый просмотр.">✎ Изменения</button>
@@ -359,6 +360,20 @@
     </div>
   </div>
 
+  <div id="tab-spend" style="display:none">
+    <div class="card">
+      <b>Траты из уведомлений банка</b>
+      <div class="hint" style="margin-top:2px" id="spHint">Телефон пересылает уведомления банка боту, сюда они приезжают сами. Категорию угадываю по магазину; поменяешь — запомню для этого магазина.</div>
+      <div class="addrow" style="margin-top:8px">
+        <select id="spMonth"></select>
+        <button class="ghost" id="spPull">⟳ забрать сейчас</button>
+        <span class="hint" style="margin:0" id="spSay"></span>
+      </div>
+      <div id="spSum" style="margin-top:10px"></div>
+      <div id="spList" style="margin-top:10px"></div>
+    </div>
+  </div>
+
   <div id="tab-budget" style="display:none">
     <div class="card">
       <b>Бюджет на месяц по группам</b>
@@ -388,7 +403,7 @@
     <button id="syncBtn">☁ Облако</button>
     <button id="ioBtn">↕ Импорт / экспорт</button>
     <button id="notifBtn">🔔 Уведомления о выплатах</button>
-    <span class="hint" style="align-self:center; margin:0">v20</span>
+    <span class="hint" style="align-self:center; margin:0">v21</span>
   </div>
 
   <div class="card" id="notifPanel">
@@ -438,7 +453,7 @@
   <datalist id="names"></datalist>
 </div>
 
-<script src="money-app.js?v=2" defer></script>
+<script src="money-app.js?v=3" defer></script>
 <script src="menu.js?v=3" defer></script>
 <script src="install.js?v=2" defer></script>
 </body>
