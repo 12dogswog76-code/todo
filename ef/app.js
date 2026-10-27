@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v12';
+const APP_VER = 'v13';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -134,6 +134,7 @@ const ВМЕНЮ = [
   ['daily', 'Ежедневные и еженедельные'],
   ['ach', 'Прогресс по достижениям'],
   ['gacha', 'Гарант, история, симулятор'],
+  ['codes', 'Рабочие коды, отметки введённых'],
   ['prof', 'Витрина аккаунта по UID'],
   ['chr', 'Регионы, база, эндгейм из SKPORT'],
 ];
@@ -923,6 +924,43 @@ EF.раздел('prof', {
   },
 });
 
+// ── промокоды ───────────────────────────────────────────────────────────────
+// Список собирает воркер (/api/ef/codes, с воркера 47): game8 и pockettactics
+// вместе, только раздел активных, коды с прошедшим сроком выкинуты. Крон
+// воркера освежает снимок сам, страница его только читает. Отметки «ввёл» —
+// ключ ef-codes-used: едут в бэкап и в облако вместе с остальным.
+const LS_CODES = 'ef-codes-used';
+let КОДЫ = null, КОДЫош = '';
+async function кодыЗабрать(свежее) {
+  const один = b => fetch(b + '/api/ef/codes' + (свежее ? '?fresh=1' : ''), { cache: 'no-store', signal: AbortSignal.timeout(12000) })
+    .then(r => r.json()).then(j => (j && j.list && j.list.length) ? j : Promise.reject(new Error(j && j.error || 'пусто')));
+  try { КОДЫ = await Promise.any(API.map(один)); КОДЫош = ''; }
+  catch (e) { КОДЫош = 'воркер не отдал список' + (e && e.errors ? ': ' + e.errors.map(x => x.message).join('; ') : ''); }
+  if (ВКЛ === 'codes') рисовать();
+}
+EF.раздел('codes', {
+  имя: 'Промокоды', буква: '#',
+  рисовать() {
+    const было = взять(LS_CODES, {});
+    const все = (КОДЫ && КОДЫ.list) || [];
+    const список = все.slice().sort((a, b) => (было[a.code] ? 1 : 0) - (было[b.code] ? 1 : 0));
+    const осталось = все.filter(c => !было[c.code]).length;
+    EF.шапка('redeem.codes', 'Промокоды', КОДЫ ? осталось : null, КОДЫ ? 'не введено' : '');
+    $('fbar').innerHTML = '<button class="btn sm gh" data-act="codes-upd">обновить сейчас</button>' +
+      '<span class="fcnt">' + (КОДЫ ? 'обновлено ' + new Date(КОДЫ.t).toLocaleString('ru', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) +
+        (КОДЫ.stale ? ' · источники молчат, показан прошлый список' : '') : (КОДЫош || 'загружаю…')) + '</span>';
+    $('body').innerHTML = '<p class="hint">Где вводить: в игре — настройки, пункт Exchange Code.</p>' +
+      (список.length ? '<table class="tbl">' + список.map(c =>
+        '<tr' + (было[c.code] ? ' style="opacity:.45"' : '') + '><td><b>' + эк(c.code) + '</b>' + (c.note ? '<br><i>' + эк(c.note) + '</i>' : '') + '</td>' +
+        '<td>' + эк(c.rew || 'состав не указан') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn sm sec" data-act="code-copy" data-code="' + эк(c.code) + '">копировать</button> ' +
+        '<button class="btn sm gh" data-act="code-done" data-code="' + эк(c.code) + '">' + (было[c.code] ? 'вернуть' : 'ввёл') + '</button></td></tr>').join('') + '</table>'
+        : '<div class="empty">' + (КОДЫ ? 'Рабочих кодов нет.' : 'Загружаю…') + '</div>');
+    EF.подвал('Коды с ' + эк((КОДЫ && КОДЫ.src) || 'game8.co, pockettactics.com') + ', собирает воркер alextask. Отметки «ввёл» — в этом браузере и в облаке.');
+    if (!КОДЫ && !КОДЫош) кодыЗабрать(false);
+  },
+});
+
 // ── аккаунт SKPORT («Хроника») ──────────────────────────────────────────────
 // С v6: ключи skport к нам больше не копируются. Человек запускает скрипт
 // (sk-export.js, функция skЭкспорт) в консоли на www.skport.com — там
@@ -1448,6 +1486,17 @@ document.addEventListener('click', e => {
       a.download = 'skport-выгрузка.json';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      return;
+    }
+    case 'codes-upd': т.textContent = 'обновляю…'; кодыЗабрать(true); return;
+    case 'code-copy':
+      navigator.clipboard.writeText(д.code).then(() => { т.textContent = 'скопировано'; }, () => { т.textContent = 'выдели сам'; });
+      return;
+    case 'code-done': {
+      const было = взять(LS_CODES, {});
+      if (было[д.code]) delete было[д.code]; else было[д.code] = Date.now();
+      try { localStorage.setItem(LS_CODES, JSON.stringify(было)); } catch (e) {}
+      EF.облакоСкоро(); рисовать();
       return;
     }
     case 'bk-save': скачатьБэкап(); return;

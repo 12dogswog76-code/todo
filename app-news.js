@@ -139,7 +139,7 @@
   async function общий() {
     for (const base of API) {
       try {
-        const r = await fetch(base + '/api/news/ch', { cache: 'no-store' });
+        const r = await fetch(base + '/api/news/ch', { cache: 'no-store', signal: AbortSignal.timeout(СРОК) });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const d = await r.json();
         if (!d.ch) return;                       // общего списка ещё нет
@@ -161,19 +161,21 @@
   let показано = ПОРЦИЯ;
   let идёт = false, повтор = false;
 
+  // Оба адреса воркера сразу, кто первый ответил — тот и прав. Раньше шли по
+  // очереди и без срока: api.alextask.ru из части сетей иногда висит минутами,
+  // запрос не кончался, флаг «идёт» не снимался — и лента стояла на
+  // «обновляю…», а кнопка «обновить» молча ничего не делала (27.10.2026).
+  const СРОК = 12000;
   async function запрос(список, свежее) {
     const q = '/api/tg?c=' + encodeURIComponent(список.join(',')) + (свежее ? '&fresh=1' : '');
-    let ош;
-    for (const base of API) {
-      try {
-        const r = await fetch(base + q, { cache: 'no-store' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json();
-        if (!d.channels) throw new Error(d.error || 'воркер старый — нет /api/tg');
-        return d.channels;
-      } catch (e) { ош = e; }
-    }
-    throw ош;
+    const один = base => fetch(base + q, { cache: 'no-store', signal: AbortSignal.timeout(СРОК) }).then(async r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (!d.channels) throw new Error(d.error || 'воркер старый — нет /api/tg');
+      return d.channels;
+    });
+    try { return await Promise.any(API.map(один)); }
+    catch (e) { throw (e && e.errors && e.errors[0]) || e; }
   }
 
   async function забрать(свежее) {
@@ -314,6 +316,10 @@
   if (всеКаналы().length && Date.now() - (кеш.t || 0) > СВЕЖЕСТЬ) забрать(false).then(() => {
     if (!Object.keys(видели).length) отметить();
   });
-  // окно висит открытым — подтягиваем раз в 15 минут
+  // окно висит открытым — подтягиваем раз в 15 минут; вернулся в свёрнутое
+  // окно или вкладку, а лента старше 15 минут — подтягиваем сразу
   setInterval(() => { if (document.visibilityState === 'visible' && navigator.onLine) забрать(false); }, СВЕЖЕСТЬ);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && navigator.onLine && Date.now() - (кеш.t || 0) > СВЕЖЕСТЬ) забрать(false);
+  });
 })();

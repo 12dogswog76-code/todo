@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v85';
+const APP_VER = 'v86';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3144,10 +3144,10 @@ function drawCodes() {
       document.body.removeChild(el);
     }
   });
-  // источник приходит вместе со списком: воркер сначала пробует ntebuild
-  // (там состав награды расписан по предметам), при осечке — prydwen
-  const from = (codesLive && codesLive.src || '').indexOf('ntebuild') >= 0
-    ? 'ntebuild.com' : (codesLive ? 'prydwen.gg' : 'запасной список в файле');
+  // источники приходят вместе со списком: с воркера 47 он складывает ntebuild
+  // и pockettactics и выкидывает коды, срок которых прошёл
+  const from = codesLive ? (codesLive.src || '').replace(/https?:\/\/(www\.)?/g, '').replace(/\/[^,]*/g, '') || 'воркера'
+                         : 'запасной список в файле';
   foot('Коды с ' + from + ', обновление тянет воркер alextask. ' +
        'Отметки «уже ввёл» хранятся в этом браузере.');
   if ($('codesUpd')) $('codesUpd').onclick = () => {

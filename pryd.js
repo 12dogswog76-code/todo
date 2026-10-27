@@ -81,8 +81,10 @@
     'lucia':1451,'seed':1461,'banyue':1471,'dialyn':1481,'sunna':1491,'aria':1501,
     'nangong-yu':1511,'cissia':1521,'billy-starlight':1531,'promeia':1541,
     'pyrois':1551,'velina':1561,'norma':1571,'remielle':1581,'sigrid':1591,
-    'claret':1611,'roxy':1621
+    'claret':1611,'roxy':1621,'severian':1631,'phoenix':1641
   };
+  // Новых агентов из zzz-db.json агент дописывает сам в копию для расширения
+  // (агент\сбор.ps1, ДописатьАгентов) — руками этот список вести не нужно.
   const TIER_MAP = { 'T0':'S+', 'T0.5':'S', 'T1':'A', 'T1.5':'B', 'T2':'C', 'T3':'D' };
   const ROLE_MAP = { 'Crit DPS':'dmg', 'Anomaly DPS':'anomaly', 'Support':'support' };
 
