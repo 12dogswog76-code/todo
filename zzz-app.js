@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v265';
+const APP_VER = 'v266';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1231,6 +1231,40 @@ function batteryFor(n) {
   return { мин, макс, строки };
 }
 const batRange = b => b.мин === b.макс ? nfmt(b.макс) : nfmt(b.мин) + '–' + nfmt(b.макс);
+// Вычесть сумку (ui.bag) из нужного: { gold, exp, items } → то же, но недостающее.
+// Журналы опыта в сумке идут в зачёт опыта по своей цене.
+function bagMissing(n) {
+  const bag = ui.bag || {};
+  const есть = id => Math.max(0, +bag[id] || 0);
+  const опыт = MATS && MATS.exp ? Object.keys(MATS.exp).reduce((s, id) => s + есть(id) * (+MATS.exp[id] || 0), 0) : 0;
+  const out = { gold: Math.max(0, (n.gold || 0) - есть('10')), exp: Math.max(0, (n.exp || 0) - опыт), items: {} };
+  Object.keys(n.items || {}).forEach(id => { const x = n.items[id] - есть(id); if (x > 0) out.items[id] = x; });
+  return out;
+}
+const bagFilled = () => Object.keys(ui.bag || {}).some(k => +ui.bag[k] > 0);
+// Блок «батарея» для одного набора нужного — карточка агента, вкладка «Фарм».
+function batBlock(n) {
+  const все = batteryFor(n);
+  if (!все.макс) return '';
+  const сумка = bagFilled();
+  const нет = сумка ? batteryFor(bagMissing(n)) : все;
+  const дн = x => Math.ceil(x / BAT_DAY);
+  const дни = b => (дн(b.мин) === дн(b.макс) ? дн(b.макс) : дн(b.мин) + '–' + дн(b.макс)) + ' ' + plural(дн(b.макс), 'день', 'дня', 'дней');
+  return '<div class="mt-sum" style="margin-top:10px">' +
+    '<div class="cap2" style="margin:0 0 7px">БАТАРЕЯ НА ФАРМ</div>' +
+    '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">' +
+      '<span><b style="font-size:22px">⚡ ' + batRange(все) + '</b> <span class="hint" style="margin:0">на всё до целей · ≈ ' + дни(все) + '</span></span>' +
+      (сумка ? '<span><b style="font-size:22px;color:var(--acc)">⚡ ' + (нет.макс ? batRange(нет) : '0') + '</b> <span class="hint" style="margin:0">с учётом сумки' +
+        (нет.макс ? ' · ≈ ' + дни(нет) : ' — всё уже есть') + '</span></span>' : '') +
+    '</div>' +
+    '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв' + (сумка ? ' (с учётом сумки)' : '') + '</summary>' +
+      '<table class="tbl" style="margin-top:6px">' + нет.строки.map(s => '<tr><td>' + esc(s.имя) + '</td>' +
+        '<td style="text-align:right;white-space:nowrap">' + (s.боиМин === s.боиМакс ? s.боиМакс : s.боиМин + '–' + s.боиМакс) + ' ' + plural(s.боиМакс, 'бой', 'боя', 'боёв') + '</td>' +
+        '<td style="text-align:right;white-space:nowrap">⚡ ' + (s.охота ? 'до ' + nfmt(s.макс) : (s.мин === s.макс ? nfmt(s.макс) : nfmt(s.мин) + '–' + nfmt(s.макс))) + '</td></tr>').join('') +
+      '</table>' +
+      '<div class="hint">Уровень Интер-нота ' + (ui.ikLvl || 60) + ' (меняется в «Материалах»). Сумка — тоже там; здесь она целиком отнесена к этому агенту.</div>' +
+    '</details></div>';
+}
 
 // Журналы опыта: сколько понадобится, если брать самые крупные.
 // Остаток добиваем меньшими — так и делают в игре.
@@ -2682,6 +2716,8 @@ function matsHtml(a) {
       books.map(b => chip(b[0], b[1])).join('') +
       Object.keys(n.items).map(id => chip(id, n.items[id])).join('') +
     '</div></div>';
+  // батарея на фарм этого агента (27.10.2026) — с сумкой и без
+  h += batBlock(n);
 
   // по частям: слева что качаем и с какого на какое, справа — цена
   h += '<div class="cap2" style="margin:14px 0 6px">ПО ЧАСТЯМ</div><div class="mp-list">' +
@@ -2690,8 +2726,10 @@ function matsHtml(a) {
       const cells = (x.gold ? [chip('10', x.gold)] : [])
         .concat(bk.map(b => chip(b[0], b[1])))
         .concat(Object.keys(x.items).map(id => chip(id, x.items[id])));
+      const бат = batteryFor(x);
       return '<div class="mp-row">' +
-        '<div class="mp-n"><b>' + esc(x.n) + '</b><i>' + x.from + ' → ' + x.to + '</i></div>' +
+        '<div class="mp-n"><b>' + esc(x.n) + '</b><i>' + x.from + ' → ' + x.to +
+          (бат.макс ? ' · ⚡ ' + batRange(бат) : '') + '</i></div>' +
         '<div class="mt-items">' + cells.join('') + '</div></div>';
     }).join('') + '</div>';
 
