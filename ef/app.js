@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v14';
+const APP_VER = 'v15';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -992,7 +992,11 @@ function кальБаннер(б) {
   const есть = (имя) => new RegExp('(^|[^A-Za-z])' + имя.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^A-Za-z]|$)').test(б.rate + ' ' + б.name);
   const опы = EF.БАЗА.персонажи.filter(c => есть(c.имя));
   const ору = EF.БАЗА.оружие.filter(w => w.редкость >= 6 && есть(w.имя));
-  const наш = EF.ТУЛЫ && EF.ТУЛЫ.баннеры ? EF.ТУЛЫ.баннеры.find(x => x.огр && опы.length && x.фокус && x.фокус[0] === опы[0].id) : null;
+  // русское имя — только если баннер назван именем своего оператора: у «Argent
+  // Flow» (новый, в базе его ещё нет) в Rate-Up стоят и старые Си с Тифеей —
+  // по ним выходило чужое имя «Преображение»
+  const глав = опы.find(c => c.имя === б.name);
+  const наш = глав && EF.ТУЛЫ && EF.ТУЛЫ.баннеры ? EF.ТУЛЫ.баннеры.find(x => x.огр && x.фокус && x.фокус[0] === глав.id) : null;
   return '<tr><td><b>' + эк(наш ? наш.н : б.name) + '</b>' + (наш ? '<br><i>' + эк(б.name) + '</i>' : '') + '</td>' +
     '<td>' + опы.map(c => '<span class="calop" data-op="' + эк(c.id) + '"><img src="' + эк(c.значок) + '" alt="">' + эк(c.имяРу) + '</span>').join('') +
       ору.map(w => '<span class="calop w" data-wpn="' + эк(w.id) + '"><img src="' + эк(w.значок) + '" alt="">' + эк(w.имяРу) + '</span>').join('') +
