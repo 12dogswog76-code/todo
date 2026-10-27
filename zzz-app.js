@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v266';
+const APP_VER = 'v267';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1193,11 +1193,11 @@ const BAT_DAY = 240;   // батарея восстанавливается на
 function batSlot(id) {
   const s = String(id);
   let m;
-  if (s === '10') return { k: 'bounty', t: 'bounty', u: 1, n: 'Симуляция: денни' };
   if ((m = /^1002([123])(\d)$/.exec(s))) return { k: 'drill' + m[2], t: 'drill', u: [0, 1, 3, 9][+m[1]], n: 'Тренировка: жетоны — ' + (BAT_ROLE[m[2]] || m[2]) };
   if ((m = /^1001([123])(\d)$/.exec(s))) return { k: 'test' + m[2], t: 'test', u: [0, 1, 3, 9][+m[1]], n: 'Испытание: чипы — ' + (BAT_EL[m[2]] || m[2]) };
   if (/^1105\d\d$/.test(s)) return { k: 'exp' + s, t: 'expert', u: 1, n: 'Испытание экспертов: ' + ((MATS.items && MATS.items[s]) || s).replace(/^Высокоразмерные данные:\s*/i, '') };
-  if (/^1100\d\d$/.test(s) || s === '100941') return { k: 'hunt' + s, t: 'hunt', u: 1, n: 'Охота: ' + ((MATS.items && MATS.items[s]) || s) };
+  // Пропуск в «Хомячью клетку» батареей не фармится — его не считаем
+  if (/^1100\d\d$/.test(s)) return { k: 'hunt' + s, t: 'hunt', u: 1, n: 'Охота: ' + ((MATS.items && MATS.items[s]) || s) };
   return null;
 }
 function batDrop(t) {
@@ -1210,7 +1210,7 @@ function batDrop(t) {
 function batteryFor(n) {
   const места = {};
   const положить = (k, t, u, имя) => { if (!(u > 0)) return; const м = места[k] || (места[k] = { t, имя, u: 0 }); м.u += u; };
-  if (n.gold) положить('bounty', 'bounty', n.gold, 'Симуляция: денни');
+  // Денни в батарею не кладём (28.10.2026): их хватает с дейликов и прочего
   if (n.exp && MATS && MATS.exp) {
     // журнал новичка — младшая единица опыта
     const малый = Math.min(...Object.values(MATS.exp).map(Number).filter(x => x > 0));
@@ -1226,11 +1226,30 @@ function batteryFor(n) {
     const боиМин = Math.ceil(м.u / dMax), боиМакс = Math.ceil(м.u / dMin);
     const лоу = м.t === 'hunt' ? 0 : боиМин * c, хай = боиМакс * c;
     мин += лоу; макс += хай;
-    return { имя: м.имя, боиМин, боиМакс, мин: лоу, макс: хай, охота: м.t === 'hunt' };
+    // за бой и за одну младшую единицу — чтобы сверить с игрой
+    return { имя: м.имя, боиМин, боиМакс, мин: лоу, макс: хай, охота: м.t === 'hunt', нужно: м.u, t: м.t, dMin, dMax, c };
   }).sort((a, b) => b.макс - a.макс);
   return { мин, макс, строки };
 }
 const batRange = b => b.мин === b.макс ? nfmt(b.макс) : nfmt(b.мин) + '–' + nfmt(b.макс);
+// Строка таблицы «где фармить»: сколько надо, сколько падает за бой и почём
+// одна штука — чтобы сверить с превью наград в игре.
+// Жетоны и чипы считаются в базовых: старший = 9 базовых, средний = 3.
+function batRow(s) {
+  const от = (a, b) => a === b ? String(a) : a + '–' + b;
+  const цена = k => { const a = Math.round(s.c * k / s.dMax * 10) / 10, b = Math.round(s.c * k / s.dMin * 10) / 10; return a === b ? String(a) : a + '–' + b; };
+  let за;
+  if (s.t === 'drill' || s.t === 'test')
+    за = от(s.dMin, s.dMax) + ' базовых за бой · ⚡ ' + цена(9) + ' за старший (×9)';
+  else if (s.t === 'exp')
+    за = от(s.dMin, s.dMax) + ' журн. новичка за бой · ⚡ ' + цена(30) + ' за журнал эксперта';
+  else
+    за = от(s.dMin, s.dMax) + ' шт за бой · ⚡ ' + цена(1) + ' за 1 шт';
+  const надо = s.t === 'drill' || s.t === 'test' ? s.нужно + ' базовых' : s.t === 'exp' ? s.нужно + ' журн. новичка' : s.нужно + ' шт';
+  return '<tr><td>' + esc(s.имя) + '<div class="hint" style="margin:2px 0 0">надо ' + надо + ' · ' + за + ' · бой ⚡ ' + s.c + '</div></td>' +
+    '<td style="text-align:right;white-space:nowrap">' + от(s.боиМин, s.боиМакс) + ' ' + plural(s.боиМакс, 'бой', 'боя', 'боёв') + '</td>' +
+    '<td style="text-align:right;white-space:nowrap">⚡ ' + (s.охота ? 'до ' + nfmt(s.макс) : (s.мин === s.макс ? nfmt(s.макс) : nfmt(s.мин) + '–' + nfmt(s.макс))) + '</td></tr>';
+}
 // Вычесть сумку (ui.bag) из нужного: { gold, exp, items } → то же, но недостающее.
 // Журналы опыта в сумке идут в зачёт опыта по своей цене.
 function bagMissing(n) {
@@ -1258,9 +1277,7 @@ function batBlock(n) {
         (нет.макс ? ' · ≈ ' + дни(нет) : ' — всё уже есть') + '</span></span>' : '') +
     '</div>' +
     '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв' + (сумка ? ' (с учётом сумки)' : '') + '</summary>' +
-      '<table class="tbl" style="margin-top:6px">' + нет.строки.map(s => '<tr><td>' + esc(s.имя) + '</td>' +
-        '<td style="text-align:right;white-space:nowrap">' + (s.боиМин === s.боиМакс ? s.боиМакс : s.боиМин + '–' + s.боиМакс) + ' ' + plural(s.боиМакс, 'бой', 'боя', 'боёв') + '</td>' +
-        '<td style="text-align:right;white-space:nowrap">⚡ ' + (s.охота ? 'до ' + nfmt(s.макс) : (s.мин === s.макс ? nfmt(s.макс) : nfmt(s.мин) + '–' + nfmt(s.макс))) + '</td></tr>').join('') +
+      '<table class="tbl" style="margin-top:6px">' + нет.строки.map(batRow).join('') +
       '</table>' +
       '<div class="hint">Уровень Интер-нота ' + (ui.ikLvl || 60) + ' (меняется в «Материалах»). Сумка — тоже там; здесь она целиком отнесена к этому агенту.</div>' +
     '</details></div>';
@@ -6295,12 +6312,10 @@ function drawMats() {
           '<select id="batLvl">' + [10, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(l => '<option' + ((ui.ikLvl || 60) === l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
       '</div>' +
       '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв</summary>' +
-        '<table class="tbl" style="margin-top:6px">' + bat.строки.map(s => '<tr><td>' + esc(s.имя) + '</td>' +
-          '<td style="text-align:right;white-space:nowrap">' + (s.боиМин === s.боиМакс ? s.боиМакс : s.боиМин + '–' + s.боиМакс) + ' ' + plural(s.боиМакс, 'бой', 'боя', 'боёв') + '</td>' +
-          '<td style="text-align:right;white-space:nowrap">⚡ ' + (s.охота ? 'до ' + nfmt(s.макс) : (s.мин === s.макс ? nfmt(s.макс) : nfmt(s.мин) + '–' + nfmt(s.макс))) + '</td></tr>').join('') +
+        '<table class="tbl" style="margin-top:6px">' + bat.строки.map(batRow).join('') +
         '</table>' +
         '<div class="hint">' + (сумкаЕсть ? 'Считается только недостающее — сумка вычтена. ' : 'Сумка не заполнена: считается всё, что нужно до целей. ') + 'Охота — 60 за бой, ' +
-          'но три в неделю со скидкой, поэтому в нижнюю границу не входит. Выпадение — таблицы zenless.tools.</div>' +
+          'но три в неделю со скидкой, поэтому в нижнюю границу не входит. Денни и пропуск в «Хомячью клетку» в батарею не входят. Выпадение — таблицы zenless.tools.</div>' +
       '</details></div>';
   }
 
