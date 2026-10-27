@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v268';
+const APP_VER = 'v269';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1091,9 +1091,12 @@ function matStub(name) {
 // parts — та же стоимость, но разложенная по частям: уровень, ядро, каждый
 // навык, оружие. В карточке агента это полезнее общей кучи: сразу видно, за
 // что именно платишь и что можно отложить.
-function matsNeed(id) {
+// zero — посчитать агента, которого ещё нет, «с нуля»: уровень 1, ядро 0,
+// навыки 1, без оружия (28.10.2026, карточка невыбитого агента)
+function matsNeed(id, zero) {
   if (!MATS || !MATS.a[id]) return null;
-  const p = prog[id];
+  let p = prog[id];
+  if (zero && !(p && p.have)) p = { have: true, lvl: 1, promo: 0, core: 0, sk: {}, w: null, tgt: p && p.tgt };
   if (!p || !p.have) return null;
   const set = MATS.a[id], t = tgtOf(p, id);
   const res = { gold: 0, exp: 0, items: {}, has: false, parts: [] };
@@ -1265,8 +1268,10 @@ const bagFilled = () => Object.keys(ui.bag || {}).some(k => +ui.bag[k] > 0);
 function batBlock(n) {
   const все = batteryFor(n);
   if (!все.макс) return '';
-  const сумка = bagFilled();
-  const нет = сумка ? batteryFor(bagMissing(n)) : все;
+  // вторая строка — только если отметки «есть» что-то меняют для этого агента
+  const нетБ = bagFilled() ? batteryFor(bagMissing(n)) : все;
+  const сумка = нетБ.мин !== все.мин || нетБ.макс !== все.макс;
+  const нет = нетБ;
   const дн = x => Math.ceil(x / BAT_DAY);
   const дни = b => (дн(b.мин) === дн(b.макс) ? дн(b.макс) : дн(b.мин) + '–' + дн(b.макс)) + ' ' + plural(дн(b.макс), 'день', 'дня', 'дней');
   return '<div class="mt-sum" style="margin-top:10px">' +
@@ -1364,8 +1369,8 @@ function bindHave(root, redraw) {
 // качаю» — часть остаётся в списке бледной, но в итог и батарею не идёт.
 // ui.partOff = { [agentId]: { [имя части]: 1 } }, синхронизируется с сумкой.
 const partOff = aid => (ui.partOff && ui.partOff[aid]) || {};
-function needOn(aid) {
-  const n = matsNeed(aid);
+function needOn(aid, zero) {
+  const n = matsNeed(aid, zero);
   if (!n) return null;
   const off = partOff(aid);
   if (!n.parts.some(x => off[x.n])) return n;
@@ -2801,7 +2806,9 @@ function guideHtml(a, p, T) {
 // сколько стоит каждая часть отдельно. Часто выясняется, что дорог не сам
 // агент, а последние два уровня навыка — их можно и отложить.
 function matsHtml(a) {
-  const n = matsNeed(a.id);
+  // агента ещё нет — считаем с нуля, чтобы заранее прикинуть фарм под рерайн
+  const zero = !(prog[a.id] && prog[a.id].have);
+  const n = matsNeed(a.id, zero);
   if (!n) return '<div class="hint" style="margin-top:0">' +
     (MATS ? 'Этот агент уже доведён до своих целей — фармить нечего.'
           : 'Нет файла <b>zzz-mats.json</b>: его собирает <b>build-zzz-mats.ps1</b>.') + '</div>';
@@ -2821,7 +2828,7 @@ function matsHtml(a) {
       '<b>' + nfmt(cnt) + '</b>' + esc(short(id)) + '</span>';
   };
   // итог и батарея — без выключенных частей; сами части показываем все
-  const nn = needOn(a.id), off = partOff(a.id);
+  const nn = needOn(a.id, zero), off = partOff(a.id);
   const books = expBooks(nn.exp);
   const есть = haveItems(books.concat(Object.keys(nn.items).map(id => [id, nn.items[id]])), short);
 
@@ -2850,7 +2857,9 @@ function matsHtml(a) {
         '<div class="mt-items">' + cells.join('') + '</div></div>';
     }).join('') + '</div>';
 
-  h += '<div class="hint">Считается до целей из кнопки «🎯 цели» — поменяешь их, ' +
+  if (zero) h += '<div class="hint">Агента ещё нет: считается с нуля — уровень 1, ядро 0, навыки 1, ' +
+    'без оружия, цели — по умолчанию (максимум, навыки по гайду).</div>';
+  else h += '<div class="hint">Считается до целей из кнопки «🎯 цели» — поменяешь их, ' +
     'пересчитается и это. Оружие учтено только по денни: модули усиления в игровых ' +
     'таблицах не расписаны. Данные из дампов игры' +
     (MATS.built ? ', собраны ' + esc(MATS.built) : '') + '.</div>';
@@ -3223,10 +3232,21 @@ function renderSheet() {
     '</div></div></div><div class="hbody">';
 
   if (!p.have) {
-    h += '<div style="padding:26px 4px;color:var(--tx2);font-size:13px;line-height:1.6">' +
-         'Этого агента ещё нет в трекере.<br>Отметь, что он у тебя есть — появятся ' +
-         'прокачка, диски, оружие и характеристики.</div>' +
-         '<button class="htab on" id="haveTog" style="padding:9px 18px">＋ Есть у меня</button>';
+    // Агента ещё нет (28.10.2026): та же карточка, но только то, что от
+    // прогресса не зависит, — гайд, фарм с нуля и команды. Удобно прикинуть
+    // ресурсы под рерайн, не добавляя агента в трекер.
+    const табы = [['guide', 'Гайд', guideOf(curId)], ['mats', 'Фарм', matsNeed(curId, true)], ['team', 'Команды', teamsOf(curId)]]
+      .filter(x => x[2]);
+    if (!табы.some(x => x[0] === curTab)) curTab = табы.length ? табы[0][0] : '';
+    h += '<div class="hhead">' +
+      табы.map(x => '<button class="htab' + (curTab === x[0] ? ' on' : '') + '" data-tab="' + x[0] + '">' + x[1] + '</button>').join('') +
+      '<span style="flex:1"></span>' +
+      '<button class="htab on" id="haveTog">＋ Есть у меня</button></div>';
+    if (curTab === 'guide') h += guideHtml(a, p, calcTotals(a, p, []));
+    else if (curTab === 'mats') h += matsHtml(a);
+    else if (curTab === 'team') h += teamHtml(a);
+    else h += '<div class="hint">По этому агенту пока нет ни гайда, ни материалов. ' +
+      'Отметь «Есть у меня» — появятся прокачка, диски, оружие и характеристики.</div>';
   } else {
     const showCB = !!cbOpen;
     const nowT  = calcTotals(a, p, p.discs);
@@ -3633,11 +3653,11 @@ function bindSheet() {
     save(curId);
     renderSheet();
   };
-  if (!p.have) return;
-
+  // вкладки есть и у агента, которого ещё нет (гайд / фарм / команды)
   document.querySelectorAll('.htab[data-tab]').forEach(b => b.onclick = () => {
     applySheet(); curTab = b.dataset.tab; editing = null; renderSheet();
   });
+  if (!p.have) return;
   // Карандаш убрали: клик по диску раскрывает подробности, а править
   // предлагается кнопкой «изменить» внутри них.
   document.querySelectorAll('.dcard').forEach(c => {
