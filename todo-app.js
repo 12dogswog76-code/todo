@@ -573,6 +573,7 @@ function render() {
   fc.appendChild(sortSel);
 
   { const ab = $('archiveBtn'); if (ab) ab.classList.toggle('on', !!state.fArchive); }
+  if (window.dzPage) window.dzPage(); // редизайн: какая страница сверху подсвечена
   if (!isArc) {
     const fs = document.createElement('div'); fs.className = 'fside';
     const fdiv = document.createElement('span'); fdiv.className = 'catdiv'; fs.appendChild(fdiv);
@@ -1477,10 +1478,11 @@ function renderCatChips() {
   divEl.className = 'catdiv';
   box.appendChild(divEl);
   const plus = document.createElement('span');
-  plus.className = 'chip catmgr' + ($('catMgr').classList.contains('open') ? ' on' : '');
+  plus.className = 'chip catmgr' + ($('catMgr').classList.contains('open') && !window.dzSettings ? ' on' : '');
   plus.textContent = '➕ Категории';
   plus.title = 'Добавить или удалить категории';
   plus.onclick = () => {
+    if (window.dzSettings) return window.dzSettings('cat'); // категории живут в «Настройках»
     $('catMgr').classList.toggle('open');
     renderCatChips();
     renderCatMgr();
@@ -2332,12 +2334,13 @@ function openGuide(dock) {
   fillQaddUI();
 }
 function hintGuideBtn() {
-  const b = $('guideBtn');
+  // гайд переехал в «Настройки» — если его кнопка скрыта, показываем на «Настройки»
+  const b = $('guideBtn').offsetParent ? $('guideBtn') : ($('dzSetBtn') || $('guideBtn'));
   b.classList.add('pulse');
   b.scrollIntoView({ block: 'nearest' });
   const tip = document.createElement('span');
   tip.className = 'gbub';
-  tip.textContent = 'Гайд всегда можно открыть здесь';
+  tip.textContent = b.id === 'dzSetBtn' ? 'Гайд — в Настройках, пункт «Как пользоваться»' : 'Гайд всегда можно открыть здесь';
   document.body.appendChild(tip);
   const place = () => {
     const r = b.getBoundingClientRect();
@@ -2887,7 +2890,88 @@ function focusClose(t, нач) {
   if (!h1) return;
   const side = document.createElement('aside');
   side.className = 'dz-side';
-  ['stats', 'lifePanel'].forEach(id => { const el = document.getElementById(id); if (el) side.appendChild(el); });
+  ['stats'].forEach(id => { const el = document.getElementById(id); if (el) side.appendChild(el); });
+  // строка про жизненный цикл — сам выбор сроков теперь в «Настройках»
+  const life = document.createElement('div');
+  life.className = 'dz-life';
+  side.appendChild(life);
   h1.after(side);
   wrap.classList.add('dz-two');
+
+  // ─── Страницы (п. 43): в шапке Задачи · Архив · Настройки · ИИ ───
+  // «Архив» — прежний фильтр state.fArchive (у строки есть «вернуть»), поле
+  // добавления на нём скрыто. «Настройки» — меню слева, справа раздел; кнопки,
+  // что раньше стояли над списком, переносятся туда целиком (id и обработчики
+  // те же). «ИИ» — прежний чат.
+  const top = wrap.querySelector('.topbar');
+  const $ = id => document.getElementById(id);
+  const кн = (id, текст) => { const b = document.createElement('button'); b.id = id; b.textContent = текст; return b; };
+  const задачи = кн('dzTasksBtn', '✓ Задачи'), наст = кн('dzSetBtn', '⚙ Настройки');
+  top.prepend(задачи);
+  $('archiveBtn').after(наст);
+
+  const РАЗДЕЛЫ = [
+    ['cat', 'Категории', ['catMgr'], 'Название, цвет и эмодзи категории; «₽ считать сумму» — у задач появится поле суммы.'],
+    ['notif', 'Уведомления', ['notifBtn'], 'Напоминания в браузере о сроках. Push при закрытом сайте — в «Облако и файлы».'],
+    ['view', 'Вид', ['dateBtn', 'themeBtn', 'pipBtn'], 'Как показывать даты, тема и окно поверх остальных.'],
+    ['life', 'Жизненный цикл', ['lifePanel'], ''],
+    ['cloud', 'Облако и файлы', ['iobar', 'ioPanel', 'syncPanel', 'statsPanel'], 'Экспорт и импорт, бэкапы, облако npoint, push и статистика.'],
+    ['guide', 'Как пользоваться', ['guideBtn'], 'Короткий гайд по всем возможностям — открывается поверх страницы.']
+  ];
+  const set = document.createElement('section');
+  set.className = 'dz-set';
+  const меню = document.createElement('nav'), тело = document.createElement('div');
+  меню.className = 'dz-set-m'; тело.className = 'dz-set-b';
+  РАЗДЕЛЫ.forEach(([k, имя, узлы, пояснение]) => {
+    const b = document.createElement('button');
+    b.textContent = имя; b.dataset.k = k;
+    меню.appendChild(b);
+    const p = document.createElement('div');
+    p.className = 'dz-set-p'; p.dataset.k = k;
+    p.innerHTML = '<h2></h2>' + (пояснение ? '<p class="hint"></p>' : '');
+    p.querySelector('h2').textContent = имя;
+    if (пояснение) p.querySelector('p').textContent = пояснение;
+    узлы.forEach(id => { const el = id === 'iobar' ? wrap.querySelector('.iobar') : $(id); if (el) p.appendChild(el); });
+    тело.appendChild(p);
+  });
+  set.append(меню, тело);
+  wrap.querySelector('.footer').before(set);
+
+  let страница = 'tasks', раздел = 'cat';
+  function открытьРаздел(k) {
+    раздел = k;
+    меню.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+    тело.querySelectorAll('.dz-set-p').forEach(p => p.hidden = p.dataset.k !== k);
+    if (k === 'cat') { $('catMgr').classList.add('open'); if (typeof renderCatMgr === 'function') renderCatMgr(); }
+  }
+  меню.addEventListener('click', e => { const b = e.target.closest('button'); if (b) открытьРаздел(b.dataset.k); });
+  function строкаЦикла() {
+    const d = $('lifeDown'), a = $('lifeArc');
+    const т = s => s && s.selectedIndex >= 0 ? s.options[s.selectedIndex].text : '—';
+    life.innerHTML = '<b>Сделанное</b><span></span><button type="button" class="ghost">настроить</button>';
+    life.querySelector('span').textContent = 'вниз списка — ' + т(d) + ', в архив — ' + т(a);
+  }
+  life.addEventListener('click', e => { if (e.target.closest('button')) window.dzSettings('life'); });
+  ['lifeDown', 'lifeArc'].forEach(id => $(id) && $(id).addEventListener('change', строкаЦикла));
+
+  window.dzPage = function () {
+    const арх = !!state.fArchive;
+    wrap.classList.toggle('dz-pset', страница === 'set');
+    wrap.classList.toggle('dz-arc', страница !== 'set' && арх);
+    задачи.classList.toggle('on', страница !== 'set' && !арх);
+    $('archiveBtn').classList.toggle('on', страница !== 'set' && арх);
+    наст.classList.toggle('on', страница === 'set');
+    строкаЦикла();
+  };
+  window.dzSettings = function (k) { страница = 'set'; открытьРаздел(k || раздел); window.dzPage(); window.scrollTo(0, 0); };
+  наст.onclick = () => window.dzSettings();
+  задачи.onclick = () => { страница = 'tasks'; if (state.fArchive) { state.fArchive = false; save(); render(); } window.dzPage(); };
+  // «Архив» с страницы настроек — сначала вернуться к списку
+  $('archiveBtn').addEventListener('click', e => {
+    const былАрхив = страница === 'set' && state.fArchive;
+    страница = 'tasks';
+    if (былАрхив) { e.stopImmediatePropagation(); window.dzPage(); } // уже архив — просто показать его
+  }, true);
+  открытьРаздел('cat');
+  window.dzPage();
 })();

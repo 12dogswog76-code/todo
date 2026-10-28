@@ -637,7 +637,9 @@ function renderTpl() {
 }
 
 function renderGoals() {
-  const box = $('goalList'); box.innerHTML = '';
+  // строка «новая цель» живёт последней карточкой сетки (редизайн, п. 44) —
+  // берём её до очистки, иначе innerHTML унесёт её вместе с полями
+  const box = $('goalList'), add = $('goalNew'); box.innerHTML = '';
   data.goals.forEach(g => {
     const d = document.createElement('div'); d.className = 'goal';
     const pct = g.target > 0 ? Math.min(100, Math.round((g.saved || 0) / g.target * 100)) : 0;
@@ -645,7 +647,8 @@ function renderGoals() {
     const gname = document.createElement('input'); gname.className = 'nmfield'; gname.value = g.name;
     gname.onchange = () => { if (gname.value.trim()) { g.name = gname.value.trim(); save(); } else gname.value = g.name; };
     const info = document.createElement('span'); info.textContent = fmt(g.saved || 0) + ' / ' + fmt(g.target || 0) + ' ₽ (' + pct + '%)';
-    headHTML.append(gname, info);
+    const ring = document.createElement('div'); ring.className = 'gring'; ring.style.setProperty('--p', pct); ring.textContent = pct + '%';
+    headHTML.append(ring, gname, info);
     const bar = document.createElement('div'); bar.className = 'gbar'; bar.innerHTML = '<div class="gfill" style="width:' + pct + '%"></div>';
     const row = document.createElement('div'); row.className = 'addrow';
     const inp = document.createElement('input'); inp.className = 'amt'; inp.type = 'number'; inp.placeholder = '＋ ₽';
@@ -664,6 +667,7 @@ function renderGoals() {
     d.append(headHTML, bar, row);
     box.appendChild(d);
   });
+  if (add) box.appendChild(add);
 }
 $('goalAdd').onclick = () => {
   const n = $('goalName').value.trim(); const t = parseFloat($('goalTarget').value);
@@ -976,7 +980,8 @@ function renderGames() {
   const box = $('gmList'); box.innerHTML = '';
   data.games.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60).forEach(x => {
     const r = document.createElement('div'); r.className = 'addrow';
-    r.innerHTML = '<span style="min-width:80px">' + esc(x.date.split('-').reverse().join('.')) + '</span><b style="min-width:70px">' + esc(x.game) + '</b>' +
+    r.dataset.game = x.game; // точка цвета игры — в design.css (п. 44)
+    r.innerHTML = '<span style="min-width:80px">' + esc(x.date.split('-').reverse().join('.')) + '</span><b class="gmname" style="min-width:70px">' + esc(x.game) + '</b>' +
       '<span style="min-width:80px;text-align:right">' + fmt(x.amount) + ' ₽</span><span class="hint" style="margin:0;flex:1">' + esc(x.what || '') + '</span>';
     const del = document.createElement('button'); del.className = 'xbtn'; del.textContent = '✕';
     twoStepDel(del, '✕', () => { data.games = data.games.filter(y => y.id !== x.id); save(); renderGames(); });

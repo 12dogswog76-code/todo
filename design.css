@@ -385,6 +385,28 @@ html[data-sec="todo"] body:not(.light) :is(.chip.on,.pill.on,.pill.ico.on){backg
   html[data-sec="todo"] .dz-side .lcrow{display:grid;gap:8px}
 }
 @media (max-width:1000px){html[data-sec="todo"] .dz-side{display:contents}}
+/* Страницы (п. 43): Задачи · Архив · Настройки — классы ставит todo-app.js */
+html[data-sec="todo"] .dz-life{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13px;color:var(--tx2)}
+html[data-sec="todo"] .dz-life b{color:var(--tx);font-weight:600}
+html[data-sec="todo"] .dz-life button{margin-left:auto;padding:3px 10px !important;font-size:12px}
+html[data-sec="todo"] .wrap.dz-arc > :is(.addbox,#demoBar){display:none !important}
+html[data-sec="todo"] .dz-set{display:none}
+html[data-sec="todo"] .wrap.dz-pset > :not(h1,.topbar,.dz-side,.dz-set,.footer,.topbanner){display:none !important}
+html[data-sec="todo"] .wrap.dz-pset > .dz-set{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px;align-items:start;margin-top:14px}
+html[data-sec="todo"] .dz-set-m{display:grid;gap:4px;padding:8px;border-radius:22px;background:var(--dz-glass);border:1px solid var(--dz-edge);
+  box-shadow:var(--dz-hi);position:sticky;top:12px}
+html[data-sec="todo"] .dz-set-m button{text-align:left;border-radius:14px !important;padding:9px 12px;background:transparent;border:0;color:var(--tx2);cursor:pointer;font:inherit}
+html[data-sec="todo"] .dz-set-m button:hover{background:rgb(255 255 255 / .06);color:var(--tx)}
+html[data-sec="todo"] .dz-set-m button.on{background:var(--acc);color:#0b0d10;font-weight:600}
+html[data-sec="todo"] .dz-set-p{padding:16px 18px;border-radius:22px;background:var(--dz-glass);border:1px solid var(--dz-edge);box-shadow:var(--dz-hi)}
+html[data-sec="todo"] .dz-set-p h2{margin:0 0 6px;font-size:18px}
+html[data-sec="todo"] .dz-set-p > .hint{margin:0 0 12px}
+html[data-sec="todo"] .dz-set-p > button{margin:0 8px 8px 0;border-radius:999px !important}
+html[data-sec="todo"] .dz-set-p #catMgr{display:block !important;margin:0;padding:0;border:0;background:none}
+html[data-sec="todo"] .dz-set-p #lifePanel{display:block !important;margin:0}
+html[data-sec="todo"] .dz-set-p .iobar{margin:0 0 10px}
+@media (max-width:700px){html[data-sec="todo"] .wrap.dz-pset > .dz-set{grid-template-columns:1fr}
+  html[data-sec="todo"] .dz-set-m{position:static;grid-auto-flow:column;overflow-x:auto}}
 
 /* EF «Таланты» B (п. 41): колонки прорывов, ступени раскрываются */
 html[data-sec="ef"] .tlp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
@@ -430,6 +452,33 @@ html[data-sec="money"] body:not(.light) #editModeBtn.on{background:var(--acc) !i
   html[data-sec="money"] #tab-periods:not([style*="none"]){display:grid !important;grid-template-columns:minmax(0,1fr) 380px;column-gap:18px;align-items:start}
   html[data-sec="money"] #tab-periods > *{grid-column:1}
   html[data-sec="money"] #tab-periods > #summary{grid-column:2;grid-row:1 / span 20;position:sticky;top:80px;margin:0}
+}
+
+/* Остальные вкладки (п. 44) */
+html[data-sec="money"] h1{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+html[data-sec="money"] h1 #editModeBtn{margin-left:auto;font-size:12px;padding:6px 14px;border-radius:999px !important;vertical-align:middle}
+html[data-sec="money"] h1 .backlink{margin-left:0}
+/* Цели — карточки сеткой, кольцо процента, последняя — «новая цель» */
+html[data-sec="money"] #goalList{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+html[data-sec="money"] #goalList .goal{margin:0;padding:14px;border-radius:18px;background:rgb(255 255 255 / .03);border:1px solid var(--dz-edge)}
+html[data-sec="money"] #goalList .goal.gadd{display:flex;flex-wrap:wrap;align-content:center;gap:8px;border-style:dashed;min-height:110px}
+html[data-sec="money"] #goalList .goal.gadd > input{flex:1 1 120px}
+html[data-sec="money"] .gring{--p:0;width:46px;height:46px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:11px;font-weight:700;
+  background:radial-gradient(closest-side,rgb(20 22 28) 76%,transparent 78%),conic-gradient(var(--acc) calc(var(--p) * 1%),rgb(255 255 255 / .1) 0)}
+html[data-sec="money"] #goalList .goal .nmfield{flex:1;min-width:0}
+/* Донат — точка цвета игры у покупки */
+html[data-sec="money"] #gmList .gmname::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--tx2);vertical-align:middle}
+html[data-sec="money"] #gmList [data-game="ZZZ"] .gmname::before{background:#34d399}
+html[data-sec="money"] #gmList [data-game="NTE"] .gmname::before{background:#fb7185}
+html[data-sec="money"] #gmList [data-game="Endfield"] .gmname::before{background:#e6f20d}
+/* Траты и Донат — две колонки: список слева, итоги справа прилипшие */
+@media (min-width:1001px){
+  html[data-sec="money"] :is(#tab-spend,#tab-games) > .card{display:grid;grid-template-columns:minmax(0,1fr) 360px;column-gap:18px;align-items:start}
+  html[data-sec="money"] :is(#tab-spend,#tab-games) > .card > *{grid-column:1}
+  html[data-sec="money"] :is(#spSum,#gmSum){grid-column:2 !important;grid-row:1 / span 6;position:sticky;top:80px;margin:0 !important;
+    padding:14px;border-radius:18px;background:rgb(255 255 255 / .04);border:1px solid var(--dz-edge)}
+  html[data-sec="money"] #spSum::before{content:"За месяц";display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px}
+  html[data-sec="money"] #gmSum::before{content:"Итог";display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px}
 }
 
 /* ── прокрутка ───────────────────────────────────────────────────────────── */
