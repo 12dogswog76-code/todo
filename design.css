@@ -272,6 +272,29 @@ html[data-sec="ef"] .st{border-radius:16px !important}
 html[data-sec="ef"] .sheet{background:rgb(4 5 3 / .55) !important}
 html[data-sec="ef"] .sheet-in{border-radius:26px !important}
 
+/* ── Endfield: раскладки разделов (метка data-tab ставится в app.js) ─────── */
+@media (min-width:1001px){
+  /* плитки операторов F (п. 3): значки и подпись — при наведении */
+  html[data-sec="ef"] .tile > .top{opacity:0;transition:opacity .2s}
+  html[data-sec="ef"] .tile:hover > .top{opacity:1}
+  html[data-sec="ef"] .tile .sub{max-height:0;overflow:hidden;opacity:0;transition:max-height .25s,opacity .2s}
+  html[data-sec="ef"] .tile:hover .sub{max-height:40px;opacity:1}
+  html[data-sec="ef"] .tile{border-radius:20px !important}
+  /* Достижения B (п. 36): категории — прилипшее меню слева, список справа */
+  html[data-sec="ef"][data-tab="ach"] .main .wrap{display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:16px;align-items:start}
+  html[data-sec="ef"][data-tab="ach"] #head{grid-column:1 / -1}
+  html[data-sec="ef"][data-tab="ach"] #fbar{grid-column:1;grid-row:2 / span 3;position:sticky;top:86px;flex-direction:column;align-items:stretch;
+    padding:8px;border-radius:22px;background:var(--dz-glass);border:1px solid var(--dz-edge);box-shadow:var(--dz-hi);
+    backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);margin:0}
+  html[data-sec="ef"][data-tab="ach"] #fbar .seg{flex-direction:column;align-items:stretch;background:none;border:0;padding:0}
+  html[data-sec="ef"][data-tab="ach"] #fbar .seg button{text-align:left;border-radius:14px !important;padding:10px 14px}
+  html[data-sec="ef"][data-tab="ach"] #fbar :is(.fgrp,.srch){width:100%}
+  html[data-sec="ef"][data-tab="ach"] :is(#body,#src){grid-column:2}
+  /* Профиль D (п. 37): визитка по центру */
+  html[data-sec="ef"][data-tab="prof"] #body{max-width:820px;margin:0 auto}
+  html[data-sec="ef"][data-tab="prof"] #head{max-width:820px;margin-left:auto;margin-right:auto}
+}
+
 /* ── Мои дела ─────────────────────────────────────────────────────────────── */
 html[data-sec="todo"] body:not(.light) :is(.topbar button,.emtab,.iobar button){border-radius:999px !important;
   background:rgb(255 255 255 / .07) !important;border-color:transparent !important}
