@@ -1,0 +1,177 @@
+/* design.css — новый облик alextask (редизайн 28.10.2026).
+   Решения — дизайн-варианты\РЕШЕНИЯ.md, пункты 1–46; живой черновик —
+   дизайн-варианты\детали\живой.html.
+
+   Один файл на все пять разделов. Подключается последним в <head>, после
+   стилей страницы, и перекрывает их: фон, «стекло» панелей, шрифт, кнопки,
+   капсулы, состояния и плашки. Раздел задаётся атрибутом <html data-sec="…">
+   (zzz, nte, ef, todo, money) — по нему свои цвета фона и акцент.
+
+   Как устроено: страницы уже красят панели переменными (--pan, --pan2,
+   --line; у Endfield --gr, --gr2, --ln). Им дано полупрозрачное «стекло» —
+   и почти всё на странице само становится стеклянным поверх цветных пятен.
+   Отдельными правилами — только то, что переменными не задано.
+
+   Убрать новый облик целиком — убрать <link rel="stylesheet" href="design.css">
+   из страницы. Код разделов файл не трогает. */
+
+/* ── общие переменные ─────────────────────────────────────────────────────── */
+html[data-sec]{
+  color-scheme:dark;
+  --dz-glass:rgb(255 255 255 / .055);
+  --dz-glass2:rgb(255 255 255 / .09);
+  --dz-edge:rgb(255 255 255 / .11);
+  --dz-edge2:rgb(255 255 255 / .2);
+  --dz-hi:inset 0 1px 0 rgb(255 255 255 / .14);
+  --dz-blur:blur(18px) saturate(1.5);
+  --dz-sys:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --dz-mono:ui-monospace,"Cascadia Mono","Segoe UI Mono",Consolas,monospace;
+  /* шрифт A (п. 5): системный, числа — моноширинные */
+  --body:var(--dz-sys); --disp:var(--dz-sys); --head:var(--dz-sys); --mono:var(--dz-mono);
+  /* стекло вместо сплошных панелей */
+  --pan:var(--dz-glass); --pan2:var(--dz-glass2); --line:var(--dz-edge);
+  --line-soft:rgb(255 255 255 / .06); --line-hard:var(--dz-edge2);
+  --glass:var(--dz-hi);
+  --bg:transparent;
+}
+/* фон (п. 1): тёмные плавающие пятна, свои цвета у раздела */
+html[data-sec="zzz"]{--dz-1:#05503c;--dz-2:#063a52;--dz-3:#0d3a2a;--dz-a:.95;--acc:#34d399}
+html[data-sec="nte"]{--dz-1:#4a0f1f;--dz-2:#4a2808;--dz-3:#2e0a2a;--dz-a:.95;--acc:#fb7185;--panel:rgb(255 255 255 / .05)}
+html[data-sec="ef"]{--dz-1:#3a4806;--dz-2:#123a22;--dz-3:#454508;--dz-a:.95;--acc:#e6f20d;--acid:#e6f20d;
+  --scene:transparent;--scene2:rgb(255 255 255 / .03);--gr:var(--dz-glass);--gr2:var(--dz-glass2);--gr3:rgb(255 255 255 / .13);
+  --ln:var(--dz-edge);--ln2:var(--dz-edge2)}
+html[data-sec="todo"]{--dz-1:#0b4a2a;--dz-2:#0b3442;--dz-3:#16420f;--dz-a:.7;--acc:#4ade80;--in:rgb(0 0 0 / .25)}
+html[data-sec="money"]{--dz-1:#4a2a06;--dz-2:#481216;--dz-3:#3a3008;--dz-a:.95;--acc:#fbbf24;--in:rgb(0 0 0 / .25)}
+
+/* ── фон ──────────────────────────────────────────────────────────────────── */
+/* цвет — только у корня: фон body перекрыл бы пятна (они ниже него в стопке) */
+html[data-sec]{background:#06070a !important}
+html[data-sec] body,
+html[data-sec] body:not(.light){
+  background:transparent !important;
+  background-image:none !important;
+  font-family:var(--dz-sys);
+}
+html[data-sec] body::before{
+  content:"" !important;position:fixed !important;inset:-15% !important;z-index:-3 !important;pointer-events:none;
+  display:block !important;
+  background:
+    radial-gradient(38% 42% at 18% 22%,var(--dz-1),transparent 70%),
+    radial-gradient(36% 40% at 84% 26%,var(--dz-2),transparent 70%),
+    radial-gradient(44% 40% at 56% 86%,var(--dz-3),transparent 72%) !important;
+  background-size:auto !important;
+  opacity:var(--dz-a,.9) !important;filter:blur(30px);
+  -webkit-mask:none;mask:none;
+  animation:dz-drift 40s ease-in-out infinite alternate !important;
+}
+/* зерно поверх пятен — едва заметное */
+html[data-sec] body::after{
+  content:"" !important;position:fixed !important;inset:0 !important;z-index:-2 !important;pointer-events:none;
+  display:block !important;opacity:.05 !important;animation:none !important;transform:none !important;
+  background:radial-gradient(circle,#fff 1px,transparent 1.2px) 0 0/3px 3px !important;
+}
+@keyframes dz-drift{
+  0%{transform:translate3d(0,0,0) scale(1)}
+  50%{transform:translate3d(3%,-2%,0) scale(1.06)}
+  100%{transform:translate3d(-2%,3%,0) scale(1.03)}
+}
+@media (prefers-reduced-motion:reduce){html[data-sec] body::before{animation:none !important}}
+/* у ZZZ поверх фона ехала надпись ZENLESS ZONE ZERO — в новом облике её нет */
+html[data-sec="zzz"] .bgroll{display:none !important}
+
+/* ── светлая тема дел и денег остаётся своей: облик только для тёмной ─────── */
+html[data-sec] body.light::before,html[data-sec] body.light::after{display:none !important}
+html[data-sec] body.light{background:revert !important}
+
+/* ── стекло: крупные панели получают размытие ─────────────────────────────── */
+html[data-sec] :is(.sheet,.sheet-in,.mmbox,.toolsm,.modal-in,#askCard,.wcard,#guideCard,#bgCard,.gbub,#ogCard){
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);
+  background:rgb(22 24 30 / .72) !important;
+  border-color:var(--dz-edge) !important;
+  box-shadow:var(--dz-hi),0 24px 60px rgb(0 0 0 / .45) !important;
+}
+html[data-sec] :is(.modal,.mmwrap,#sheet,.sheet-wrap,#askNotif,#welcome,#guide){
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+
+/* ── кнопки B «плоские» (п. 13), капсулы A (п. 15) ────────────────────────── */
+html[data-sec] :is(.fb,.chip,.tbtn,.pill,.tabs button,.seg button,.ghost,.vbtn){
+  border-radius:999px !important;
+  transition:background .15s,color .15s,border-color .15s;
+}
+html[data-sec] :is(.fb,.chip,.tbtn,.tabs button,.ghost){
+  background:rgb(255 255 255 / .07) !important;border-color:transparent !important;color:var(--tx2) !important;
+  box-shadow:none !important;
+}
+html[data-sec] :is(.fb,.chip,.tbtn,.tabs button,.ghost):hover{background:rgb(255 255 255 / .12) !important;color:var(--tx) !important}
+html[data-sec] :is(.fb.on,.chip.on,.tbtn.on,.tabs button.on,.seg button.on,.fb.active,.chip.active){
+  background:var(--acc) !important;color:#0b0d10 !important;border-color:transparent !important;font-weight:600;
+}
+html[data-sec] :is(.fb.on,.chip.on,.tbtn.on,.tabs button.on) img{filter:brightness(0) opacity(.75)}
+
+/* поля ввода — капсулы на стекле */
+html[data-sec] :is(input[type=text],input[type=search],input[type=number],input:not([type]),select,textarea){
+  background:rgb(0 0 0 / .22);border-color:var(--dz-edge);
+}
+html[data-sec] :is(input[type=text],input[type=search],input:not([type])):not(.editInput){border-radius:999px}
+html[data-sec] :is(input,select,textarea):focus{outline:none;border-color:color-mix(in srgb,var(--acc) 70%,transparent) !important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+html[data-sec] input[type=range]{accent-color:var(--acc)}
+
+/* ── плашки A «полосами» (п. 46) ──────────────────────────────────────────── */
+html[data-sec] :is(.topbanner,#installBar,#demoBar){
+  border-radius:16px !important;background:var(--dz-glass2) !important;border:1px solid var(--dz-edge) !important;
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi) !important;
+}
+
+/* ── состояния D (п. 45): «ничего нет» — пятно цвета раздела ────────────────── */
+html[data-sec] .empty{
+  position:relative;padding-top:86px !important;text-transform:none !important;letter-spacing:0 !important;
+  font-size:14px !important;color:var(--tx2) !important;
+}
+html[data-sec] .empty::before{
+  content:"";position:absolute;left:50%;top:6px;width:66px;height:66px;margin-left:-33px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,color-mix(in srgb,var(--acc) 60%,transparent),transparent 70%);filter:blur(2px);
+}
+
+/* ── числа моноширинным (п. 5) ────────────────────────────────────────────── */
+html[data-sec] :is(.num,.mono,td.n,td.num){font-family:var(--dz-mono)}
+
+/* ── шапка «островами» (п. 2): логотип и инструменты — стеклянные капсулы,
+      прилипают к верху при прокрутке ─────────────────────────────────────── */
+html[data-sec] :is(.top,.topbar){position:sticky;top:10px;z-index:30}
+html[data-sec="zzz"] .top{padding:0;gap:10px}
+html[data-sec="zzz"] .top > :is(.logo,.tools){
+  padding:6px 8px 6px 6px;border-radius:999px;background:rgb(20 22 28 / .6);border:1px solid var(--dz-edge);
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi);
+}
+html[data-sec="zzz"] .top > .tools{padding:5px}
+html[data-sec="zzz"] .logo-btn .mark{border-radius:50%}
+
+/* ── ZZZ: плитки и сводка ─────────────────────────────────────────────────── */
+html[data-sec="zzz"] .card{border-radius:20px !important}
+html[data-sec="zzz"] :is(.sum > *,.panel,.infobox,.dcard,.sect){border-radius:20px !important}
+
+/* ── NTE: шапка — три острова (логотип · вкладки · инструменты) ─────────── */
+html[data-sec="nte"] .top{background:transparent !important;border:0 !important;backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;top:10px;padding:0;margin-bottom:18px}
+html[data-sec="nte"] .top-in{gap:10px;flex-wrap:nowrap}
+html[data-sec="nte"] .top-in > :is(.logo,.tabs,.tools){
+  border-radius:999px;background:rgb(20 22 28 / .6) !important;border:1px solid var(--dz-edge) !important;
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi);
+}
+html[data-sec="nte"] .top-in > .logo{padding:7px 14px 7px 8px}
+html[data-sec="nte"] .top-in > .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:4px;min-width:0;flex:0 1 auto;margin:0 auto}
+html[data-sec="nte"] .top-in > .tabs::-webkit-scrollbar{display:none}
+html[data-sec="nte"] .top-in > .tools{padding:4px}
+html[data-sec="nte"] .top-sp{display:none}
+html[data-sec="nte"] .tb{border-radius:999px !important;white-space:nowrap}
+html[data-sec="nte"] .tb.on{background:var(--acc) !important;color:#0b0d10 !important;box-shadow:none !important}
+html[data-sec="nte"] :is(.box,.item,.bc,.card){border-radius:20px !important}
+html[data-sec="nte"] .card{background:linear-gradient(135deg,color-mix(in srgb,var(--el,#888) 14%,transparent),rgb(255 255 255 / .03)) !important}
+html[data-sec="nte"] .cloudb{border-radius:999px !important;background:transparent !important;border-color:transparent !important;color:var(--tx2) !important;box-shadow:none !important}
+html[data-sec="nte"] .cloudb:hover{background:rgb(255 255 255 / .1) !important;color:var(--tx) !important}
+html[data-sec="nte"] .logo{white-space:nowrap}
+
+/* ── прокрутка ───────────────────────────────────────────────────────────── */
+html[data-sec]{scrollbar-color:rgb(255 255 255 / .18) transparent}
