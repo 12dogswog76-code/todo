@@ -173,5 +173,54 @@ html[data-sec="nte"] .cloudb{border-radius:999px !important;background:transpare
 html[data-sec="nte"] .cloudb:hover{background:rgb(255 255 255 / .1) !important;color:var(--tx) !important}
 html[data-sec="nte"] .logo{white-space:nowrap}
 
+/* ── Endfield: свой фон с надписями убран, шапка — три острова, тёмные
+      оливковые панели — стекло ──────────────────────────────────────────── */
+html[data-sec="ef"] .bg{display:none !important}
+html[data-sec="ef"] .ehead{background:transparent !important;border:0 !important;backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;top:10px}
+html[data-sec="ef"] .ehead .hz{display:none}
+html[data-sec="ef"] .ehead .top-in{gap:10px;flex-wrap:nowrap;padding:0 26px}
+html[data-sec="ef"] .ehead .top-in > :is(.logo,.tabs,.tools){
+  border-radius:999px;background:rgb(20 22 16 / .6) !important;border:1px solid var(--dz-edge) !important;
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi);
+}
+html[data-sec="ef"] .ehead .top-in > .logo{padding:6px 14px 6px 8px}
+html[data-sec="ef"] .ehead .top-in > .tabs{margin:0 auto;padding:4px}
+html[data-sec="ef"] .ehead .top-in > .tools{padding:4px}
+html[data-sec="ef"] .ehead .top-sp{display:none}
+html[data-sec="ef"] .tab{border-radius:999px !important;white-space:nowrap}
+html[data-sec="ef"] .tab.on{background:var(--acid) !important;color:#14150d !important;border-color:transparent !important;box-shadow:none !important}
+html[data-sec="ef"] .tbtn{background:transparent !important;border-color:transparent !important;border-radius:999px !important;letter-spacing:.06em}
+html[data-sec="ef"] .tbtn:hover{background:rgb(255 255 255 / .1) !important}
+html[data-sec="ef"] :is(.box,.it,details.dd,.skill,.team){background:var(--dz-glass) !important;border-color:var(--dz-edge) !important;border-radius:18px !important}
+html[data-sec="ef"] .st{border-radius:16px !important}
+html[data-sec="ef"] .sheet{background:rgb(4 5 3 / .55) !important}
+html[data-sec="ef"] .sheet-in{border-radius:26px !important}
+
+/* ── Мои дела ─────────────────────────────────────────────────────────────── */
+html[data-sec="todo"] body:not(.light) :is(.topbar button,.emtab,.iobar button){border-radius:999px !important;
+  background:rgb(255 255 255 / .07) !important;border-color:transparent !important}
+html[data-sec="todo"] body:not(.light) :is(.topbar button,.iobar button):hover{background:rgb(255 255 255 / .12) !important;color:var(--tx) !important}
+html[data-sec="todo"] .topbar{position:static;padding:5px;border-radius:999px;background:rgb(20 22 28 / .5);border:1px solid var(--dz-edge);
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi);width:fit-content;max-width:100%;
+  flex-wrap:nowrap !important;overflow-x:auto;scrollbar-width:none}
+html[data-sec="todo"] .topbar button{flex:none;white-space:nowrap}
+html[data-sec="todo"] body:not(.light) .addbox{border-radius:24px !important;background:var(--dz-glass) !important;
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi) !important}
+html[data-sec="todo"] body:not(.light) #taskInput{border-radius:999px !important;padding-left:18px}
+html[data-sec="todo"] body:not(.light) .task{border-radius:16px !important}
+html[data-sec="todo"] body:not(.light) :is(.chip,.pill){border-radius:999px !important}
+html[data-sec="todo"] body:not(.light) :is(.chip.on,.pill.on,.pill.ico.on){background:var(--acc) !important;color:#0b0d10 !important;border-color:transparent !important}
+
+/* ── Мои деньги ───────────────────────────────────────────────────────────── */
+html[data-sec="money"] body:not(.light) .tabs{padding:5px;border-radius:999px;background:rgb(20 22 28 / .5);border:1px solid var(--dz-edge);
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi);width:fit-content;max-width:100%;
+  position:sticky;top:10px;z-index:30}
+html[data-sec="money"] body:not(.light) .tabs button{border-radius:999px !important}
+html[data-sec="money"] body:not(.light) .card{border-radius:22px !important;background:var(--dz-glass) !important;
+  border-color:var(--dz-edge) !important;box-shadow:var(--dz-hi) !important}
+html[data-sec="money"] body:not(.light) :is(button.ghost,button.act){border-radius:999px !important}
+html[data-sec="money"] body:not(.light) #editModeBtn.on{background:var(--acc) !important;color:#0b0d10 !important}
+
 /* ── прокрутка ───────────────────────────────────────────────────────────── */
 html[data-sec]{scrollbar-color:rgb(255 255 255 / .18) transparent}
