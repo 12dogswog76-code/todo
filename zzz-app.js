@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v270';
+const APP_VER = 'v271';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5848,6 +5848,23 @@ function menuDropDraw() {
     menuOpen(b.dataset.k);
   });
 }
+// Средний остров шапки (редизайн 28.10.2026, п. 2). Главные разделы меню —
+// кнопками в одну строку; пункт открывает раздел страницей под шапкой (класс
+// .page на menuWrap), а не окном поверх. «Агенты» — назад к сетке. Остальные
+// пункты меню (импорт, облако, справка…) живут, где жили, — в «☰ Инструменты».
+const ZNAV = [['', 'Агенты'], ['mats', 'Что фармить'], ['todo', 'Кого качать'], ['pull', 'Крутки'],
+              ['end', 'Эндгейм'], ['codes', 'Коды'], ['banner', 'Баннеры']];
+function zNavDraw() {
+  const nav = $('zNav');
+  if (!nav) return;
+  const стр = $('menuWrap').classList.contains('page') ? menuCur : '';
+  nav.innerHTML = ZNAV.map(z => '<button class="zn' + (стр === z[0] ? ' on' : '') + '" data-zn="' + z[0] + '">' + esc(z[1]) + '</button>').join('');
+  nav.querySelectorAll('.zn').forEach(b => b.onclick = () => {
+    const k = b.dataset.zn;
+    if (!k) { menuClose(); window.scrollTo({ top: 0 }); return; }
+    menuOpen(k, true);
+  });
+}
 function menuGo(k) {
   const m = MENU.filter(x => x.k === k)[0];
   if (!m) return;
@@ -5883,14 +5900,19 @@ function menuGo(k) {
   if (k === 'boo')    drawBoo();
   const body = $('menuBody');
   if (body) body.scrollTop = 0;
+  zNavDraw();
 }
-function menuOpen(k) {
+// страницей — из среднего острова шапки; окном — из «☰ Инструменты»
+function menuOpen(k, страницей) {
   $('menuWrap').classList.add('open');
+  $('menuWrap').classList.toggle('page', !!страницей);
+  document.body.classList.toggle('zpage', !!страницей);
   document.body.classList.add('noscroll');
   menuCur = '';
   $('menuBox').classList.remove('open');
   menuDraw();
   if (k) menuGo(k);
+  zNavDraw();
 }
 // вернуть все панели на их законное место вне меню
 function menuPark() {
@@ -5902,10 +5924,11 @@ function menuPark() {
   });
 }
 function menuClose() {
-  $('menuWrap').classList.remove('open');
-  document.body.classList.remove('noscroll');
+  $('menuWrap').classList.remove('open', 'page');
+  document.body.classList.remove('noscroll', 'zpage');
   menuPark();
   menuCur = '';
+  zNavDraw();
 }
 $('menuBtn').onclick   = e => {
   e.stopPropagation();
@@ -5917,6 +5940,7 @@ document.addEventListener('click', e => {
   if (box && !box.contains(e.target)) box.classList.remove('open');
 });
 $('menuClose').onclick = menuClose;
+zNavDraw();
 $('menuWrap').onclick  = e => { if (e.target === $('menuWrap')) menuClose(); };
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('toolsBox')) $('toolsBox').classList.remove('open');

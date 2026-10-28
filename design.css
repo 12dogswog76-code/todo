@@ -148,6 +148,46 @@ html[data-sec="zzz"] .top > :is(.logo,.tools){
 html[data-sec="zzz"] .top > .tools{padding:5px}
 html[data-sec="zzz"] .logo-btn .mark{border-radius:50%}
 
+/* средний остров ZZZ: главные разделы в одну строку */
+html[data-sec="zzz"] .znav{display:flex;gap:2px;padding:4px;margin:0 auto;min-width:0;overflow-x:auto;scrollbar-width:none;
+  border-radius:999px;background:rgb(20 22 28 / .6);border:1px solid var(--dz-edge);
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi)}
+html[data-sec="zzz"] .znav::-webkit-scrollbar{display:none}
+html[data-sec="zzz"] .zn{flex:none;padding:8px 14px;border:0;border-radius:999px;cursor:pointer;font:500 13px var(--dz-sys);
+  color:var(--tx2);background:transparent;white-space:nowrap;transition:background .15s,color .15s}
+html[data-sec="zzz"] .zn:hover{color:var(--tx);background:rgb(255 255 255 / .08)}
+html[data-sec="zzz"] .zn.on{color:#0b0d10;background:var(--acc);font-weight:600}
+html[data-sec="zzz"] .top .sp{display:none}
+html[data-sec="zzz"] .top{flex-wrap:nowrap;gap:8px}
+html[data-sec="zzz"] .top > :is(.logo,.tools){flex:none}
+html[data-sec="zzz"] .tbtn-menu{white-space:nowrap;letter-spacing:.02em !important;text-transform:none !important;font-size:13px !important}
+html[data-sec="zzz"] .logo-btn small{display:none}
+/* раздел страницей под шапкой: окно меню без затемнения, без левого списка */
+html[data-sec="zzz"] .mmwrap.page{background:transparent !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  z-index:25;top:78px;padding:0 18px 18px}
+html[data-sec="zzz"] .mmwrap.page .mmnav,html[data-sec="zzz"] .mmwrap.page .mmx{display:none !important}
+html[data-sec="zzz"] .mmwrap.page .mmbox{width:min(1240px,100%) !important;background:transparent !important;border:0 !important;
+  box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+html[data-sec="zzz"] .mmwrap.page .mmbody{max-height:calc(100vh - 96px)}
+html[data-sec="zzz"] .mmwrap.page .mmhead{background:transparent;border:0;padding:6px 4px 12px;backdrop-filter:none}
+html[data-sec="zzz"] .mmwrap.page .mmhead h2{font-size:30px;text-transform:none;letter-spacing:-.01em;font-weight:800}
+html[data-sec="zzz"] .mmwrap.page .mmslot{padding:0 4px 20px}
+html[data-sec="zzz"] body.zpage #main{visibility:hidden}
+
+/* ── ZZZ: плитки F (п. 3) — чистый арт, сведения выезжают стеклом при наведении ── */
+html[data-sec="zzz"] .card :is(.badges,.fav,.tierb){opacity:0;transition:opacity .2s}
+html[data-sec="zzz"] .card:hover :is(.badges,.fav,.tierb),html[data-sec="zzz"] .card .fav.on{opacity:1}
+html[data-sec="zzz"] .card .ph::after{opacity:.55}
+html[data-sec="zzz"] .card .nmb{transition:transform .25s,background .25s,backdrop-filter .25s}
+html[data-sec="zzz"] .card:hover .nmb{background:rgb(15 17 22 / .55);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);
+  border-radius:16px;box-shadow:var(--dz-hi)}
+
+/* ── ZZZ: фон открытой карточки E (п. 8) — пятна цвета стихии ───────────────── */
+html[data-sec="zzz"] .hero{background:
+  radial-gradient(60% 50% at 12% 18%,color-mix(in srgb,var(--el) 30%,transparent),transparent 70%),
+  radial-gradient(50% 45% at 88% 82%,color-mix(in srgb,var(--el) 20%,transparent),transparent 72%),
+  rgb(16 18 23 / .78) !important}
+
 /* ── ZZZ: плитки и сводка ─────────────────────────────────────────────────── */
 html[data-sec="zzz"] .card{border-radius:20px !important}
 html[data-sec="zzz"] :is(.sum > *,.panel,.infobox,.dcard,.sect){border-radius:20px !important}

@@ -2397,7 +2397,7 @@
   }
 </style>
 <!-- новый облик (редизайн 28.10.2026): последним, перекрывает стили выше -->
-<link rel="stylesheet" href="design.css?v=1">
+<link rel="stylesheet" href="design.css?v=2">
 </head>
 <body>
 <div class="bgroll" aria-hidden="true"><div class="bgroll-in">
@@ -2425,6 +2425,10 @@
       <span class="ver" id="appVer" title="версия"></span>
       <span id="cloudDot" title="облако не подключено"></span>
     </div>
+    <!-- Средний остров шапки (редизайн 28.10.2026, п. 2): главные инструменты
+         раздела в одну строку. Пункт открывает тот же раздел меню, но
+         страницей под шапкой, а не окном поверх. Рисует zNavDraw(). -->
+    <nav class="znav" id="zNav" aria-label="Инструменты ZZZ"></nav>
     <span class="sp"></span>
     <!-- Семь кнопок занимали всю строку и лезли во вторую. Теперь одна, всё
          остальное — разделами внутри меню. -->
@@ -2781,7 +2785,7 @@
   </div>
 </div></div>
 
-<script src="zzz-app.js?v=270" defer></script>
+<script src="zzz-app.js?v=271" defer></script>
 <script src="menu.js?v=3" defer></script>
 <script src="install.js?v=2" defer></script>
 <script src="status.js?v=1" defer></script>
