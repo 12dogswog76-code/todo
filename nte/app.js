@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v90';
+const APP_VER = 'v91';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -300,6 +300,41 @@ function drawTabs() {
   });
 }
 
+// ── Окно предмета (редизайн 28.10.2026, п. 24, 28, 29) ─────────────────────
+// В «Городе», «Оружии» и «Картриджах» открытая строка списка показывается
+// окном по центру поверх размытого фона — сама раскладка в design.css
+// (html.dz-win). Здесь только учёт: открыт ли предмет, один ли он, и закрытие
+// кликом мимо окна или по Esc. Открывается всё, как раньше, — заголовком.
+const DZ_WIN = ['city', 'arcs', 'carts'];
+function dzWin() {
+  const есть = DZ_WIN.indexOf(state.tab) >= 0 &&
+    !!document.querySelector('#body details.suit[open], #body .wp.open');
+  document.documentElement.classList.toggle('dz-win', есть);
+}
+function dzWinClose(кроме) {
+  document.querySelectorAll('#body details.suit[open]').forEach(d => { if (d !== кроме) d.open = false; });
+  document.querySelectorAll('#body .wp.open').forEach(w => { if (w !== кроме) w.classList.remove('open'); });
+}
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (!d.matches || !d.matches('#body details.suit')) return;
+  if (d.open) dzWinClose(d);
+  dzWin();
+}, true);
+document.addEventListener('click', e => {
+  if (DZ_WIN.indexOf(state.tab) < 0) return;
+  const wp = e.target.closest('#body .wp-h');
+  // своя строка оружия — открывается её же обработчиком; соседние закрываем
+  if (wp) { setTimeout(() => { if (wp.parentElement.classList.contains('open')) dzWinClose(wp.parentElement); dzWin(); }); return; }
+  if (!document.documentElement.classList.contains('dz-win')) return;
+  if (e.target.closest('#body details.suit[open], #body .wp.open, #sheet, .top')) return;
+  dzWinClose(null);
+  dzWin();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.documentElement.classList.contains('dz-win')) { dzWinClose(null); dzWin(); }
+});
+
 // Отрисовка вкладки в обёртке. Если внутри что-то падает — а так уже было,
 // когда в данных машины попался пустой элемент, — фильтры успевают
 // перерисоваться, а тело остаётся от прошлой вкладки: на экране висел
@@ -315,6 +350,7 @@ function draw() {
   // вкладки по решениям редизайна — «События» в две колонки, «Аукцион» с меню
   // слева, «Команды» карточками.
   document.documentElement.dataset.tab = t;
+  document.documentElement.classList.remove('dz-win');
   const one = {
     espers: drawEspers, arcs: drawArcs, carts: drawCarts, tier: drawTier,
     teams: drawTeams, ban: drawBanners, codes: drawCodes, city: drawCity,

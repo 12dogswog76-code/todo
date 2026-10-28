@@ -241,6 +241,28 @@ html[data-sec="nte"] .logo{white-space:nowrap}
   html[data-sec="nte"][data-tab="ban"] #evBox{grid-column:2;grid-row:1 / span 30;position:sticky;top:86px;
     max-height:calc(100vh - 100px);overflow:auto;scrollbar-width:thin}
   html[data-sec="nte"][data-tab="ban"] .bcards{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  /* Город, Оружие, Картриджи (п. 24, 28, 29): открытый предмет — окном по
+     центру поверх размытого фона; учёт открытого — в app.js (html.dz-win) */
+  html[data-sec="nte"]:is([data-tab="city"],[data-tab="arcs"],[data-tab="carts"]) :is(details.suit[open],.wp.open){
+    position:fixed;left:0;right:0;top:6vh;margin:0 auto !important;width:min(920px,92vw);max-height:88vh;overflow:auto;z-index:50;
+    background:rgb(24 18 22 / .9) !important;border:1px solid var(--dz-edge) !important;border-radius:26px !important;
+    backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi),0 30px 80px rgb(0 0 0 / .55) !important;
+    scrollbar-width:thin}
+  html[data-sec="nte"].dz-win::after{content:"";position:fixed;inset:0;z-index:49;background:rgb(0 0 0 / .45);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  html[data-sec="nte"]:is([data-tab="city"],[data-tab="arcs"],[data-tab="carts"]) :is(details.suit,.wp){border-radius:20px !important}
+  /* Пробуждения D (п. 31): ступени строками, справа переключатель «есть»;
+     нажатие на строку работает как раньше — отмечает ступень */
+  html[data-sec="nte"] .awks{grid-template-columns:1fr !important;gap:0 !important;border-radius:20px;overflow:hidden;
+    background:var(--dz-glass);border:1px solid var(--dz-edge)}
+  html[data-sec="nte"] .awk{position:relative;border-radius:0 !important;border:0 !important;border-top:1px solid rgb(255 255 255 / .07) !important;
+    background:transparent !important;padding:12px 84px 12px 14px !important;opacity:.62;box-shadow:none !important}
+  html[data-sec="nte"] .awk:first-child{border-top:0 !important}
+  html[data-sec="nte"] .awk.on{opacity:1}
+  html[data-sec="nte"] .awk[data-awk]::after{content:"";position:absolute;right:18px;top:50%;margin-top:-13px;width:46px;height:26px;border-radius:999px;
+    background:radial-gradient(circle at 13px 50%,#fff 9px,transparent 10px),rgb(255 255 255 / .16);transition:background .2s}
+  html[data-sec="nte"] .awk[data-awk].on::after{background:radial-gradient(circle at 33px 50%,#fff 9px,transparent 10px),var(--el,var(--acc))}
+  html[data-sec="nte"] .awk-d{margin-top:4px}
   /* Команды D (п. 27): составы карточками сеткой */
   html[data-sec="nte"][data-tab="teams"] :has(> .team){display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:start}
   html[data-sec="nte"][data-tab="teams"] .team{flex-direction:column;align-items:flex-start;align-content:flex-start;gap:10px;border-radius:20px;margin:0;height:auto;min-height:0}
