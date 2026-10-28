@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v20';
+const APP_VER = 'v21';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -505,9 +505,18 @@ function вклОбзор(c, д, м) {
     '<em>основной — ' + эк(EF.БАЗА.справочники.атрибуты[c.осн] || '') + ', второй — ' + эк(EF.БАЗА.справочники.атрибуты[c.доп] || '') + '</em></h4>' +
     '<input type="range" min="1" max="90" value="' + УР + '" id="urr" style="width:100%;accent-color:var(--acid);margin:0 0 10px">' +
     '<div class="stats" id="urs">' + плиткиСтатов(s, c) + '</div></div>';
-  h += '<div class="sec"><h4>навыки</h4>' + (д.навыки || []).map(н =>
-    '<div class="it">' + (н.значок ? '<img src="' + эк(н.значок) + '" alt="" style="width:34px;height:34px;object-fit:contain">' : '') +
-    '<span><b>' + эк(н.имя) + '</b><i>' + эк(н.типРу) + '</i></span></div>').join('<div style="height:6px"></div>') + '</div>';
+  // Навыки нажимаются (редизайн 28.10.2026, п. 40): отдельной вкладки
+  // «Навыки» больше нет — описание и значения раскрываются прямо здесь.
+  // Значения — на максимальном уровне навыка.
+  h += '<div class="sec"><h4>навыки<em>нажми — что делает</em></h4>' + (д.навыки || []).map(н => {
+    const макс = н.уровней || 12;
+    return '<details class="dd skx"><summary><span class="it">' + (н.значок ? '<img src="' + эк(н.значок) + '" alt="" style="width:34px;height:34px;object-fit:contain">' : '') +
+      '<span><b>' + эк(н.имя) + '</b><i>' + эк(н.типРу) + (н.стоимость ? ' · ' + н.стоимость + ' энергии' : '') + '</i></span></span></summary>' +
+      '<div class="dd-in"><p class="rich" style="margin:0 0 8px;font-size:13px;line-height:1.55">' + богат(н.описание) + '</p>' +
+      (н.строки && н.строки.length ? '<table class="tbl"><tr><th></th><th class="n">на ур. ' + макс + '</th></tr>' +
+        н.строки.map(r => '<tr><td>' + эк(r[0]) + '</td><td class="n">' + эк(r[макс] || r[r.length - 1] || '') + '</td></tr>').join('') + '</table>' : '') +
+      '</div></details>';
+  }).join('') + '</div>';
   const ор = (c.лучшееОружие || []).slice(0, 4);
   if (ор.length) {
     h += '<div class="sec"><h4>оружие по приоритету<em>prydwen</em></h4>' + ор.map((o, i) => строкаОружия(o, i)).join('<div style="height:6px"></div>') + '</div>';
@@ -566,23 +575,24 @@ function вклНавыки(c, д, м) {
   return h;
 }
 
+// Таланты по прорывам (редизайн 28.10.2026, п. 41): что открывает каждый
+// прорыв — ступени талантов и узлы характеристик; ниже потенциалы плитками
+// P1–P5 и навыки на базе. Свой потенциал (витрина enka) — в рамке.
 function вклТаланты(c, д) {
-  let h = '<div class="cols">';
-  const ветки = {};
-  (д.пассивки || []).forEach(п => (ветки[п.ветка] = ветки[п.ветка] || []).push(п));
-  h += '<div class="sec"><h4>пассивные таланты</h4>' + Object.values(ветки).map(в => в.map(п =>
-    '<div class="node">' + (п.значок ? '<img src="' + эк(п.значок) + '" alt="">' : '') +
-    '<div style="flex:1;min-width:0"><b>' + эк(п.имя) + '</b><p>' + богат(п.описание) + '</p></div>' +
-    '<span class="lvl">' + ['', 'I', 'II', 'III'][п.ур] + ' · пр. ' + п.этап + '</span></div>').join('')).join('') + '</div>';
-  h += '<div class="sec"><h4>потенциалы<em>дубли P1–P5</em></h4>' + (д.потенциалы || []).map(п =>
-    '<div class="node"><div style="flex:1;min-width:0"><b>' + эк(п.имя) + '</b><p>' + богат(п.описание) + '</p></div>' +
-    '<span class="lvl">P' + п.ур + '</span></div>').join('') + '</div>';
-  const атр = д.атрибуты || [];
-  if (атр.length) {
-    h += '<div class="sec"><h4>узлы характеристик</h4><table class="tbl"><tr><th>узел</th><th>прорыв</th><th>доверие</th><th class="n">прибавка</th></tr>' +
-      атр.map(а => '<tr><td>' + эк(а.имя) + '</td><td>' + а.этап + '</td><td>' + (а.доверие || '—') + '</td><td class="n">+' + чис(а.знач) + ' ' + эк(а.атрРу) + '</td></tr>').join('') +
-      '</table><p class="hint">Сумма: +' + чис(атр.reduce((s, а) => s + (а.знач || 0), 0)) + ' ' + эк(атр[0].атрРу) + '.</p></div>';
-  }
+  const м = EF.мой(c.id);
+  const пас = д.пассивки || [], атр = д.атрибуты || [];
+  const этапы = [...new Set(пас.map(п => п.этап).concat(атр.map(а => а.этап)))].filter(x => x != null).sort((a, b) => a - b);
+  let h = '<div class="sec full"><h4>что открывает каждый прорыв</h4><div class="tlp">' + этапы.map(э =>
+    '<div class="tlp-s"><div class="tlp-h"><span class="tag">' + э + '</span><b>Прорыв ' + э + '</b></div>' +
+      пас.filter(п => п.этап === э).map(п => '<details class="tlp-i"><summary>' + (п.значок ? '<img src="' + эк(п.значок) + '" alt="">' : '') +
+        '<span>' + эк(п.имя) + ' <u>' + ['', 'I', 'II', 'III'][п.ур] + '</u></span></summary><p>' + богат(п.описание) + '</p></details>').join('') +
+      атр.filter(а => а.этап === э).map(а => '<div class="tlp-a"><i></i>+' + чис(а.знач) + ' ' + эк(а.атрРу) +
+        (а.доверие ? ' <em>доверие ' + а.доверие + '</em>' : '') + '</div>').join('') +
+    '</div>').join('') + '</div>' +
+    (атр.length ? '<p class="hint">Узлы вместе: +' + чис(атр.reduce((s, а) => s + (а.знач || 0), 0)) + ' ' + эк(атр[0].атрРу) + '. Ступень таланта — нажми, что даёт.</p>' : '') + '</div>';
+  h = '<div class="cols">' + h;
+  h += '<div class="sec full"><h4>потенциалы<em>дубли P1–P5' + (м && м.пот ? ' · у тебя P' + эк(м.пот) : '') + '</em></h4><div class="tlpot">' + (д.потенциалы || []).map(п =>
+    '<div class="tlpot-i' + (м && м.пот >= п.ур ? ' on' : '') + '"><b>P' + п.ур + '</b><span>' + эк(п.имя) + '</span><p>' + богат(п.описание) + '</p></div>').join('') + '</div></div>';
   if ((д.завод || []).length) {
     h += '<div class="sec"><h4>навыки на базе</h4>' + д.завод.map(ф =>
       '<div class="node"><div style="flex:1;min-width:0"><b>' + эк(ф.имя) + ' ' + эк(ф.суфф) + '</b><p>' + богат(ф.описание) + '</p></div>' +

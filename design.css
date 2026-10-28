@@ -386,6 +386,35 @@ html[data-sec="todo"] body:not(.light) :is(.chip.on,.pill.on,.pill.ico.on){backg
 }
 @media (max-width:1000px){html[data-sec="todo"] .dz-side{display:contents}}
 
+/* EF «Таланты» B (п. 41): колонки прорывов, ступени раскрываются */
+html[data-sec="ef"] .tlp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+html[data-sec="ef"] .tlp-s{background:rgb(255 255 255 / .03);border:1px solid var(--dz-edge);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px}
+html[data-sec="ef"] .tlp-h{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+html[data-sec="ef"] .tlp-h .tag{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:#0b0d10;font-weight:700;font-size:12px}
+html[data-sec="ef"] .tlp-i summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;font-size:13px;padding:4px;border-radius:10px}
+html[data-sec="ef"] .tlp-i summary::-webkit-details-marker{display:none}
+html[data-sec="ef"] .tlp-i summary:hover{background:rgb(255 255 255 / .05)}
+html[data-sec="ef"] .tlp-i summary img{width:26px;height:26px;object-fit:contain}
+html[data-sec="ef"] .tlp-i summary u{text-decoration:none;color:var(--acc);font-size:11px}
+html[data-sec="ef"] .tlp-i p{margin:2px 4px 6px;font-size:12.5px;line-height:1.5;color:var(--tx2,#b9bcc4)}
+html[data-sec="ef"] .tlp-a{display:flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 4px}
+html[data-sec="ef"] .tlp-a i{width:7px;height:7px;border-radius:50%;background:var(--acc);flex:none}
+html[data-sec="ef"] .tlp-a em{margin-left:auto;font-style:normal;font-size:11px;opacity:.6}
+html[data-sec="ef"] .tlpot{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+html[data-sec="ef"] .tlpot-i{border:1px solid var(--dz-edge);border-radius:16px;padding:10px;background:rgb(255 255 255 / .03)}
+html[data-sec="ef"] .tlpot-i.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+html[data-sec="ef"] .tlpot-i b{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:rgb(255 255 255 / .08);margin-right:6px}
+html[data-sec="ef"] .tlpot-i.on b{background:var(--acc);color:#0b0d10}
+html[data-sec="ef"] .tlpot-i span{font-weight:600;font-size:13px}
+html[data-sec="ef"] .tlpot-i p{margin:6px 0 0;font-size:12.5px;line-height:1.5;opacity:.85}
+/* EF «Обзор» (п. 40): навык раскрывается */
+html[data-sec="ef"] .skx{margin-bottom:6px}
+html[data-sec="ef"] .skx > summary{cursor:pointer;list-style:none;border-radius:12px;padding:2px}
+html[data-sec="ef"] .skx > summary::-webkit-details-marker{display:none}
+html[data-sec="ef"] .skx > summary:hover{background:rgb(255 255 255 / .05)}
+html[data-sec="ef"] .skx[open] > summary{background:rgb(255 255 255 / .06)}
+html[data-sec="ef"] .skx .dd-in{padding:8px 6px 4px}
+
 /* ── Мои деньги ───────────────────────────────────────────────────────────── */
 html[data-sec="money"] body:not(.light) .tabs{padding:5px;border-radius:999px;background:rgb(20 22 28 / .5);border:1px solid var(--dz-edge);
   backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi);width:fit-content;max-width:100%;
