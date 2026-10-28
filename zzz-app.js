@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v271';
+const APP_VER = 'v272';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1280,12 +1280,19 @@ function batBlock(n) {
       '<span><b style="font-size:22px">⚡ ' + batRange(все) + '</b> <span class="hint" style="margin:0">на всё до целей · ≈ ' + дни(все) + '</span></span>' +
       (сумка ? '<span><b style="font-size:22px;color:var(--acc)">⚡ ' + (нет.макс ? batRange(нет) : '0') + '</b> <span class="hint" style="margin:0">без того, что уже есть' +
         (нет.макс ? ' · ≈ ' + дни(нет) : ' — всё уже есть') + '</span></span>' : '') +
-    '</div>' +
-    '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв' + (сумка ? ' (без того, что уже есть)' : '') + '</summary>' +
-      '<table class="tbl" style="margin-top:6px">' + нет.строки.map(batRow).join('') +
-      '</table>' +
-      '<div class="hint">Уровень Интер-нота ' + (ui.ikLvl || 60) + ' (меняется в «Материалах»). Отметки «уже есть» общие на аккаунт; здесь они целиком отнесены к этому агенту.</div>' +
-    '</details></div>';
+    '</div></div>';
+}
+// «Где фармить» — отдельным блоком после «По частям» (редизайн 28.10.2026,
+// п. 11: Всего → Батарея → По частям → Где фармить). Раньше таблица была
+// свёрнута внутри блока батареи.
+function batWhere(n) {
+  const все = batteryFor(n);
+  if (!все.макс) return '';
+  const нет = bagFilled() ? batteryFor(bagMissing(n)) : все;
+  const сумка = нет.мин !== все.мин || нет.макс !== все.макс;
+  return '<div class="cap2 mt-cap" style="margin:14px 0 6px">ГДЕ ФАРМИТЬ<span>сколько боёв' + (сумка ? ' — без того, что уже есть' : '') + '</span></div>' +
+    '<table class="tbl" style="margin-top:6px">' + нет.строки.map(batRow).join('') + '</table>' +
+    '<div class="hint">Уровень Интер-нота ' + (ui.ikLvl || 60) + ' (меняется в «Материалах»). Отметки «уже есть» общие на аккаунт; здесь они целиком отнесены к этому агенту.</div>';
 }
 
 // ─────────────── «что уже есть» прямо на материалах (28.10.2026) ───────────────
@@ -2856,6 +2863,7 @@ function matsHtml(a) {
           (off[x.n] ? ' · не считается' : бат.макс ? ' · ⚡ ' + batRange(бат) : '') + '</i></div>' +
         '<div class="mt-items">' + cells.join('') + '</div></div>';
     }).join('') + '</div>';
+  h += batWhere(nn);
 
   if (zero) h += '<div class="hint">Агента ещё нет: считается с нуля — уровень 1, ядро 0, навыки 1, ' +
     'без оружия, цели — по умолчанию (максимум, навыки по гайду).</div>';
@@ -3170,15 +3178,9 @@ function teamHtml(a) {
                                        : 'ни один не собирается целиком') + '</span></h4>' +
       '<div class="tm-list">' + rows.map((r, i) => teamRow(r, i + 1)).join('') + '</div></div>';
   };
+  // Строку «Фракция …: …» сверху вкладки убрали (редизайн 28.10.2026, п. 12):
+  // владелец счёл её лишней. Фракция по-прежнему видна в подборе банбу.
   let h = '';
-  const fac = facRu(factionOf(a.id));
-  if (fac) {
-    const mates = DB.agents.filter(x => x.id !== a.id && facRu(factionOf(x.id)) === fac);
-    if (mates.length) h += '<div class="tm-fac">Фракция <b>' + esc(fac) + '</b>: ' +
-      mates.map(x => '<span class="' + (prog[x.id] && prog[x.id].have ? 'tm-has' : 'tm-no') + '">' +
-        esc(x.ru) + '</span>').join(', ') +
-      '<i>двое из одной фракции включают пассивку у части банбу</i></div>';
-  }
   h += sect('Оборона Шиюй', 'SHIYU DEFENSE', t.shiyu || []);
   h += sect('Опасный штурм', 'DEADLY ASSAULT', t.da || []);
   h += '<div class="hint">Составы — срез по реальным прохождениям эндгейма с <a href="' +
