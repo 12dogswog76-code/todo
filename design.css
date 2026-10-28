@@ -40,7 +40,7 @@ html[data-sec="nte"]{--dz-1:#4a0f1f;--dz-2:#4a2808;--dz-3:#2e0a2a;--dz-a:.95;--a
 html[data-sec="ef"]{--dz-1:#3a4806;--dz-2:#123a22;--dz-3:#454508;--dz-a:.95;--acc:#e6f20d;--acid:#e6f20d;
   --scene:transparent;--scene2:rgb(255 255 255 / .03);--gr:var(--dz-glass);--gr2:var(--dz-glass2);--gr3:rgb(255 255 255 / .13);
   --ln:var(--dz-edge);--ln2:var(--dz-edge2)}
-html[data-sec="todo"]{--dz-1:#0b4a2a;--dz-2:#0b3442;--dz-3:#16420f;--dz-a:.7;--acc:#4ade80;--in:rgb(0 0 0 / .25)}
+html[data-sec="todo"]{--dz-1:#0b4a2a;--dz-2:#0b3442;--dz-3:#16420f;--dz-a:.55;--acc:#4ade80;--in:rgb(0 0 0 / .25)}
 html[data-sec="money"]{--dz-1:#4a2a06;--dz-2:#481216;--dz-3:#3a3008;--dz-a:.95;--acc:#fbbf24;--in:rgb(0 0 0 / .25)}
 
 /* ── фон ──────────────────────────────────────────────────────────────────── */
@@ -52,24 +52,23 @@ html[data-sec] body:not(.light){
   background-image:none !important;
   font-family:var(--dz-sys);
 }
+/* пятна как в живом черновике: крупные, сплошные, размытые и насыщенные
+   (blur 65px, saturate 1.5) — прежние полупрозрачные градиенты выходили тусклыми */
 html[data-sec] body::before{
-  content:"" !important;position:fixed !important;inset:-15% !important;z-index:-3 !important;pointer-events:none;
+  content:"" !important;position:fixed !important;inset:-20% !important;z-index:-3 !important;pointer-events:none;
   display:block !important;
   background:
-    radial-gradient(38% 42% at 18% 22%,var(--dz-1),transparent 70%),
-    radial-gradient(36% 40% at 84% 26%,var(--dz-2),transparent 70%),
-    radial-gradient(44% 40% at 56% 86%,var(--dz-3),transparent 72%) !important;
+    radial-gradient(26vmax 26vmax at 22% 18%,var(--dz-1) 0 60%,transparent 72%),
+    radial-gradient(26vmax 26vmax at 86% 52%,var(--dz-2) 0 60%,transparent 72%),
+    radial-gradient(26vmax 26vmax at 52% 96%,var(--dz-3) 0 60%,transparent 72%) !important;
   background-size:auto !important;
-  opacity:var(--dz-a,.9) !important;filter:blur(30px);
+  opacity:var(--dz-a,.9) !important;filter:blur(65px) saturate(1.5);
   -webkit-mask:none;mask:none;
   animation:dz-drift 40s ease-in-out infinite alternate !important;
 }
-/* зерно поверх пятен — едва заметное */
-html[data-sec] body::after{
-  content:"" !important;position:fixed !important;inset:0 !important;z-index:-2 !important;pointer-events:none;
-  display:block !important;opacity:.05 !important;animation:none !important;transform:none !important;
-  background:radial-gradient(circle,#fff 1px,transparent 1.2px) 0 0/3px 3px !important;
-}
+/* «зерно» точками через 3px читалось как сетка (28.10) — убрано совсем;
+   ::after гасим, чтобы старые фоновые узоры страниц тоже не вылезли */
+html[data-sec] body::after{content:none !important;display:none !important;background:none !important}
 @keyframes dz-drift{
   0%{transform:translate3d(0,0,0) scale(1)}
   50%{transform:translate3d(3%,-2%,0) scale(1.06)}
@@ -192,6 +191,15 @@ html[data-sec] .dz-strip button{border-radius:999px !important;padding:7px 16px;
 html[data-sec] .dz-strip .ok{background:var(--acc);color:#0b0d10;font-weight:600}
 html[data-sec] .dz-strip .x{background:transparent;color:var(--tx2);padding:7px 10px}
 
+/* ── тексты (п. 6): без капса и разрядки, подпись над блоком — с заглавной ─── */
+/* старые стили разделов писали подписи, вкладки и английские имена
+   ЗАГЛАВНЫМИ с разрядкой — в новом облике везде обычные буквы */
+html[data-sec] body :not(svg,svg *){text-transform:none !important;letter-spacing:normal !important}
+html[data-sec] :is(h1,h2,h3){letter-spacing:-.4px !important}
+html[data-sec] :is(.sc > span,.fil .cap,.fgrp > u,.cap,h4,h5,.sec > h4,.mmhead h2){text-transform:none}
+html[data-sec] :is(.fil .cap,.fgrp > u){display:inline-block;text-decoration:none}
+html[data-sec] :is(.sc > span,.fil .cap,.fgrp > u,.cap,h4,h5)::first-letter{text-transform:uppercase !important}
+
 /* ── числа моноширинным (п. 5) ────────────────────────────────────────────── */
 html[data-sec] :is(.num,.mono,td.n,td.num){font-family:var(--dz-mono)}
 
@@ -233,12 +241,43 @@ html[data-sec="zzz"] .mmwrap.page .mmslot{padding:0 4px 20px}
 html[data-sec="zzz"] body.zpage #main{visibility:hidden}
 
 /* ── ZZZ: плитки F (п. 3) — чистый арт, сведения выезжают стеклом при наведении ── */
-html[data-sec="zzz"] .card :is(.badges,.fav,.tierb){opacity:0;transition:opacity .2s}
-html[data-sec="zzz"] .card:hover :is(.badges,.fav,.tierb),html[data-sec="zzz"] .card .fav.on{opacity:1}
-html[data-sec="zzz"] .card .ph::after{opacity:.55}
-html[data-sec="zzz"] .card .nmb{transition:transform .25s,background .25s,backdrop-filter .25s}
-html[data-sec="zzz"] .card:hover .nmb{background:rgb(15 17 22 / .55);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);
-  border-radius:16px;box-shadow:var(--dz-hi)}
+/* Как в черновике: плитка 3:4, арт на всю плитку; сверху слева — редкость,
+   стихия, роль кружками; снизу стеклянная панель с именем, при наведении
+   выезжает целиком — уровень, ядро, навыки, готовность (cardHov в zzz-app.js).
+   Тир, кольцо, модификаторы и полоски под артом на плитке не показываем. */
+html[data-sec="zzz"] .card{position:relative;aspect-ratio:3/4;overflow:hidden;padding:0 !important;
+  background:linear-gradient(160deg,rgb(255 255 255 / .1),rgb(255 255 255 / .02)) !important;border:0 !important;
+  box-shadow:none !important;transition:transform .2s}
+html[data-sec="zzz"] .card:hover{transform:translateY(-3px)}
+html[data-sec="zzz"] .card .ph{position:absolute;inset:0;aspect-ratio:auto;background:none}
+html[data-sec="zzz"] .card .ph::after{display:none}
+html[data-sec="zzz"] .card .ph img{transition:transform .4s}
+html[data-sec="zzz"] .card.no .ph img{opacity:1;filter:grayscale(.85) brightness(.7)}
+html[data-sec="zzz"] .card :is(.cbars,.tierb,.pcirc,.modc){display:none !important}
+html[data-sec="zzz"] .card .rk{top:7px;left:7px}
+html[data-sec="zzz"] .card .rk .rankb{width:auto !important;height:22px !important;min-width:22px;padding:0 7px !important;display:grid !important;place-items:center;
+  background:rgb(0 0 0 / .45) !important;border:0 !important;border-radius:999px !important;box-shadow:none !important;clip-path:none !important;transform:none !important}
+html[data-sec="zzz"] .card .rk .rankb::before,html[data-sec="zzz"] .card .rk .rankb::after{display:none !important}
+html[data-sec="zzz"] .card .rk .rankb i{font:800 11px/1 var(--dz-mono) !important;color:#ffd54a !important;font-style:normal;transform:none !important;
+  -webkit-text-fill-color:#ffd54a;background:none !important}
+html[data-sec="zzz"] .grid:has(> .card){grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) !important;gap:12px !important}
+html[data-sec="zzz"] .card .badges{left:34px;right:auto;top:7px;flex-direction:row;gap:4px;opacity:1}
+html[data-sec="zzz"] .card :is(.elb,.prb){width:22px;height:22px;border-radius:50%;border:0;background:rgb(0 0 0 / .45);
+  display:grid;place-items:center}
+html[data-sec="zzz"] .card .fav{top:7px;right:9px;left:auto;opacity:0}
+html[data-sec="zzz"] .card:hover .fav,html[data-sec="zzz"] .card .fav.on{opacity:1}
+html[data-sec="zzz"] .card .nmb{left:7px;right:7px;bottom:7px;padding:8px 12px;border-radius:18px;
+  background:rgb(20 22 28 / .55);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);
+  box-shadow:var(--dz-hi),inset 0 0 0 1px var(--dz-edge)}
+html[data-sec="zzz"] .card .nmb b{font:800 13.5px/1.25 var(--dz-sys);letter-spacing:-.2px;margin:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-sec="zzz"] .card .nmb > span{display:none}
+html[data-sec="zzz"] .card .hv{display:grid;max-height:0;overflow:hidden;transition:max-height .3s cubic-bezier(.2,.8,.2,1),margin .3s}
+html[data-sec="zzz"] .card:is(:hover,:focus-within) .hv{max-height:110px;margin-top:6px}
+html[data-sec="zzz"] .card .hv div{display:flex;justify-content:space-between;gap:6px;font-size:11.5px;padding:2px 0;color:var(--tx2)}
+html[data-sec="zzz"] .card .hv i{font:600 11.5px var(--dz-mono);font-style:normal;color:var(--tx);font-variant-numeric:tabular-nums}
+html[data-sec="zzz"] .card .hv i.a{color:var(--acc)}
+html[data-sec="zzz"] .card:hover .ph img{transform:scale(1.04)}
 
 /* ── ZZZ: фон открытой карточки E (п. 8) — пятна цвета стихии ───────────────── */
 html[data-sec="zzz"] .hero{background:
@@ -275,8 +314,23 @@ html[data-sec="nte"] .logo{white-space:nowrap}
       Только на широком экране — телефон разбираем отдельно, после деплоя. ── */
 @media (min-width:1001px){
   /* Эсперы (п. 21) и все сетки плиток — F: арт чистый, значки при наведении */
-  html[data-sec="nte"] .card :is(.card-t,.card-e){opacity:0;transition:opacity .2s}
-  html[data-sec="nte"] .card:hover :is(.card-t,.card-e){opacity:1}
+  /* как в черновике: 3:4, тир и значки сверху слева всегда, имя — стеклом снизу */
+  html[data-sec="nte"] .grid:has(> .card){grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) !important;gap:12px !important}
+  html[data-sec="nte"] .grid > .card{aspect-ratio:3/4;overflow:hidden;padding:0 !important;border:0 !important;box-shadow:none !important;
+    background:linear-gradient(160deg,rgb(255 255 255 / .1),rgb(255 255 255 / .02)) !important;transition:transform .2s}
+  html[data-sec="nte"] .grid > .card:hover{transform:translateY(-3px)}
+  html[data-sec="nte"] .grid > .card .card-p{position:absolute;inset:0;aspect-ratio:auto;height:100%;background:none}
+  html[data-sec="nte"] .grid > .card .card-p::after{display:none}
+  html[data-sec="nte"] .grid > .card .card-p > img{width:100%;height:100%;object-fit:cover;object-position:top;transition:transform .4s}
+  html[data-sec="nte"] .grid > .card:hover .card-p > img{transform:scale(1.04)}
+  html[data-sec="nte"] .grid > .card .card-t{position:absolute;top:7px;left:7px;right:auto;height:22px;min-width:22px;padding:0 7px;display:grid;place-items:center;
+    font:800 11px/1 var(--dz-mono);color:#ffd54a;background:rgb(0 0 0 / .45) !important;border:0 !important;border-radius:999px;box-shadow:none !important;opacity:1}
+  html[data-sec="nte"] .grid > .card .card-e{position:absolute;top:7px;left:44px;right:auto;margin-left:0;display:flex;gap:4px;opacity:1}
+  html[data-sec="nte"] .grid > .card .card-e img{width:22px;height:22px;padding:2px;border-radius:50%;background:rgb(0 0 0 / .45);border:0;box-shadow:none}
+  html[data-sec="nte"] .grid > .card .card-n{position:absolute;left:7px;right:7px;bottom:7px;padding:8px 12px;border-radius:18px;
+    background:rgb(20 22 28 / .55);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi),inset 0 0 0 1px var(--dz-edge)}
+  html[data-sec="nte"] .grid > .card .card-n b{display:block;font:800 13.5px/1.25 var(--dz-sys);letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html[data-sec="nte"] .grid > .card .card-n i{display:none}
   /* Карта B (п. 22): карта на всю ширину, категории — стеклом поверх слева */
   html[data-sec="nte"][data-tab="map"] .maprow{display:block;position:relative}
   html[data-sec="nte"][data-tab="map"] .mapside{position:absolute;left:14px;top:14px;z-index:5;width:270px;
@@ -378,12 +432,30 @@ html[data-sec="ef"] .sheet-in{border-radius:26px !important}
 
 /* ── Endfield: раскладки разделов (метка data-tab ставится в app.js) ─────── */
 @media (min-width:1001px){
-  /* плитки операторов F (п. 3): значки и подпись — при наведении */
-  html[data-sec="ef"] .tile > .top{opacity:0;transition:opacity .2s}
-  html[data-sec="ef"] .tile:hover > .top{opacity:1}
-  html[data-sec="ef"] .tile .sub{max-height:0;overflow:hidden;opacity:0;transition:max-height .25s,opacity .2s}
-  html[data-sec="ef"] .tile:hover .sub{max-height:40px;opacity:1}
-  html[data-sec="ef"] .tile{border-radius:20px !important}
+  /* плитки операторов F (п. 3), как в черновике: сверху слева редкость ★N,
+     стихия, класс и тир кружками; имя — стеклом снизу, при наведении под ним
+     выезжает строка «★ · класс · оружие». Полоса редкости и тень — убраны. */
+  html[data-sec="ef"] .tile{border-radius:22px !important;border:0 !important;box-shadow:none !important}
+  html[data-sec="ef"] .tile:hover{transform:translateY(-3px)}
+  html[data-sec="ef"] .tile :is(.rb,.sh2){display:none !important}
+  html[data-sec="ef"] .tile > .top{position:absolute !important;top:7px;left:7px;right:auto;display:flex;gap:4px;align-items:center;
+    padding:0;background:none !important;border:0;opacity:1;z-index:2}
+  html[data-sec="ef"] .tile > .top::before{content:"★" attr(data-r);font:800 11px/22px var(--dz-mono);color:#ffd54a;height:22px;padding:0 7px;
+    border-radius:999px;background:rgb(0 0 0 / .45)}
+  html[data-sec="ef"] .tile.r6 > .top::before{content:"★6"}
+  html[data-sec="ef"] .tile.r5 > .top::before{content:"★5"}
+  html[data-sec="ef"] .tile.r4 > .top::before{content:"★4"}
+  html[data-sec="ef"] .tile > .top img{width:22px;height:22px;padding:2px;border-radius:50%;background:rgb(0 0 0 / .45);border:0}
+  html[data-sec="ef"] .tile > .top .tr{height:22px;line-height:22px;padding:0 7px;border-radius:999px;background:rgb(0 0 0 / .45) !important;
+    border:0 !important;font:700 10.5px/22px var(--dz-mono)}
+  html[data-sec="ef"] .tile > .info{left:7px;right:7px;bottom:7px;padding:8px 12px;border-radius:18px;
+    background:rgb(20 22 28 / .55) !important;backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);
+    box-shadow:var(--dz-hi),inset 0 0 0 1px var(--dz-edge)}
+  html[data-sec="ef"] .tile .nm{font:800 13.5px/1.25 var(--dz-sys) !important;letter-spacing:-.2px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html[data-sec="ef"] .tile .sub{display:block;max-height:0;overflow:hidden;opacity:0;font-size:11.5px;color:var(--tx2);
+    transition:max-height .3s cubic-bezier(.2,.8,.2,1),opacity .2s,margin .3s}
+  html[data-sec="ef"] .tile .sub .stars{display:none}
+  html[data-sec="ef"] .tile:is(:hover,:focus-visible) .sub{max-height:40px;opacity:1;margin-top:4px}
   /* Достижения B (п. 36): категории — прилипшее меню слева, список справа */
   html[data-sec="ef"][data-tab="ach"] .main .wrap{display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:16px;align-items:start}
   html[data-sec="ef"][data-tab="ach"] #head{grid-column:1 / -1}

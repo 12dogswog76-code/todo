@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v273';
+const APP_VER = 'v274';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -2034,8 +2034,18 @@ function cardHTML(a, idx) {
           'характеристик на дисках и их удачных улучшений">' + mods + '</span>' : '') +
       '</div>' +
       '<span class="fav' + (p && p.fav ? ' on' : '') + '" data-fav="' + a.id + '" title="в избранное">★</span>' +
-      '<div class="nmb"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span></div>' +
+      '<div class="nmb"><b>' + esc(a.ru) + '</b><span>' + esc(a.en) + '</span>' + cardHov(a, p, have, pc) + '</div>' +
     '</div>' + bars + '</div>';
+}
+
+// Плитка F (редизайн 28.10.2026, п. 3): строки панели, что выезжает снизу при
+// наведении, — уровень, ядро, навыки, готовность. Вид — design.css (.hv).
+function cardHov(a, p, have, pc) {
+  if (!have) return '<div class="hv"><div><span>Нет в трекере</span><i class="a">открыть →</i></div></div>';
+  const ряд = (лаб, зн, акц) => '<div><span>' + лаб + '</span><i' + (акц ? ' class="a"' : '') + '>' + зн + '</i></div>';
+  const sk = SKILL_IDX.map(o => Math.min(SKILL_MAX, (p.sk && p.sk[o.i]) || 1)).join('·');
+  return '<div class="hv">' + ряд('Уровень', p.lvl || 0) + ряд('Ядро', (p.core || 0) + ' / ' + CORE_MAX) +
+    ряд('Навыки', sk) + ряд('Готовность', pc + '%', true) + '</div>';
 }
 
 function renderSummary() {
