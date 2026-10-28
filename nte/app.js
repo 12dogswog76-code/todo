@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v89';
+const APP_VER = 'v90';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -311,6 +311,10 @@ function draw() {
   // На карте всё лишнее ужимается: страница шире 1560, шапка тоньше, строка
   // фильтров схлопывается — счётчик точек переезжает в угол самой карты.
   document.body.classList.toggle('mapmode', t === 'map');
+  // Вкладка — меткой на странице: по ней общий облик (design.css) раскладывает
+  // вкладки по решениям редизайна — «События» в две колонки, «Аукцион» с меню
+  // слева, «Команды» карточками.
+  document.documentElement.dataset.tab = t;
   const one = {
     espers: drawEspers, arcs: drawArcs, carts: drawCarts, tier: drawTier,
     teams: drawTeams, ban: drawBanners, codes: drawCodes, city: drawCity,

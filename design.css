@@ -213,6 +213,41 @@ html[data-sec="nte"] .cloudb{border-radius:999px !important;background:transpare
 html[data-sec="nte"] .cloudb:hover{background:rgb(255 255 255 / .1) !important;color:var(--tx) !important}
 html[data-sec="nte"] .logo{white-space:nowrap}
 
+/* ── NTE: раскладки вкладок (метка data-tab ставится в app.js при отрисовке).
+      Только на широком экране — телефон разбираем отдельно, после деплоя. ── */
+@media (min-width:1001px){
+  /* Эсперы (п. 21) и все сетки плиток — F: арт чистый, значки при наведении */
+  html[data-sec="nte"] .card :is(.card-t,.card-e){opacity:0;transition:opacity .2s}
+  html[data-sec="nte"] .card:hover :is(.card-t,.card-e){opacity:1}
+  /* Карта B (п. 22): карта на всю ширину, категории — стеклом поверх слева */
+  html[data-sec="nte"][data-tab="map"] .maprow{display:block;position:relative}
+  html[data-sec="nte"][data-tab="map"] .mapside{position:absolute;left:14px;top:14px;z-index:5;width:270px;
+    max-height:calc(100% - 80px);background:rgb(20 14 18 / .66) !important;border-color:var(--dz-edge) !important;
+    backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi),0 18px 40px rgb(0 0 0 / .35);border-radius:22px}
+  html[data-sec="nte"][data-tab="map"] .mapwrap{border-radius:24px}
+  /* Аукцион D (п. 23): подразделы — прилипшее меню слева, содержимое справа */
+  html[data-sec="nte"][data-tab="bid"] .wrap{display:grid;grid-template-columns:210px minmax(0,1fr);column-gap:16px;align-items:start}
+  html[data-sec="nte"][data-tab="bid"] #filters{grid-column:1;grid-row:1 / span 3;position:sticky;top:86px;margin:0;padding:8px;
+    border-radius:22px;background:var(--dz-glass);border:1px solid var(--dz-edge);box-shadow:var(--dz-hi);
+    backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur)}
+  html[data-sec="nte"][data-tab="bid"] #filters .fgrp{flex-direction:column;align-items:stretch;gap:2px;width:100%}
+  html[data-sec="nte"][data-tab="bid"] #filters .fb{justify-content:flex-start;text-align:left;border-radius:14px !important;
+    padding:10px 14px;font-size:13px;letter-spacing:0;text-transform:none;background:transparent !important}
+  html[data-sec="nte"][data-tab="bid"] #filters .fb.on{background:rgb(255 255 255 / .12) !important;color:var(--tx) !important}
+  html[data-sec="nte"][data-tab="bid"] :is(#body,#foot){grid-column:2}
+  /* События B (п. 25): баннеры слева, календарь событий справа, прилипший */
+  html[data-sec="nte"][data-tab="ban"] #body{display:grid;grid-template-columns:minmax(0,1fr) 420px;column-gap:16px;align-items:start;overflow:visible}
+  html[data-sec="nte"][data-tab="ban"] #body > :not(#evBox){grid-column:1}
+  html[data-sec="nte"][data-tab="ban"] #evBox{grid-column:2;grid-row:1 / span 30;position:sticky;top:86px;
+    max-height:calc(100vh - 100px);overflow:auto;scrollbar-width:thin}
+  html[data-sec="nte"][data-tab="ban"] .bcards{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  /* Команды D (п. 27): составы карточками сеткой */
+  html[data-sec="nte"][data-tab="teams"] :has(> .team){display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:start}
+  html[data-sec="nte"][data-tab="teams"] .team{flex-direction:column;align-items:flex-start;align-content:flex-start;gap:10px;border-radius:20px;margin:0;height:auto;min-height:0}
+  /* у частей строки была ширина-основа (flex-basis): в колонке она стала высотой */
+  html[data-sec="nte"][data-tab="teams"] .team > *{flex:0 0 auto !important;max-width:100%}
+}
+
 /* ── Endfield: свой фон с надписями убран, шапка — три острова, тёмные
       оливковые панели — стекло ──────────────────────────────────────────── */
 html[data-sec="ef"] .bg{display:none !important}
