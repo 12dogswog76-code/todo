@@ -133,6 +133,64 @@ html[data-sec] .empty::before{
   content:"";position:absolute;left:50%;top:6px;width:66px;height:66px;margin-left:-33px;border-radius:50%;
   background:radial-gradient(circle at 35% 35%,color-mix(in srgb,var(--acc) 60%,transparent),transparent 70%);filter:blur(2px);
 }
+/* Загрузка — бегущая полоска сверху и строки-заглушки; классы ставит states.js */
+html[data-sec] .empty.dz-load{padding:22px 18px 18px !important;text-align:left !important;overflow:hidden;border-radius:18px;
+  background:rgb(255 255 255 / .03);border:1px solid var(--dz-edge)}
+html[data-sec] .empty.dz-load::before{left:0;top:0;width:35%;height:2px;margin:0;border-radius:2px;filter:none;
+  background:var(--acc);animation:dz-run 1.2s ease-in-out infinite}
+html[data-sec] .empty.dz-load::after{content:"";display:block;height:56px;margin-top:12px;
+  background:linear-gradient(rgb(255 255 255 / .09),rgb(255 255 255 / .09)) 0 0 / 100% 12px no-repeat,
+    linear-gradient(rgb(255 255 255 / .09),rgb(255 255 255 / .09)) 0 22px / 84% 12px no-repeat,
+    linear-gradient(rgb(255 255 255 / .09),rgb(255 255 255 / .09)) 0 44px / 60% 12px no-repeat;
+  animation:dz-pulse 1.4s ease-in-out infinite}
+@keyframes dz-run{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+@keyframes dz-pulse{50%{opacity:.4}}
+/* Ошибка — красноватая плашка с «↻ Повторить» */
+html[data-sec] .empty.dz-err{padding:14px 16px !important;text-align:left !important;border-radius:16px;color:var(--tx) !important;
+  background:rgb(248 113 113 / .08);border:1px solid rgb(248 113 113 / .45);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+html[data-sec] .empty.dz-err::before{content:"Не загрузилось";position:static;width:auto;height:auto;margin:0;background:none;filter:none;
+  font-weight:700;color:#fca5a5;flex-basis:100%}
+html[data-sec] .dz-retry{margin-left:auto;border-radius:999px !important;padding:6px 14px;font:inherit;font-size:12.5px;cursor:pointer;
+  background:rgb(255 255 255 / .08);border:1px solid var(--dz-edge);color:var(--tx)}
+html[data-sec] .dz-retry:hover{background:rgb(255 255 255 / .14)}
+/* Подсказка — полоса цвета раздела слева, «ⓘ Подсказка», ✕ справа */
+html[data-sec] .dz-tip{position:relative;display:block;margin:8px 0 10px !important;padding:10px 38px 10px 14px !important;border-radius:12px;
+  background:color-mix(in srgb,var(--acc) 7%,transparent);border-left:3px solid var(--acc);color:var(--tx2) !important;font-size:12.5px;line-height:1.5}
+html[data-sec] .dz-tip::before{content:"ⓘ Подсказка";display:block;font-weight:700;color:var(--tx);margin-bottom:2px}
+html[data-sec] .dz-tip[hidden]{display:none !important}
+html[data-sec] .dz-tip-x{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;border:0;background:transparent;
+  color:var(--tx2);cursor:pointer;font-size:12px;padding:0}
+html[data-sec] .dz-tip-x:hover{background:rgb(255 255 255 / .1);color:var(--tx)}
+
+/* ── плашки A: уведомления полосой, сообщения капсулой, статус окном ─────────── */
+/* «Включить уведомления?» (Мои дела) — полоса сверху вместо окна на весь экран */
+html[data-sec] #askNotif.open{inset:14px 14px auto;background:none !important;backdrop-filter:none !important;padding:0;pointer-events:none}
+html[data-sec] #askNotif #askCard{pointer-events:auto;max-width:880px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  text-align:left;padding:12px 14px 12px 18px;border-radius:16px;background:var(--dz-glass2,rgb(28 30 38 / .85));color:var(--tx);
+  border:1px solid var(--dz-edge);border-left:3px solid var(--acc);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:0 10px 30px rgb(0 0 0 / .4)}
+html[data-sec] #askNotif #askCard h2{margin:0;font-size:14px;color:var(--tx)}
+html[data-sec] #askNotif #askCard p{margin:0;flex:1;min-width:220px;font-size:12.5px;color:var(--tx2)}
+html[data-sec] #askNotif .askrow{margin:0;flex:none}
+html[data-sec] #askNotif .askrow button{flex:none;border-radius:999px;padding:7px 16px;font-size:13px}
+html[data-sec] #askNotif #askYes{background:var(--acc);color:#0b0d10}
+html[data-sec] #askNotif #askLater{background:rgb(255 255 255 / .08);color:var(--tx)}
+/* короткие сообщения ZZZ — капсулой внизу по центру */
+html[data-sec] #toasts{left:50%;right:auto;transform:translateX(-50%);align-items:center}
+html[data-sec] .tst{border-radius:999px !important;background:var(--dz-glass2,rgb(28 30 38 / .9)) !important;border:1px solid var(--dz-edge) !important;
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);padding-left:14px !important;padding-right:14px !important}
+html[data-sec] .tst.out{transform:translateY(10px)}
+/* статус агента — стеклянная капсула и окно */
+html[data-sec] .agst{border-radius:999px;background:rgb(20 22 28 / .5);border-color:var(--dz-edge);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur)}
+html[data-sec] .agst-in{border-radius:18px;background:var(--dz-glass2,rgb(20 22 28 / .92));border-color:var(--dz-edge);
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);padding:14px 16px}
+/* установка — полоса под шапкой (рисует install.js) */
+html[data-sec] .dz-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px auto;max-width:1180px;padding:10px 10px 10px 16px;
+  border-radius:16px;background:var(--dz-glass2,rgb(28 30 38 / .85));border:1px solid var(--dz-edge);border-left:3px solid var(--acc);
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi);font-size:13px;color:var(--tx)}
+html[data-sec] .dz-strip span{flex:1;min-width:200px}
+html[data-sec] .dz-strip button{border-radius:999px !important;padding:7px 16px;font:inherit;font-size:13px;cursor:pointer;border:0}
+html[data-sec] .dz-strip .ok{background:var(--acc);color:#0b0d10;font-weight:600}
+html[data-sec] .dz-strip .x{background:transparent;color:var(--tx2);padding:7px 10px}
 
 /* ── числа моноширинным (п. 5) ────────────────────────────────────────────── */
 html[data-sec] :is(.num,.mono,td.n,td.num){font-family:var(--dz-mono)}

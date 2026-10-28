@@ -37,9 +37,33 @@
   let плашка = null;
   let таймер = 0;
 
+  // С 28.10.2026 (v3, редизайн п. 46): на страницах с новым обликом — полоса
+  // под шапкой «Установи как приложение…» с «Установить» и ✕; вид — design.css
+  // (.dz-strip). Остальные страницы — прежняя капсула в углу.
+  function полоса() {
+    плашка = document.createElement('div');
+    плашка.className = 'dz-strip';
+    плашка.innerHTML = '<span>Установи как приложение — своё окно и работает без интернета</span>' +
+      '<button type="button" class="ok">Установить</button><button type="button" class="x" title="Скрыть на 30 минут">✕</button>';
+    const [ставить, закрыть] = плашка.querySelectorAll('button');
+    ставить.addEventListener('click', async () => {
+      if (!событие) return;
+      ставить.disabled = true;
+      событие.prompt();
+      try { await событие.userChoice; } catch (e) {}
+      событие = null;
+      убрать();
+    });
+    закрыть.addEventListener('click', убрать);
+    const шапка = document.querySelector('.ehead, header, .top, .wrap > h1');
+    if (шапка) шапка.after(плашка); else document.body.prepend(плашка);
+  }
+
   function показать() {
     if (плашка || Date.now() - чит() < ПАУЗА) return;
     пиши();
+    if (document.getElementById('installBar')) return;             // у «Моих дел» своя такая полоса
+    if (document.documentElement.dataset.sec) return полоса();   // полоса не исчезает сама — только по ✕
     плашка = document.createElement('div');
     плашка.style.cssText = [
       'position:fixed', 'right:12px', 'bottom:12px', 'z-index:2147483000',
