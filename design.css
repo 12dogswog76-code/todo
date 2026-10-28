@@ -263,12 +263,36 @@ html[data-sec="nte"] .logo{white-space:nowrap}
     background:radial-gradient(circle at 13px 50%,#fff 9px,transparent 10px),rgb(255 255 255 / .16);transition:background .2s}
   html[data-sec="nte"] .awk[data-awk].on::after{background:radial-gradient(circle at 33px 50%,#fff 9px,transparent 10px),var(--el,var(--acc))}
   html[data-sec="nte"] .awk-d{margin-top:4px}
+  /* Механики C (п. 30): колесо стихий слева, «что такое цикл» справа,
+     реакции карточками с подсветкой двумя цветами */
+  html[data-sec="nte"] .mech-top{display:grid;grid-template-columns:380px minmax(0,1fr);gap:16px;align-items:start;margin-bottom:6px}
+  html[data-sec="nte"] .mech-wb{display:grid;place-items:center;padding:10px !important;border-radius:22px !important;margin:0}
+  html[data-sec="nte"] .mech-rx{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:10px}
+  html[data-sec="nte"] .mech-r{padding:13px 15px;border-radius:20px;border:1px solid var(--dz-edge);box-shadow:var(--dz-hi);
+    background:linear-gradient(135deg,color-mix(in srgb,var(--a) 20%,transparent),color-mix(in srgb,var(--b) 14%,transparent) 70%),var(--dz-glass)}
+  html[data-sec="nte"] .mech-rh{display:flex;align-items:center;gap:8px}
+  html[data-sec="nte"] .mech-rh .els{display:flex;gap:2px}
+  html[data-sec="nte"] .mech-rh .els img{width:20px;height:20px}
+  html[data-sec="nte"] .mech-rh b{font-size:14.5px}
+  html[data-sec="nte"] .mech-rh i{font-style:normal;font-size:11px;color:var(--tx3)}
+  html[data-sec="nte"] .mech-tag{margin-left:auto;font-size:10.5px;padding:1px 8px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--tx3);color:var(--tx2)}
+  html[data-sec="nte"] .mech-rp{font-size:11.5px;color:var(--tx2);margin:3px 0 5px}
+  html[data-sec="nte"] .mech-r p{margin:0;font-size:12.5px;line-height:1.5}
   /* Команды D (п. 27): составы карточками сеткой */
   html[data-sec="nte"][data-tab="teams"] :has(> .team){display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:start}
   html[data-sec="nte"][data-tab="teams"] .team{flex-direction:column;align-items:flex-start;align-content:flex-start;gap:10px;border-radius:20px;margin:0;height:auto;min-height:0}
   /* у частей строки была ширина-основа (flex-basis): в колонке она стала высотой */
   html[data-sec="nte"][data-tab="teams"] .team > *{flex:0 0 auto !important;max-width:100%}
 }
+
+/* колесо стихий NTE — на любой ширине */
+html[data-sec="nte"] .mech-wheel{width:100%;max-width:340px}
+html[data-sec="nte"] .mech-wheel .mw-l{stroke:rgb(255 255 255 / .25);stroke-width:2}
+html[data-sec="nte"] .mech-wheel .mw-c{fill-opacity:.22;stroke-width:2}
+html[data-sec="nte"] .mech-wheel text{text-anchor:middle;dominant-baseline:middle;fill:var(--tx)}
+html[data-sec="nte"] .mech-wheel .mw-r{font-size:12px;font-weight:600}
+html[data-sec="nte"] .mech-wheel .mw-n{font-size:11px;font-weight:700}
+html[data-sec="nte"] .mech-wheel .mw-t{font-size:11px;fill:var(--tx3)}
 
 /* ── Endfield: свой фон с надписями убран, шапка — три острова, тёмные
       оливковые панели — стекло ──────────────────────────────────────────── */

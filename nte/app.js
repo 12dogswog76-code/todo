@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v91';
+const APP_VER = 'v92';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3297,16 +3297,39 @@ function mfold(title, def, html) {
 }
 function drawMech() {
   $('filters').innerHTML = '';
-  const cyc = CYCLES.map(c =>
-    '<tr><td><div class="els">' + c.els.map(e =>
-        '<img src="' + elIcon(e) + '" title="' + esc(EL_RU[e] || e) + '" alt="">').join('') +
-      '</div></td>' +
-    '<td><b>' + esc(c.en) + '</b>' + (c.ru ? '<br><span style="font-size:11px;color:var(--tx3)">' +
-      esc(c.ru) + '</span>' : '') + '</td>' +
-    '<td>' + esc(c.els.map(e => EL_RU[e] || e).join(' + ')) + '</td>' +
-    '<td>' + esc(c.t) + '</td></tr>').join('');
+  // Колесо стихий (редизайн 28.10.2026, п. 30): шесть стихий по кругу, на
+  // рёбрах — реакция соседей. Реакция бывает только у соседей — колесо
+  // показывает это одним взглядом. Цвета — переменные стихий страницы.
+  const КРУГ = ['Anima', 'Cosmos', 'Lakshana', 'Psyche', 'Chaos', 'Incantation'];
+  const колесо = (() => {
+    const R = 118, C = 170;
+    const p = КРУГ.map((e, i) => { const a = -Math.PI / 2 + i * Math.PI / 3; return [C + R * Math.cos(a), C + R * Math.sin(a)]; });
+    let s = '<svg class="mech-wheel" viewBox="0 0 340 340" role="img" aria-label="Колесо стихий">';
+    КРУГ.forEach((e, i) => {
+      const j = (i + 1) % 6;
+      const r = CYCLES.filter(c => c.els.length === 2 && c.els.indexOf(e) >= 0 && c.els.indexOf(КРУГ[j]) >= 0)[0];
+      const mx = (p[i][0] + p[j][0]) / 2, my = (p[i][1] + p[j][1]) / 2;
+      s += '<line x1="' + p[i][0] + '" y1="' + p[i][1] + '" x2="' + p[j][0] + '" y2="' + p[j][1] + '" class="mw-l"/>' +
+        '<text x="' + (C + (mx - C) * 1.24) + '" y="' + (C + (my - C) * 1.24) + '" class="mw-r">' + esc(r ? (r.ru || r.en) : '') + '</text>';
+    });
+    КРУГ.forEach((e, i) => {
+      s += '<circle cx="' + p[i][0] + '" cy="' + p[i][1] + '" r="24" class="mw-c" style="fill:var(--' + e + ');stroke:var(--' + e + ')"/>' +
+        '<text x="' + p[i][0] + '" y="' + p[i][1] + '" class="mw-n">' + esc((EL_RU[e] || e).slice(0, 3)) + '</text>';
+    });
+    return s + '<text x="' + C + '" y="' + (C - 7) + '" class="mw-t">реакция —</text>' +
+      '<text x="' + C + '" y="' + (C + 11) + '" class="mw-t">только у соседей</text></svg>';
+  })();
+  // реакции карточками: подсветка двумя цветами стихий пары
+  const карты = '<div class="mech-rx">' + CYCLES.map(c =>
+    '<div class="mech-r' + (c.els.length > 2 ? ' tri' : '') + '" style="--a:var(--' + c.els[0] + ');--b:var(--' + c.els[1] + ')">' +
+      '<div class="mech-rh"><span class="els">' + c.els.map(e => '<img src="' + elIcon(e) + '" title="' + esc(EL_RU[e] || e) + '" alt="">').join('') + '</span>' +
+        '<b>' + esc(c.ru || c.en) + '</b>' + (c.ru ? '<i>' + esc(c.en) + '</i>' : '') +
+        (c.els.length > 2 ? '<span class="mech-tag">тройной</span>' : '') + '</div>' +
+      '<div class="mech-rp">' + esc(c.els.map(e => EL_RU[e] || e).join(' + ')) + '</div>' +
+      '<p>' + esc(c.t) + '</p></div>').join('') + '</div>';
 
   $('body').innerHTML = '<div class="doc">' +
+    '<div class="mech-top"><div class="box mech-wb">' + колесо + '</div><div>' +
     // Первый раздел открыт по умолчанию: иначе страница встречает голым
     // списком заголовков и непонятно, что внутри.
     mfold('Что такое цикл эспера', true,
@@ -3329,11 +3352,11 @@ function drawMech() {
       'Стоять на поле при этом должен не обязательно тот, у кого её больше — вклад ' +
       'засчитывается всем участникам. Поэтому Интенсивность цикла обычно набивают ' +
       'поддержке, а не главному ДД.</div>') +
-    mfold('Реакции целиком', false,
-    '<table class="tbl"><tr><th>стихии</th><th>реакция</th><th>пара</th><th>что делает</th></tr>' +
-      cyc + '</table>' +
-    '<p class="hint" style="margin-top:0">У каждого эспера есть ещё и личная реакция на ' +
-    'конкретный цикл — она прописана в его пассивке. Смотри карточку эспера, блок с бонусами.</p>') +
+    '</div></div>' +
+    // Реакции — карточками всегда на виду (раньше — таблицей в свёртке)
+    '<div class="cap"><b>Реакции</b><span></span><em>' + CYCLES.length + '</em></div>' + карты +
+    '<p class="hint">У каждого эспера есть ещё и личная реакция на конкретный цикл — она ' +
+    'прописана в его пассивке. Смотри карточку эспера, блок с бонусами.</p>' +
     mfold('Разрушение', false,
     '<p>У врагов есть шкала <b>разрушения</b> (Break). Пока она цела, урон по врагу режется; ' +
     'как только выбил её в ноль — открывается окно, в котором и наносится основная часть урона. ' +
