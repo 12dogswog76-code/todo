@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v19';
+const APP_VER = 'v20';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -186,6 +186,7 @@ function рисовать() {
   // разделы по решениям редизайна — «Достижения» с меню категорий слева,
   // «Профиль» визиткой по центру.
   document.documentElement.dataset.tab = ВКЛ;
+  document.documentElement.classList.remove('dz-win');
   $('fbar').innerHTML = '';
   $('src').innerHTML = '';
   const р = EF.разделы[ВКЛ];

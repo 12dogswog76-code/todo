@@ -87,8 +87,22 @@ EF.раздел('forge', {
       : '<div class="fggrid">' +
         '<div id="fglist">' + списокВещей(К) + '</div><div class="fgscr" id="fgcard">' + (Ф.вещь ? картВещи(К, Ф.вещь) : '<div class="empty">Выбери вещь в списке.</div>') + '</div></div>';
     EF.подвал('Данные — решатель перековки endfieldtools.dev (собран ' + эк(К.собрано) + '), с разрешения автора. Проценты — оценки по данным игры, а не скрытые шансы.');
+    // Редизайн 28.10.2026 (п. 34): вещи — плитками, выбранная — окном по
+    // центру (раскладка в design.css по html.dz-win). Закрыть — клик мимо окна
+    // или Esc: выбор сбрасывается, список остаётся.
+    document.documentElement.classList.toggle('dz-win', Ф.режим === 'вещь' && !!Ф.вещь);
   },
 });
+function закрытьОкно() {
+  if (!document.documentElement.classList.contains('dz-win') || document.documentElement.dataset.tab !== 'forge') return;
+  Ф.вещь = '';
+  EF.перейти('forge');
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('#fgcard, [data-fg-item], [data-fg-go], [data-fg-mode], [data-fg-part], [data-fg-stat], .ehead, #sheet')) return;
+  закрытьОкно();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') закрытьОкно(); });
 
 document.addEventListener('click', e => {
   const т = e.target.closest('[data-fg-mode],[data-fg-part],[data-fg-item],[data-fg-stat],[data-fg-go]');
