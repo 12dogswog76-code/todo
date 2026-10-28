@@ -2875,3 +2875,19 @@ function focusClose(t, нач) {
   // учёт: сколько минут задача была в фокусе
   if (t && нач) { const мин = Math.round((Date.now() - нач) / 60000); if (мин > 0) { t.focusMin = (t.focusMin || 0) + мин; t.mod = Date.now(); } }
 }
+
+// ─── Редизайн 28.10.2026 (п. 43): две колонки на широком экране ───
+// Справа — прилипшая колонка со сводкой (#stats) и жизненным циклом задач.
+// Узлы переносятся целиком, с id и обработчиками, — остальной код находит их
+// как раньше. Раскладка — в design.css (.wrap.dz-two); на узком экране колонка
+// растворяется (display:contents), и блоки стоят по-старому.
+(function () {
+  const wrap = document.querySelector('.wrap');
+  const h1 = wrap && wrap.querySelector('h1');
+  if (!h1) return;
+  const side = document.createElement('aside');
+  side.className = 'dz-side';
+  ['stats', 'lifePanel'].forEach(id => { const el = document.getElementById(id); if (el) side.appendChild(el); });
+  h1.after(side);
+  wrap.classList.add('dz-two');
+})();

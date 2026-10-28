@@ -310,6 +310,21 @@ html[data-sec="todo"] body:not(.light) .task{border-radius:16px !important}
 html[data-sec="todo"] body:not(.light) :is(.chip,.pill){border-radius:999px !important}
 html[data-sec="todo"] body:not(.light) :is(.chip.on,.pill.on,.pill.ico.on){background:var(--acc) !important;color:#0b0d10 !important;border-color:transparent !important}
 
+/* «Задачи» (п. 43): две колонки — список слева, справа прилипшие сводка и
+   жизненный цикл. Колонку собирает todo-app.js (aside.dz-side). */
+@media (min-width:1001px){
+  html[data-sec="todo"] .wrap.dz-two{max-width:1180px;display:grid;grid-template-columns:minmax(0,1fr) 320px;column-gap:18px;row-gap:0;align-items:start}
+  html[data-sec="todo"] .wrap.dz-two > *{grid-column:1}
+  html[data-sec="todo"] .wrap.dz-two > .dz-side{grid-column:2;grid-row:1 / span 60;position:sticky;top:12px;display:grid;gap:12px}
+  html[data-sec="todo"] .dz-side > *{margin:0 !important;padding:14px 16px;border-radius:22px;background:var(--dz-glass);
+    border:1px solid var(--dz-edge);box-shadow:var(--dz-hi);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur)}
+  html[data-sec="todo"] .dz-side #stats{font-size:14px;line-height:1.6;color:var(--tx)}
+  html[data-sec="todo"] .dz-side #stats::before{content:"Сегодня";display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px}
+  html[data-sec="todo"] .dz-side #lifePanel{display:block !important}
+  html[data-sec="todo"] .dz-side .lcrow{display:grid;gap:8px}
+}
+@media (max-width:1000px){html[data-sec="todo"] .dz-side{display:contents}}
+
 /* ── Мои деньги ───────────────────────────────────────────────────────────── */
 html[data-sec="money"] body:not(.light) .tabs{padding:5px;border-radius:999px;background:rgb(20 22 28 / .5);border:1px solid var(--dz-edge);
   backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi);width:fit-content;max-width:100%;
@@ -319,6 +334,13 @@ html[data-sec="money"] body:not(.light) .card{border-radius:22px !important;back
   border-color:var(--dz-edge) !important;box-shadow:var(--dz-hi) !important}
 html[data-sec="money"] body:not(.light) :is(button.ghost,button.act){border-radius:999px !important}
 html[data-sec="money"] body:not(.light) #editModeBtn.on{background:var(--acc) !important;color:#0b0d10 !important}
+/* «Периоды» (п. 44): две колонки — периоды слева, сводка текущего справа, прилипшая */
+@media (min-width:1001px){
+  html[data-sec="money"] .wrap{max-width:1180px}
+  html[data-sec="money"] #tab-periods:not([style*="none"]){display:grid !important;grid-template-columns:minmax(0,1fr) 380px;column-gap:18px;align-items:start}
+  html[data-sec="money"] #tab-periods > *{grid-column:1}
+  html[data-sec="money"] #tab-periods > #summary{grid-column:2;grid-row:1 / span 20;position:sticky;top:80px;margin:0}
+}
 
 /* ── прокрутка ───────────────────────────────────────────────────────────── */
 html[data-sec]{scrollbar-color:rgb(255 255 255 / .18) transparent}
