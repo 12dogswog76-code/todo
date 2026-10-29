@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v102';
+const APP_VER = 'v103';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -287,6 +287,12 @@ function shotsReady() {
   wv.postMessage('nte-ready');
 }
 
+const TAB_ПОД = {
+  espers: 'Все эсперы и карточки', arcs: 'Арки — характеристики и прокачка', carts: 'Наборы картриджей и модули',
+  tier: 'Кто силён в эндгейме', teams: 'Составы по стихиям', ban: 'Баннеры и события со сроками',
+  codes: 'Рабочие коды, отметки введённых', city: 'Транспорт и недвижимость', map: 'Точки и сборы на карте',
+  bid: 'Аукцион «Раз, два, продано!»', mech: 'Циклы стихий и реакции'
+};
 function drawTabs() {
   $('tabs').innerHTML = TABS.map(t =>
     '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' +
@@ -300,10 +306,11 @@ function drawTabs() {
     разд.id = 'toolsTabs'; разд.className = 'tm-tabs';
     меню.prepend(разд);
   }
-  if (разд) разд.innerHTML = TABS.map(t =>
-    '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' + esc(t[1]) + '</button>').join('');
-  const тек = TABS.find(t => t[0] === state.tab);
-  if ($('toolsBtn')) $('toolsBtn').textContent = '☰ ' + (тек ? тек[1] : 'Инструменты');
+  // пункты как у остальных инструментов: название и пояснение строкой ниже
+  if (разд) разд.innerHTML = '<u>Разделы</u>' + TABS.map(t =>
+    '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' + esc(t[1]) +
+      '<i>' + esc(TAB_ПОД[t[0]] || '') + '</i></button>').join('') + '<u>Инструменты</u>';
+  if ($('toolsBtn')) $('toolsBtn').textContent = '☰ Инструменты';
   document.querySelectorAll('#tabs .tb, #toolsTabs .tb').forEach(b => b.onclick = () => {
     // фильтры сбрасываем: стихия, выбранная в списке эсперов, иначе сразу
     // прячет половину составов на соседней вкладке

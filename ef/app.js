@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v31';
+const APP_VER = 'v32';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -155,14 +155,16 @@ function пунктМеню(атр, имя, под, вкл) {
 // С 29.10.2026 (слова владельца): строки разделов в шапке нет — все разделы
 // в меню «Инструменты» (каждый один раз), ниже служебные пункты; на кнопке
 // меню — где ты сейчас.
+const ВКЛПОД = { ops: 'Все операторы и карточки', tier: 'Кто силён сейчас', team: 'Составы по ролям', wpn: 'Оружие, прокачка, кому подходит',
+  gear: 'Наборы снаряжения', map: 'Точки и сборы на карте', fac: 'Рецепты AIC и цепочки' };
 function рисоватьМеню() {
   $('nav').innerHTML = '';
-  const все = ВКЛАДКИ.map(id => [id, '']).concat(ВМЕНЮ).filter(([id]) => EF.разделы[id]);
+  const все = ВКЛАДКИ.map(id => [id, ВКЛПОД[id] || '']).concat(ВМЕНЮ).filter(([id]) => EF.разделы[id]);
   $('toolsBtn').classList.remove('on');
-  $('toolsBtn').innerHTML = '☰ ' + эк((EF.разделы[ВКЛ] || {}).имя || 'Инструменты');
-  $('toolsDrop').innerHTML =
+  $('toolsBtn').innerHTML = '☰ Инструменты';
+  $('toolsDrop').innerHTML = '<u>Разделы</u>' +
     все.map(([id, под]) => пунктМеню('data-tab="' + id + '"', EF.разделы[id].имя, под, id === ВКЛ)).join('') +
-    '<hr>' + ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', false)).join('');
+    '<u>Инструменты</u>' + ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', false)).join('');
 }
 function меню(откр) {
   $('toolsBox').classList.toggle('open', откр == null ? !$('toolsBox').classList.contains('open') : откр);

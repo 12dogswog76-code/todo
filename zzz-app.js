@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v282';
+const APP_VER = 'v283';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5884,15 +5884,13 @@ function menuDraw() {
 function menuDropDraw() {
   const d = $('toolsDrop');
   if (!d) return;
-  const стр = ZNAV.map(z => z[0]).filter(Boolean);
-  d.innerHTML = '<button data-k="">Агенты<i>Все агенты и карточки</i></button>' +
-    MENU.map(m => '<button data-k="' + m.k + '">' + esc(m.n) + '<i>' + esc(m.d) + '</i></button>').join('');
+  // 29.10.2026 (вторая проверка): без «Агентов» — это стартовая страница; все
+  // разделы открываются одинаково — окном со списком инструментов слева.
+  d.innerHTML = MENU.map(m => '<button data-k="' + m.k + '">' + esc(m.n) + '<i>' + esc(m.d) + '</i></button>').join('');
   d.querySelectorAll('button').forEach(b => b.onclick = e => {
     e.stopPropagation();
     $('toolsBox').classList.remove('open');
-    const k = b.dataset.k;
-    if (!k) { menuClose(); window.scrollTo({ top: 0 }); return; }
-    menuOpen(k, стр.indexOf(k) >= 0);
+    menuOpen(b.dataset.k);
   });
 }
 // Средний остров шапки (редизайн 28.10.2026, п. 2). Главные разделы меню —
@@ -5905,9 +5903,7 @@ function zNavDraw() {
   const nav = $('zNav');
   if (!nav) return;
   const стр = $('menuWrap').classList.contains('page') ? menuCur : '';
-  // на кнопке меню — где ты сейчас (строки разделов в шапке больше нет)
-  const тек = стр ? (MENU.find(m => m.k === стр) || {}).n : ($('menuWrap').classList.contains('open') ? '' : 'Агенты');
-  if ($('menuBtn')) $('menuBtn').textContent = '☰ ' + (тек || 'Инструменты');
+  if ($('menuBtn')) $('menuBtn').textContent = '☰ Инструменты';
   nav.innerHTML = ZNAV.map(z => '<button class="zn' + (стр === z[0] ? ' on' : '') + '" data-zn="' + z[0] + '">' + esc(z[1]) + '</button>').join('');
   nav.querySelectorAll('.zn').forEach(b => b.onclick = () => {
     const k = b.dataset.zn;
