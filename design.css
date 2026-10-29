@@ -351,7 +351,8 @@ html[data-sec="ef"] .hd .acts{order:3;flex-basis:100%;display:flex;gap:6px;flex-
 /* подзаголовок блока — подпись без жёлтой черты */
 html[data-sec="ef"] .sh{display:flex !important;align-items:baseline;gap:10px;margin:18px 0 10px !important;padding:0 !important;border:0 !important}
 html[data-sec="ef"] .sh::before,html[data-sec="ef"] .sh::after{display:none !important}
-html[data-sec="ef"] .sh > b{font:600 13px var(--dz-sys) !important;color:var(--tx) !important}
+html[data-sec="ef"] .sh > b{font:600 14px var(--dz-sys) !important;color:var(--tx) !important;padding-left:0 !important}
+html[data-sec="ef"] .sh > b::before,html[data-sec="ef"] .sh > b::after{display:none !important}
 html[data-sec="ef"] .sh > i{display:none !important}
 html[data-sec="ef"] .sh > em{margin-left:auto;font:400 12px var(--dz-sys) !important;font-style:normal;color:var(--tx2) !important}
 /* блоки — стекло радиус 24 без «уголков» прицела */
@@ -810,6 +811,48 @@ html[data-sec="app"] .gt .gt-sub{white-space:nowrap;overflow:hidden;text-overflo
 html[data-sec="app"] .gt .gt-foot{margin-top:6px}
 html[data-sec="app"] .gt .gt-go{font:600 13px var(--dz-sys) !important}
 @media (max-width:800px){html[data-sec="app"] .games{grid-template-columns:1fr !important}html[data-sec="app"] .mine{grid-template-columns:1fr !important}}
+/* ── живая проверка 29.10 ─────────────────────────────────────────────────── */
+/* ZZZ «Эндгейм»: со списком слева «Мета» узкая — агенты состава компактно, в строку */
+html[data-sec="zzz"] .eg-cols{grid-template-columns:minmax(0,1fr) 400px}
+html[data-sec="zzz"] .eg-l .tm-ags{flex-wrap:nowrap !important;gap:6px !important}
+html[data-sec="zzz"] .eg-l .tm-a{display:flex !important;flex-direction:column;align-items:center;gap:2px;width:62px;text-align:center}
+html[data-sec="zzz"] .eg-l .tm-a i{font-size:10.5px;font-style:normal;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-sec="zzz"] .eg-l .tm-row{display:flex !important;align-items:center;gap:10px}
+html[data-sec="zzz"] .eg-l .tm-boo{flex:1;min-width:0}
+/* ZZZ «Справка»: подзаголовки — обычным цветом, не старым золотым */
+html[data-sec="zzz"] #helpPanel :is(h3,h4,h5){color:var(--tx) !important;font-family:var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important}
+/* NTE: в старых стилях .box>b — блок золотом; это задевало и <b> внутри текста
+   («Charge», «Esc» рвали строку). Заголовок — только первый <b>, остальные в строке */
+html[data-sec="nte"] .box > b:first-child{color:var(--tx) !important;font:600 13px var(--dz-sys) !important}
+html[data-sec="nte"] .box > b:not(:first-child){display:inline !important;margin:0 !important;font-size:inherit !important;color:var(--tx) !important}
+html[data-sec="nte"] .box b{color:var(--tx)}
+/* NTE: на «Карте» боковой список не показываем — вся ширина нужна карте */
+html[data-sec="nte"][data-tab="map"].dz-side body > .wrap:not(.top-in){padding-left:0 !important;max-width:none !important}
+html[data-sec="nte"][data-tab="map"] .dz-side-nav{display:none !important}
+/* NTE «Аукцион»: со списком слева свой столбец фильтров — строкой капсул сверху */
+html[data-sec="nte"][data-tab="bid"].dz-side body > .wrap:not(.top-in){display:block !important}
+html[data-sec="nte"][data-tab="bid"].dz-side #filters{position:static !important;width:auto !important;display:flex !important;flex-wrap:wrap;gap:6px;
+  padding:0 !important;margin:0 0 12px !important;background:none !important;border:0 !important;box-shadow:none !important;backdrop-filter:none !important}
+html[data-sec="nte"][data-tab="bid"].dz-side #filters .fgrp{flex-direction:row !important;flex-wrap:wrap;width:auto !important}
+html[data-sec="nte"][data-tab="bid"].dz-side #filters .fb{border-radius:999px !important}
+/* NTE: подписи разделов на страницах — без красной черты слева */
+html[data-sec="nte"] #body .cap::before,html[data-sec="nte"] #body .cap > span:empty{display:none !important}
+html[data-sec="nte"] #body .cap > b{font:600 14px var(--dz-sys) !important;color:var(--tx) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="nte"] #body .cap > em{font:400 11.5px var(--dz-sys) !important;font-style:normal;color:var(--tx3,#6b7280) !important;text-transform:none !important;letter-spacing:normal !important}
+/* Endfield: <b> внутри описаний — обычным выделением в строке, не плашкой */
+html[data-sec="ef"] :is(.tlpot-i p,.tlp-i p,.dd-in p,.rich,#cbody p) b{display:inline !important;padding:0 !important;background:none !important;
+  border:0 !important;box-shadow:none !important;color:var(--acid) !important;font-weight:600}
+/* Endfield: подписи блоков внутри страниц и открытых предметов — без жёлтой черты */
+html[data-sec="ef"] :is(#body,#sheet-in) :is(.sec > h4,.sh)::before{display:none !important}
+html[data-sec="ef"] :is(#body,#sheet-in) .sec > h4{padding-left:0 !important;border:0 !important;font:600 13px var(--dz-sys) !important;color:var(--tx) !important;
+  text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="ef"] :is(#body,#sheet-in) .sec > h4::first-letter,html[data-sec="ef"] #body .sh > b::first-letter{text-transform:uppercase}
+html[data-sec="ef"] #body :is(.box,.verdict) > b:first-child{display:block;font:600 12px var(--dz-sys) !important;color:var(--tx2) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="ef"] #body :is(.box,.verdict) > b:first-child::first-letter{text-transform:uppercase}
+/* Endfield «Карта»: масштаба нет — шапка во всю ширину, как сама карта */
+html[data-sec="ef"][data-tab="map"] .ehead .top-in{max-width:none !important;padding:0 24px !important}
+/* карточка ZZZ одной высоты на всех вкладках — не прыгает при переключении */
+html[data-sec="zzz"] .modal.open #sheet{min-height:min(860px,calc(100vh - 40px))}
 /* сводка над сеткой (агентов есть … лидер модификации) — убрана по просьбе владельца 29.10 */
 html[data-sec="zzz"] #summary{display:none !important}
 /* «← Разделы» (menu.js, в окне приложения) — капсула как пункты шапки */

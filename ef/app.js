@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v35';
+const APP_VER = 'v36';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -654,8 +654,9 @@ function вклПрокачка(c, д) {
   Object.values(д.цены || {}).forEach(v => v.forEach(x => { сложить(навыки, x.п); навыки.item_gold = (навыки.item_gold || 0) + x.з; }));
   const тал = {};
   (д.пассивки || []).concat(д.атрибуты || []).concat(д.заводУзлы || []).forEach(x => сложить(тал, x.цена));
-  let h = '<div class="verdict" style="margin-bottom:16px"><b>всё до максимума</b>' +
-    'Посчитать под себя — с текущими уровнями и складом — можно в <a class="lnk" href="#plan" data-plan="' + эк(c.id) + '">планировщике</a>.</div>';
+  // планировщик из меню убран (29.10.2026) — ссылку на него не показываем
+  let h = '<div class="verdict" style="margin-bottom:16px"><b>Всё до максимума</b>' +
+    'Сколько нужно материалов, чтобы довести оператора до предела.</div>';
   h += '<div class="cols">';
   h += '<div class="sec full"><h4>повышения (прорывы)</h4><div class="wide" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">' +
     пр.map(x => '<div class="box"><b>' + эк(x.имя) + '</b><div class="hint" style="margin:0 0 8px">' + эк(x.описание) + '</div>' +
@@ -1466,7 +1467,7 @@ function инструменты() {
 }
 function нутроИнстр() {
   if (ИНСТРВКЛ === 'backup') {
-    return '<div class="box brk"><b>файл со всеми отметками</b>Уровни в планировщике, карта, дейлики, достижения, крутки, UID. ' +
+    return '<div class="box brk"><b>Файл со всеми отметками</b>Карта, достижения, крутки, промокоды, UID.' +
       'Адрес облака в файл не кладётся — это ключ доступа.<div class="fld" style="margin-top:12px">' +
       '<button class="btn" data-act="bk-save">Скачать всё</button><label class="btn sec" style="cursor:pointer">Восстановить из файла' +
       '<input type="file" id="bkfile" accept=".json,application/json" style="display:none"></label></div><div class="say" id="bksay"></div></div>';

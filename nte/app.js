@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v106';
+const APP_VER = 'v107';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3158,8 +3158,15 @@ const CODE_NOTE = { 'Launch code':'код запуска', 'Stream code':'со �
                     'still works':'срок вышел, но код ещё работает' };
 // Повод к коду с ntebuild приходит по-английски: «Zankou banner (Version 1.3)»,
 // «Version 1.1 preview livestream». Переводим знакомые куски, остальное как есть.
+// месяцы и пометки источника — по-русски (живая проверка 29.10.2026: в строках
+// кодов шло «Oct 28, 2026 → Nov 1, 2026 · ✓ Working»)
+const МЕС_EN = { jan: 'янв', feb: 'фев', mar: 'мар', apr: 'апр', may: 'мая', jun: 'июн', jul: 'июл', aug: 'авг', sep: 'сен', oct: 'окт', nov: 'ноя', dec: 'дек' };
 function codeWhy(s) {
   return String(s || '')
+    .replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/g, (_, m, d, y) => d + ' ' + МЕС_EN[m.toLowerCase()] + ' ' + y)
+    .replace(/\s*·?\s*✓?\s*\bWorking\b/gi, '')
+    .replace(/No end date announced\s*\(TBA\)/gi, 'без срока')
+    .replace(/\bTBA\b/g, 'срок не объявлен')
     .replace(/\bpreview livestream\b/gi, 'стрим-превью')
     .replace(/\blivestream\b/gi, 'стрим')
     .replace(/\bbanner\b/gi, 'баннер')

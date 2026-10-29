@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v286';
+const APP_VER = 'v287';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -30,7 +30,7 @@ const ELEM = {
   auricink: { ru: 'Аурчернила', c: '#b197fc' },
   auricether:{ ru: 'Аурэфир',   c: '#c9a7ff' },
   frost:    { ru: 'Мороз',      c: '#7dd3fc' },
-  firefrost:{ ru: 'Огнемороз',  c: '#ff9a76' },
+  firefrost:{ ru: 'Огнемороз',  c: '#7dd3fc' },   // это Иней — цвет как у льда (п. 8)
   zhenzhenassault: { ru: 'Заточенный клинок', c: '#ffd54a' },
   honededge:       { ru: 'Заточенный клинок', c: '#ffd54a' }
 };
