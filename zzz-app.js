@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v275';
+const APP_VER = 'v276';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1615,7 +1615,7 @@ function tgtHTML(p, id) {
       '" value="' + t.sk[o.i] + '" style="width:60px;text-align:right"></div>';
   });
   return '<div class="editbox" style="margin:0 0 8px">' +
-    '<div class="cap2">ЦЕЛИ ПРОКАЧКИ</div>' +
+    '<div class="cap2">Цели прокачки</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">' +
     rows + '</div>' +
     '<div class="hint">Готовность считается относительно этих значений: выставленное = 100%. ' +
@@ -2783,11 +2783,11 @@ function guideHtml(a, p, T) {
   if ((g.set4 || []).length || (g.set2 || []).length) {
     const many = (g.set4 || []).length > 1;
     h += '<div class="sect"><h4><span class="tt">Комплекты дисков<i>DISK SETS</i></span></h4>' +
-      '<div class="cap2" style="margin:0 0 6px">ЧЕТЫРЕ СЛОТА' +
-      (many ? ' — ЛЮБОЙ ИЗ ЭТИХ' : '') + '</div>';
+      '<div class="cap2" style="margin:0 0 6px">Четыре слота' +
+      (many ? ' — любой из этих' : '') + '</div>';
     (g.set4 || []).forEach((n, i) => { h += guideSuit(n, 4, i === 0); });
     if ((g.set2 || []).length) {
-      h += '<div class="cap2" style="margin:10px 0 6px">ОСТАВШИЕСЯ ДВА СЛОТА — ОДИН ИЗ ЭТИХ</div>';
+      h += '<div class="cap2" style="margin:10px 0 6px">Оставшиеся два слота — один из этих</div>';
       (g.set2 || []).forEach(n => { h += guideSuit(n, 2, false); });
     }
     h += '</div>';
@@ -2807,7 +2807,7 @@ function guideHtml(a, p, T) {
     }
     if (g.substats) {
       const subs = prydSubs(a.id) || [];
-      h += '<div class="cap2" style="margin:10px 0 6px">ДОП. ХАРАКТЕРИСТИКИ, ПО УБЫВАНИЮ</div>' +
+      h += '<div class="cap2" style="margin:10px 0 6px">Доп. характеристики, по убыванию</div>' +
         '<div class="gsubs">' +
         subs.map(s => '<span class="gsub r' + Math.min(s.rank, 3) + '">' +
           statIcon(s.k === 'hpp' ? 'hp' : (s.k === 'atkp' ? 'atk' : (s.k === 'defp' ? 'def' : s.k)), 12) +
@@ -3399,7 +3399,7 @@ function renderSheet() {
         const cur = subsOf(curId, p);
         const auto = (EXTRA && EXTRA.subs && EXTRA.subs[curId]) || [];
         return '<div class="editbox" style="margin:0 0 8px">' +
-          '<div class="cap2">РЕКОМЕНДУЕМЫЕ ДОП. ХАРАКТЕРИСТИКИ</div>' +
+          '<div class="cap2">Рекомендуемые доп. характеристики</div>' +
           '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
           MOD_OPTS.map(o => '<label class="tg2' + (cur.indexOf(o[0]) >= 0 ? ' on' : '') + '">' +
             '<input type="checkbox" class="modchk" data-k="' + o[0] + '"' +
@@ -3834,7 +3834,7 @@ function coreBonusHTML(p) {
   const auto = (EXTRA && EXTRA.core && EXTRA.core[curId]) || CORE_KNOWN[curId] || {};
   const c = Object.keys(own).some(k => +own[k]) ? own : auto;
   return '<div class="editbox" style="margin:8px 0">' +
-    '<div class="cap2">ЧТО ДОБАВЛЯЕТ ПРОКАЧАННОЕ ЯДРО</div>' +
+    '<div class="cap2">Что добавляет прокачанное ядро</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px">' +
     CB_ROWS.map(r => '<div class="frow" style="gap:6px">' +
       '<span style="flex:1;font-size:11.5px">' + esc(r[1]) + '</span>' +
@@ -3981,7 +3981,7 @@ function openEditor(kind, slot) {
       }
       ed.subs = (d.subs || []).slice(0, 4).map(x => ({ p: String(x.p), l: x.l || 1 }));
       while (ed.subs.length < 4) ed.subs.push({ p: '', l: 1 });
-      h += '<div class="cap2" style="margin-top:8px">ДОП. ХАРАКТЕРИСТИКИ И ПРОКИ</div>';
+      h += '<div class="cap2" style="margin-top:8px">Доп. характеристики и проки</div>';
       h += '<div id="pkSubs">' + ed.subs.map((sb, ix) =>
         '<div class="subrow" data-ix="' + ix + '">' +
           '<select class="sbP"><option value="">— пусто —</option>' +
@@ -5757,7 +5757,7 @@ function drawModTable() {
   if (!rows.length) { box.innerHTML = '<div class="hint">Нет агентов с заданными приоритетами.</div>'; return; }
   box.innerHTML = '<div class="editbox" style="margin:8px 0">' +
     '<div class="mt-top">' +
-      '<div class="cap2" style="margin:0">МОДИФИКАТОРЫ ПО АГЕНТАМ</div>' +
+      '<div class="cap2" style="margin:0">Модификаторы по агентам</div>' +
       '<label class="mt-find">' +
         '<input type="text" id="modFind" placeholder="Найти" autocomplete="off"></label>' +
     '</div>' +
@@ -6064,7 +6064,7 @@ function drawMaint() {
   const noMats = !MATS;
 
   const old = (n, lim) => n != null && n > lim;
-  let h = '<div class="mt"><div class="cap2">ОБСЛУЖИВАНИЕ</div>';
+  let h = '<div class="mt"><div class="cap2">Обслуживание</div>';
 
   h += '<div class="mt-age">' +
     '<span' + (old(gAge, 21) ? ' class="warn2"' : '') + '>сборки с prydwen: ' +
@@ -6462,8 +6462,10 @@ function drawMats() {
   const нет = bagMissing(total);
   const сумкаЕсть = bagFilled();
   const есть = haveItems(expBooks(total.exp).concat(items.map(id => [id, total.items[id]])), short);
-  h += '<div class="mt-sum">' +
-    '<div class="cap2 mt-cap" style="margin:0 0 7px">ВСЕГО ПОНАДОБИТСЯ<span>нажми на материал — отметить, что уже есть</span></div>' +
+  // Раскладка B (редизайн 28.10.2026, п. 16): слева «Всего понадобится» и
+  // «По агентам», справа прилипшая колонка — «Батарея на фарм» и «Где фармить».
+  let лев = '<div class="mt-sum">' +
+    '<div class="cap2 mt-cap" style="margin:0 0 7px">Всего понадобится<span>нажми на материал — отметить, что уже есть</span></div>' +
     '<div class="mt-items">' +
       (total.gold ? chip('10', total.gold) : '') + есть.чипы +
     '</div>' + есть.пол +
@@ -6472,26 +6474,24 @@ function drawMats() {
 
   // батарея на недостающее — как у zenless.tools
   const bat = batteryFor(нет);
+  let прав = '';
   if (bat.макс) {
     const дн = x => Math.ceil(x / BAT_DAY);
-    h += '<div class="mt-sum" style="margin-top:10px">' +
-      '<div class="cap2" style="margin:0 0 7px">Батарея на фарм</div>' +
-      '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">' +
-        '<b style="font-size:24px">⚡ ' + batRange(bat) + '</b>' +
-        '<span class="hint" style="margin:0">≈ ' + (дн(bat.мин) === дн(bat.макс) ? дн(bat.макс) : дн(bat.мин) + '–' + дн(bat.макс)) + ' ' +
-          plural(дн(bat.макс), 'день', 'дня', 'дней') + ' восстановления (' + BAT_DAY + ' в сутки)</span>' +
-        '<label class="hint" style="margin:0 0 0 auto">уровень Интер-нота ' +
-          '<select id="batLvl">' + [10, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(l => '<option' + ((ui.ikLvl || 60) === l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
+    прав += '<div class="mt-sum">' +
+      '<div class="cap2" style="margin:0 0 7px">Батарея на фарм' +
+        '<label class="mt-ik">Интер-нот <select id="batLvl">' + [10, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(l => '<option' + ((ui.ikLvl || 60) === l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label></div>' +
+      '<div class="mt-bat"><b>⚡ ' + batRange(bat) + '</b>' +
+        '<span>' + (сумкаЕсть ? 'без того, что уже есть' : 'на всё до целей') + ' · ≈ ' + (дн(bat.мин) === дн(bat.макс) ? дн(bat.макс) : дн(bat.мин) + '–' + дн(bat.макс)) + ' ' +
+          plural(дн(bat.макс), 'день', 'дня', 'дней') + ' (' + BAT_DAY + ' в сутки)</span></div>' +
       '</div>' +
-      '<details style="margin-top:8px"><summary class="hint" style="margin:0;cursor:pointer">где фармить и сколько боёв</summary>' +
-        '<table class="tbl" style="margin-top:6px">' + bat.строки.map(batRow).join('') +
-        '</table>' +
-        '<div class="hint">' + (сумкаЕсть ? 'Считается только недостающее — отмеченное «есть» вычтено. ' : 'Ничего не отмечено: считается всё, что нужно до целей. ') + 'Охота — 60 за бой, ' +
-          'но три в неделю со скидкой, поэтому в нижнюю границу не входит. Денни и пропуск в «Хомячью клетку» в батарею не входят. Выпадение — таблицы zenless.tools.</div>' +
-      '</details></div>';
+      '<div class="mt-sum"><div class="cap2" style="margin:0 0 7px">Где фармить<span title="' +
+        esc((сумкаЕсть ? 'Считается только недостающее — отмеченное «есть» вычтено. ' : 'Ничего не отмечено: считается всё, что нужно до целей. ') + 'Охота — 60 за бой, ' +
+          'но три в неделю со скидкой, поэтому в нижнюю границу не входит. Денни и пропуск в «Хомячью клетку» в батарею не входят. Выпадение — таблицы zenless.tools.') + '">ⓘ</span></div>' +
+        '<table class="tbl">' + bat.строки.map(batRow).join('') + '</table>' +
+      '</div>';
   }
 
-  h += '<div class="cap2" style="margin:14px 0 6px">ПО АГЕНТАМ</div><div class="td-list">' +
+  лев += '<div class="mt-sum"><div class="cap2" style="margin:0 0 7px">По агентам<span>' + rows.length + ' ' + plural(rows.length, 'агент', 'агента', 'агентов') + '</span></div><div class="td-list">' +
     rows.sort((x, y) => y.n.gold - x.n.gold).map(r => {
       const its = Object.keys(r.n.items).sort((x, y) => order(x) - order(y));
       const txt = its.slice(0, 3).map(id => short(id) + ' ×' + r.n.items[id]).join(', ');
@@ -6502,10 +6502,11 @@ function drawMats() {
         '<em class="td-h">' + nfmt(r.n.gold) + ' денни</em>' +
         (function () { const b = batteryFor(r.n); return b.макс ? '<em class="td-h" title="батарея на фарм этого агента без учёта сумки">⚡ ' + batRange(b) + '</em>' : ''; })() +
         '</div>';
-    }).join('') + '</div>';
+    }).join('') + '</div></div>';
 
-  h += '<div class="hint">Считается от текущего состояния до целей агента (кнопка «🎯 цели» ' +
-    'в карточке). Оружие учтено только по денни: модули усиления в игровых таблицах ' +
+  h += '<div class="mt-cols"><div class="mt-l">' + лев + '</div><div class="mt-r">' + прав + '</div></div>';
+  h += '<div class="hint">ⓘ Считается от текущего состояния до целей агента (кнопка «цели» ' +
+    'в карточке). Оружие — только по денни: модули усиления в игровых таблицах ' +
     'не расписаны. Данные — из дампов игры' +
     (MATS.built ? ', собраны ' + esc(MATS.built) : '') + '.</div>';
   box.innerHTML = h;
@@ -6530,7 +6531,7 @@ function drawTodo() {
     // за что браться — докачать навыки или перебрать диски.
     const why = [];
     if (mode === 'clean') { if (x.pc < 100) why.push('готовность ' + x.pc + '%'); }
-    else if (x.gaps.length) why.push(x.gaps.join(', '));
+    else if (x.gaps.length) why.push('не хватает: ' + x.gaps.join(', '));
     // Раньше рядом висело красное число, и что оно значит — по нему было не
     // понять. Пишем словами, но красим только критическую часть: если залить
     // красным всю строку, «7 замечаний» выглядит страшнее, чем есть, а рядом
@@ -6553,6 +6554,8 @@ function drawTodo() {
       '<span class="td-t">' + (x.tier ? rankBadge(x.tier, 'sm') : '') + '</span>' +
       '<span class="td-w">' + esc(why.join(' · ')) + '</span>' +
       iss +
+      // готовность числом справа (редизайн, п. 17)
+      (mode !== 'clean' ? '<b class="td-pc">' + x.pc + '%</b>' : '') +
       '</div>';
   }).join('');
   const empty = {
@@ -6585,7 +6588,8 @@ function drawTodo() {
         '<span class="hint" style="margin:0">Считается по этим агентам ' +
           'и в разделе «Что фармить».</span></div>'
       : '') +
-    (list.length ? '<div class="td-list">' + rows + '</div>'
+    (list.length ? '<div class="mt-sum"><div class="cap2">Чего не хватает<span title="Порядок — тир, затем готовность. Строка открывает карточку.">ⓘ</span></div>' +
+                   '<div class="td-list">' + rows + '</div></div>'
                  : '<div class="hint" style="margin-top:0">' + empty + '</div>') +
     '<div class="hint">' + (mode === 'clean'
       ? 'Здесь те, у кого диски, комплекты и цели сходятся с гайдом prydwen. Готовность может быть и меньше 100%: она считается по прокачке, а замечания — по сборке.'
@@ -7163,7 +7167,7 @@ function drawHist() {
 
   // журнал: свежие дни сверху, пустые дни пропускаем
   const withEv = days.filter(d => (d.ev || []).length).slice(-60).reverse();
-  h += '<div class="cap2" style="margin:14px 0 6px">ЧТО МЕНЯЛОСЬ</div>';
+  h += '<div class="cap2" style="margin:14px 0 6px">Что менялось</div>';
   h += withEv.length
     ? '<div class="hs-log">' + withEv.map(d =>
         '<div class="hs-day"><div class="hs-date">' + esc(banDate(d.d)) + '</div><div class="hs-evs">' +
@@ -7183,7 +7187,7 @@ function drawHist() {
     'от ' + HIST_STEP + '% за раз.</div>';
 
   // Подробный журнал: что именно менялось у агентов и что это дало
-  h += '<div class="cap2" style="margin:18px 0 6px">ПОДРОБНО ПО АГЕНТАМ</div>' +
+  h += '<div class="cap2" style="margin:18px 0 6px">Подробно по агентам</div>' +
     chronHtml(null, 40) +
     '<div class="hint">Записывается при импорте: трекер сравнивает новое состояние ' +
     'со снимком и отмечает, что поменялось — диски, движок, навыки, ядро. ' +
@@ -7222,7 +7226,7 @@ function drawPatch() {
       tile(st.discs, 'дисков сменил') +
     '</div>' +
     (uniq.length
-      ? '<div class="cap2" style="margin:14px 0 6px">КОГО ВЫБИЛ</div><div class="pt-got">' +
+      ? '<div class="cap2" style="margin:14px 0 6px">Кого выбил</div><div class="pt-got">' +
         uniq.map(z => {
           const pic = pullPic(z.n, z.iid);
           return '<span class="pt-g" title="' + esc((pic && pic.n) || z.n) + '">' +
@@ -7232,13 +7236,13 @@ function drawPatch() {
         }).join('') + '</div>'
       : '<div class="hint">За патч ни одного S-ранга.</div>') +
     '<div class="pt-cols">' +
-      '<div class="pt-col"><div class="cap2">ЭНДГЕЙМ</div>' +
+      '<div class="pt-col"><div class="cap2">Эндгейм</div>' +
         ptRow('Оборона Шиюй', st.shiyu ? (st.shiyu.rating || '—') + ' · ' + nfmt(st.shiyu.score || 0) : 'нет данных') +
         ptRow('Опасный штурм', st.mem ? (st.mem.star || 0) + '★ · ' + nfmt(st.mem.score || 0) : 'нет данных') +
         ptRow('Место в рейтинге', st.shiyu && st.shiyu.rank
           ? 'топ ' + (Math.round(st.shiyu.rank * 10) / 10) + '%' : '—') +
       '</div>' +
-      '<div class="pt-col"><div class="cap2">ПРОКАЧКА</div>' +
+      '<div class="pt-col"><div class="cap2">Прокачка</div>' +
         ptRow('Поднял уровней', st.lvls) +
         ptRow('Мыслительных картин', st.minds) +
         ptRow('A-рангов из круток', st.gotA) +
@@ -9012,7 +9016,7 @@ function drawSquad() {
       (ids.length ? '<button id="sqClear" class="ghost2">очистить</button>' : '') +
     '</div>' +
     prev +
-    '<div class="cap2" style="margin:16px 0 6px">КОГО ПОСТАВИТЬ' +
+    '<div class="cap2" style="margin:16px 0 6px">Кого поставить' +
       ' <span class="eg-st">только твои, ' + mine.length + '</span></div>' +
     (mine.length
       // На галочке — порядковый номер: в составе важно, кто первый (по нему
@@ -9026,7 +9030,7 @@ function drawSquad() {
         }).join('') + '</div>'
       : '<div class="hint" style="margin-top:0">В трекере пока нет ни одного твоего агента — ' +
         'загрузи аккаунт в разделе «⟳ Импорт из игры».</div>') +
-    '<div class="cap2" style="margin:16px 0 6px">БАНБУ' +
+    '<div class="cap2" style="margin:16px 0 6px">Банбу' +
       ' <span class="eg-st">' + (booList.length ? 'твои, ' + booList.length : 'ни одного не отмечено') +
       '</span></div>' +
     (booList.length
@@ -10521,13 +10525,13 @@ function egSect(title, note, e) {
   const total = stages.reduce((s2, g) => s2 + g.rows.length, 0);
   const ready = stages.reduce((s2, g) => s2 + g.ready, 0);
   return '<div class="sect"><h4><span class="tt">' + title +
-      '<i>' + note + (e.phase ? ' · ФАЗА ' + esc(e.phase) : '') + '</i></span>' +
+      '<i>' + note + (e.phase ? ' · фаза ' + esc(e.phase) : '') + '</i></span>' +
       '<span class="tm-cnt">' + (total ? 'собираешь ' + ready + ' из ' + total : '') + '</span></h4>' +
     (e.chars && e.chars.length
-      ? '<div class="cap2" style="margin:0 0 6px">ТВОИ АГЕНТЫ В ЭТОЙ ФАЗЕ</div>' + egMine(e.chars)
+      ? '<div class="cap2" style="margin:0 0 6px">Твои агенты в этой фазе</div>' + egMine(e.chars)
       : '') +
     stages.map(g =>
-      '<div class="cap2" style="margin:12px 0 6px">' + esc((g.n || 'ЧТО БЕРУТ ЧАЩЕ ВСЕГО').toUpperCase()) +
+      '<div class="cap2" style="margin:12px 0 6px">' + esc(g.n || 'Что берут чаще всего') +
         (g.rows.length ? ' <span class="eg-st">' + (g.ready ? 'собираешь ' + g.ready : 'ни одного') + '</span>' : '') +
       '</div><div class="tm-list">' + g.rows.slice(0, 6).map((r, i) => egTeamRow(r, i + 1)).join('') + '</div>'
     ).join('') +
@@ -10760,9 +10764,9 @@ function drawRuns() {
       'которой в игре нет.</div>';
   }
   return head +
-    (sh.length ? '<div class="cap2" style="margin:12px 0 6px">ОБОРОНА ШИЮЙ</div>' +
+    (sh.length ? '<div class="cap2" style="margin:12px 0 6px">Оборона шиюй</div>' +
       sh.map(runsShiyu).join('') : '') +
-    (mem.length ? '<div class="cap2" style="margin:14px 0 6px">ОПАСНЫЙ ШТУРМ</div>' +
+    (mem.length ? '<div class="cap2" style="margin:14px 0 6px">Опасный штурм</div>' +
       mem.map(runsMem).join('') : '') +
     '<div class="hint">Данные боевой хроники HoYoLab. Периоды старше прошлого хранятся ' +
       'только у тебя — в облаке и в этом браузере.</div>';
@@ -10771,19 +10775,10 @@ function drawRuns() {
 function drawEndgame() {
   const box = $('endBox');
   if (!box) return;
-  // Вкладки: свои прохождения и метовая аналитика — разные вопросы к одному
-  // разделу, поэтому не мешаем их в одну простыню.
-  if (ui.egTab !== 'runs') ui.egTab = 'meta';
-  const tabs = '<div style="display:flex;gap:6px;margin:0 0 12px">' +
-    '<button class="htab' + (ui.egTab === 'meta' ? ' on' : '') + '" data-t="meta">Мета</button>' +
-    '<button class="htab' + (ui.egTab === 'runs' ? ' on' : '') + '" data-t="runs">Мои бои</button></div>';
-  box.innerHTML = tabs + '<div id="endTabBox">' +
-    (ui.egTab === 'runs' ? drawRuns() : drawEgMeta()) + '</div>';
-  box.querySelectorAll('.htab[data-t]').forEach(b => b.onclick = () => {
-    ui.egTab = b.dataset.t;
-    try { localStorage.setItem(LS + '_ui', JSON.stringify(ui)); } catch (e) {}
-    drawEndgame();
-  });
+  // Редизайн 28.10.2026 (п. 19): без подвкладок — две колонки, слева «Мета»,
+  // справа прилипшие «Мои бои». На узком экране — одна колонка, «Мета» сверху.
+  box.innerHTML = '<div class="eg-cols"><div class="eg-l"><div class="cap2 eg-cap">Мета</div>' + drawEgMeta() + '</div>' +
+    '<div class="eg-r"><div class="cap2 eg-cap">Мои бои</div>' + drawRuns() + '</div></div>';
   if ($('runsBtn')) $('runsBtn').onclick = () => runsLoad($('runsBtn'), $('runsMsg'));
   if ($('egRemBtn')) $('egRemBtn').onclick = egRemToggle;
   box.querySelectorAll('[data-rt]').forEach(b => b.onclick = () => {
@@ -10850,8 +10845,8 @@ function drawBanners() {
       '</button>' +
       '<span id="banRemMsg">' + esc(banRemText()) + '</span>' +
     '</div>' +
-    sect('СЕЙЧАС', cur) +
-    (next.length ? '<div class="cap2" style="margin:14px 0 6px">ДАЛЬШЕ</div>' +
+    sect('Сейчас', cur) +
+    (next.length ? '<div class="cap2" style="margin:14px 0 6px">Дальше</div>' +
       next.map(banRow).join('') : '') +
     '<div class="hint">Даты и состав — с <a href="' + esc(bn.src || 'https://www.prydwen.gg/zenless/banners') +
       '" target="_blank" rel="noopener">prydwen.gg</a>' +
@@ -11030,19 +11025,21 @@ function codesHtml() {
       // выбрать сервер и нажать «Активировать»; клик сразу отмечает код
       '<a class="cgo" data-go="' + esc(c.code) + '" target="_blank" rel="noopener" ' +
         'href="https://zenless.hoyoverse.com/redemption?code=' + encodeURIComponent(c.code) + '" ' +
-        'title="открыть страницу активации HoYoverse с этим кодом">ввести →</a>' +
+        'title="открыть страницу активации HoYoverse с этим кодом">' + (введён ? 'введён' : 'Активировать') + '</a>' +
       '</div>';
   };
+  // Два блока (редизайн 28.10.2026, п. 20): «Не введены» и «Уже введены»,
+  // счётчик справа в подписи блока.
   const свежие = список.filter(c => !было[c.code]);
   const старые = список.filter(c => было[c.code]);
   return (свежие.length
-      ? '<div class="csec"><b>не введены — ' + свежие.length + '</b>' +
+      ? '<div class="csec"><b>Не введены<em>' + свежие.length + '</em></b>' +
         свежие.map(строка).join('') + '</div>' : '') +
     (старые.length
-      ? '<div class="csec"><b>уже введены — ' + старые.length + '</b>' +
+      ? '<div class="csec"><b>Уже введены<em>' + старые.length + '</em></b>' +
         старые.map(строка).join('') + '</div>' : '') +
-    '<div class="chint">Коды сгорают без предупреждения: если пишет «недоступен», ' +
-    'значит лимит активаций кончился. Отметки хранятся только у тебя.</div>';
+    '<div class="chint">ⓘ Коды сгорают без предупреждения: если пишет «недоступен», ' +
+    'значит лимит активаций кончился. «Активировать» открывает страницу HoYoverse с кодом и отмечает его. Отметки — только у тебя.</div>';
 }
 
 function drawCodes() {

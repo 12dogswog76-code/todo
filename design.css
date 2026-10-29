@@ -283,6 +283,130 @@ html[data-sec="zzz"] .mmwrap.page .mmhead{background:transparent;border:0;paddin
 html[data-sec="zzz"] .mmwrap.page .mmhead h2{font-size:30px;text-transform:none;letter-spacing:-.01em;font-weight:800}
 html[data-sec="zzz"] .mmwrap.page .mmslot{padding:0 4px 20px}
 html[data-sec="zzz"] body.zpage #main{visibility:hidden}
+html[data-sec="zzz"] body.zpage #main *{visibility:hidden !important}
+/* блоки .sect на страницах (Эндгейм и др.) — стекло и подпись без жёлтой черты */
+html[data-sec="zzz"] .mmslot .sect{margin:0 0 12px !important;padding:16px 18px !important;border-radius:24px !important;border:0 !important;
+  background:rgb(255 255 255 / .06) !important;box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06) !important}
+html[data-sec="zzz"] .mmslot .sect > h4{display:flex;gap:8px;align-items:center;margin:0 0 10px !important;padding:0 !important;border:0 !important;
+  font:600 13px var(--dz-sys) !important;color:var(--tx) !important}
+html[data-sec="zzz"] .mmslot .sect > h4::before,html[data-sec="zzz"] .mmslot .sect > h4::after,
+html[data-sec="zzz"] .mmslot .sect > h4 .tt::before,html[data-sec="zzz"] .mmslot .sect > h4 .tt::after{display:none !important}
+html[data-sec="zzz"] .mmslot .sect > h4 .tt{font:inherit !important;color:inherit !important}
+html[data-sec="zzz"] .mmslot .sect > h4 .tt i{display:none !important}
+html[data-sec="zzz"] .mmslot .sect > h4 .tm-cnt{margin-left:auto;font:400 12px var(--dz-sys);color:var(--tx2)}
+html[data-sec="zzz"] .mmslot .sect .tm-list{padding:0;background:none;box-shadow:none}
+html[data-sec="zzz"] .mmslot :is(.ban-rem,.eg-rem){display:flex;align-items:center;gap:10px;margin:0 0 12px}
+html[data-sec="zzz"] .mmslot :is(.ban-rem,.eg-rem) button{height:32px;padding:0 14px;border-radius:999px !important;border:0 !important;background:rgb(255 255 255 / .09) !important;
+  color:var(--tx2) !important;font:500 12.5px var(--dz-sys) !important;box-shadow:none !important}
+html[data-sec="zzz"] .mmslot :is(.ban-rem,.eg-rem) button.on{background:var(--acc) !important;color:#0b0d10 !important}
+html[data-sec="zzz"] .mmslot :is(.ban-rem,.eg-rem) span{font-size:12px;color:var(--tx3,#6b7280)}
+/* страница инструмента — сразу под шапкой, без подложки окна (29.10) */
+html[data-sec="zzz"] .mmwrap.page{align-items:flex-start !important;justify-content:center !important;padding-top:0 !important}
+/* «Кого качать» (п. 17): тир квадратиком с обводкой, замечания капсулами, готовность справа */
+html[data-sec="zzz"] .mmslot .td-r .td-t .rankb{width:22px !important;height:22px !important;border-radius:6px !important;background:none !important;
+  box-shadow:inset 0 0 0 1.5px currentColor !important;clip-path:none !important;transform:none !important;display:grid !important;place-items:center}
+html[data-sec="zzz"] .mmslot .td-r .td-t .rankb::before,html[data-sec="zzz"] .mmslot .td-r .td-t .rankb::after{display:none !important}
+html[data-sec="zzz"] .mmslot .td-r .td-t .rankb i{font:800 11px var(--dz-mono) !important;transform:none !important;background:none !important;
+  color:currentColor !important;-webkit-text-fill-color:currentColor !important;-webkit-background-clip:border-box !important;background-clip:border-box !important;opacity:1 !important}
+html[data-sec="zzz"] .mmslot .td-r .td-w{text-align:left !important}
+html[data-sec="zzz"] .mmwrap.page .mmhead :is(p,small,span:not(:first-child)){font:400 13px var(--dz-sys) !important;color:var(--tx2) !important}
+html[data-sec="zzz"] .mmslot .td-r .td-t .rS{color:#facc15}
+html[data-sec="zzz"] .mmslot .td-r .td-t .rA{color:#c084fc}
+html[data-sec="zzz"] .mmslot .td-r .td-t .rB{color:#60a5fa}
+html[data-sec="zzz"] .mmslot .td-r em.td-h:is([title^="Всего"],.hard){padding:3px 9px !important;border-radius:999px !important;font:500 11px var(--dz-sys) !important;
+  background:rgb(255 255 255 / .08) !important;color:var(--tx2) !important}
+html[data-sec="zzz"] .mmslot .td-r em.td-h.hard{background:rgb(248 113 113 / .15) !important;color:#fca5a5 !important}
+html[data-sec="zzz"] .mmslot .td-r .td-pc{width:46px;text-align:right;font:700 13px var(--dz-mono);font-variant-numeric:tabular-nums;flex:none}
+html[data-sec="zzz"] .mmwrap.page :is(.mmbox,.mmbody,.mmslot,.mmmain){background:transparent !important;border:0 !important;box-shadow:none !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+html[data-sec="zzz"] .mmwrap.page .mmbox{width:min(1180px,100%) !important}
+html[data-sec="zzz"] .mmwrap.page #menuBox{background:transparent !important;box-shadow:none !important;border:0 !important;margin-top:0 !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+html[data-sec="zzz"] .mmwrap.page .mmslot > .panel{background:transparent !important;border:0 !important;box-shadow:none !important;padding:0 !important}
+html[data-sec="zzz"] .mmwrap.page .mmhead{display:flex;align-items:baseline;gap:10px}
+html[data-sec="zzz"] .mmwrap.page .mmhead p,html[data-sec="zzz"] .mmwrap.page .mmhead small{font-size:13px;color:var(--tx2);margin:0}
+/* режимы страницы — капсулы, число — текстом */
+html[data-sec="zzz"] .td-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 14px !important;padding:0 !important;background:none !important;border:0 !important}
+html[data-sec="zzz"] .td-head .td-cnt{order:9;margin-left:8px;background:none !important;border:0 !important;color:var(--tx2) !important;font:400 13px var(--dz-sys) !important;padding:0 !important}
+html[data-sec="zzz"] .td-sw{height:34px;padding:0 15px !important;border-radius:999px !important;border:0 !important;font:500 13px var(--dz-sys) !important;
+  background:rgb(255 255 255 / .06) !important;color:var(--tx2) !important;box-shadow:none !important;cursor:pointer}
+html[data-sec="zzz"] .td-sw:hover{background:rgb(255 255 255 / .12) !important;color:var(--tx) !important}
+html[data-sec="zzz"] .td-sw.on{background:var(--acc) !important;color:#0b0d10 !important;font-weight:600 !important}
+/* блоки страниц — стекло радиус 24, подпись 12px серым (п. 14) */
+html[data-sec="zzz"] .mmslot .mt-sum{margin:0 0 12px !important;padding:16px 18px !important;border-radius:24px !important;border:0 !important;
+  background:rgb(255 255 255 / .06) !important;box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06) !important;
+  backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur)}
+html[data-sec="zzz"] .mmslot .cap2{display:flex;gap:10px;align-items:baseline;margin:0 0 10px !important;font:600 12px var(--dz-sys) !important;color:var(--tx2) !important}
+html[data-sec="zzz"] .mmslot .cap2 span{margin-left:auto;font:400 11px var(--dz-sys) !important;color:var(--tx3,#6b7280) !important;text-transform:none !important}
+html[data-sec="zzz"] .mmslot .cap2.mt-cap span{margin-left:0}
+/* строки «По агентам» — аватар 44, имя, главные материалы, числа справа */
+html[data-sec="zzz"] .mmslot .td-list{display:grid;gap:0;background:none !important;border:0 !important}
+html[data-sec="zzz"] .mmslot .td-r{display:flex;align-items:center;gap:12px;padding:10px 2px !important;margin:0 !important;border:0 !important;border-radius:0 !important;
+  border-bottom:1px solid rgb(255 255 255 / .07) !important;background:none !important;box-shadow:none !important;cursor:pointer}
+html[data-sec="zzz"] .mmslot .td-r:last-child{border-bottom:0 !important}
+html[data-sec="zzz"] .mmslot .td-r:hover{background:rgb(255 255 255 / .03) !important}
+html[data-sec="zzz"] .mmslot .td-r .td-ic{width:44px !important;height:44px !important;border-radius:50% !important;flex:none}
+html[data-sec="zzz"] .mmslot .td-r > b{font:600 14px var(--dz-sys)}
+html[data-sec="zzz"] .mmslot .td-r .td-w{font-size:12px;color:var(--tx2);flex:1;min-width:0}
+html[data-sec="zzz"] .mmslot .td-r .td-h{background:none !important;border:0 !important;padding:0 !important;font:600 12.5px var(--dz-mono) !important;font-style:normal;color:var(--tx2) !important}
+html[data-sec="zzz"] .mmslot .td-r .td-h:last-child{color:var(--acc) !important}
+/* верхняя строка панели страницы («обновлено …», кнопки) — стеклянная капсула;
+   своё название не повторяем — оно уже в заголовке страницы */
+html[data-sec="zzz"] .mmwrap.page .ptop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px !important;padding:8px 8px 8px 18px !important;
+  border-radius:999px !important;border:0 !important;background:rgb(255 255 255 / .06) !important;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06) !important}
+html[data-sec="zzz"] .mmwrap.page .ptop > b{display:none}
+html[data-sec="zzz"] .mmwrap.page .ptop .pnote{flex:1;font-size:12.5px;color:var(--tx2)}
+html[data-sec="zzz"] .mmwrap.page .ptop .mini{height:32px;display:inline-flex;align-items:center;padding:0 14px !important;border-radius:999px !important;border:0 !important;
+  background:rgb(255 255 255 / .09) !important;color:var(--tx2) !important;font:500 12.5px var(--dz-sys) !important;text-decoration:none;box-shadow:none !important}
+html[data-sec="zzz"] .mmwrap.page .ptop .mini:hover{background:rgb(255 255 255 / .14) !important;color:var(--tx) !important}
+/* «Коды» (п. 20): два стеклянных блока строками */
+html[data-sec="zzz"] .csec{margin:0 0 12px;padding:16px 18px;border-radius:24px;background:rgb(255 255 255 / .06);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06)}
+html[data-sec="zzz"] .csec > b{display:flex;margin:0 0 6px;font:600 12px var(--dz-sys);color:var(--tx2)}
+html[data-sec="zzz"] .csec > b em{margin-left:auto;font:500 11px var(--dz-mono);font-style:normal;color:var(--tx3,#6b7280)}
+html[data-sec="zzz"] .crow{display:grid !important;grid-template-columns:26px minmax(140px,180px) 1fr auto auto;gap:12px;align-items:center;
+  padding:10px 2px !important;margin:0 !important;border:0 !important;border-radius:0 !important;border-bottom:1px solid rgb(255 255 255 / .07) !important;
+  background:none !important;box-shadow:none !important}
+html[data-sec="zzz"] .crow:last-child{border-bottom:0 !important}
+html[data-sec="zzz"] .crow .cchk{width:24px;height:24px;padding:0;border-radius:50% !important;border:0 !important;cursor:pointer;font-size:12px;color:#0b0d10;
+  background:transparent !important;box-shadow:inset 0 0 0 2px rgb(255 255 255 / .28) !important}
+html[data-sec="zzz"] .crow.done{opacity:.5}
+html[data-sec="zzz"] .crow.done .cchk{background:var(--acc) !important;box-shadow:none !important}
+html[data-sec="zzz"] .crow .ccode{font:700 14px var(--dz-mono);letter-spacing:.5px !important;color:var(--tx) !important;background:none !important;cursor:copy}
+html[data-sec="zzz"] .crow .crew{font-size:13px;color:var(--tx2)}
+html[data-sec="zzz"] .crow .cnote{font-style:normal;font-size:12px;color:var(--tx3,#6b7280);white-space:nowrap}
+html[data-sec="zzz"] .crow .cgo{height:32px;display:inline-flex;align-items:center;padding:0 16px;border-radius:999px;border:0 !important;font:600 12.5px var(--dz-sys);
+  background:var(--acc) !important;color:#0b0d10 !important;text-decoration:none;grid-column:5}
+html[data-sec="zzz"] .crow.done .cgo{background:rgb(255 255 255 / .08) !important;color:var(--tx2) !important;font-weight:500;height:24px;padding:0 9px;font-size:11px}
+html[data-sec="zzz"] .chint{font-size:12px;color:var(--tx3,#6b7280);margin-top:4px}
+/* «Эндгейм» B (п. 19): «Мета» слева, «Мои бои» справа прилипают */
+html[data-sec="zzz"] .eg-cols{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:16px;align-items:start}
+html[data-sec="zzz"] .eg-r{position:sticky;top:12px;max-height:calc(100vh - 120px);overflow:auto;scrollbar-width:thin}
+@media (max-width:1000px){html[data-sec="zzz"] .eg-cols{grid-template-columns:1fr}html[data-sec="zzz"] .eg-r{position:static;max-height:none}}
+html[data-sec="zzz"] .eg-cap{font:600 13px var(--dz-sys) !important;color:var(--tx) !important;margin:0 0 8px !important}
+html[data-sec="zzz"] .eg-head{padding:10px 16px;border-radius:999px;background:rgb(255 255 255 / .06);font-size:12.5px;color:var(--tx2);margin-bottom:12px;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .14)}
+html[data-sec="zzz"] .mmslot :is(.rn-p,.eg-sec,.egs){padding:14px 16px;border-radius:24px;background:rgb(255 255 255 / .06);margin:0 0 12px;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06);border:0}
+html[data-sec="zzz"] .mmslot .tm-list > *{border-radius:0 !important;border:0 !important;border-bottom:1px solid rgb(255 255 255 / .07) !important;background:none !important;box-shadow:none !important}
+html[data-sec="zzz"] .mmslot .tm-list{padding:6px 16px;border-radius:24px;background:rgb(255 255 255 / .06);box-shadow:inset 0 1px 0 rgb(255 255 255 / .14)}
+/* «Что фармить» B: две колонки, правая прилипает */
+html[data-sec="zzz"] .mt-cols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;align-items:start}
+html[data-sec="zzz"] .mt-r{position:sticky;top:12px;display:grid;gap:0}
+@media (max-width:900px){html[data-sec="zzz"] .mt-cols{grid-template-columns:1fr}html[data-sec="zzz"] .mt-r{position:static}}
+html[data-sec="zzz"] .mt-bat b{display:block;font:800 30px/1.1 var(--dz-mono);font-variant-numeric:tabular-nums}
+html[data-sec="zzz"] .mt-bat span{display:block;margin-top:4px;font-size:12px;color:var(--tx2)}
+html[data-sec="zzz"] .mt-ik{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font:500 11.5px var(--dz-sys);color:var(--tx2)}
+html[data-sec="zzz"] .mt-ik select{border-radius:999px;padding:3px 8px;background:rgb(255 255 255 / .08);border:0;color:var(--tx);font:600 12px var(--dz-mono)}
+html[data-sec="zzz"] .mt-r .tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+html[data-sec="zzz"] .mt-r .tbl td{padding:8px 2px;border:0;border-bottom:1px solid rgb(255 255 255 / .07)}
+html[data-sec="zzz"] .mt-r .tbl tr:last-child td{border-bottom:0}
+/* чипы материалов (п. 15): капсула, круглая иконка на тёмной подложке, число моно */
+html[data-sec="zzz"] .mt-i{display:inline-flex;align-items:center;gap:7px;padding:4px 12px 4px 4px !important;border-radius:999px !important;border:0 !important;
+  background:rgb(255 255 255 / .07) !important;font-size:12px;color:var(--tx2);box-shadow:none !important}
+html[data-sec="zzz"] .mt-i b{font:700 12.5px var(--dz-mono);color:var(--tx)}
+html[data-sec="zzz"] .mt-i :is(img,.ic){width:28px !important;height:28px !important;border-radius:50%;background:rgb(0 0 0 / .3)}
 
 /* ── ZZZ: плитки F (п. 3) — чистый арт, сведения выезжают стеклом при наведении ── */
 /* Как в черновике: плитка 3:4, арт на всю плитку; сверху слева — редкость,
@@ -448,10 +572,6 @@ html[data-sec="zzz"] #sheet .hbody > table.tbl{display:block;border-spacing:0}
 html[data-sec="zzz"] #sheet :is(.cap2,.mt-cap){display:flex;gap:10px;align-items:baseline;margin:0 0 10px !important;padding:0 !important;border:0 !important;
   font:600 12px var(--dz-sys) !important;color:var(--tx2) !important;font-variant:normal !important}
 html[data-sec="zzz"] #sheet .mt-cap{padding:0 4px !important}
-/* подписи, набранные в коде капсом («ЦЕЛИ ПРОКАЧКИ»), — строчными, первая заглавная */
-html[data-sec="zzz"] .cap2{text-transform:lowercase !important}
-html[data-sec="zzz"] .cap2::first-letter{text-transform:uppercase !important}
-html[data-sec="zzz"] .cap2 span{text-transform:none !important}
 html[data-sec="zzz"] #sheet :is(.cap2,.mt-cap) span{font:400 11px var(--dz-sys) !important;color:var(--tx3,#6b7280) !important}
 html[data-sec="zzz"] #sheet .mp-row{border:0 !important;border-bottom:1px solid rgb(255 255 255 / .07) !important;background:none !important;border-radius:0 !important;padding:10px 0 !important}
 html[data-sec="zzz"] #sheet .mp-row:last-child{border-bottom:0 !important}
