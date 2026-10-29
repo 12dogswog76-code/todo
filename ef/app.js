@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v27';
+const APP_VER = 'v28';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -129,9 +129,9 @@ EF.закрыть = function () {
 // вкладками в шапке, остальное — в выпадающем меню «☰ Инструменты» справа.
 // Пункт меню — крупное название прописными и пояснение строкой ниже.
 const ВКЛАДКИ = ['ops', 'tier', 'team', 'wpn', 'gear', 'map', 'fac'];
+// «Планировщик» и «Дейлики» убраны из навигации 29.10.2026 по слову владельца
+// (код разделов на месте — вернуть можно, добавив сюда строку).
 const ВМЕНЮ = [
-  ['plan', 'Сколько фармить до цели'],
-  ['daily', 'Ежедневные и еженедельные'],
   ['ach', 'Прогресс по достижениям'],
   ['gacha', 'Гарант, история, симулятор'],
   ['cal', 'Баннеры и события со сроками'],
@@ -152,19 +152,17 @@ let ВКЛ = 'ops';
 function пунктМеню(атр, имя, под, вкл) {
   return '<button class="tmi' + (вкл ? ' on' : '') + '" ' + атр + '>' + эк(имя) + '<i>' + эк(под) + '</i></button>';
 }
-// Редизайн 28.10.2026 (п. 2): по центру шапки — все инструменты раздела одной
-// строкой (листается вбок), в меню «Инструменты» остаются служебные пункты.
+// С 29.10.2026 (слова владельца): строки разделов в шапке нет — все разделы
+// в меню «Инструменты» (каждый один раз), ниже служебные пункты; на кнопке
+// меню — где ты сейчас.
 function рисоватьМеню() {
-  $('nav').innerHTML = ВКЛАДКИ.concat(ВМЕНЮ.map(([id]) => id)).filter(id => EF.разделы[id]).map(id => {
-    const р = EF.разделы[id], под = (ВМЕНЮ.find(([x]) => x === id) || [])[1];
-    return '<button class="tab' + (id === ВКЛ ? ' on' : '') + '" data-tab="' + id + '"' + (под ? ' title="' + эк(под) + '"' : '') + '>' + эк(р.имя) +
-      (р.новое ? '<em>new</em>' : '') + '</button>';
-  }).join('');
-  const акт = $('nav').querySelector('.tab.on');
-  if (акт && акт.scrollIntoView) акт.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  $('nav').innerHTML = '';
+  const все = ВКЛАДКИ.map(id => [id, '']).concat(ВМЕНЮ).filter(([id]) => EF.разделы[id]);
   $('toolsBtn').classList.remove('on');
-  $('toolsBtn').innerHTML = '☰ Инструменты';
-  $('toolsDrop').innerHTML = ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', false)).join('');
+  $('toolsBtn').innerHTML = '☰ ' + эк((EF.разделы[ВКЛ] || {}).имя || 'Инструменты');
+  $('toolsDrop').innerHTML =
+    все.map(([id, под]) => пунктМеню('data-tab="' + id + '"', EF.разделы[id].имя, под, id === ВКЛ)).join('') +
+    '<hr>' + ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', false)).join('');
 }
 function меню(откр) {
   $('toolsBox').classList.toggle('open', откр == null ? !$('toolsBox').classList.contains('open') : откр);
@@ -314,10 +312,8 @@ function фильтрыОператоров() {
       '" data-f="редкость" data-v="' + r + '"><span class="r' + r + ' rt">★</span>' + r + '</button>').join('') + '</div>' +
     '<div class="fgrp"><i>тир</i>' + ТИРЫ.map(t => кнопкаФ('тир', t, t)).join('') + '</div>' +
     (EF.ПРОФ ? '<button class="fb' + (Ф.свои ? ' on' : '') + '" data-f="свои" data-v="1">только мои</button>' : '') +
-    '<select class="srch" id="sort" style="min-width:0"><option value="ранг">по рангу</option><option value="тир"' +
-      (Ф.порядок === 'тир' ? ' selected' : '') + '>по тиру</option><option value="имя"' +
-      (Ф.порядок === 'имя' ? ' selected' : '') + '>по имени</option></select>' +
-    '<input class="srch" id="q" placeholder="поиск по имени" value="' + эк(Ф.поиск) + '">';
+    // сортировка и поиск по имени убраны 29.10.2026 по слову владельца
+    '';
 }
 function отбор() {
   const q = Ф.поиск.trim().toLowerCase();
@@ -353,7 +349,8 @@ function витрина() {
 EF.раздел('ops', {
   имя: 'Операторы', буква: '◆',
   рисовать() {
-    EF.шапка('operator.database', 'Операторы', EF.БАЗА.персонажи.length, 'в индексе');
+    // заголовок «Операторы» убран 29.10.2026 по слову владельца
+    $('head').innerHTML = '';
     $('fbar').innerHTML = фильтрыОператоров();
     $('body').innerHTML = витрина();
     EF.подвал('Данные: открытая база <a class="lnk" href="' + ЕФТ + '" target="_blank" rel="noopener">endfieldtools.dev</a> ' +

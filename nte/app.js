@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v98';
+const APP_VER = 'v99';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -291,12 +291,27 @@ function drawTabs() {
   $('tabs').innerHTML = TABS.map(t =>
     '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' +
     esc(t[1]) + '</button>').join('');
-  $('tabs').querySelectorAll('.tb').forEach(b => b.onclick = () => {
+  // С 29.10.2026 (слова владельца): строки вкладок в шапке нет — разделы стоят
+  // первым блоком меню «Инструменты», на кнопке меню — где ты сейчас.
+  const меню = document.querySelector('#tools .toolsm');
+  let разд = $('toolsTabs');
+  if (!разд && меню) {
+    разд = document.createElement('div');
+    разд.id = 'toolsTabs'; разд.className = 'tm-tabs';
+    меню.prepend(разд);
+  }
+  if (разд) разд.innerHTML = TABS.map(t =>
+    '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' + esc(t[1]) + '</button>').join('');
+  const тек = TABS.find(t => t[0] === state.tab);
+  if ($('toolsBtn')) $('toolsBtn').textContent = '☰ ' + (тек ? тек[1] : 'Инструменты');
+  document.querySelectorAll('#tabs .tb, #toolsTabs .tb').forEach(b => b.onclick = () => {
     // фильтры сбрасываем: стихия, выбранная в списке эсперов, иначе сразу
     // прячет половину составов на соседней вкладке
     state.tab = b.dataset.t; state.q = ''; $('q').value = '';
     state.el = state.role = state.tier = state.rar = '';
+    if ($('tools')) $('tools').classList.remove('open');
     drawTabs(); draw();
+    window.scrollTo({ top: 0 });
   });
 }
 
@@ -483,9 +498,7 @@ function drawEspers() {
   const roles = [...new Set(DB.agents.map(a => a.role).filter(Boolean))];
   const tiers = TIERS.filter(t => DB.agents.some(a => a.tier === t));
   const list = espersShown();
-  // заголовок со счётом (редизайн 28.10.2026, п. 21) — как «Агенты» в ZZZ
   $('filters').innerHTML =
-    '<div class="ztitle"><h2>Эсперы</h2><small>' + list.length + ' из ' + DB.agents.length + '</small></div>' +
     fgroup('стихия', 'el', els, elIcon, EL_RU) +
     fgroup('роль', 'role', roles, roleIcon, ROLE_RU) +
     fgroup('тир', 'tier', tiers, null, null) +

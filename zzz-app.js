@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v278';
+const APP_VER = 'v279';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -3241,7 +3241,7 @@ function renderSheet() {
       const пц = pctOf(curId);
       return '<svg class="hring" viewBox="0 0 40 40" aria-label="готовность ' + пц + '%"><circle cx="20" cy="20" r="16"/>' +
         '<circle class="v" cx="20" cy="20" r="16" style="stroke-dasharray:' + (пц * 1.005).toFixed(1) + ' 101"/>' +
-        '<text x="20" y="24">' + пц + '</text></svg>';
+        '<text x="20" y="24">' + пц + '%</text></svg>';
     })() : '') +
     (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async"' +
       ' data-pic="' + esc(a.id) + '" data-kind="hero"' + artZoomStyle(a, 'hero') +
@@ -5878,14 +5878,21 @@ function menuDraw() {
   nav.querySelectorAll('.mmi').forEach(b => b.onclick = () => menuGo(b.dataset.k));
 }
 // Короткий список под кнопкой — тот же MENU, чтобы пункты не расходились.
+// С 29.10.2026 (слова владельца) строки разделов в шапке нет — всё здесь:
+// первым «Агенты» (сетка), главные разделы открываются страницей, остальное —
+// окном, как раньше. Каждый пункт ровно один раз.
 function menuDropDraw() {
   const d = $('toolsDrop');
   if (!d) return;
-  d.innerHTML = MENU.map(m => '<button data-k="' + m.k + '">' + esc(m.n) + '<i>' + esc(m.d) + '</i></button>').join('');
+  const стр = ZNAV.map(z => z[0]).filter(Boolean);
+  d.innerHTML = '<button data-k="">Агенты<i>Все агенты и карточки</i></button>' +
+    MENU.map(m => '<button data-k="' + m.k + '">' + esc(m.n) + '<i>' + esc(m.d) + '</i></button>').join('');
   d.querySelectorAll('button').forEach(b => b.onclick = e => {
     e.stopPropagation();
     $('toolsBox').classList.remove('open');
-    menuOpen(b.dataset.k);
+    const k = b.dataset.k;
+    if (!k) { menuClose(); window.scrollTo({ top: 0 }); return; }
+    menuOpen(k, стр.indexOf(k) >= 0);
   });
 }
 // Средний остров шапки (редизайн 28.10.2026, п. 2). Главные разделы меню —
@@ -5898,6 +5905,9 @@ function zNavDraw() {
   const nav = $('zNav');
   if (!nav) return;
   const стр = $('menuWrap').classList.contains('page') ? menuCur : '';
+  // на кнопке меню — где ты сейчас (строки разделов в шапке больше нет)
+  const тек = стр ? (MENU.find(m => m.k === стр) || {}).n : ($('menuWrap').classList.contains('open') ? '' : 'Агенты');
+  if ($('menuBtn')) $('menuBtn').textContent = '☰ ' + (тек || 'Инструменты');
   nav.innerHTML = ZNAV.map(z => '<button class="zn' + (стр === z[0] ? ' on' : '') + '" data-zn="' + z[0] + '">' + esc(z[1]) + '</button>').join('');
   nav.querySelectorAll('.zn').forEach(b => b.onclick = () => {
     const k = b.dataset.zn;
