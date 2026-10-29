@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v283';
+const APP_VER = 'v284';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5875,7 +5875,12 @@ function menuDraw() {
   nav.innerHTML = MENU.map(m =>
     '<button class="mmi' + (menuCur === m.k ? ' on' : '') + '" data-k="' + m.k + '">' +
       '<span><b>' + esc(m.n) + '</b><i>' + esc(m.d) + '</i></span></button>').join('');
-  nav.querySelectorAll('.mmi').forEach(b => b.onclick = () => menuGo(b.dataset.k));
+  nav.querySelectorAll('.mmi').forEach(b => b.onclick = () => {
+    const стр = менюСтраницей(b.dataset.k);
+    // сменился вид (страница ↔ окно) — открываем заново, иначе просто раздел
+    if (стр !== $('menuWrap').classList.contains('page')) menuOpen(b.dataset.k, стр);
+    else menuGo(b.dataset.k);
+  });
 }
 // Короткий список под кнопкой — тот же MENU, чтобы пункты не расходились.
 // С 29.10.2026 (слова владельца) строки разделов в шапке нет — всё здесь:
@@ -5890,8 +5895,14 @@ function menuDropDraw() {
   d.querySelectorAll('button').forEach(b => b.onclick = e => {
     e.stopPropagation();
     $('toolsBox').classList.remove('open');
-    menuOpen(b.dataset.k);
+    menuOpen(b.dataset.k, менюСтраницей(b.dataset.k));
   });
+}
+// Разделы, у которых свой дизайн страницы (Что фармить, Кого качать, Крутки,
+// Эндгейм, Коды, Баннеры), открываются страницей; остальные — окном. И там и
+// там слева список всех инструментов (29.10.2026, третья проверка).
+function менюСтраницей(k) {
+  return ZNAV.some(z => z[0] && z[0] === k);
 }
 // Средний остров шапки (редизайн 28.10.2026, п. 2). Главные разделы меню —
 // кнопками в одну строку; пункт открывает раздел страницей под шапкой (класс

@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v32';
+const APP_VER = 'v33';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -159,12 +159,20 @@ const ВКЛПОД = { ops: 'Все операторы и карточки', tie
   gear: 'Наборы снаряжения', map: 'Точки и сборы на карте', fac: 'Рецепты AIC и цепочки' };
 function рисоватьМеню() {
   $('nav').innerHTML = '';
-  const все = ВКЛАДКИ.map(id => [id, ВКЛПОД[id] || '']).concat(ВМЕНЮ).filter(([id]) => EF.разделы[id]);
-  $('toolsBtn').classList.remove('on');
-  $('toolsBtn').innerHTML = '☰ Инструменты';
-  $('toolsDrop').innerHTML = '<u>Разделы</u>' +
+  // «Операторов» в списке нет — это стартовая страница, на неё ведёт логотип
+  const все = ВКЛАДКИ.filter(id => id !== 'ops').map(id => [id, ВКЛПОД[id] || '']).concat(ВМЕНЮ).filter(([id]) => EF.разделы[id]);
+  const список = '<u>Разделы</u>' +
     все.map(([id, под]) => пунктМеню('data-tab="' + id + '"', EF.разделы[id].имя, под, id === ВКЛ)).join('') +
     '<u>Инструменты</u>' + ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', false)).join('');
+  $('toolsBtn').classList.remove('on');
+  $('toolsBtn').innerHTML = '☰ Инструменты';
+  $('toolsDrop').innerHTML = список;
+  // Левый список на страницах разделов (29.10.2026): всегда открыт, кроме стартовой
+  const обёртка = document.querySelector('.main > .wrap');
+  let бок = $('dzSide');
+  if (!бок && обёртка) { бок = document.createElement('aside'); бок.id = 'dzSide'; бок.className = 'dz-side-nav'; обёртка.prepend(бок); }
+  if (бок) бок.innerHTML = '<div class="dz-side-in">' + список + '</div>';
+  document.documentElement.classList.toggle('dz-side', ВКЛ !== 'ops' && ВКЛ !== 'map');
 }
 function меню(откр) {
   $('toolsBox').classList.toggle('open', откр == null ? !$('toolsBox').classList.contains('open') : откр);

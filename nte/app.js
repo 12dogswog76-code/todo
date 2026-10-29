@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v103';
+const APP_VER = 'v104';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -287,6 +287,12 @@ function shotsReady() {
   wv.postMessage('nte-ready');
 }
 
+// логотип — к стартовой странице (эсперам): в меню её нет
+document.addEventListener('click', e => {
+  if (!e.target.closest('.top-in .logo') || e.target.closest('#ver')) return;
+  state.tab = 'espers'; state.q = ''; state.el = state.role = state.tier = state.rar = '';
+  drawTabs(); draw(); window.scrollTo({ top: 0 });
+});
 const TAB_ПОД = {
   espers: 'Все эсперы и карточки', arcs: 'Арки — характеристики и прокачка', carts: 'Наборы картриджей и модули',
   tier: 'Кто силён в эндгейме', teams: 'Составы по стихиям', ban: 'Баннеры и события со сроками',
@@ -306,12 +312,26 @@ function drawTabs() {
     разд.id = 'toolsTabs'; разд.className = 'tm-tabs';
     меню.prepend(разд);
   }
-  // пункты как у остальных инструментов: название и пояснение строкой ниже
-  if (разд) разд.innerHTML = '<u>Разделы</u>' + TABS.map(t =>
+  // пункты как у остальных инструментов: название и пояснение строкой ниже;
+  // «Эсперов» в списке нет — это стартовая страница, на неё ведёт логотип
+  const пункты = TABS.filter(t => t[0] !== 'espers').map(t =>
     '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' + esc(t[1]) +
-      '<i>' + esc(TAB_ПОД[t[0]] || '') + '</i></button>').join('') + '<u>Инструменты</u>';
+      '<i>' + esc(TAB_ПОД[t[0]] || '') + '</i></button>').join('');
+  if (разд) разд.innerHTML = '<u>Разделы</u>' + пункты + '<u>Инструменты</u>';
   if ($('toolsBtn')) $('toolsBtn').textContent = '☰ Инструменты';
-  document.querySelectorAll('#tabs .tb, #toolsTabs .tb').forEach(b => b.onclick = () => {
+  // Левый список на страницах разделов (29.10.2026): разделы и инструменты
+  // всегда открыты рядом, как в окне инструментов ZZZ. На стартовой — нет.
+  const обёртка = document.querySelector('body > .wrap');
+  let бок = $('dzSide');
+  if (!бок && обёртка) { бок = document.createElement('aside'); бок.id = 'dzSide'; бок.className = 'dz-side-nav'; обёртка.prepend(бок); }
+  if (бок) {
+    const инстр = [...document.querySelectorAll('#tools .toolsm > [data-tool]')].filter(x => x.style.display !== 'none')
+      .map(x => '<button data-tool="' + x.dataset.tool + '">' + x.innerHTML + '</button>').join('');
+    бок.innerHTML = '<div class="dz-side-in"><u>Разделы</u>' + пункты + '<u>Инструменты</u>' + инстр + '</div>';
+    бок.querySelectorAll('[data-tool]').forEach(x => x.onclick = () => открытьИнструмент(x.dataset.tool));
+    document.documentElement.classList.toggle('dz-side', state.tab !== 'espers');
+  }
+  document.querySelectorAll('#tabs .tb, #toolsTabs .tb, #dzSide .tb').forEach(b => b.onclick = () => {
     // фильтры сбрасываем: стихия, выбранная в списке эсперов, иначе сразу
     // прячет половину составов на соседней вкладке
     state.tab = b.dataset.t; state.q = ''; $('q').value = '';

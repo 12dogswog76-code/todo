@@ -660,6 +660,55 @@ html[data-sec="nte"] #toolsTabs .tb.on{background:color-mix(in srgb,var(--acc) 1
 @media (min-width:1400px){
   html[data-sec="ef"]:not([data-tab="map"]) body{zoom:1.25}
 }
+/* ── заход 4в (п. 44–50) ──────────────────────────────────────────────────── */
+/* NTE: шапка по ширине содержимого, как у ZZZ и Endfield (п. 44) */
+html[data-sec="nte"] .top > .top-in{max-width:1180px !important;margin:0 auto !important;padding:0 !important}
+html[data-sec="nte"].dz-side .top > .top-in{max-width:1420px !important}
+/* «← Разделы» у края — только когда рядом с содержимым есть место; иначе в строке шапки */
+@media (max-width:1459px){
+  html[data-sec] .dz-back{position:static !important;margin-right:8px !important;backdrop-filter:none}
+}
+/* «Инструменты» — одна обводка: у обёртки своей рамки нет (п. 45) */
+html[data-sec]:is([data-sec="nte"],[data-sec="ef"]) :is(.top-in,.ehead .top-in) > .tools{padding:0 !important;background:none !important;border:0 !important;
+  box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+/* левый список разделов и инструментов на страницах разделов (п. 48) */
+html[data-sec] .dz-side-nav{display:none}
+html[data-sec].dz-side body > .wrap:not(.top-in),html[data-sec="ef"].dz-side .main > .wrap{max-width:1420px !important;position:relative;padding-left:244px !important}
+html[data-sec].dz-side .ehead .top-in{max-width:1420px !important}
+html[data-sec].dz-side .dz-side-nav{display:block;position:absolute;left:0;top:0;bottom:0;width:228px}
+html[data-sec] .dz-side-in{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto;scrollbar-width:thin;padding:8px;border-radius:22px;
+  background:rgb(20 22 28 / .6);border:1px solid var(--dz-edge);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi)}
+html[data-sec] .dz-side-in u{display:block;padding:8px 12px 4px;font:600 11px var(--dz-sys);color:var(--tx3,#6b7280);text-decoration:none}
+html[data-sec] .dz-side-in > :is(button,.tmi){display:block;width:100%;text-align:left;padding:8px 12px !important;margin:0 !important;border:0 !important;border-radius:14px !important;
+  background:transparent !important;box-shadow:none !important;font:600 13px/1.3 var(--dz-sys) !important;color:var(--tx) !important;
+  text-transform:none !important;letter-spacing:normal !important;cursor:pointer}
+html[data-sec] .dz-side-in > :is(button,.tmi) i{display:block;margin-top:1px;font:400 11px/1.3 var(--dz-sys) !important;font-style:normal;color:var(--tx2) !important;
+  text-transform:none !important;letter-spacing:normal !important}
+html[data-sec] .dz-side-in > :is(button,.tmi):hover{background:rgb(255 255 255 / .07) !important}
+html[data-sec] .dz-side-in > :is(button,.tmi).on{background:color-mix(in srgb,var(--acc) 16%,transparent) !important;color:var(--acc) !important}
+html[data-sec="nte"] .dz-side-in > button::first-letter{text-transform:uppercase}
+@media (max-width:1000px){html[data-sec].dz-side .dz-side-nav{display:none}
+  html[data-sec].dz-side body > .wrap:not(.top-in),html[data-sec="ef"].dz-side .main > .wrap{padding-left:0 !important}}
+/* ZZZ: страницы разделов — со списком инструментов слева (п. 47) */
+html[data-sec="zzz"] .mmwrap.page .mmnav{display:flex !important;flex-direction:column;position:sticky;top:0;align-self:flex-start;width:228px !important;
+  max-height:calc(100vh - 110px);overflow:auto;border-radius:22px !important;border:1px solid var(--dz-edge) !important;
+  background:rgb(20 22 28 / .6) !important;backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);margin-right:16px}
+html[data-sec="zzz"] .mmwrap.page .mmbox{width:min(1420px,100%) !important;display:flex !important;align-items:flex-start}
+html[data-sec="zzz"] .mmwrap.page .mmmain,html[data-sec="zzz"] .mmwrap.page .mmbody{flex:1;min-width:0}
+/* Endfield: карточка и текст в блоках под масштаб 125% (п. 49, 50) */
+@media (min-width:1400px){html[data-sec="ef"] #sheet-in{max-width:1180px !important}}
+html[data-sec="ef"] #cbody .sec{padding:16px 18px !important;overflow:hidden}
+html[data-sec="ef"] #cbody .sec > h4{flex-wrap:wrap}
+html[data-sec="ef"] #cbody .sec > h4 em{white-space:normal;text-align:right}
+html[data-sec="ef"] #cbody :is(.st,.it,.node,.wrow){min-width:0;overflow:hidden}
+html[data-sec="ef"] #cbody .st{padding:10px 12px !important}
+html[data-sec="ef"] #cbody .st :is(u,small,i){display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-sec="ef"] #cbody .st b{font-size:clamp(16px,1.6vw,22px) !important;white-space:nowrap}
+html[data-sec="ef"] #cbody :is(.it,.skx > summary) b{white-space:normal;overflow-wrap:anywhere}
+html[data-sec="ef"] #cbody .cols{gap:12px !important;min-width:0}
+html[data-sec="ef"] #cbody .cols > *{min-width:0}
+html[data-sec="ef"] #sheet-in .card-l .art img{width:100%;height:auto;object-fit:contain}
+html[data-sec="ef"] #body :is(.box,.verdict,.tile,.it,.tmi){min-width:0;overflow-wrap:anywhere}
 /* сводка над сеткой (агентов есть … лидер модификации) — убрана по просьбе владельца 29.10 */
 html[data-sec="zzz"] #summary{display:none !important}
 /* «← Разделы» (menu.js, в окне приложения) — капсула как пункты шапки */
@@ -685,7 +734,7 @@ html[data-sec="zzz"] .logo-btn small{display:none}
 /* раздел страницей под шапкой: окно меню без затемнения, без левого списка */
 html[data-sec="zzz"] .mmwrap.page{background:transparent !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
   z-index:25;top:78px;padding:0 18px 18px}
-html[data-sec="zzz"] .mmwrap.page .mmnav,html[data-sec="zzz"] .mmwrap.page .mmx{display:none !important}
+html[data-sec="zzz"] .mmwrap.page .mmx{display:none !important}
 html[data-sec="zzz"] .mmwrap.page .mmbox{width:min(1240px,100%) !important;background:transparent !important;border:0 !important;
   box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
 html[data-sec="zzz"] .mmwrap.page .mmbody{max-height:calc(100vh - 96px)}
@@ -1031,10 +1080,7 @@ html[data-sec="nte"] .cloudb{border-radius:999px !important;background:transpare
 html[data-sec="nte"] .cloudb:hover{background:rgb(255 255 255 / .1) !important;color:var(--tx) !important}
 html[data-sec="nte"] .logo{white-space:nowrap}
 
-/* ── NTE: раскладки вкладок (метка data-tab ставится в app.js при отрисовке).
-      Только на широком экране — телефон разбираем отдельно, после деплоя. ── */
-@media (min-width:1001px){
-  /* Эсперы (п. 21) и все сетки плиток — F: арт чистый, значки при наведении */
+/* NTE: плитки эсперов — при любой ширине (29.10: на узком окне были старые) */
   /* как в черновике: 3:4, тир и значки сверху слева всегда, имя — стеклом снизу */
   html[data-sec="nte"] .grid:has(> .card){grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) !important;gap:12px !important}
   html[data-sec="nte"] .grid > .card{aspect-ratio:3/4;overflow:hidden;padding:0 !important;border:0 !important;box-shadow:none !important;
@@ -1057,6 +1103,10 @@ html[data-sec="nte"] .logo{white-space:nowrap}
   html[data-sec="nte"] .grid > .card .card-e::before{content:"";width:12px;height:12px;margin:5px;border-radius:50%;background:var(--el);
     box-shadow:0 0 0 3px rgb(0 0 0 / .45),0 0 8px var(--el)}
   html[data-sec="nte"] .grid > .card .card-p > img{object-position:top center}
+/* ── NTE: раскладки вкладок (метка data-tab ставится в app.js при отрисовке).
+      Только на широком экране — телефон разбираем отдельно, после деплоя. ── */
+@media (min-width:1001px){
+  /* Эсперы (п. 21) и все сетки плиток — F: арт чистый, значки при наведении */
   /* Карта B (п. 22): карта на всю ширину, категории — стеклом поверх слева */
   html[data-sec="nte"][data-tab="map"] .maprow{display:block;position:relative}
   html[data-sec="nte"][data-tab="map"] .mapside{position:absolute;left:14px;top:14px;z-index:5;width:270px;
