@@ -250,6 +250,72 @@ html[data-sec="zzz"] .gsec > h4 .gstar{color:#ffd54a}
 html[data-sec="zzz"] .gsec > h4 i{font:500 11px var(--dz-mono);font-style:normal;color:var(--tx3,#6b7280);background:none !important;border:0 !important;padding:0 !important;margin-left:0}
 html[data-sec="zzz"] #grid{display:block}
 html[data-sec="zzz"] .gsec:first-child > h4{margin-top:4px !important}
+/* заголовок страницы со счётом — общий для разделов (черновик: «Агенты», «Эсперы») */
+html[data-sec] .ztitle{flex-basis:100%;display:flex;align-items:baseline;gap:10px;margin:6px 0 6px}
+html[data-sec] .ztitle h2{margin:0;font:800 30px/1.1 var(--dz-sys);letter-spacing:-.4px !important;color:var(--tx)}
+html[data-sec] .ztitle small{font-size:13px;color:var(--tx2)}
+/* NTE: содержимое по центру шириной как в черновике (шапка — во всю ширину) */
+html[data-sec="nte"] body > .wrap{max-width:1180px !important;margin-left:auto !important;margin-right:auto !important}
+html[data-sec="nte"][data-tab="map"] body > .wrap{max-width:none !important}
+html[data-sec="nte"] #filters{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+html[data-sec="nte"] #filters .fgrp > u{font-size:11.5px;color:var(--tx3,#6b7280);text-decoration:none}
+html[data-sec="nte"] .tds{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;margin-bottom:14px}
+html[data-sec="nte"] .tds .td{border-radius:18px !important;border:0 !important;background:rgb(255 255 255 / .06) !important;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06) !important}
+html[data-sec="nte"] .tds .td.hot{box-shadow:inset 0 0 0 1px rgb(251 191 36 / .5) !important}
+/* NTE «Оружие» B (п. 28): плитки — иконка на подсветке цвета редкости, имя и
+   главная характеристика снизу, сила справа; выбранное — окном (dzWin в app.js) */
+html[data-sec="nte"][data-tab="arcs"] #body .list{display:grid !important;grid-template-columns:repeat(auto-fill,minmax(210px,1fr)) !important;gap:12px !important}
+html[data-sec="nte"] .wp:has(.rar.S){--rc:#f59e0b}
+html[data-sec="nte"] .wp:has(.rar.A){--rc:#c084fc}
+html[data-sec="nte"] .wp:has(.rar.B){--rc:#60a5fa}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open){position:relative;margin:0 !important;padding:0 !important;border-radius:22px !important;border:0 !important;
+  background:radial-gradient(70% 55% at 50% 32%,color-mix(in srgb,var(--rc,#888) 30%,transparent),transparent 72%),rgb(255 255 255 / .05) !important;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .16),inset 0 0 0 1px rgb(255 255 255 / .07) !important;cursor:pointer;transition:transform .2s}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open):hover{transform:translateY(-3px)}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-h{display:grid !important;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:2px 8px;padding:14px !important;
+  background:none !important;border:0 !important;align-items:end}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-ic{grid-column:1 / -1;justify-self:center;width:130px !important;height:130px !important;margin:16px 0 8px;
+  background:none !important;border:0 !important;filter:drop-shadow(0 12px 20px rgb(0 0 0 / .45))}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-b{grid-column:1 / -1;display:grid;grid-template-columns:1fr auto;gap:2px 8px;min-width:0}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-b > b{font:800 13.5px/1.25 var(--dz-sys);color:var(--tx);min-width:0}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-b > b .rar{position:absolute;top:12px;left:12px;margin:0}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-b > i{display:none}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-st{display:contents}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-st > span{background:none !important;border:0 !important;padding:0 !important;font-size:11.5px;color:var(--tx2)}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-st > span:first-child{grid-column:2;grid-row:1;align-self:center;font-size:0}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-st > span:first-child b{font:700 13px var(--dz-mono);color:var(--acc)}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-st > span:nth-child(2){grid-column:1 / -1}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-st > span:nth-child(2) b{color:var(--tx2);font-weight:400}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-st > span:nth-child(n+3){display:none}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-own{position:absolute;top:118px;right:14px;width:32px !important;height:32px !important;border-radius:50%;
+  background:rgb(0 0 0 / .35);box-shadow:0 0 0 2px rgb(255 255 255 / .2)}
+html[data-sec="nte"][data-tab="arcs"] .list > .wp:not(.open) .wp-x{display:none}
+/* NTE «Картриджи» (п. 29) — те же плитки: иконка набора, имя, бонус за 2 шт.;
+   за 4 шт. и модули — в окне (details.suit[open] → dz-win) */
+html[data-sec="nte"][data-tab="carts"] #body .list{display:grid !important;grid-template-columns:repeat(auto-fill,minmax(210px,1fr)) !important;gap:12px !important}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]){position:relative;margin:0 !important;border-radius:22px !important;border:0 !important;
+  background:radial-gradient(70% 55% at 50% 32%,rgb(251 146 60 / .22),transparent 72%),rgb(255 255 255 / .05) !important;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .16),inset 0 0 0 1px rgb(255 255 255 / .07) !important;transition:transform .2s}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]):hover{transform:translateY(-3px)}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) > summary{display:grid !important;grid-template-columns:1fr;padding:14px !important;list-style:none;cursor:pointer}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) > summary::after,
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) > summary::-webkit-details-marker{display:none}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) .cart-ic{justify-self:center;width:96px !important;height:96px !important;margin:18px 0 14px;
+  background:none !important;border:0 !important;filter:drop-shadow(0 10px 18px rgb(0 0 0 / .45))}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) .item-b > b{display:block;font:800 13.5px/1.25 var(--dz-sys) !important;color:var(--tx) !important}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) .rpill{position:absolute;top:12px;left:12px;margin:0}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) .set-b{font-size:11.5px;color:var(--tx2);margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) .set-b i{display:none}
+html[data-sec="nte"][data-tab="carts"] .list > details.suit:not([open]) .set-b ~ .set-b{display:none}
+html[data-sec="nte"] .rpill{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px !important;font:800 10.5px var(--dz-mono);
+  background:none !important;border:0 !important;box-shadow:inset 0 0 0 1.5px currentColor !important;color:#f59e0b}
+html[data-sec="nte"] .rar{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;font:800 10.5px var(--dz-mono);
+  background:none !important;box-shadow:inset 0 0 0 1.5px currentColor;margin-right:6px}
+html[data-sec="nte"] .rar.S{color:#f59e0b}
+html[data-sec="nte"] .rar.A{color:#c084fc}
+html[data-sec="nte"] .rar.B{color:#60a5fa}
 /* сводка над сеткой (агентов есть … лидер модификации) — убрана по просьбе владельца 29.10 */
 html[data-sec="zzz"] #summary{display:none !important}
 /* «← Разделы» (menu.js, в окне приложения) — капсула как пункты шапки */
@@ -642,6 +708,11 @@ html[data-sec="nte"] .logo{white-space:nowrap}
     background:rgb(20 22 28 / .55);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi),inset 0 0 0 1px var(--dz-edge)}
   html[data-sec="nte"] .grid > .card .card-n b{display:block;font:800 13.5px/1.25 var(--dz-sys);letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   html[data-sec="nte"] .grid > .card .card-n i{display:none}
+  /* стихия на плитке — светящаяся точка цвета стихии (п. 21), роль не показываем */
+  html[data-sec="nte"] .grid > .card .card-e img{display:none}
+  html[data-sec="nte"] .grid > .card .card-e::before{content:"";width:12px;height:12px;margin:5px;border-radius:50%;background:var(--el);
+    box-shadow:0 0 0 3px rgb(0 0 0 / .45),0 0 8px var(--el)}
+  html[data-sec="nte"] .grid > .card .card-p > img{object-position:top center}
   /* Карта B (п. 22): карта на всю ширину, категории — стеклом поверх слева */
   html[data-sec="nte"][data-tab="map"] .maprow{display:block;position:relative}
   html[data-sec="nte"][data-tab="map"] .mapside{position:absolute;left:14px;top:14px;z-index:5;width:270px;

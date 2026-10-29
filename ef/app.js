@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v25';
+const APP_VER = 'v26';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';

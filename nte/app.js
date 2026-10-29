@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v96';
+const APP_VER = 'v97';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -483,7 +483,9 @@ function drawEspers() {
   const roles = [...new Set(DB.agents.map(a => a.role).filter(Boolean))];
   const tiers = TIERS.filter(t => DB.agents.some(a => a.tier === t));
   const list = espersShown();
+  // заголовок со счётом (редизайн 28.10.2026, п. 21) — как «Агенты» в ZZZ
   $('filters').innerHTML =
+    '<div class="ztitle"><h2>Эсперы</h2><small>' + list.length + ' из ' + DB.agents.length + '</small></div>' +
     fgroup('стихия', 'el', els, elIcon, EL_RU) +
     fgroup('роль', 'role', roles, roleIcon, ROLE_RU) +
     fgroup('тир', 'tier', tiers, null, null) +
@@ -494,7 +496,8 @@ function drawEspers() {
     '<div class="card" data-slug="' + a.slug + '" style="' + elStyle(a.el) + ';' +
       tierStyle(a.tier) + '">' +
       '<div class="card-p">' +
-        '<img src="' + portrait(a) + '" alt="' + esc(a.ru) + '" loading="lazy">' +
+        // плитка F — арт в полный рост (img/art), как в черновике; портрет остаётся в карточке
+        '<img src="img/art/' + a.slug + '.png" alt="' + esc(a.ru) + '" loading="lazy">' +
         (a.tier ? '<span class="card-t">' + esc(a.tier) + '</span>' : '') +
         '<span class="card-e">' +
           (a.el ? '<img src="' + elIcon(a.el) + '" title="' + esc(EL_RU[a.el] || a.el) + '" alt="">' : '') +
