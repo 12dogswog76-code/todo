@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v26';
+const APP_VER = 'v27';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -152,18 +152,19 @@ let ВКЛ = 'ops';
 function пунктМеню(атр, имя, под, вкл) {
   return '<button class="tmi' + (вкл ? ' on' : '') + '" ' + атр + '>' + эк(имя) + '<i>' + эк(под) + '</i></button>';
 }
+// Редизайн 28.10.2026 (п. 2): по центру шапки — все инструменты раздела одной
+// строкой (листается вбок), в меню «Инструменты» остаются служебные пункты.
 function рисоватьМеню() {
-  $('nav').innerHTML = ВКЛАДКИ.filter(id => EF.разделы[id]).map(id => {
-    const р = EF.разделы[id];
-    return '<button class="tab' + (id === ВКЛ ? ' on' : '') + '" data-tab="' + id + '">' + эк(р.имя) +
+  $('nav').innerHTML = ВКЛАДКИ.concat(ВМЕНЮ.map(([id]) => id)).filter(id => EF.разделы[id]).map(id => {
+    const р = EF.разделы[id], под = (ВМЕНЮ.find(([x]) => x === id) || [])[1];
+    return '<button class="tab' + (id === ВКЛ ? ' on' : '') + '" data-tab="' + id + '"' + (под ? ' title="' + эк(под) + '"' : '') + '>' + эк(р.имя) +
       (р.новое ? '<em>new</em>' : '') + '</button>';
   }).join('');
-  const изМеню = ВМЕНЮ.some(([id]) => id === ВКЛ);
-  $('toolsBtn').classList.toggle('on', изМеню);
-  $('toolsBtn').innerHTML = '☰ ' + (изМеню ? эк(EF.разделы[ВКЛ].имя) : 'Инструменты');
-  $('toolsDrop').innerHTML =
-    ВМЕНЮ.filter(([id]) => EF.разделы[id]).map(([id, под]) => пунктМеню('data-tab="' + id + '"', EF.разделы[id].имя, под, id === ВКЛ)).join('') +
-    '<hr>' + ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', false)).join('');
+  const акт = $('nav').querySelector('.tab.on');
+  if (акт && акт.scrollIntoView) акт.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  $('toolsBtn').classList.remove('on');
+  $('toolsBtn').innerHTML = '☰ Инструменты';
+  $('toolsDrop').innerHTML = ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', false)).join('');
 }
 function меню(откр) {
   $('toolsBox').classList.toggle('open', откр == null ? !$('toolsBox').classList.contains('open') : откр);

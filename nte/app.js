@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v97';
+const APP_VER = 'v98';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3180,24 +3180,28 @@ function drawCodes() {
       (when ? '<div class="hint">Список актуален на ' + esc(when) + '.</div>' : '') +
     '</div>' +
     (list.length
-      ? '<div class="codes">' + list.map(c => {
-          const rew = rewHtml(c.rew || '');
-          const when2 = [c.date ? 'с ' + ruDate(c.date) : '',
-                         c.until ? 'до ' + ruDate(c.until) : '',
-                         c.note ? codeNote(c.note) : ''].filter(Boolean).join(' · ');
-          return '<div class="code' + (used[c.code] ? ' done-c' : '') + '">' +
-            '<div class="code-t">' +
+      ? (function () {
+          // Двумя блоками строками, как «Коды» в ZZZ (редизайн 28.10.2026, п. 20):
+          // кружок-отметка · код · награда · срок · «копировать» (вводятся в игре,
+          // страницы активации у NTE нет).
+          const строка = c => {
+            const rew = rewHtml(c.rew || '');
+            const when2 = [c.until ? 'до ' + ruDate(c.until) : '',
+                           c.note ? codeNote(c.note) : ''].filter(Boolean).join(' · ');
+            return '<div class="code' + (used[c.code] ? ' done-c' : '') + '">' +
               '<label class="ck" title="отметить, что уже ввёл">' +
                 '<input type="checkbox" data-u="' + esc(c.code) + '"' +
                 (used[c.code] ? ' checked' : '') + '><span></span></label>' +
               '<b>' + esc(c.code) + '</b>' +
+              '<div class="code-r">' + (rew || '<span class="hint" style="margin:0">награда не указана</span>') + '</div>' +
+              '<i class="code-d">' + esc(when2 || 'без срока') + '</i>' +
               '<button data-c="' + esc(c.code) + '">копировать</button>' +
-            '</div>' +
-            (rew ? '<div class="code-r">' + rew + '</div>'
-                 : '<div class="hint" style="margin:0">Состав награды не указан.</div>') +
-            (when2 ? '<div class="code-d">' + esc(when2) + '</div>' : '') +
-          '</div>';
-        }).join('') + '</div>'
+            '</div>';
+          };
+          const свежие = list.filter(c => !used[c.code]), старые = list.filter(c => used[c.code]);
+          return (свежие.length ? '<div class="codes"><div class="codes-h">Не введены<em>' + свежие.length + '</em></div>' + свежие.map(строка).join('') + '</div>' : '') +
+            (старые.length ? '<div class="codes"><div class="codes-h">Уже введены<em>' + старые.length + '</em></div>' + старые.map(строка).join('') + '</div>' : '');
+        })()
       : '<div class="empty">Кодов нет.</div>') +
     '<div class="hint">Коды не бессрочные: часть из них рано или поздно закроют. ' +
     'Если игра пишет, что код недействителен — значит, срок вышел.</div>';
