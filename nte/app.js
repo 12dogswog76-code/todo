@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v107';
+const APP_VER = 'v108';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3192,8 +3192,9 @@ function codeToggle(code) {
   drawCodes();
 }
 function codeRedeemHint() {
-  return 'Где вводить: в игре нажми <b>Esc</b> (на геймпаде — Start), открой телефон, ' +
-         'значок с тремя нотами рядом с профилем, дальше кнопка <b>Redeem Code</b>.';
+  // <strong>, не <b>: у .box>b в стилях NTE своё оформление заголовка блока
+  return 'Где вводить: в игре нажми <strong>Esc</strong> (на геймпаде — Start), открой телефон, ' +
+         'значок с тремя нотами рядом с профилем, дальше кнопка <strong>Redeem Code</strong>.';
 }
 function drawCodes() {
   const fallback = GUIDE.codes || { list: [] };
