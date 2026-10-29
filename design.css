@@ -248,7 +248,7 @@ html[data-sec="zzz"] .gsec > h4{display:flex;align-items:center;gap:8px;margin:1
 html[data-sec="zzz"] .gsec > h4::before,html[data-sec="zzz"] .gsec > h4::after{display:none !important}
 html[data-sec="zzz"] .gsec > h4 .gstar{color:#ffd54a}
 html[data-sec="zzz"] .gsec > h4 i{font:500 11px var(--dz-mono);font-style:normal;color:var(--tx3,#6b7280);background:none !important;border:0 !important;padding:0 !important;margin-left:0}
-html[data-sec="zzz"] #grid{display:block}
+html[data-sec="zzz"] #grid:has(> .gsec){display:block}
 html[data-sec="zzz"] .gsec:first-child > h4{margin-top:4px !important}
 /* заголовок страницы со счётом — общий для разделов (черновик: «Агенты», «Эсперы») */
 html[data-sec] .ztitle{flex-basis:100%;display:flex;align-items:baseline;gap:10px;margin:6px 0 6px}
@@ -415,6 +415,65 @@ html[data-sec="zzz"] #sheet .hring circle.v{stroke:var(--el) !important;stroke-w
 html[data-sec="zzz"] #sheet .hring text{font:800 11.5px var(--dz-sys) !important;fill:#fff}
 /* NTE «Картриджи»: отступ после сетки наборов (п. 9) */
 html[data-sec="nte"][data-tab="carts"] #body .list{margin-bottom:22px !important}
+/* ── заход 2: меню и окно «Инструменты» в новом облике (п. 4, 12, 32) ───────── */
+/* выпадающее меню — стеклянная панель, пункт: название 600 + пояснение серым */
+html[data-sec] :is(.toolsm,#toolsDrop){border-radius:22px !important;padding:8px !important;border:1px solid var(--dz-edge) !important;
+  background:rgb(20 22 28 / .88) !important;backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);
+  box-shadow:var(--dz-hi),0 24px 60px rgb(0 0 0 / .5) !important;max-height:calc(100vh - 100px);overflow:auto;scrollbar-width:thin;min-width:280px !important}
+html[data-sec] :is(.toolsm,#toolsDrop) > :is(button,.tmi){display:block;width:100%;text-align:left;padding:9px 12px !important;margin:0 !important;border:0 !important;
+  border-radius:14px !important;background:transparent !important;box-shadow:none !important;
+  font:600 13px/1.3 var(--dz-sys) !important;color:var(--tx) !important;text-transform:none !important;letter-spacing:normal !important;cursor:pointer}
+html[data-sec] :is(.toolsm,#toolsDrop) > :is(button,.tmi) i{display:block;margin-top:2px;font:400 11.5px/1.3 var(--dz-sys) !important;font-style:normal;
+  color:var(--tx2) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec] :is(.toolsm,#toolsDrop) > :is(button,.tmi):hover{background:rgb(255 255 255 / .07) !important}
+html[data-sec] :is(.toolsm,#toolsDrop) > :is(button,.tmi).on{background:color-mix(in srgb,var(--acc) 16%,transparent) !important;color:var(--acc) !important}
+html[data-sec] :is(.toolsm,#toolsDrop) hr{border:0;height:1px;background:rgb(255 255 255 / .08);margin:6px 8px}
+/* окно с меню слева (ZZZ .mmbox, NTE .sheet-in.tm, Endfield .toolsg) */
+html[data-sec] :is(.mmbox,.sheet-in.tm,#sheet-in:has(.toolsg)){border-radius:30px !important;border:1px solid var(--dz-edge) !important;
+  background:rgb(14 16 20 / .82) !important;backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4);
+  box-shadow:var(--dz-hi),0 30px 80px rgb(0 0 0 / .5) !important}
+html[data-sec] :is(.mmnav,.tmnav,.tcol){background:rgb(255 255 255 / .03) !important;border:0 !important;border-right:1px solid rgb(255 255 255 / .06) !important;padding:12px !important;gap:2px !important}
+html[data-sec] :is(.mmnav .mmi,.tmnav .tmi,.tcol .tmi){padding:10px 12px !important;border:0 !important;border-radius:16px !important;background:transparent !important;box-shadow:none !important;
+  color:var(--tx) !important;text-transform:none !important;letter-spacing:normal !important;font:600 13px/1.3 var(--dz-sys) !important;text-align:left}
+html[data-sec] :is(.mmnav .mmi b){font:600 13px/1.3 var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec] :is(.mmnav .mmi,.tmnav .tmi,.tcol .tmi) i{font:400 11.5px/1.3 var(--dz-sys) !important;font-style:normal;color:var(--tx2) !important;
+  text-transform:none !important;letter-spacing:normal !important;margin-top:2px}
+html[data-sec] :is(.mmnav .mmi,.tmnav .tmi,.tcol .tmi):hover{background:rgb(255 255 255 / .07) !important}
+html[data-sec] :is(.mmnav .mmi,.tmnav .tmi,.tcol .tmi).on{background:color-mix(in srgb,var(--acc) 16%,transparent) !important;color:var(--acc) !important}
+html[data-sec] :is(.mmnav .mmi,.tmnav .tmi,.tcol .tmi).on i{color:color-mix(in srgb,var(--acc) 70%,var(--tx2)) !important}
+html[data-sec] .tcol hr{display:none}
+/* заголовок окна: крупно, без капса и разрядки */
+html[data-sec] :is(.mmhead,.wh){background:transparent !important;border:0 !important;border-bottom:1px solid rgb(255 255 255 / .06) !important;backdrop-filter:none !important}
+html[data-sec] :is(.mmhead h2,.wh h2,.sheet-in.tm h2){font:800 28px/1.15 var(--dz-sys) !important;letter-spacing:-.4px !important;text-transform:none !important;color:var(--tx) !important}
+html[data-sec] :is(.mmhead i,.wh i){font:400 13px var(--dz-sys) !important;letter-spacing:normal !important;text-transform:none !important;color:var(--tx2) !important;font-style:normal}
+/* содержимое окон: блоки-стекло, подписи без капса, без «уголков» и жёлтых полос */
+html[data-sec] :is(.mmbody,.tmbody,#tlbody) :is(.box,.card,.sect,.hcard,.mt-sum,.panel-box,.ibox){border-radius:22px !important;border:0 !important;
+  background:rgb(255 255 255 / .05) !important;box-shadow:inset 0 1px 0 rgb(255 255 255 / .12),inset 0 0 0 1px rgb(255 255 255 / .05) !important}
+html[data-sec] :is(.mmbody,.tmbody,#tlbody) :is(.box,.cap,.sh,.sect > h4)::before,
+html[data-sec] :is(.mmbody,.tmbody,#tlbody) :is(.box,.cap,.sh,.sect > h4)::after{display:none !important}
+html[data-sec] :is(.mmbody,.tmbody,#tlbody) :is(h3,h4,.cap,.cap > b,.sh > b,.cap2){font-family:var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec] :is(.mmbody,.tmbody,#tlbody) :is(button:not(.mmi):not(.tmi),.mini,.ghost2,a.btn){border-radius:999px !important;font-family:var(--dz-sys) !important;
+  text-transform:none !important;letter-spacing:normal !important}
+html[data-sec] :is(.mmbody,.tmbody,#tlbody) :is(input[type=text],input:not([type]),input[type=number],select,textarea){border-radius:14px;background:rgb(255 255 255 / .07) !important;
+  border:1px solid rgb(255 255 255 / .08) !important;font-family:var(--dz-sys)}
+html[data-sec] :is(.mmbody,.tmbody,#tlbody) code,html[data-sec] :is(.mmbody,.tmbody,#tlbody) pre{border-radius:12px;background:rgb(0 0 0 / .3) !important;border:0 !important}
+/* отметки — круглые, как в «Кодах» (вместо старых квадратных галочек) */
+html[data-sec] .boo-chk{width:26px !important;height:26px !important;border-radius:50% !important;border:0 !important;font-size:12px;
+  background:transparent !important;box-shadow:inset 0 0 0 2px rgb(255 255 255 / .28) !important;color:transparent !important}
+html[data-sec] .boo.on .boo-chk{background:var(--acc) !important;box-shadow:none !important;color:#0b0d10 !important}
+html[data-sec] .ck span{width:22px !important;height:22px !important;border-radius:50% !important;border:0 !important;background:transparent !important;
+  box-shadow:inset 0 0 0 2px rgb(255 255 255 / .28)}
+html[data-sec] .ck input:checked + span{background:var(--acc) !important;box-shadow:none}
+html[data-sec] .ck input:checked + span:after{color:#0b0d10 !important;line-height:22px}
+html[data-sec] .boo{border-radius:18px !important;border:0 !important;background:rgb(255 255 255 / .05) !important;box-shadow:inset 0 1px 0 rgb(255 255 255 / .12) !important}
+html[data-sec] .boo-t b{color:var(--tx) !important;font:600 13px var(--dz-sys) !important}
+html[data-sec] .boo-t i{font-size:11px !important;color:var(--tx2) !important}
+/* пункты меню NTE в коде строчными — с заглавной */
+html[data-sec] :is(.toolsm > button,.tmnav .tmi)::first-line{text-transform:none}
+html[data-sec="nte"] :is(.toolsm > button,.tmnav .tmi)::first-letter{text-transform:uppercase !important}
+/* закрыть — круглая кнопка */
+html[data-sec] :is(.mmx,#sheet-in > .x,.sheet-in > .x){border-radius:999px !important;border:0 !important;background:rgb(255 255 255 / .1) !important;color:var(--tx) !important;
+  font:500 12.5px var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important;box-shadow:none !important}
 /* сводка над сеткой (агентов есть … лидер модификации) — убрана по просьбе владельца 29.10 */
 html[data-sec="zzz"] #summary{display:none !important}
 /* «← Разделы» (menu.js, в окне приложения) — капсула как пункты шапки */

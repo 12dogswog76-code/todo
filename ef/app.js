@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v28';
+const APP_VER = 'v29';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -1440,8 +1440,8 @@ function инструменты() {
   EF.открыть('<div class="wh"><h2>' + эк(имя) + '</h2><i>' + эк(ИНСТРПОД[ИНСТРВКЛ] || '') + '</i></div>' +
     '<div class="toolsg">' +
       '<div class="tcol">' +
+        // только служебные пункты: разделы и так в выпадающем меню (без дублей, 29.10)
         ИНСТР.map(([k, и]) => пунктМеню('data-tl="' + k + '"', и, ИНСТРПОД[k] || '', k === ИНСТРВКЛ)).join('') +
-        '<hr>' + ВМЕНЮ.filter(([id]) => EF.разделы[id]).map(([id, под]) => пунктМеню('data-tab="' + id + '"', EF.разделы[id].имя, под, false)).join('') +
       '</div>' +
       '<div id="tlbody">' + нутроИнстр() + '</div></div>');
 }
