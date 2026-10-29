@@ -394,7 +394,8 @@ html[data-sec="zzz"] .top > .tools,html[data-sec="nte"] .top-in > .tools,html[da
 /* только логотип, без названия игры текстом (п. 3, 14) */
 html[data-sec="zzz"] .logo-btn > span:not(.mark){display:none !important}
 html[data-sec="nte"] .top-in .logo{font-size:0 !important;gap:8px}
-html[data-sec="nte"] .top-in .logo > :is(img,i,b){font-size:12px}
+html[data-sec="nte"] .top-in .logo > :is(img,i){font-size:12px}
+html[data-sec="nte"] .top-in .logo > b{display:none !important}
 html[data-sec="ef"] #logo > span{display:none !important}
 /* версия и воркер — одной капсулой, как у всех (п. 15) */
 html[data-sec] :is(#ver,#appVer,.ver){white-space:nowrap !important;display:inline-flex;align-items:center;height:24px;padding:0 10px !important;
