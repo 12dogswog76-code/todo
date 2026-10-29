@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v29';
+const APP_VER = 'v30';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -377,7 +377,10 @@ EF.раздел('tier', {
 // ── команды ─────────────────────────────────────────────────────────────────
 function найтиИмя(и) {
   и = String(и || '').trim();
-  return EF.БАЗА.персонажи.find(x => x.имя === и || x.имяРу === и) || null;
+  // без пробелов и регистра: в базе «Mifu», в составах prydwen — «Mi Fu»
+  const сж = s => String(s || '').replace(/\s+/g, '').toLowerCase();
+  return EF.БАЗА.персонажи.find(x => x.имя === и || x.имяРу === и) ||
+    EF.БАЗА.персонажи.find(x => сж(x.имя) === сж(и) || сж(x.имяРу) === сж(и)) || null;
 }
 function доляМоих(строка) {
   if (!EF.ПРОФ) return 0;
@@ -1596,7 +1599,9 @@ EF.облакоHtml = function () {
 // ── события ─────────────────────────────────────────────────────────────────
 document.addEventListener('click', e => {
   const т = e.target.closest('[data-tab],[data-f],[data-fo],[data-fs],[data-act],[data-op],[data-wpn],[data-set],[data-close],[data-ct],[data-tools],[data-tl],[data-plan]');
-  if (!т) { if (e.target.id === 'sheet') EF.закрыть(); return; }
+  // <html data-tab> — метка раздела для design.css, не кнопка: без этой проверки
+  // любой клик по странице перерисовывал раздел и кидал наверх (29.10.2026)
+  if (!т || т === document.documentElement) { if (e.target.id === 'sheet') EF.закрыть(); return; }
   const д = т.dataset;
   if (д.close) { EF.закрыть(); return; }
   if (д.tab) { EF.перейти(д.tab); return; }

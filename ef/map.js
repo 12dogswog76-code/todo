@@ -84,6 +84,20 @@ function перерисоватьСкоро() {
   скороРисовать = requestAnimationFrame(() => { скороРисовать = 0; рисовать(); });
 }
 
+// знак для точки без своей картинки — по ключу типа
+function знакТипа(тип) {
+  const к = (тип.к || '').toLowerCase();
+  if (/trchest|supplybox|box|container/.test(к)) return '▣';
+  if (/narrative|document|letter|book|note|pad|audiotape|chip|signage|blackbox/.test(к)) return '✎';
+  if (/terminal/.test(к)) return '⌨';
+  if (/challenge|dungeon/.test(к)) return '⚑';
+  if (/eny_|enemy|spawner/.test(к)) return '✕';
+  if (/erosion|core/.test(к)) return '◆';
+  if (/piece|shard|fragment/.test(к)) return '◇';
+  if (/collection|doodad|ore|mine/.test(к)) return '✦';
+  return '•';
+}
+
 // ── отрисовка ───────────────────────────────────────────────────────────────
 function рисовать() {
   if (!ctx || !вид) return;
@@ -154,10 +168,18 @@ function рисовать() {
       ctx.stroke();
       if (im.готова) ctx.drawImage(im, sx - r, sy - r, r * 2, r * 2);
     } else {
-      ctx.fillStyle = '#' + (гр ? гр.цвет : 'ffffff');
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(sx, sy, Math.max(4, r * 0.55), 0, 7); ctx.fill(); ctx.stroke();
+      // Своих картинок у сундуков, записей, терминалов и т.п. в данных игры
+      // нет — раньше рисовалась голая точка, и казалось, что значков нет
+      // (29.10.2026). Теперь такой же кружок, как у остальных, и знак по типу.
+      const цв = '#' + (гр ? гр.цвет : 'ffffff');
+      ctx.fillStyle = 'rgba(8,9,6,.82)';
+      ctx.beginPath(); ctx.arc(sx, sy, r + 2, 0, 7); ctx.fill();
+      ctx.strokeStyle = цв; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.fillStyle = цв;
+      ctx.font = '700 ' + Math.round(r * 1.25) + 'px system-ui';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(знакТипа(тип), sx, sy + 0.5);
+      ctx.textBaseline = 'alphabetic';
     }
     if (взят) {
       ctx.globalAlpha = 1;
