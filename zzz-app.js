@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v274';
+const APP_VER = 'v275';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -16,18 +16,20 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
 // ─────────────── справочники отображения ───────────────
+// Цвета стихий — по редизайну 28.10.2026 (РЕШЕНИЯ.md, п. 8): лёд и иней
+// одинаковые, эфир фиолетово-розовый, люмен просто розовый.
 const ELEM = {
-  physical: { ru: 'Физический', c: '#c9c19b' },
-  fire:     { ru: 'Огонь',      c: '#ff6b4a' },
-  ice:      { ru: 'Лёд',        c: '#66d9e8' },
-  electric: { ru: 'Электро',    c: '#7fb8ff' },
-  ether:    { ru: 'Эфир',       c: '#ff8fce' },
-  wind:     { ru: 'Ветер',      c: '#8fd6a8' },
-  lumiflux: { ru: 'Люмифлюкс',  c: '#ff8ad4' },
-  lumen:    { ru: 'Люмифлюкс',  c: '#ff8ad4' },
+  physical: { ru: 'Физический', c: '#facc15' },
+  fire:     { ru: 'Огонь',      c: '#fb923c' },
+  ice:      { ru: 'Лёд',        c: '#7dd3fc' },
+  electric: { ru: 'Электро',    c: '#60a5fa' },
+  ether:    { ru: 'Эфир',       c: '#c77dff' },
+  wind:     { ru: 'Ветер',      c: '#4ade80' },
+  lumiflux: { ru: 'Люмифлюкс',  c: '#f472b6' },
+  lumen:    { ru: 'Люмифлюкс',  c: '#f472b6' },
   auricink: { ru: 'Аурчернила', c: '#b197fc' },
   auricether:{ ru: 'Аурэфир',   c: '#c9a7ff' },
-  frost:    { ru: 'Мороз',      c: '#9fe8ff' },
+  frost:    { ru: 'Мороз',      c: '#7dd3fc' },
   firefrost:{ ru: 'Огнемороз',  c: '#ff9a76' },
   zhenzhenassault: { ru: 'Заточенный клинок', c: '#ffd54a' },
   honededge:       { ru: 'Заточенный клинок', c: '#ffd54a' }
@@ -1275,7 +1277,7 @@ function batBlock(n) {
   const дн = x => Math.ceil(x / BAT_DAY);
   const дни = b => (дн(b.мин) === дн(b.макс) ? дн(b.макс) : дн(b.мин) + '–' + дн(b.макс)) + ' ' + plural(дн(b.макс), 'день', 'дня', 'дней');
   return '<div class="mt-sum" style="margin-top:10px">' +
-    '<div class="cap2" style="margin:0 0 7px">БАТАРЕЯ НА ФАРМ</div>' +
+    '<div class="cap2" style="margin:0 0 7px">Батарея на фарм</div>' +
     '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">' +
       '<span><b style="font-size:22px">⚡ ' + batRange(все) + '</b> <span class="hint" style="margin:0">на всё до целей · ≈ ' + дни(все) + '</span></span>' +
       (сумка ? '<span><b style="font-size:22px;color:var(--acc)">⚡ ' + (нет.макс ? batRange(нет) : '0') + '</b> <span class="hint" style="margin:0">без того, что уже есть' +
@@ -1290,7 +1292,7 @@ function batWhere(n) {
   if (!все.макс) return '';
   const нет = bagFilled() ? batteryFor(bagMissing(n)) : все;
   const сумка = нет.мин !== все.мин || нет.макс !== все.макс;
-  return '<div class="cap2 mt-cap" style="margin:14px 0 6px">ГДЕ ФАРМИТЬ<span>сколько боёв' + (сумка ? ' — без того, что уже есть' : '') + '</span></div>' +
+  return '<div class="cap2 mt-cap" style="margin:14px 0 6px">Где фармить<span>сколько боёв' + (сумка ? ' — без того, что уже есть' : '') + '</span></div>' +
     '<table class="tbl" style="margin-top:6px">' + нет.строки.map(batRow).join('') + '</table>' +
     '<div class="hint">Уровень Интер-нота ' + (ui.ikLvl || 60) + ' (меняется в «Материалах»). Отметки «уже есть» общие на аккаунт; здесь они целиком отнесены к этому агенту.</div>';
 }
@@ -1677,21 +1679,31 @@ function renderFilters() {
     (a.element || []).forEach(e => els[e] = 1);
     if (a.prof) prs[a.prof] = 1;
   });
-  let h = '<span class="cap">стихия</span>';
+  // Редизайн 28.10.2026 (п. 21, черновик «Агенты»): сверху заголовок со счётом,
+  // ниже капсулы с числом — «Все», «Есть у меня», стихии (значком, название
+  // по наведению — их одиннадцать, словами не влезают в ряд), роли словами.
+  const есть = DB.agents.filter(a => prog[a.id] && prog[a.id].have);
+  const гот = есть.length ? Math.round(есть.reduce((s, a) => s + pctOf(a.id), 0) / есть.length) : 0;
+  const сколько = f => DB.agents.filter(f).length;
+  let h = '<div class="ztitle"><h2>Агенты</h2><small>' + есть.length + ' из ' + DB.agents.length +
+    (есть.length ? ' · готовность ' + гот + '%' : '') + '</small></div>';
+  const все = !ui.el.length && !ui.pr.length && !ui.have;
+  h += '<span class="chip f-all' + (все ? ' on' : '') + '">Все<em>' + DB.agents.length + '</em></span>';
+  h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">Есть у меня<em>' + есть.length + '</em></span>';
+  h += '<span class="fsep"></span>';
   Object.keys(els).forEach(e => {
     const on = ui.el.indexOf(e) !== -1 ? ' on' : '';
     const c = (ELEM[e] && ELEM[e].c) || '#e53e3e';
-    h += '<span class="chip f-el' + on + '" data-v="' + esc(e) + '" style="--c:' + c + '">' +
-         elIcon(e, 18) + '</span>';
+    h += '<span class="chip f-el' + on + '" data-v="' + esc(e) + '" style="--c:' + c + '" title="' + esc((ELEM[e] && ELEM[e].ru) || e) + '">' +
+         elIcon(e, 16) + '<em>' + сколько(a => (a.element || []).indexOf(e) !== -1) + '</em></span>';
   });
-  h += '<span class="fsep"></span><span class="cap">роль</span>';
+  h += '<span class="fsep"></span>';
   Object.keys(prs).forEach(pr => {
     const on = ui.pr.indexOf(pr) !== -1 ? ' on' : '';
     h += '<span class="chip f-pr' + on + '" data-v="' + esc(pr) + '">' +
-         profIcon(pr, 18, on ? '#ffd54a' : '#8b92a3') + '</span>';
+         profIcon(pr, 16, on ? '#0b0d10' : '#8b92a3') + esc(PROF[pr] || pr) + '<em>' + сколько(a => a.prof === pr) + '</em></span>';
   });
   h += '<span class="fsep"></span>';
-  h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">есть у меня</span>';
   // Сортировка одна и переключается как флажок: нажал — по тир-листу,
   // нажал ещё раз — обычный порядок по именам.
   if (tierSrc()) {
@@ -1720,6 +1732,7 @@ function renderFilters() {
   document.querySelectorAll('.f-el').forEach(c => c.onclick = () => { tog(ui.el, c.dataset.v); save(); renderFilters(); render(); });
   document.querySelectorAll('.f-pr').forEach(c => c.onclick = () => { tog(ui.pr, c.dataset.v); save(); renderFilters(); render(); });
   document.querySelector('.f-have').onclick = () => { ui.have = !ui.have; save(); renderFilters(); render(); };
+  document.querySelector('.f-all').onclick = () => { ui.el = []; ui.pr = []; ui.have = false; save(); renderFilters(); render(); };
   document.querySelectorAll('.f-sort').forEach(c => c.onclick = () => {
     ui.sort = (ui.sort === c.dataset.v) ? '' : c.dataset.v;   // повторное нажатие снимает
     save(); renderFilters(); render();
@@ -2060,6 +2073,9 @@ function renderSummary() {
     }
   });
   const avg = have ? Math.round(sum / have) : 0;
+  // счёт в заголовке над фильтрами (сама сводка в новом облике скрыта)
+  const зт = document.querySelector('.ztitle small');
+  if (зт) зт.textContent = have + ' из ' + all + (have ? ' · готовность ' + avg + '%' : '');
 
   // модификаторы: среднее по тем, у кого есть рекомендации, и лидер
   let mSum = 0, mCnt = 0, best = null, bestVal = -1;
@@ -2850,7 +2866,7 @@ function matsHtml(a) {
   const есть = haveItems(books.concat(Object.keys(nn.items).map(id => [id, nn.items[id]])), short);
 
   let h = '<div class="mt-sum">' +
-    '<div class="cap2 mt-cap" style="margin:0 0 7px">ВСЕГО ДО ЦЕЛЕЙ<span>нажми на материал — отметить, что уже есть</span></div>' +
+    '<div class="cap2 mt-cap" style="margin:0 0 7px">Всего до целей<span>нажми на материал — отметить, что уже есть</span></div>' +
     '<div class="mt-items">' +
       (nn.gold ? chip('10', nn.gold) : '') + есть.чипы +
     '</div>' + есть.пол +
@@ -2860,7 +2876,7 @@ function matsHtml(a) {
   h += batBlock(nn);
 
   // по частям: слева что качаем и с какого на какое, справа — цена
-  h += '<div class="cap2 mt-cap" style="margin:14px 0 6px">ПО ЧАСТЯМ<span>нажми на часть — не считать её</span></div><div class="mp-list">' +
+  h += '<div class="cap2 mt-cap" style="margin:14px 0 6px">По частям<span>нажми на часть — не считать её</span></div><div class="mp-list">' +
     n.parts.map(x => {
       const bk = expBooks(x.exp);
       const cells = (x.gold ? [chip('10', x.gold)] : [])
@@ -3220,7 +3236,13 @@ function renderSheet() {
       '<span>' + esc(((a.en || a.ru) + ' · ').repeat(12)) + '</span>' +
       '<span>' + esc(((a.en || a.ru) + ' · ').repeat(12)) + '</span>' +
     '</div></div>' +
-    (p.have ? '<span class="lv">Ур. ' + (p.lvl || 0) + '</span>' : '') +
+    // кольцо готовности (редизайн, п. 4) — вместо прежней метки «Ур. N»
+    (p.have ? (function () {
+      const пц = pctOf(curId);
+      return '<svg class="hring" viewBox="0 0 40 40" aria-label="готовность ' + пц + '%"><circle cx="20" cy="20" r="16"/>' +
+        '<circle class="v" cx="20" cy="20" r="16" style="stroke-dasharray:' + (пц * 1.005).toFixed(1) + ' 101"/>' +
+        '<text x="20" y="24">' + пц + '</text></svg>';
+    })() : '') +
     (art ? '<div class="hfig"><img src="' + esc(art) + '" alt="" decoding="async"' +
       ' data-pic="' + esc(a.id) + '" data-kind="hero"' + artZoomStyle(a, 'hero') +
       ' data-nf="next"></div>' : '') +
@@ -3241,7 +3263,11 @@ function renderSheet() {
           '<span class="cap2">тир-ранг</span>' + rankBadge(t.tier, 'sm') + '</span>';
       })() +
 
-    '</div></div></div><div class="hbody">';
+    '</div>' +
+    // строка под именем — всё через точки (п. 6): «Лёд · Аномалия · S · ур. 60»
+    '<small class="hline">' + esc([(ELEM[el] && ELEM[el].ru) || '', PROF[a.prof] || '', a.rarity || '',
+      p.have ? 'ур. ' + (p.lvl || 0) : 'нет в трекере'].filter(Boolean).join(' · ')) + '</small>' +
+    '</div></div><div class="hbody">';
 
   if (!p.have) {
     // Агента ещё нет (28.10.2026): та же карточка, но только то, что от
@@ -3250,8 +3276,8 @@ function renderSheet() {
     const табы = [['guide', 'Гайд', guideOf(curId)], ['mats', 'Фарм', matsNeed(curId, true)], ['team', 'Команды', teamsOf(curId)]]
       .filter(x => x[2]);
     if (!табы.some(x => x[0] === curTab)) curTab = табы.length ? табы[0][0] : '';
-    h += '<div class="hhead">' +
-      табы.map(x => '<button class="htab' + (curTab === x[0] ? ' on' : '') + '" data-tab="' + x[0] + '">' + x[1] + '</button>').join('') +
+    h += '<div class="hhead"><div class="hseg">' +
+      табы.map(x => '<button class="htab' + (curTab === x[0] ? ' on' : '') + '" data-tab="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>' +
       '<span style="flex:1"></span>' +
       '<button class="htab on" id="haveTog">＋ Есть у меня</button></div>';
     if (curTab === 'guide') h += guideHtml(a, p, calcTotals(a, p, []));
@@ -3274,7 +3300,8 @@ function renderSheet() {
     });
     const T = curTab === 'plan' ? planT : nowT;
 
-    h += '<div class="hhead">' +
+    // вкладки — одним сегментом (редизайн, п. 13): подложка и выбранная светлее
+    h += '<div class="hhead"><div class="hseg">' +
       '<button class="htab' + (curTab === 'now' ? ' on' : '') + '" data-tab="now">Сейчас</button>' +
       '<button class="htab' + (curTab === 'plan' ? ' on' : '') + '" data-tab="plan">План</button>' +
       (guideOf(curId)
@@ -3288,7 +3315,7 @@ function renderSheet() {
       (teamsOf(curId)
         ? '<button class="htab' + (curTab === 'team' ? ' on' : '') + '" data-tab="team" ' +
           'title="С кем ходят в эндгейме — по статистике прохождений">Команды</button>'
-        : '') +
+        : '') + '</div>' +
       // Вкладки «Журнал» тут больше нет: те же записи целиком лежат в разделе
       // «📈 История» → «Подробно по агентам», а в карточке они только съедали
       // место среди вкладок, которыми пользуешься каждый день.
@@ -3562,6 +3589,7 @@ function renderSheet() {
   const тотЖе = былаHb && $('sheet').dataset.agent === String(curId);
   const прокр = тотЖе ? былаHb.scrollTop : 0;
   $('sheet').innerHTML = h;
+  $('sheet').style.setProperty('--el', col); // цвет стихии и низу окна (главная кнопка)
   $('sheet').dataset.agent = String(curId);
   const новаяHb = $('sheet').querySelector('.hbody');
   if (новаяHb) новаяHb.scrollTop = прокр;
@@ -6447,7 +6475,7 @@ function drawMats() {
   if (bat.макс) {
     const дн = x => Math.ceil(x / BAT_DAY);
     h += '<div class="mt-sum" style="margin-top:10px">' +
-      '<div class="cap2" style="margin:0 0 7px">БАТАРЕЯ НА ФАРМ</div>' +
+      '<div class="cap2" style="margin:0 0 7px">Батарея на фарм</div>' +
       '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">' +
         '<b style="font-size:24px">⚡ ' + batRange(bat) + '</b>' +
         '<span class="hint" style="margin:0">≈ ' + (дн(bat.мин) === дн(bat.макс) ? дн(bat.макс) : дн(bat.мин) + '–' + дн(bat.макс)) + ' ' +

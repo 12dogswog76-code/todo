@@ -77,14 +77,22 @@
       'z-index:2147483000', 'background:rgba(14,15,17,.94)', 'box-shadow:0 8px 24px rgba(0,0,0,.45)']),
   };
   кнопка.addEventListener('mouseenter', () => {
+    if (кнопка.className === 'dz-back') return;
     кнопка.style.borderColor = 'rgba(74,222,128,1)';
     кнопка.style.background = 'rgba(74,222,128,.18)';
   });
   кнопка.addEventListener('mouseleave', () => {
+    if (кнопка.className === 'dz-back') return;
     кнопка.style.borderColor = 'rgba(74,222,128,.55)';
     кнопка.style.background = '';
     if (кнопка.dataset.vid === 'поверх') кнопка.style.background = 'rgba(14,15,17,.94)';
   });
+
+  // С 29.10.2026 (редизайн): на страницах с новым обликом (<html data-sec>)
+  // вид кнопки задаёт design.css (.dz-back — капсула как у пунктов шапки),
+  // старые встроенные стили не ставим.
+  const новый = !!document.documentElement.dataset.sec;
+  if (новый) кнопка.className = 'dz-back';
 
   const поставить = () => {
     if (!document.body || кнопка.isConnected) return;
@@ -92,6 +100,7 @@
       const куда = document.querySelector(сел);
       if (!куда) continue;
       кнопка.dataset.vid = вид;
+      if (новый) { куда.insertBefore(кнопка, куда.firstChild); return; }
       кнопка.style.cssText = ВИД[вид].join(';');
       куда.insertBefore(кнопка, куда.firstChild);
       return;
