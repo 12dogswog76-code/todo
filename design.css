@@ -792,6 +792,23 @@ html[data-sec="app"] :is(.offin,.chset) button.go{background:var(--acc) !importa
 html[data-sec="app"] .offin .bar{height:6px;border-radius:3px;background:rgb(255 255 255 / .1);overflow:hidden}
 html[data-sec="app"] .offin .bar i{background:var(--acc)}
 html[data-sec="app"] .more{border-radius:999px !important;font-family:var(--dz-sys) !important;text-transform:none !important}
+/* правки 29.10 (замечания по оболочке): один шрифт везде, знак внутри острова
+   с названием, картинки игр на всю плитку, плашка ниже и компактнее */
+html[data-sec="app"] body *:not(.clock b){font-family:var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="app"] .hd .markbtn{position:relative;z-index:2;width:44px;height:44px;margin-right:-62px;padding:4px !important;border:0 !important;background:transparent !important;
+  box-shadow:none !important;backdrop-filter:none !important}
+html[data-sec="app"] .hd .ttl{padding:7px 22px 7px 64px !important;min-height:56px;justify-content:center}
+html[data-sec="app"] .hd h1{font:700 21px/1.1 var(--dz-sys) !important;letter-spacing:-.5px !important}
+html[data-sec="app"] .hd h1 i{font-weight:700}
+html[data-sec="app"] .hd .chip,html[data-sec="app"] .hd .agst{height:36px;font:500 12.5px var(--dz-sys) !important}
+html[data-sec="app"] .gt .gt-art{max-width:none !important;width:100% !important;height:100% !important;right:auto !important;bottom:auto !important;
+  inset:0 !important;object-fit:cover !important;object-position:center 18% !important}
+html[data-sec="app"] .gt:hover .gt-art{transform:scale(1.04) !important}
+html[data-sec="app"] .gt .gt-in{padding:10px 14px !important}
+html[data-sec="app"] .gt .gt-name{font:700 18px/1.2 var(--dz-sys) !important;letter-spacing:-.3px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-sec="app"] .gt .gt-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-sec="app"] .gt .gt-foot{margin-top:6px}
+html[data-sec="app"] .gt .gt-go{font:600 13px var(--dz-sys) !important}
 @media (max-width:800px){html[data-sec="app"] .games{grid-template-columns:1fr !important}html[data-sec="app"] .mine{grid-template-columns:1fr !important}}
 /* сводка над сеткой (агентов есть … лидер модификации) — убрана по просьбе владельца 29.10 */
 html[data-sec="zzz"] #summary{display:none !important}
