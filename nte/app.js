@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v101';
+const APP_VER = 'v102';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -3334,7 +3334,9 @@ function drawMech() {
     });
     КРУГ.forEach((e, i) => {
       s += '<circle cx="' + p[i][0] + '" cy="' + p[i][1] + '" r="24" class="mw-c" style="fill:var(--' + e + ');stroke:var(--' + e + ')"/>' +
-        '<text x="' + p[i][0] + '" y="' + p[i][1] + '" class="mw-n">' + esc((EL_RU[e] || e).slice(0, 3)) + '</text>';
+        // значок стихии вместо сокращённого названия (29.10.2026); название — по наведению
+        '<image href="' + elIcon(e) + '" x="' + (p[i][0] - 15) + '" y="' + (p[i][1] - 15) + '" width="30" height="30"><title>' +
+          esc(EL_RU[e] || e) + '</title></image>';
     });
     return s + '<text x="' + C + '" y="' + (C - 7) + '" class="mw-t">реакция —</text>' +
       '<text x="' + C + '" y="' + (C + 11) + '" class="mw-t">только у соседей</text></svg>';

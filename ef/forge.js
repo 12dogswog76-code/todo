@@ -55,7 +55,9 @@ function списокВещей(К) {
     .filter(б => (!Ф.часть || б.частьРу === Ф.часть) && (!q || (б.имяРу + ' ' + б.имя).toLowerCase().indexOf(q) >= 0))
     .sort((a, b) => b.ранг - a.ранг || a.имяРу.localeCompare(b.имяРу));
   return '<div style="display:flex;flex-direction:column;gap:4px;max-height:70vh;overflow:auto">' +
-    все.map(б => '<button class="tmi' + (б.id === Ф.вещь ? ' on' : '') + '" data-fg-item="' + эк(б.id) + '">' + эк(б.имяРу) +
+    // плитка (29.10.2026, слова владельца): картинка вещи первой, название ниже мелко
+    все.map(б => '<button class="tmi fgt' + (б.id === Ф.вещь ? ' on' : '') + '" data-fg-item="' + эк(б.id) + '">' +
+      '<img src="img/item/' + эк(б.id) + '.webp" alt="" loading="lazy" data-nf="hide">' + '<b>' + эк(б.имяРу) + '</b>' +
       '<i>' + эк(б.частьРу + ' · ' + (К.вещи[б.id].ст.map(s => s.и).filter(x => !/атрибут/.test(x)).join(', '))) + '</i></button>').join('') +
     (все.length ? '' : '<div class="empty">Ничего не нашлось.</div>') + '</div>';
 }

@@ -485,6 +485,154 @@ html[data-sec="ef"] .btn:not(.sec):not(.gh){background:var(--acid) !important;co
 html[data-sec="ef"] :is(.fbar,.fld){align-items:center !important;gap:8px !important}
 html[data-sec="ef"] :is(.brk,.verdict)::before,html[data-sec="ef"] :is(.brk,.verdict)::after{display:none !important}
 html[data-sec="ef"] #body :is(.brk,.verdict) > b{font:600 12px var(--dz-sys) !important;color:var(--tx2) !important;text-transform:none !important;letter-spacing:normal !important}
+/* ── заход 4 ─────────────────────────────────────────────────────────────── */
+/* «Перековка»: картинка вещи первой, название и характеристики ниже (п. 31) */
+html[data-sec="ef"] #fglist > div:has(> .fgt){display:grid !important;grid-template-columns:repeat(auto-fill,minmax(180px,1fr)) !important;gap:10px !important}
+html[data-sec="ef"] #fglist .tmi.fgt{display:flex !important;flex-direction:column;align-items:center;text-align:center !important;gap:4px;padding:16px 12px 14px !important}
+html[data-sec="ef"] #fglist .tmi.fgt img{width:84px;height:84px;object-fit:contain;margin-bottom:6px;filter:drop-shadow(0 8px 16px rgb(0 0 0 / .4))}
+html[data-sec="ef"] #fglist .tmi.fgt b{font:700 12.5px/1.3 var(--dz-sys)}
+html[data-sec="ef"] #fglist .tmi.fgt i{font-size:11px !important;margin-top:0 !important}
+/* NTE: карточка эспера — как карточка агента ZZZ (п. 8): окно, пятна стихии,
+   вкладки сегментом, блоки строками, системный шрифт */
+html[data-sec="nte"] #sheet.on{background:rgb(0 0 0 / .45) !important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+html[data-sec="nte"] #sheetIn:has(> .sh-head){position:relative;isolation:isolate;overflow:hidden;border-radius:30px !important;border:0 !important;
+  background:rgb(6 8 11 / .62) !important;box-shadow:inset 0 0 0 1px var(--dz-edge),0 30px 80px rgb(0 0 0 / .5) !important;
+  backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4)}
+html[data-sec="nte"] #sheetIn:has(> .sh-head)::before{content:"";position:absolute;inset:-25%;z-index:-1;pointer-events:none;filter:blur(60px);opacity:.7;
+  background:radial-gradient(35% 35% at 20% 30%,color-mix(in srgb,var(--acc) 50%,#000),transparent 70%),
+    radial-gradient(30% 30% at 80% 70%,color-mix(in srgb,var(--acc) 35%,#102),transparent 70%);animation:dz-cdfl 24s ease-in-out infinite alternate}
+html[data-sec="nte"] #sheetIn :is(.sh-head,.sh-art,.sh-body){background:transparent !important;border:0 !important;box-shadow:none !important}
+html[data-sec="nte"] #sheetIn .sh-art{border-radius:24px;overflow:hidden}
+html[data-sec="nte"] #sheetIn .sh-title h2{font:800 30px/1.1 var(--dz-sys) !important;letter-spacing:-.4px !important;text-transform:none !important}
+html[data-sec="nte"] #sheetIn .sh-title h2 > i{display:none}
+html[data-sec="nte"] #sheetIn .sh-tags .tag{height:24px;padding:0 10px 0 4px;border-radius:999px !important;border:0 !important;background:rgb(0 0 0 / .35) !important;
+  font:500 12px var(--dz-sys) !important;color:var(--tx) !important;box-shadow:none !important;text-transform:none !important}
+html[data-sec="nte"] #sheetIn .sh-tags .tag.tier{padding:0 9px;color:var(--tier) !important;font-weight:800 !important}
+html[data-sec="nte"] #sheetIn .sh-tags .tag img{width:18px;height:18px}
+html[data-sec="nte"] #sheetIn .sh-facts > *{border-radius:18px !important;border:0 !important;background:rgb(255 255 255 / .06) !important;box-shadow:inset 0 1px 0 rgb(255 255 255 / .12) !important;
+  font-family:var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="nte"] #sheetIn .x{border-radius:999px !important;border:0 !important;background:rgb(255 255 255 / .09) !important;color:var(--tx) !important;
+  font:500 12.5px var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important;box-shadow:none !important}
+html[data-sec="nte"] #sheetIn .htabs{display:inline-flex !important;gap:2px;padding:3px !important;border-radius:999px !important;background:rgb(0 0 0 / .22) !important;
+  border:0 !important;box-shadow:none !important;width:auto !important}
+html[data-sec="nte"] #sheetIn .htabs .htab{padding:7px 14px !important;border-radius:999px !important;border:0 !important;background:none !important;box-shadow:none !important;
+  color:var(--tx2) !important;font:500 13px var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="nte"] #sheetIn .htabs .htab.on{background:rgb(255 255 255 / .16) !important;color:var(--tx) !important;font-weight:600 !important}
+html[data-sec="nte"] #shBody .cap{margin:16px 0 8px !important;border:0 !important;padding:0 !important}
+html[data-sec="nte"] #shBody .cap::before,html[data-sec="nte"] #shBody .cap::after,html[data-sec="nte"] #shBody .cap > span{display:none !important}
+html[data-sec="nte"] #shBody .cap > b{font:600 13px var(--dz-sys) !important;color:var(--tx) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="nte"] #shBody .cap > em{margin-left:auto;font:400 11.5px var(--dz-sys) !important;font-style:normal;color:var(--tx3,#6b7280) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="nte"] #shBody .rows{border-radius:24px;padding:4px 16px;background:rgb(255 255 255 / .06);box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06)}
+html[data-sec="nte"] #shBody .rows > details,html[data-sec="nte"] #shBody .rows > .row{border:0 !important;border-bottom:1px solid rgb(255 255 255 / .07) !important;border-radius:0 !important;
+  background:none !important;box-shadow:none !important;margin:0 !important}
+html[data-sec="nte"] #shBody .rows > :last-child{border-bottom:0 !important}
+html[data-sec="nte"] #shBody .row{padding:10px 2px !important;font-family:var(--dz-sys) !important}
+html[data-sec="nte"] #shBody .row > b{font:600 14px var(--dz-sys) !important}
+html[data-sec="nte"] #shBody .row .pct{font:600 13px var(--dz-mono) !important;color:var(--acc) !important}
+html[data-sec="nte"] #shBody .row .m{border-radius:999px !important;font:600 10.5px var(--dz-mono) !important}
+html[data-sec="nte"] #shBody .row.best{box-shadow:inset 3px 0 0 var(--acc) !important;padding-left:12px !important}
+html[data-sec="nte"] #shBody :is(.prio,.goals) > *{border-radius:14px !important;border:0 !important;background:rgb(255 255 255 / .06) !important;box-shadow:none !important;font-family:var(--dz-sys) !important}
+html[data-sec="nte"] #shBody .gsh{border-radius:999px !important;border:0 !important;background:rgb(255 255 255 / .07) !important;font-family:var(--dz-sys) !important}
+/* Endfield: карточка оператора — то же окно B, что у ZZZ и NTE (п. 18) */
+html[data-sec="ef"] #sheet.on{background:rgb(0 0 0 / .45) !important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+html[data-sec="ef"] #sheet-in:has(> .card){position:relative;isolation:isolate;overflow:hidden;border-radius:30px !important;border:0 !important;
+  background:rgb(6 8 11 / .62) !important;box-shadow:inset 0 0 0 1px var(--dz-edge),0 30px 80px rgb(0 0 0 / .5) !important;
+  backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4)}
+html[data-sec="ef"] #sheet-in:has(> .card)::before{content:"";position:absolute;inset:-25%;z-index:-1;pointer-events:none;filter:blur(60px);opacity:.55;
+  background:radial-gradient(35% 35% at 18% 30%,color-mix(in srgb,var(--acid) 45%,#000),transparent 70%),
+    radial-gradient(30% 30% at 80% 75%,color-mix(in srgb,var(--acid) 25%,#021),transparent 70%);animation:dz-cdfl 24s ease-in-out infinite alternate}
+html[data-sec="ef"] #sheet-in > .card{background:transparent !important;border:0 !important;box-shadow:none !important}
+html[data-sec="ef"] #sheet-in > .card::before,html[data-sec="ef"] #sheet-in > .card::after{display:none !important}
+/* левая колонка: арт без рамок и полосы, стеклянная плашка с именем */
+html[data-sec="ef"] #sheet-in .card-l .art{border-radius:24px !important;border:0 !important;box-shadow:none !important;overflow:hidden;background:transparent !important}
+html[data-sec="ef"] #sheet-in .card-l .art .rb,html[data-sec="ef"] #sheet-in .card-l .art::before,html[data-sec="ef"] #sheet-in .card-l .art::after{display:none !important}
+html[data-sec="ef"] #sheet-in .card-l .cname{margin-top:12px;padding:12px 16px;border-radius:22px;background:rgb(255 255 255 / .08);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .4),inset 0 0 0 1px rgb(255 255 255 / .1);font:800 30px/1.05 var(--dz-sys) !important;letter-spacing:-.4px !important;text-transform:none !important}
+html[data-sec="ef"] #sheet-in .card-l .cname small{display:block;margin-top:4px;font:400 12px var(--dz-sys) !important;letter-spacing:normal !important;text-transform:none !important;color:var(--tx2)}
+html[data-sec="ef"] #sheet-in .card-l .pills .pill{height:26px;padding:0 10px !important;border-radius:999px !important;border:0 !important;background:rgb(0 0 0 / .35) !important;
+  font:500 12px var(--dz-sys) !important;color:var(--tx) !important;box-shadow:none !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="ef"] #sheet-in .card-l .hint a{color:var(--tx2)}
+/* вкладки сегментом */
+html[data-sec="ef"] #sheet-in .seg.ctabs{display:inline-flex !important;gap:2px;padding:3px !important;border-radius:999px !important;background:rgb(0 0 0 / .22) !important;border:0 !important;width:auto !important}
+html[data-sec="ef"] #sheet-in .seg.ctabs button{padding:7px 14px !important;border-radius:999px !important;border:0 !important;background:none !important;box-shadow:none !important;
+  color:var(--tx2) !important;font:500 13px var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="ef"] #sheet-in .seg.ctabs button.on{background:rgb(255 255 255 / .16) !important;color:var(--tx) !important;font-weight:600 !important}
+/* блоки содержимого — стекло, подписи 13px, без жёлтых полос */
+html[data-sec="ef"] #cbody :is(.sec,.verdict,.box){border-radius:24px !important;border:0 !important;background:rgb(255 255 255 / .06) !important;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06) !important}
+html[data-sec="ef"] #cbody .verdict{background:color-mix(in srgb,var(--acid) 7%,rgb(255 255 255 / .04)) !important}
+html[data-sec="ef"] #cbody .sec > h4{display:flex;align-items:baseline;gap:8px;margin:0 0 10px !important;padding:0 !important;border:0 !important;
+  font:600 13px var(--dz-sys) !important;color:var(--tx) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="ef"] #cbody .sec > h4::before,html[data-sec="ef"] #cbody .sec > h4::after{display:none !important}
+html[data-sec="ef"] #cbody .sec > h4 em{margin-left:auto;font:400 11.5px var(--dz-sys) !important;font-style:normal;color:var(--tx3,#6b7280) !important;letter-spacing:normal !important;text-transform:none !important}
+html[data-sec="ef"] #cbody :is(.st,.it,.node,.wrow){border-radius:16px !important;border:0 !important;background:rgb(255 255 255 / .05) !important;box-shadow:none !important}
+html[data-sec="ef"] #cbody .st :is(u,small,i){font-family:var(--dz-sys) !important;text-transform:none !important;letter-spacing:normal !important}
+html[data-sec="ef"] #cbody .st b{font-family:var(--dz-mono) !important}
+html[data-sec="ef"] #cbody .chipi{border-radius:12px !important}
+html[data-sec="ef"] #cbody .chipi::after{display:none !important}
+/* Endfield «Календарь»: баннеры карточками с артом (п. 30) */
+html[data-sec="ef"] .calbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:8px}
+html[data-sec="ef"] .calb{position:relative;min-height:190px;border-radius:24px;overflow:hidden;cursor:pointer;isolation:isolate;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--acid) 14%,transparent),rgb(255 255 255 / .03));
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .16),inset 0 0 0 1px rgb(255 255 255 / .07);transition:transform .2s}
+html[data-sec="ef"] .calb:hover{transform:translateY(-3px)}
+html[data-sec="ef"] .calb.hot{box-shadow:inset 0 0 0 1.5px rgb(251 191 36 / .7)}
+html[data-sec="ef"] .calb.soon{opacity:.85}
+html[data-sec="ef"] .calb-art{position:absolute;right:-30px;top:-10px;height:125%;z-index:-1;object-fit:contain;
+  -webkit-mask:linear-gradient(90deg,transparent,#000 35%);mask:linear-gradient(90deg,transparent,#000 35%)}
+html[data-sec="ef"] .calb-art.w{height:70%;top:15%;right:12px}
+html[data-sec="ef"] .calb-in{position:relative;display:flex;flex-direction:column;gap:3px;padding:16px 18px;max-width:62%;min-height:190px}
+html[data-sec="ef"] .calb-in em{align-self:flex-start;font:600 10.5px var(--dz-sys);font-style:normal;padding:2px 9px;border-radius:999px;background:var(--acid);color:#14150d}
+html[data-sec="ef"] .calb.soon .calb-in em{background:rgb(255 255 255 / .14);color:var(--tx)}
+html[data-sec="ef"] .calb-in b{font:800 22px/1.15 var(--dz-sys);letter-spacing:-.3px;margin-top:6px}
+html[data-sec="ef"] .calb-in i{font-style:normal;font-size:12px;color:var(--tx2)}
+html[data-sec="ef"] .calb-who{display:flex;gap:4px;margin-top:auto;padding-top:10px}
+html[data-sec="ef"] .calb-who img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:rgb(0 0 0 / .4);box-shadow:0 0 0 2px rgb(255 255 255 / .15)}
+html[data-sec="ef"] .calb-who img.w{border-radius:10px;object-fit:contain}
+html[data-sec="ef"] .calb-t{font:600 12px var(--dz-sys);color:var(--tx2);margin-top:6px}
+html[data-sec="ef"] .calb.hot .calb-t{color:#fbbf24}
+/* Endfield «Рецепты» (п. 26, решение 33): плитка — значок на подсветке цвета редкости */
+html[data-sec="ef"] .wide > .it.go .chipi{background:radial-gradient(circle,color-mix(in srgb,var(--rc,#9ca3af) 40%,transparent),rgb(0 0 0 / .35) 72%) !important;border:0 !important}
+html[data-sec="ef"] .wide > .it.go:has(.r1){--rc:#9ca3af}
+html[data-sec="ef"] .wide > .it.go:has(.r2){--rc:#4ade80}
+html[data-sec="ef"] .wide > .it.go:has(.r3){--rc:#60a5fa}
+html[data-sec="ef"] .wide > .it.go:has(.r4){--rc:#c084fc}
+html[data-sec="ef"] .wide > .it.go:has(:is(.r5,.r6)){--rc:#fbbf24}
+html[data-sec="ef"] .wide > .it.go b.rt{color:var(--tx) !important}
+/* окно рецепта: шапка, схема колонками, четыре цифры, строки рецептов */
+html[data-sec="ef"] #sheet-in:has(.fc-hd){border-radius:30px !important;border:0 !important;background:rgb(10 12 14 / .9) !important;
+  box-shadow:inset 0 0 0 1px var(--dz-edge),0 30px 80px rgb(0 0 0 / .5) !important}
+html[data-sec="ef"] .fc-hd{display:flex;gap:14px;align-items:center;margin:0 0 16px}
+html[data-sec="ef"] .fc-hd .chipi{width:64px !important;height:64px !important;border-radius:18px !important}
+html[data-sec="ef"] .fc-hd h2{margin:0;font:800 28px/1.1 var(--dz-sys);letter-spacing:-.4px;color:var(--tx)}
+html[data-sec="ef"] .fc-hd i{font-style:normal;font-size:13px;color:var(--tx2)}
+html[data-sec="ef"] #sheet-in:has(.fc-hd) .sec{margin:0 0 12px;padding:16px 18px;border-radius:24px;background:rgb(255 255 255 / .05);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .12),inset 0 0 0 1px rgb(255 255 255 / .05)}
+html[data-sec="ef"] #sheet-in:has(.fc-hd) .sec > h4{display:flex;gap:8px;margin:0 0 10px;font:600 13px var(--dz-sys);color:var(--tx);text-transform:none;letter-spacing:normal}
+html[data-sec="ef"] #sheet-in:has(.fc-hd) .sec > h4::before{display:none}
+html[data-sec="ef"] #sheet-in:has(.fc-hd) .sec > h4 em{margin-left:auto;font:400 11.5px var(--dz-sys);font-style:normal;color:var(--tx3,#6b7280)}
+html[data-sec="ef"] .fc-sp{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;color:var(--tx2)}
+html[data-sec="ef"] .fc-sp input{width:84px;text-align:center;border-radius:999px !important;font:700 14px var(--dz-mono) !important}
+html[data-sec="ef"] .fc-flow{display:flex;align-items:stretch;gap:8px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+html[data-sec="ef"] .fc-col{flex:1 0 200px;display:flex;flex-direction:column;gap:8px}
+html[data-sec="ef"] .fc-col small{font:600 11px var(--dz-sys);color:var(--tx3,#6b7280)}
+html[data-sec="ef"] .fc-a{align-self:center;color:var(--tx3,#6b7280);font-size:18px}
+html[data-sec="ef"] .fc-n{display:flex;gap:10px;align-items:center;padding:10px;border-radius:16px;background:rgb(255 255 255 / .05);box-shadow:inset 0 0 0 1px rgb(255 255 255 / .06)}
+html[data-sec="ef"] .fc-col:last-child .fc-n{box-shadow:inset 0 0 0 1.5px var(--acid)}
+html[data-sec="ef"] .fc-n b{display:block;font:600 12.5px/1.3 var(--dz-sys)}
+html[data-sec="ef"] .fc-n i{display:block;font-style:normal;font-size:11px;color:var(--tx2);margin-top:2px}
+html[data-sec="ef"] .fc-n select{margin-top:6px;max-width:100%;font-size:11px !important;padding:3px 8px !important;border-radius:999px !important}
+html[data-sec="ef"] .fc-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+html[data-sec="ef"] .fc-kpi > div{padding:12px 14px;border-radius:18px;background:rgb(255 255 255 / .05)}
+html[data-sec="ef"] .fc-kpi b{display:block;font:800 22px/1.1 var(--dz-mono);color:var(--tx)}
+html[data-sec="ef"] .fc-kpi .ok b{color:var(--acid)}
+html[data-sec="ef"] .fc-kpi span{font-size:11.5px;color:var(--tx2)}
+html[data-sec="ef"] .fc-rows .rcp{display:flex;align-items:center;gap:10px;padding:10px 2px;border:0 !important;border-bottom:1px solid rgb(255 255 255 / .07) !important;
+  background:none !important;border-radius:0 !important;box-shadow:none !important}
+html[data-sec="ef"] .fc-rows .rcp:last-child{border-bottom:0 !important}
+html[data-sec="ef"] .fc-rows .rcp .mc{margin-left:auto;text-align:right;font-size:11.5px;color:var(--tx2)}
+html[data-sec="ef"] .fc-rows .rcp .mc b{font:600 12.5px var(--dz-sys) !important}
+html[data-sec="ef"] .fc-rows .rcp .arr{color:var(--tx3,#6b7280)}
 /* сводка над сеткой (агентов есть … лидер модификации) — убрана по просьбе владельца 29.10 */
 html[data-sec="zzz"] #summary{display:none !important}
 /* «← Разделы» (menu.js, в окне приложения) — капсула как пункты шапки */

@@ -43,26 +43,33 @@ function рецептДля(id, путь) {
   if (!сп.length) return null;
   return сп.find(r => r.id === выбор[id]) || сп[0];
 }
-function дерево(id, скорость, путь, итог) {
+// Схема цепочки (редизайн 28.10.2026, п. 33, вариант C): колонки слева
+// направо — сырьё → шаги → итог. Колонка узла — его «высота» от сырья, так
+// что каждая колонка — один шаг производства. Одинаковые предметы в колонке
+// складываются.
+function схема(id, скорость, путь, итог, кол) {
   const r = рецептДля(id, путь);
+  const сюда = (h, узел) => { const к = кол[h] = кол[h] || {}; const б = к[id]; if (б) { б.с += узел.с; б.м += узел.м; } else к[id] = узел; };
   if (!r) {
     итог.сырьё[id] = (итог.сырьё[id] || 0) + скорость;
-    return '<div class="row2">' + EF.фишка(id, null, true) + '<span>' + эк(EF.пр(id).н) + ' <span class="tag gh">сырьё</span></span>' +
-      '<span class="num">' + чис(скорость, 2) + '/мин</span></div>';
+    сюда(0, { с: скорость, м: 0, маш: '' });
+    return 0;
   }
-  const одна = вМинуту(r, id);
-  const машин = скорость / одна;
+  const машин = скорость / вМинуту(r, id);
   итог.машины[r.м] = (итог.машины[r.м] || 0) + машин;
   итог.энергия += Math.ceil(машин) * (машина(r.м).эн || 0);
-  const м = машина(r.м);
-  const выборы = (ПО_ВЫХОДУ[id] || []).length > 1
-    ? '<select class="srch" data-frcp="' + эк(id) + '" style="min-width:0;padding:3px 8px;font-size:11px">' + ПО_ВЫХОДУ[id].map(x =>
-      '<option value="' + эк(x.id) + '"' + (x === r ? ' selected' : '') + '>' + эк(x.вх.map(([i, n]) => n + '× ' + EF.пр(i).н).join(' + ') || x.id) + '</option>').join('') + '</select>' : '';
   const путь2 = new Set(путь); путь2.add(id);
-  return '<div class="row2">' + EF.фишка(id, null, true) + '<span><b style="font:700 12.5px var(--head)">' + эк(EF.пр(id).н) + '</b> · ' +
-    (м.з ? '<img src="' + эк(м.з) + '" alt="" style="width:18px;height:18px;vertical-align:middle">' : '') + эк(м.н) + ' × <span class="hl">' + чис(машин, 2) + '</span></span>' +
-    выборы + '<span class="num">' + чис(скорость, 2) + '/мин</span></div>' +
-    '<div class="tree">' + r.вх.map(([x, n]) => дерево(x, скорость * n / r.вых.find(o => o[0] === id)[1], путь2, итог)).join('') + '</div>';
+  const h = 1 + Math.max(...r.вх.map(([x, n]) => схема(x, скорость * n / r.вых.find(o => o[0] === id)[1], путь2, итог, кол)));
+  сюда(h, { с: скорость, м: машин, маш: r.м });
+  return h;
+}
+function узелСхемы(id, у) {
+  const выборы = у.маш && (ПО_ВЫХОДУ[id] || []).length > 1
+    ? '<select class="srch" data-frcp="' + эк(id) + '">' + ПО_ВЫХОДУ[id].map(x =>
+      '<option value="' + эк(x.id) + '"' + (x.id === (рецептДля(id, new Set()) || {}).id ? ' selected' : '') + '>' +
+      эк(x.вх.map(([i, n]) => n + '× ' + EF.пр(i).н).join(' + ') || x.id) + '</option>').join('') + '</select>' : '';
+  return '<div class="fc-n">' + EF.фишка(id, null, true) + '<div><b>' + эк(EF.пр(id).н) + '</b>' +
+    '<i>' + чис(у.с, 2) + '/мин' + (у.маш ? ' · ' + эк(машина(у.маш).н) + ' × ' + чис(у.м, 2) : '') + '</i>' + выборы + '</div></div>';
 }
 let ОТКР = null, СКОР = 10;
 function открыть(id) {
@@ -71,21 +78,24 @@ function открыть(id) {
   const делают = ПО_ВЫХОДУ[id] || [];
   const идёт = (ПО_ВХОДУ[id] || []).slice(0, 30);
   const итог = { сырьё: {}, машины: {}, энергия: 0 };
-  const дер = делают.length ? дерево(id, СКОР, new Set(), итог) : '';
-  EF.открыть('<div class="hd" style="margin-top:0"><div style="display:flex;gap:14px;align-items:center">' + EF.фишка(id) +
-    '<div class="ttl"><span class="eyebrow">// factory.item</span><h1 class="r' + п.р + ' rt">' + эк(п.н) + '</h1></div></div></div>' +
-    '<div class="cols">' +
-    '<div class="sec full"><h4>чем делают</h4>' + (делают.length ? делают.map(строкаРецепта).join('<div style="height:6px"></div>') : '<div class="hint">это сырьё — добывается или выращивается</div>') + '</div>' +
-    (делают.length ? '<div class="sec full"><h4>цепочка под скорость<em>штук в минуту</em></h4>' +
-      '<div class="fld"><input class="inp num" type="number" min="0.1" step="0.5" value="' + СКОР + '" id="fspeed"><span class="hint" style="margin:0">шт/мин на выходе · свой рецепт выбирается в строке</span></div>' +
-      '<div class="box" style="margin-bottom:12px">' + дер + '</div>' +
-      '<div class="cols"><div class="box"><b>машины</b>' + Object.entries(итог.машины).map(([m, n]) =>
-        '<div class="it" style="margin-bottom:6px">' + (машина(m).з ? '<img src="' + эк(машина(m).з) + '" alt="" style="width:30px;height:30px;object-fit:contain">' : '') +
-        '<span><b>' + эк(машина(m).н) + '</b><i>' + чис(n, 2) + ' → ставить ' + Math.ceil(n - 1e-9) + '</i></span><span class="rt2">' + Math.ceil(n - 1e-9) + '</span></div>').join('') +
-        '<p class="hint">Энергия: ~' + чис(итог.энергия, 0) + ' (по целым машинам)</p></div>' +
-      '<div class="box"><b>сырьё в минуту</b>' + EF.материалы(Object.entries(итог.сырьё).map(([k, v]) => [k, Math.round(v * 100) / 100])) + '</div></div></div>' : '') +
-    (идёт.length ? '<div class="sec full"><h4>куда идёт дальше<em>' + (ПО_ВХОДУ[id] || []).length + ' рецептов</em></h4>' + идёт.map(строкаРецепта).join('<div style="height:6px"></div>') + '</div>' : '') +
-    '</div>');
+  const кол = [];
+  if (делают.length) схема(id, СКОР, new Set(), итог, кол);
+  const ПОДП = i => i === 0 ? 'сырьё' : (i === кол.length - 1 ? 'итог' : 'шаг ' + i);
+  const машинЦелых = Object.values(итог.машины).reduce((s, n) => s + Math.ceil(n - 1e-9), 0);
+  const строки = сп => '<div class="fc-rows">' + сп.map(строкаРецепта).join('') + '</div>';
+  EF.открыть(
+    '<div class="fc-hd">' + EF.фишка(id) + '<div><h2 class="r' + п.р + '">' + эк(п.н) + '</h2>' +
+      '<i>' + (делают.length ? делают.length + ' ' + (делают.length === 1 ? 'рецепт' : 'рецептов') : 'сырьё') +
+      ((ПО_ВХОДУ[id] || []).length ? ' · идёт ещё в ' + ПО_ВХОДУ[id].length : '') + '</i></div></div>' +
+    (делают.length
+      ? '<div class="sec full"><div class="fc-sp"><span>Скорость на выходе</span><input class="inp num" type="number" min="0.1" step="0.5" value="' + СКОР + '" id="fspeed"><span>шт/мин</span></div>' +
+          '<div class="fc-flow">' + кол.map((к, i) => '<div class="fc-col"><small>' + ПОДП(i) + '</small>' +
+            Object.entries(к).map(([x, у]) => узелСхемы(x, у)).join('') + '</div>').join('<span class="fc-a">→</span>') + '</div>' +
+          '<div class="fc-kpi"><div><b>' + машинЦелых + '</b><span>машин</span></div><div><b>' + чис(итог.энергия, 0) + '</b><span>энергии</span></div>' +
+            '<div><b>' + Object.keys(итог.сырьё).length + '</b><span>вида сырья</span></div><div class="ok"><b>' + чис(СКОР, 2) + '</b><span>шт/мин на выходе</span></div></div></div>'
+      : '') +
+    '<div class="sec full"><h4>Чем делают</h4>' + (делают.length ? строки(делают) : '<div class="hint">Это сырьё — добывается или выращивается.</div>') + '</div>' +
+    (идёт.length ? '<div class="sec full"><h4>Куда идёт дальше<em>' + (ПО_ВХОДУ[id] || []).length + ' рецептов</em></h4>' + строки(идёт) + '</div>' : ''));
 }
 
 EF.раздел('fac', {

@@ -17,7 +17,7 @@
 (function () {
 'use strict';
 
-const APP_VER = 'v30';
+const APP_VER = 'v31';
 const ВОРКЕР = 'https://alextask-push.12dogswog76.workers.dev';
 const API = ['https://api.alextask.ru', ВОРКЕР];
 const РАЗБОР = 'https://www.prydwen.gg/arknights-endfield/characters/';
@@ -1022,11 +1022,16 @@ function кальБаннер(б) {
   const наш = глав && EF.ТУЛЫ && EF.ТУЛЫ.баннеры ? EF.ТУЛЫ.баннеры.find(x => x.огр && x.фокус && x.фокус[0] === глав.id) : null;
   const р = КАЛРУ || {}, и = прям(б.name);
   const ру = наш ? наш.н : ((р.банн || {})[и] || (р.ор || {})[и] || (р.оп || {})[и] || '');
-  return '<tr><td><b>' + эк(ру || б.name) + '</b>' + (ру ? '<br><i>' + эк(б.name) + '</i>' : '') + '</td>' +
-    '<td>' + опы.map(c => '<span class="calop" data-op="' + эк(c.id) + '"><img src="' + эк(c.значок) + '" alt="">' + эк(c.имяРу) + '</span>').join('') +
-      ору.map(w => '<span class="calop w" data-wpn="' + эк(w.id) + '"><img src="' + эк(w.значок) + '" alt="">' + эк(w.имяРу) + '</span>').join('') +
-      (!опы.length && !ору.length ? эк(б.rate) : '') + '</td>' +
-    '<td style="white-space:nowrap"' + (с.горит ? ' class="hot"' : '') + '>' + эк(с.текст) + '</td></tr>';
+  // Карточкой с артом (29.10.2026, слова владельца: «как в NTE, чтобы было
+  // видно, что сейчас идёт»): арт главного оператора или оружия фоном.
+  const лицо = глав || опы[0];
+  const фон = лицо ? 'img/art/' + лицо.id + '.webp' : (ору[0] ? ору[0].значок : '');
+  return '<div class="calb' + (с.горит ? ' hot' : '') + (с.скоро ? ' soon' : '') + '"' + (лицо ? ' data-op="' + эк(лицо.id) + '"' : '') + '>' +
+    (фон ? '<img class="calb-art' + (лицо ? '' : ' w') + '" src="' + эк(фон) + '" alt="" loading="lazy" data-nf="hide">' : '') +
+    '<div class="calb-in"><em>' + (с.скоро ? 'скоро' : 'идёт') + '</em><b>' + эк(ру || б.name) + '</b>' + (ру ? '<i>' + эк(б.name) + '</i>' : '') +
+      '<div class="calb-who">' + опы.map(c => '<img src="' + эк(c.значок) + '" alt="" title="' + эк(c.имяРу) + '">').join('') +
+        ору.map(w => '<img class="w" src="' + эк(w.значок) + '" alt="" title="' + эк(w.имяРу) + '">').join('') + '</div>' +
+      '<span class="calb-t">' + эк(с.текст) + '</span></div></div>';
 }
 function кальСобытие(е) {
   const с = сроки(е.from, е.to);
@@ -1049,9 +1054,10 @@ EF.раздел('cal', {
     const раздел = (заг, строки, шапка) => строки.length ? EF.блок(заг) + '<table class="tbl"><tr>' + шапка.map(х => '<th>' + х + '</th>').join('') + '</tr>' + строки.join('') + '</table>' : '';
     const по = (спис, ф, скоро) => спис.filter(x => (с => с && с.скоро === скоро)(сроки(x.from, x.to))).sort((a, b) => Date.parse(a.from) - Date.parse(b.from)).map(ф);
     const б = КАЛ.banners || [], е = КАЛ.events || [];
+    const карточки = (заг, строки) => строки.filter(Boolean).length ? EF.блок(заг) + '<div class="calbs">' + строки.join('') + '</div>' : '';
     $('body').innerHTML =
-      раздел('Баннеры — сейчас', по(б, кальБаннер, false), ['баннер', 'на баннере', 'срок']) +
-      раздел('Баннеры — скоро', по(б, кальБаннер, true), ['баннер', 'на баннере', 'срок']) +
+      карточки('Баннеры — сейчас', по(б, кальБаннер, false)) +
+      карточки('Баннеры — скоро', по(б, кальБаннер, true)) +
       раздел('События — сейчас', по(е, кальСобытие, false), ['событие', 'тип', 'срок']) +
       раздел('События — скоро', по(е, кальСобытие, true), ['событие', 'тип', 'срок']) ||
       '<div class="empty">Ничего не идёт.</div>';
