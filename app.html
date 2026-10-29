@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-sec="app">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -252,6 +252,8 @@
     .chset .r{grid-template-columns:1fr;gap:5px}
   }
 </style>
+<!-- новый облик (редизайн, п. 34): последним, перекрывает стили выше -->
+<link rel="stylesheet" href="design.css?v=15">
 </head>
 <body>
 <div class="bg" aria-hidden="true">
@@ -372,7 +374,7 @@
 <script src="app-news.js?v=6" defer></script>
 <!-- menu.js здесь ничего не рисует, только запоминает «вошли через оболочку» -
      по этой метке разделы показывают кнопку «← Разделы». -->
-<script src="menu.js?v=3" defer></script>
+<script src="menu.js?v=5" defer></script>
 <!-- плашка агента обслуживания в шапке — только владельцу -->
 <script src="status.js?v=1" defer></script>
 </body>
