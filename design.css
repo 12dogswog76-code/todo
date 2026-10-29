@@ -853,7 +853,11 @@ html[data-sec="ef"] #body :is(.box,.verdict) > b:first-child::first-letter{text-
 /* Endfield «Карта»: масштаба нет — шапка во всю ширину, как сама карта */
 html[data-sec="ef"][data-tab="map"] .ehead .top-in{max-width:none !important;padding:0 24px !important}
 /* карточка ZZZ одной высоты на всех вкладках — не прыгает при переключении */
-html[data-sec="zzz"] .modal.open #sheet{min-height:min(860px,calc(100vh - 40px))}
+html[data-sec="zzz"] .modal.open #sheet{min-height:min(860px,calc(100vh - 40px));max-height:calc(100vh - 24px)}
+/* при увеличении 125% / 150% (большой экран) высота экрана в CSS-пикселях
+   меньше — без деления карточка вылезала за верх и низ окна (29.10) */
+@media (min-width:1900px){html[data-sec="zzz"] .modal.open #sheet{min-height:min(860px,calc(100vh / 1.25 - 40px));max-height:calc(100vh / 1.25 - 24px)}}
+@media (min-width:2500px){html[data-sec="zzz"] .modal.open #sheet{min-height:min(860px,calc(100vh / 1.5 - 40px));max-height:calc(100vh / 1.5 - 24px)}}
 /* сводка над сеткой (агентов есть … лидер модификации) — убрана по просьбе владельца 29.10 */
 html[data-sec="zzz"] #summary{display:none !important}
 /* «← Разделы» (menu.js, в окне приложения) — капсула как пункты шапки */
