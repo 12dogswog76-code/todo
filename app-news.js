@@ -22,7 +22,7 @@
   const LS_F = 'alextask_news_filter';
   const LS_GLOB = 'alextask_news_glob';   // общий список каналов из воркера — копия на случай без сети
   const LS_KEY = 'alextask_news_key';     // ключ владельца: им сохраняется общий список
-  const ИГРЫ = { zzz: 'ZZZ', nte: 'NTE', ef: 'Endfield' };
+  const ИГРЫ = { zzz: 'ZZZ', nte: 'NTE', ef: 'Endfield', x: 'Ещё' };
   const СВЕЖЕСТЬ = 15 * 60 * 1000;
   const ПОРЦИЯ = 12;
 
@@ -101,7 +101,7 @@
   const разобрать = s => String(s || '').split(/[\s,;]+/).map(имя).filter(x => /^[A-Za-z][A-Za-z0-9_]{3,40}$/.test(x));
   // Каналы по умолчанию — стандарт, вводить их не нужно. Своё, заданное
   // кнопкой «Каналы», их заменяет; если список игры пустой — берётся стандарт.
-  const СТАНДАРТ = { zzz: ['zenlessleak'], nte: ['NTE_MIUMIU'], ef: ['ArknightsEndfieldleaks'] };
+  const СТАНДАРТ = { zzz: ['zenlessleak'], nte: ['MIU_VERSE'], ef: ['ArknightsEndfieldleaks'], x: [] };
   // Список каналов один на всех и лежит в воркере (/api/news/ch): любой, кто
   // открыл сайт или приложение, видит те же каналы. Пока общего списка нет
   // (воркер не обновлён или ещё не сохраняли) — свой старый из localStorage,

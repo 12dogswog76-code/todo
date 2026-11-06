@@ -36,7 +36,10 @@
 
   const стиль = document.createElement('style');
   стиль.textContent =
-    '.agst{position:relative;display:inline-flex;align-items:center;gap:7px;cursor:pointer;font:600 11px/1.2 Inter,"Segoe UI",system-ui,sans-serif;' +
+    // z-index: design.css даёт .agst backdrop-filter, а он делает плашку
+    // отдельным контекстом наложения уровня 0 — всплывашка рисовалась ПОД
+    // плитками игр. Поднимаем весь контекст выше плиток.
+    '.agst{position:relative;z-index:60;display:inline-flex;align-items:center;gap:7px;cursor:pointer;font:600 11px/1.2 Inter,"Segoe UI",system-ui,sans-serif;' +
       'letter-spacing:.06em;text-transform:uppercase;color:#c9cdd6;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);' +
       'border-radius:10px;padding:7px 11px;margin:0 8px;user-select:none}' +
     '.agst:hover{border-color:rgba(255,255,255,.25)}' +

@@ -335,6 +335,7 @@
     <button class="chip" data-f="zzz">ZZZ</button>
     <button class="chip" data-f="nte">NTE</button>
     <button class="chip" data-f="ef">Endfield</button>
+    <button class="chip" data-f="x">Ещё</button>
     <span class="sp"></span>
     <span class="nst" id="nst"></span>
     <button class="chip" id="nRefresh" title="Забрать свежие посты">Обновить</button>
@@ -344,12 +345,14 @@
     <div class="r"><label data-g="zzz">ZZZ</label><input data-ch="zzz" placeholder="@канал, @ещё_канал" spellcheck="false"></div>
     <div class="r"><label data-g="nte">NTE</label><input data-ch="nte" placeholder="@канал" spellcheck="false"></div>
     <div class="r"><label data-g="ef">Endfield</label><input data-ch="ef" placeholder="@канал" spellcheck="false"></div>
+    <div class="r"><label data-g="x">Ещё</label><input data-ch="x" placeholder="@канал, @ещё_канал — любые открытые" spellcheck="false"></div>
     <div class="r"><label>Ключ</label><input id="chKey" type="password" placeholder="ключ владельца (NEWS_KEY)" autocomplete="off" spellcheck="false"></div>
     <div class="row" style="margin-top:12px"><button class="go" id="chSave">Сохранить для всех</button><button id="chCancel">Отмена</button><span class="chmsg" id="chMsg"></span></div>
     <div class="hint">Список каналов общий: его видит каждый, кто открыл сайт или приложение. Сохранить может только
       владелец — с ключом, он запоминается в этом окне. Только открытые каналы: у них есть веб-витрина <b>t.me/s/имя</b>.
       Имя — как в ссылке на канал, можно с @ или целой ссылкой; несколько — через запятую. Пустое поле — стандартный
-      канал игры (@zenlessleak, @NTE_MIUMIU, @ArknightsEndfieldleaks).
+      канал игры (@zenlessleak, @MIU_VERSE, @ArknightsEndfieldleaks); «Ещё» — произвольные каналы вне игр, пустым
+      остаётся пустым.
       Ключ — секрет <b>NEWS_KEY</b> воркера alextask-push в Cloudflare. Старый ключ посмотреть нельзя: если он
       потерян, задай новый в Cloudflare → Workers &amp; Pages → alextask-push → Settings → Variables and Secrets,
       а затем вставь его сюда и нажми «Сохранить для всех».</div>
@@ -374,11 +377,11 @@
   </details>
 </div>
 <script src="app-shell.js?v=2" defer></script>
-<script src="app-news.js?v=6" defer></script>
+<script src="app-news.js?v=7" defer></script>
 <!-- menu.js здесь ничего не рисует, только запоминает «вошли через оболочку» -
      по этой метке разделы показывают кнопку «← Разделы». -->
 <script src="menu.js?v=5" defer></script>
 <!-- плашка агента обслуживания в шапке — только владельцу -->
-<script src="status.js?v=1" defer></script>
+<script src="status.js?v=2" defer></script>
 </body>
 </html>
