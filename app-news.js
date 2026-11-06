@@ -257,6 +257,7 @@
     const who = эл('div', 'who');
     if (https(p.chPhoto)) { const i = эл('img'); i.src = https(p.chPhoto); i.alt = ''; i.loading = 'lazy'; i.referrerPolicy = 'no-referrer'; who.appendChild(i); }
     who.appendChild(эл('span', 'gm', ИГРЫ[p.g] || p.g));
+    if (p.video) who.appendChild(эл('span', 'vd', '▶ видео'));
     who.appendChild(эл('span', '', p.chTitle));
     who.appendChild(эл('u', '', когда(p.t)));
     bd.appendChild(who);
