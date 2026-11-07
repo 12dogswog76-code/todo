@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v292';
+const APP_VER = 'v291';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -78,7 +78,36 @@ const PRIORITY = {
 function priOf(id, p) {
   const own = p && Array.isArray(p.pri2) ? p.pri2 : null;
   if (own && own.length) return own;
-  return PRIORITY[id] || [];
+  return PRIORITY[id] || derivePri(id);
+}
+// Для агентов вне ручного списка набор восстанавливаем из гайда prydwen:
+// шестой диск даёт Импульс/Восстановление/Контроль аномалии (их не бывает
+// в доп. характеристиках), строка приоритета доп. характеристик — криты,
+// атаку, HP и знание аномалии. Знание берём только из начала списка: в хвосте
+// оно у дамагеров просто «не мешает», а в игре не подсвечено. У HP-скейлеров
+// и стунеров атака в игре не подсвечивается.
+function derivePri(id) {
+  const g = GUIDE && GUIDE.agents && GUIDE.agents[id];
+  if (!g) return [];
+  const out = [];
+  const push = k => { if (out.indexOf(k) < 0) out.push(k); };
+  const d6 = (g.disk6 || '').toLowerCase();
+  if (d6.indexOf('impact') >= 0) push('im');
+  if (d6.indexOf('energy') >= 0) push('er');
+  if (d6.indexOf('anomaly mastery') >= 0) push('am');
+  const toks = (g.substats || '').split(/[>=]/).map(t =>
+    t.trim().toUpperCase().replace(/\(.*?\)/g, '').trim()).filter(t => t);
+  toks.forEach((t, i) => {
+    if (/^CRIT RATE/.test(t)) push('cr');
+    else if (/^CRIT DMG/.test(t)) push('cd');
+    else if (/^ATK/.test(t)) push('atk');
+    else if (/^(FLAT )?HP/.test(t)) push('hp');
+    else if (/^DEF/.test(t)) push('def');
+    else if (i < 2 && (/^ANOMALY PROFICIENCY/.test(t) || t === 'AP')) push('ap');
+  });
+  if ((out.indexOf('im') >= 0 || out.indexOf('hp') >= 0) && out.indexOf('atk') >= 0)
+    out.splice(out.indexOf('atk'), 1);
+  return out;
 }
 
 // Из чего сложилась характеристика — видно в подсказке у поля.
@@ -560,6 +589,11 @@ function svgW(inner, col, size) {
   return '<svg viewBox="0 0 24 24" width="' + (size || 14) + '" height="' + (size || 14) +
     '" fill="' + col + '">' + inner + '</svg>';
 }
+// Иконки кнопок карточки (07.11) — SVG вместо эмодзи 🖼 и текстовых ★/☆,
+// чтобы совпадали с остальными значками сайта по толщине и цвету.
+const PIC_ICON = svgW('<path d="M21 19V5c0-1.1-.9-2-2-2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>', 'currentColor', 13);
+const STAR_ON = svgW('<path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>', 'currentColor', 13);
+const STAR_OFF = svgW('<path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/>', 'currentColor', 13);
 const EL_PATH = {
   // четырёхлучевая искра
   ether:    '<path d="M12 1.5c.6 4.6 1.9 7.9 4.6 9.4-2.7 1.5-4 4.8-4.6 9.4-.6-4.6-1.9-7.9-4.6-9.4C10.1 9.4 11.4 6.1 12 1.5z" transform="translate(0,1.2)"/><path d="M20 8.5c.3 2 .8 3.4 2 4.1-1.2.7-1.7 2.1-2 4.1-.3-2-.8-3.4-2-4.1 1.2-.7 1.7-2.1 2-4.1z" opacity=".75"/>',
@@ -1848,6 +1882,15 @@ function agentPic(a, kind) {
 const ART_ZOOM = {
   'Claret':  { card: 1,  hero: 1.1, orig: 'top center' },
   'Кларет':  { card: 1,  hero: 1.1, orig: 'top center' },
+  // 07.11: Сигрид, Севериан и Цезарь — на артах оружие съедает кадр, фигура
+  // выходит мелкой. Растим от низа: ноги остаются у имени, голова доходит
+  // до верха панели, пустой фон сверху уходит за край.
+  'Caesar':   { card: 1, hero: 1.4,  orig: 'center bottom' },
+  'Цезарь':   { card: 1, hero: 1.4,  orig: 'center bottom' },
+  'Sigrid':   { card: 1, hero: 1.45, orig: 'center bottom' },
+  'Сигрид':   { card: 1, hero: 1.45, orig: 'center bottom' },
+  'Severian': { card: 1, hero: 1.45, orig: 'center bottom' },
+  'Севериан': { card: 1, hero: 1.45, orig: 'center bottom' },
 };
 function artZoomStyle(a, kind) {
   const z = ART_ZOOM[a && a.en] || ART_ZOOM[a && a.ru];
@@ -3332,9 +3375,9 @@ function renderSheet() {
                  '<b>' + pctOf(curId) + '%</b><i>готовность</i></span>';
       })() +
       '<button class="htab" id="cardBtn" title="Сохранить сборку картинкой — ' +
-        'арт, характеристики, движок и диски одним PNG">🖼 картинкой</button>' +
+        'арт, характеристики, движок и диски одним PNG">' + PIC_ICON + ' картинкой</button>' +
       '<button class="htab' + (p.fav ? ' favon' : '') + '" id="favTog" title="в избранное">' +
-        (p.fav ? '★ в избранном' : '☆ в избранное') + '</button></div>';
+        (p.fav ? STAR_ON + ' в избранном' : STAR_OFF + ' в избранное') + '</button></div>';
 
     if (curTab === 'guide') { h += guideHtml(a, p, nowT); }
     else if (curTab === 'mats') { h += matsHtml(a); }
@@ -5852,8 +5895,9 @@ $('rebuildDb').onclick = async () => {
 // Пока раздел не выбран, окно узкое — только колонка с пунктами. Выбрал —
 // раскрывается вправо, колонка остаётся на месте.
 const MENU = [
-  { k: 'enka',   p: 'enkaPanel',   i: '⟳',  n: 'Импорт из игры',  d: 'Забрать аккаунт из игры' },
-  { k: 'cloud',  p: 'cloudPanel',  i: '☁',  n: 'Облако и данные', d: 'Синхронизация, бэкап, обслуживание' },
+  // 07.11: «Облако и данные» влито в импорт — отдельного пункта больше нет,
+  // содержимое живёт в enkaPanel блоком #cloudPart.
+  { k: 'enka',   p: 'enkaPanel',   i: '⟳',  n: 'Импорт из игры и облако', d: 'Аккаунт, синхронизация, бэкап' },
   { k: 'todo',   p: 'todoPanel',   i: '🎯', n: 'Кого качать',     d: 'Сильные, но недоделанные' },
   { k: 'mats',   p: 'matsPanel',   i: '🧱', n: 'Что фармить',     d: 'Материалы до твоих целей' },
   { k: 'mod',    p: 'modPanel',    i: '📊', n: 'Модификаторы',    d: 'Сумма по каждому агенту' },
@@ -5898,11 +5942,11 @@ function menuDropDraw() {
     menuOpen(b.dataset.k, менюСтраницей(b.dataset.k));
   });
 }
-// Разделы, у которых свой дизайн страницы (Что фармить, Кого качать, Крутки,
-// Эндгейм, Коды, Баннеры), открываются страницей; остальные — окном. И там и
-// там слева список всех инструментов (29.10.2026, третья проверка).
+// 07.11 (слова владельца): ВСЕ инструменты открываются одинаково — страницей
+// под шапкой со списком инструментов слева, как «Кого качать» и «Что фармить».
+// Раньше часть разделов всплывала окном, из-за чего система выглядела рваной.
 function менюСтраницей(k) {
-  return ZNAV.some(z => z[0] && z[0] === k);
+  return !!k;
 }
 // Средний остров шапки (редизайн 28.10.2026, п. 2). Главные разделы меню —
 // кнопками в одну строку; пункт открывает раздел страницей под шапкой (класс
@@ -5921,6 +5965,37 @@ function zNavDraw() {
     if (!k) { menuClose(); window.scrollTo({ top: 0 }); return; }
     menuOpen(k, true);
   });
+  syncBackBtn();
+}
+// 07.11 (п. 11): внутри раздела-страницы кнопка «← Разделы» (есть только в
+// приложении) превращается в «← Агенты» и ведёт назад к сетке, а не в оболочку.
+// На сайте своей кнопки не было — создаём её на время раздела, чтобы назад
+// можно было уйти одинаково и там, и там.
+function syncBackBtn() {
+  const page = $('menuWrap').classList.contains('page');
+  let b = document.querySelector('.dz-back');
+  if (page) {
+    if (!b) {
+      b = document.createElement('a');
+      b.className = 'dz-back';
+      b.dataset.own = '1';
+      document.body.appendChild(b);
+    }
+    if (b.dataset.href === undefined) b.dataset.href = b.getAttribute('href') || '';
+    b.textContent = '← Агенты';
+    b.href = '#';
+    b.onclick = e => { e.preventDefault(); menuClose(); window.scrollTo({ top: 0 }); };
+    document.body.classList.add('has-back');
+  } else if (b) {
+    if (b.dataset.own) b.remove();
+    else {
+      b.textContent = '← Разделы';
+      if (b.dataset.href) b.href = b.dataset.href;
+      else b.removeAttribute('href');
+      b.onclick = null;
+    }
+  }
+  if (!document.querySelector('.dz-back')) document.body.classList.remove('has-back');
 }
 function menuGo(k) {
   const m = MENU.filter(x => x.k === k)[0];
@@ -5941,8 +6016,7 @@ function menuGo(k) {
   }
   $('menuBox').classList.add('open');
   menuDraw();
-  if (k === 'enka')   { refreshEnkaLinks(); drawMaint(); refreshAutoImp(); }
-  if (k === 'cloud')  cloudUI();
+  if (k === 'enka')   { refreshEnkaLinks(); drawMaint(); refreshAutoImp(); cloudUI(); }
   if (k === 'mod')    drawModTable();
   if (k === 'gear')   drawGear();
   if (k === 'pull')   { drawPulls(); planAuto(); }
@@ -5998,7 +6072,12 @@ document.addEventListener('click', e => {
 });
 $('menuClose').onclick = menuClose;
 zNavDraw();
-$('menuWrap').onclick  = e => { if (e.target === $('menuWrap')) menuClose(); };
+// 07.11 (п. 11): клик по пустым полям по бокам страницы-раздела больше не
+// возвращает на старт — назад ведёт только кнопка «← Агенты». Для окна
+// (больше не используется) поведение бы сохранилось тем же условием.
+$('menuWrap').onclick  = e => {
+  if (e.target === $('menuWrap') && !$('menuWrap').classList.contains('page')) menuClose();
+};
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('toolsBox')) $('toolsBox').classList.remove('open');
   if (e.key === 'Escape' && $('menuWrap').classList.contains('open') &&
@@ -8902,7 +8981,7 @@ async function cardSave(id) {
   } catch (e) {
     alert('Не вышло: ' + ((e && e.message) || e));
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🖼 картинкой'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = PIC_ICON + ' картинкой'; }
   }
 }
 // имя файла латиницей: кириллица в именах скачиваемых файлов местами ломается
@@ -10930,6 +11009,57 @@ document.addEventListener('error', e => {
   else if (как === 'mat') { try { t.replaceWith(matStub(t.dataset.mat || '')); } catch (err) { t.remove(); } }
   else if (t.parentNode) { t.parentNode.classList.add(как); t.remove(); }
 }, true);
+
+// ─────────────── своя подсказка вместо нативного title (07.11) ───────────────
+// Нативный тултип WebView2/Chromium появляется прямо под курсором и им же
+// перекрывается — у вопросиков в «Куда стремиться» текст было не прочитать.
+// Здесь title у элемента забирается в data-tt (нативная подсказка больше не
+// всплывает), а текст показывается плашкой #dTip над самим элементом.
+(() => {
+  let tip = null, tipFor = null, timer = 0;
+  const убрать = () => {
+    clearTimeout(timer); timer = 0; tipFor = null;
+    if (tip) { tip.remove(); tip = null; }
+  };
+  const показать = el => {
+    const txt = (el.dataset.tt || '').trim();
+    if (!txt) return;
+    убрать();
+    tipFor = el;
+    timer = setTimeout(() => {
+      if (tipFor !== el || !el.isConnected) return;
+      tip = document.createElement('div');
+      tip.id = 'dTip';
+      tip.textContent = txt;
+      document.body.appendChild(tip);
+      const r = el.getBoundingClientRect();
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let x = r.left + r.width / 2 - tw / 2;
+      x = Math.max(8, Math.min(x, window.innerWidth - tw - 8));
+      let y = r.top - th - 10;
+      if (y < 8) y = r.bottom + 10;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+      tip.classList.add('on');
+    }, 250);
+  };
+  document.addEventListener('mouseover', e => {
+    const t = e.target;
+    const el = t && t.closest ? t.closest('[title],[data-tt]') : null;
+    if (!el) { убрать(); return; }
+    if (el.hasAttribute('title')) {
+      el.dataset.tt = el.getAttribute('title');
+      el.removeAttribute('title');
+    }
+    if (el === tipFor) return;
+    показать(el);
+  });
+  document.addEventListener('mouseout', e => {
+    if (tipFor && !(e.relatedTarget && tipFor.contains(e.relatedTarget))) убрать();
+  });
+  document.addEventListener('scroll', убрать, true);
+  document.addEventListener('click', убрать, true);
+})();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {

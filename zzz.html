@@ -1789,6 +1789,14 @@
     width:13px;height:13px;border-radius:50%;border:1px solid var(--tx3);color:var(--tx3);
     font-size:9px;font-style:normal;font-weight:700;line-height:1}
   .gg.note:hover .gg-q{border-color:var(--gold);color:var(--gold)}
+  /* Своя подсказка вместо нативного title (07.11): нативная рисуется прямо
+     под курсором и им же перекрывается — текст не прочитать. Эта плашка
+     привязана к элементу: сверху по центру, если не влезает — снизу. */
+  #dTip{position:fixed;z-index:120000;max-width:360px;padding:9px 12px;border-radius:12px;
+    background:#1a1d24;border:1px solid #ffffff22;box-shadow:0 10px 34px #000a;
+    color:#e9ecf3;font:12px/1.55 var(--dz-sys,system-ui,sans-serif);white-space:pre-line;
+    pointer-events:none;opacity:0;transition:opacity .12s}
+  #dTip.on{opacity:1}
   .gg-now{font-size:10.5px;color:var(--tx3);text-align:right;flex:none;min-width:64px;
     font-variant-numeric:tabular-nums}
   .gg.hit .gg-now{color:var(--acc)}
@@ -2397,7 +2405,7 @@
   }
 </style>
 <!-- новый облик (редизайн 28.10.2026): последним, перекрывает стили выше -->
-<link rel="stylesheet" href="design.css?v=19">
+<link rel="stylesheet" href="design.css?v=20">
 </head>
 <body>
 <div class="bgroll" aria-hidden="true"><div class="bgroll-in">
@@ -2573,12 +2581,10 @@
       </div>
     </details>
 
-    <!-- Обслуживание. Видно только владельцу: остальным эти команды ни к чему
-         и запустить их всё равно негде. -->
-    <div id="maint" style="display:none"></div>
-  </div>
-
-  <div class="panel" id="cloudPanel">
+    <!-- 07.11: «Облако и данные» перенесено сюда отдельным блоком — вкладка
+         называется «Импорт из игры и облако», самостоятельного пункта больше нет -->
+    <div class="panel-part" id="cloudPart" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+    <div class="cap2" style="margin:0 0 8px">Облако и данные<span>синхронизация, бэкап, обслуживание</span></div>
     <div class="hint" id="cloudInfo" style="margin-top:0"></div>
 
     <div class="howto" id="npHow">
@@ -2617,6 +2623,11 @@
       «Обновить список агентов» — когда вышел новый патч и появились новые персонажи
       (сам список обновляется раз в неделю).</div>
   </div>
+  </div>
+
+    <!-- Обслуживание. Видно только владельцу: остальным эти команды ни к чему
+         и запустить их всё равно негде. -->
+    <div id="maint" style="display:none"></div>
   </div>
 
   <div class="panel" id="modPanel">
@@ -2785,8 +2796,8 @@
   </div>
 </div></div>
 
-<script src="zzz-app.js?v=292" defer></script>
-<script src="menu.js?v=5" defer></script>
+<script src="zzz-app.js?v=291" defer></script>
+<script src="menu.js?v=6" defer></script>
 <script src="install.js?v=3" defer></script>
 <script src="states.js?v=1" defer></script>
 <script src="status.js?v=2" defer></script>

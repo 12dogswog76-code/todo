@@ -206,6 +206,10 @@ html[data-sec] :is(.num,.mono,td.n,td.num){font-family:var(--dz-mono)}
 /* ── шапка «островами» (п. 2): логотип и инструменты — стеклянные капсулы,
       прилипают к верху при прокрутке ─────────────────────────────────────── */
 html[data-sec] :is(.top,.topbar){position:sticky;top:10px;z-index:30}
+/* 07.11: класс .top есть и у лучшего движка в гайде (.gen.top) — общее
+   sticky-правило шапки заставляло его прилипать и наползать на соседние
+   строки при прокрутке. Возвращаем строке обычное место в потоке. */
+html[data-sec="zzz"] #sheet .gen.top{position:static}
 html[data-sec="zzz"] .top{padding:0;gap:10px}
 html[data-sec="zzz"] .top > :is(.logo,.tools){
   padding:6px 8px 6px 6px;border-radius:999px;background:rgb(20 22 28 / .6);border:1px solid var(--dz-edge);
@@ -237,7 +241,7 @@ html[data-sec="zzz"] #filters .chip{display:inline-flex;align-items:center;gap:6
   background:rgb(255 255 255 / .06) !important;color:var(--tx2) !important;border:0 !important;width:auto !important;min-width:0 !important}
 html[data-sec="zzz"] #filters .chip:hover{background:rgb(255 255 255 / .12) !important;color:var(--tx) !important}
 html[data-sec="zzz"] #filters .chip.on{background:var(--acc) !important;color:#0b0d10 !important;font-weight:600 !important}
-html[data-sec="zzz"] #filters .chip em{font:500 11px var(--dz-mono);font-style:normal;opacity:.6}
+html[data-sec="zzz"] #filters .chip em{font:500 11px/1 var(--dz-mono);font-style:normal;opacity:.6;transform:translateY(.5px)}
 html[data-sec="zzz"] #filters .chip :is(img,svg,.ic){width:16px !important;height:16px !important}
 html[data-sec="zzz"] #filters .fsep{width:1px;height:18px;background:rgb(255 255 255 / .1);margin:0 4px}
 html[data-sec="zzz"] #filters .chip.link{margin-left:0;background:none !important;color:var(--tx3,#6b7280) !important}
@@ -639,6 +643,9 @@ html[data-sec="ef"] .fc-rows .rcp .arr{color:var(--tx3,#6b7280)}
 /* «← Разделы» — у левого края страницы; шапка начинается по краю содержимого */
 html[data-sec] .dz-back{position:fixed !important;left:16px;top:22px;z-index:60;margin:0 !important;
   backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur)}
+/* 07.11 (2K): если кнопка «← Разделы/Агенты» на странице, шапка отступает
+   вправо на её ширину — иначе кнопка наезжает на логотип */
+html[data-sec="zzz"] body.has-back .top{padding-left:104px}
 html[data-sec="ef"] .dz-back{top:14px}
 /* Endfield: шапка как у всех — по ширине содержимого, логотип и версия одним островом */
 html[data-sec="ef"] .ehead .top-in{max-width:1180px !important;margin:0 auto !important;padding:0 !important}
@@ -887,7 +894,11 @@ html[data-sec="zzz"] .mmwrap.page .mmx{display:none !important}
 html[data-sec="zzz"] .mmwrap.page .mmbox{width:min(1240px,100%) !important;background:transparent !important;border:0 !important;
   box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
 html[data-sec="zzz"] .mmwrap.page .mmbody{max-height:calc(100vh - 96px)}
-html[data-sec="zzz"] .mmwrap.page .mmhead{background:transparent;border:0;padding:6px 4px 12px;backdrop-filter:none}
+/* 07.11 (п. 10): заголовок раздела прилипает к верху (sticky уже был), но
+   был прозрачным — при прокрутке текст контента просвечивал сквозь него и
+   казалось, будто плашка уезжает. Даём полосу с блюром, как у шапки сайта. */
+html[data-sec="zzz"] .mmwrap.page .mmhead{background:rgb(13 16 21 / .88);border:0;padding:10px 14px 14px;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:0 0 18px 18px;z-index:6}
 html[data-sec="zzz"] .mmwrap.page .mmhead h2{font-size:30px;text-transform:none;letter-spacing:-.01em;font-weight:800}
 html[data-sec="zzz"] .mmwrap.page .mmslot{padding:0 4px 20px}
 html[data-sec="zzz"] body.zpage #main{visibility:hidden}
@@ -1143,12 +1154,12 @@ html[data-sec="zzz"] #sheet .stg .st::before,html[data-sec="zzz"] #sheet .stg .s
 html[data-sec="zzz"] #sheet .stg .st .lab{font-size:12.5px !important;min-width:0;color:var(--tx2) !important;font-weight:400 !important;display:flex;align-items:center;gap:6px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html[data-sec="zzz"] #sheet .stg .st .lab svg{width:13px;height:13px;opacity:.6;flex:none}
-html[data-sec="zzz"] #sheet .stg .st.pri-stat .lab{color:var(--el) !important;font-weight:600 !important}
+html[data-sec="zzz"] #sheet .stg .st.pri-stat .lab{color:var(--gold,#ffd54a) !important;font-weight:600 !important}
 html[data-sec="zzz"] #sheet .stg .st.pri-stat .lab svg{display:none}
-html[data-sec="zzz"] #sheet .stg .st.pri-stat .lab::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--el);flex:none}
+html[data-sec="zzz"] #sheet .stg .st.pri-stat .lab::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold,#ffd54a);flex:none}
 html[data-sec="zzz"] #sheet .stg .st .curin{width:64px;text-align:right;font:600 14px var(--dz-mono) !important;background:transparent !important;border:0 !important;
   border-radius:8px !important;padding:2px 4px !important;color:var(--tx) !important;box-shadow:none !important}
-html[data-sec="zzz"] #sheet .stg .st.pri-stat .curin{color:var(--el) !important}
+html[data-sec="zzz"] #sheet .stg .st.pri-stat .curin{color:var(--gold,#ffd54a) !important}
 html[data-sec="zzz"] #sheet .stg .st .curin:focus{background:rgb(255 255 255 / .07) !important}
 html[data-sec="zzz"] #sheet .stg .st .goalin{width:50px;text-align:center;font:500 11.5px var(--dz-mono) !important;padding:3px 6px !important;border-radius:999px !important;
   background:rgb(255 255 255 / .06) !important;border:0 !important;color:var(--tx2) !important;box-shadow:none !important}
@@ -1173,6 +1184,7 @@ html[data-sec="zzz"] #sheet .skl .sk{width:44px;text-align:center;font:700 16px 
 html[data-sec="zzz"] #sheet .skl .sl,html[data-sec="zzz"] #sheet .skl .mind span{font-size:11px;color:var(--tx2);text-align:center}
 html[data-sec="zzz"] #sheet .skl .mind b{font:700 20px var(--dz-mono);margin-top:6px}
 html[data-sec="zzz"] #sheet .core .htab{border-radius:999px !important;border:0 !important;background:rgb(255 255 255 / .08) !important;color:var(--tx2) !important;box-shadow:none !important}
+html[data-sec="zzz"] #sheet .core .htab svg{vertical-align:-2px;margin-right:2px}
 /* «Фарм» (п. 11) и «Гайд» — те же стеклянные блоки и подписи, что в «Сейчас» */
 html[data-sec="zzz"] #sheet :is(.mt-sum,.mp-list,.hbody > table.tbl){margin:0 0 12px !important;padding:16px 18px !important;border-radius:24px !important;border:0 !important;
   background:rgb(255 255 255 / .06) !important;box-shadow:inset 0 1px 0 rgb(255 255 255 / .14),inset 0 0 0 1px rgb(255 255 255 / .06) !important}
@@ -1184,6 +1196,13 @@ html[data-sec="zzz"] #sheet :is(.cap2,.mt-cap) span{font:400 11px var(--dz-sys) 
 html[data-sec="zzz"] #sheet .mp-row{border:0 !important;border-bottom:1px solid rgb(255 255 255 / .07) !important;background:none !important;border-radius:0 !important;padding:10px 0 !important}
 html[data-sec="zzz"] #sheet .mp-row:last-child{border-bottom:0 !important}
 html[data-sec="zzz"] #sheet .tbl :is(td,th){border-color:rgb(255 255 255 / .07) !important;background:none !important}
+/* «Где фармить» (07.11): строки таблицы разделены чертой и с отступами —
+   раньше название, «надо…» и числа слипались в одну массу на широком экране */
+html[data-sec="zzz"] #sheet .hbody > table.tbl td{padding:9px 6px;vertical-align:top;line-height:1.45}
+html[data-sec="zzz"] #sheet .hbody > table.tbl tr + tr td{border-top:1px solid rgb(255 255 255 / .09)}
+html[data-sec="zzz"] #sheet .hbody > table.tbl td:first-child{padding-left:0}
+html[data-sec="zzz"] #sheet .hbody > table.tbl td:last-child{padding-right:0}
+html[data-sec="zzz"] #sheet .hbody > table.tbl td .hint{margin-top:3px !important;line-height:1.5}
 html[data-sec="zzz"] #sheet .tm-list > *{border-radius:0 !important;border:0 !important;border-bottom:1px solid rgb(255 255 255 / .07) !important;background:none !important;box-shadow:none !important}
 html[data-sec="zzz"] #sheet .tm-list > *:last-child{border-bottom:0 !important}
 html[data-sec="zzz"] #sheet :is(.ggoals,.gengs) > *{border-radius:16px !important;border:0 !important;background:rgb(255 255 255 / .05) !important;box-shadow:none !important}

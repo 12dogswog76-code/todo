@@ -97,6 +97,9 @@
 
   const поставить = () => {
     if (!document.body || кнопка.isConnected) return;
+    // 07.11 (2K): кнопка fixed поверх шапки — шапка должна зарезервировать
+    // место слева, иначе на широком экране кнопка наезжает на логотип.
+    document.body.classList.add('has-back');
     for (const [сел, вид] of МЕСТА) {
       const куда = document.querySelector(сел);
       if (!куда) continue;
