@@ -1553,3 +1553,52 @@ html[data-sec="money"] #gmList [data-game="Endfield"] .gmname::before{background
 
 /* ── прокрутка ───────────────────────────────────────────────────────────── */
 html[data-sec]{scrollbar-color:rgb(255 255 255 / .18) transparent}
+
+/* 08.11 — инструменты: компактное меню и один внутренний скролл. */
+html[data-sec="zzz"] .mmwrap.page{overflow:hidden !important}
+html[data-sec="zzz"] .mmwrap.page .mmbox{height:100%;max-height:calc(100vh - 96px);margin:0 !important}
+html[data-sec="zzz"] .mmwrap.page .mmbody{height:100%;max-height:none}
+html[data-sec="zzz"] .mmwrap.page .mmnav{height:100%;max-height:none;overflow:hidden;padding:8px;gap:2px}
+html[data-sec="zzz"] .mmwrap.page .mmi{padding:7px 10px}
+html[data-sec="zzz"] .mmwrap.page .mmi b{font-size:11px;line-height:1.25}
+html[data-sec="zzz"] .mmwrap.page .mmi i{display:none}
+/* Заголовок и служебная строка — просто текст, без плашек-пузырей. */
+html[data-sec="zzz"] .mmwrap.page .mmhead{background:transparent !important;backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;border-radius:0;padding:10px 4px 14px}
+html[data-sec="zzz"] .mmwrap.page :is(.ptop,.eg-head){background:transparent !important;box-shadow:none !important;
+  border-radius:0 !important;padding:0 0 10px !important}
+
+/* Модификаторы — обычная читаемая таблица, без чрезмерных карточек. */
+html[data-sec="zzz"] #modBox .mod-wrap{padding:0;background:transparent;border:0;border-radius:0;overflow:visible}
+html[data-sec="zzz"] #modBox .mt-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+html[data-sec="zzz"] #modFind{width:220px;height:36px;padding:0 12px;border:1px solid var(--dz-edge);border-radius:10px;
+  background:rgb(20 22 28 / .78);color:var(--tx);font:400 13px var(--dz-sys);outline:none;color-scheme:dark}
+html[data-sec="zzz"] #modFind::placeholder{color:var(--tx2);opacity:1}
+html[data-sec="zzz"] #modFind:focus{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 18%,transparent)}
+html[data-sec="zzz"] #modBox .mod-table{table-layout:fixed;font-size:13px !important;line-height:1.45;border-spacing:0}
+html[data-sec="zzz"] #modBox .mod-table th{padding:8px 10px !important;color:var(--tx2) !important;font:600 12px var(--dz-sys);
+  background:rgb(255 255 255 / .035)}
+html[data-sec="zzz"] #modBox .mod-table td{padding:7px 10px !important;color:var(--tx2) !important;vertical-align:top}
+html[data-sec="zzz"] #modBox .mod-table :is(th,td):nth-child(1){width:15%}
+html[data-sec="zzz"] #modBox .mod-table :is(th,td):nth-child(2){width:7%}
+html[data-sec="zzz"] #modBox .mod-table :is(th,td):nth-child(3){width:32%}
+html[data-sec="zzz"] #modBox .mod-table :is(th,td):nth-child(4){width:46%}
+html[data-sec="zzz"] #modBox .mod-table td:nth-child(2){color:var(--gold) !important}
+html[data-sec="zzz"] #modBox .mod-table tbody tr:nth-child(even) td{background:rgb(255 255 255 / .018)}
+html[data-sec="zzz"] #modBox .mod-table tr.hit td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+
+/* Промокоды: тонкая окантовка чекбокса, без двойного кольца и рамки секции. */
+html[data-sec="zzz"] .csec{background:rgb(255 255 255 / .035);box-shadow:none;border:0}
+html[data-sec="zzz"] .crow .cchk{border:1px solid rgb(255 255 255 / .28) !important;box-shadow:none !important}
+
+/* Эндгейм занимает доступную высоту; каждая колонка прокручивается отдельно. */
+html[data-sec="zzz"] .mmwrap.page :is(#endPanel,#endBox){height:100%;min-height:0}
+html[data-sec="zzz"] .eg-cols{height:100%;min-height:0;grid-template-columns:minmax(0,1fr) minmax(380px,460px)}
+html[data-sec="zzz"] .eg-cols :is(.eg-l,.eg-r){position:static;min-height:0;max-height:100%;overflow-y:auto;scrollbar-width:thin;padding-right:4px}
+/* В узкой мета-колонке оставляем значок банбу; название доступно в подсказке. */
+html[data-sec="zzz"] .eg-l .tm-boo{flex:0 0 32px}
+html[data-sec="zzz"] .eg-l .tm-boo>span{display:none}
+html[data-sec="zzz"] .rn-pic{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0}
+html[data-sec="zzz"] .rn-pic svg{width:15px;height:15px;display:block}
+html[data-sec="zzz"] #sqBtn{display:inline-flex;align-items:center;gap:6px}
+

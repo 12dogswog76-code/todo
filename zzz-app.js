@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v295';
+const APP_VER = 'v296';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5800,13 +5800,13 @@ function drawModTable() {
     })
     .sort((x, y) => y.sum - x.sum);
   if (!rows.length) { box.innerHTML = '<div class="hint">Нет агентов с заданными приоритетами.</div>'; return; }
-  box.innerHTML = '<div class="editbox" style="margin:8px 0">' +
+  box.innerHTML = '<div class="editbox mod-wrap" style="margin:8px 0">' +
     '<div class="mt-top">' +
       '<div class="cap2" style="margin:0">Модификаторы по агентам</div>' +
       '<label class="mt-find">' +
-        '<input type="text" id="modFind" placeholder="Найти" autocomplete="off"></label>' +
+        '<input type="search" id="modFind" placeholder="Найти агента" autocomplete="off"></label>' +
     '</div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:11.5px">' +
+    '<table class="mod-table" style="width:100%;border-collapse:collapse;font-size:11.5px">' +
     '<tr style="color:var(--tx3)"><th style="text-align:left;padding:3px 0">Агент</th>' +
     '<th style="text-align:right;padding:3px 8px">Сайт</th>' +
     '<th style="text-align:left;padding:3px 8px">Рекомендации</th>' +
@@ -5841,14 +5841,19 @@ function drawModTable() {
     timer = setTimeout(() => first.classList.remove('blink'), 2400);
     // На страницах инструментов прокручивается .mmslot; шапка остаётся снаружи.
     const scroller = first.closest('.mmslot') || first.closest('.mmbody') || first.closest('.panel') || null;
+    // getBoundingClientRect учитывает CSS zoom, а scrollTop — нет. Переводим
+    // разницу координат в единицы скролла, иначе при 150% строка проскакивает.
+    const zoom = scroller && scroller.clientHeight
+      ? scroller.getBoundingClientRect().height / scroller.clientHeight : 1;
     const top = scroller
-      ? scroller.scrollTop + first.getBoundingClientRect().top -
-        scroller.getBoundingClientRect().top - scroller.clientHeight / 2
+      ? scroller.scrollTop + (first.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top) / (zoom || 1) - scroller.clientHeight / 2
       : 0;
-    // scrollTo у элемента есть не везде (и нет в тестовой среде) — подстраховка
-    if (scroller && scroller.scrollTo) scroller.scrollTo({ top: top, behavior: 'smooth' });
+    // Без плавной анимации: при вводе следующего символа она не перезапускается
+    // и в WebView2 могла оставить найденную строку за пределами видимой области.
+    if (scroller && scroller.scrollTo) scroller.scrollTo({ top: top, behavior: 'auto' });
     else if (scroller) scroller.scrollTop = top;
-    else if (first.scrollIntoView) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    else if (first.scrollIntoView) first.scrollIntoView({ block: 'center', behavior: 'auto' });
   };
   inp.onkeydown = e => { if (e.key === 'Escape') { inp.value = ''; inp.oninput(); } };
 }
@@ -5897,21 +5902,21 @@ $('rebuildDb').onclick = async () => {
 // Пока раздел не выбран, окно узкое — только колонка с пунктами. Выбрал —
 // раскрывается вправо, колонка остаётся на месте.
 const MENU = [
-  // 07.11: «Облако и данные» влито в импорт — отдельного пункта больше нет,
-  // содержимое живёт в enkaPanel блоком #cloudPart.
-  { k: 'enka',   p: 'enkaPanel',   i: '⟳',  n: 'Импорт из игры и облако', d: 'Аккаунт, синхронизация, бэкап' },
-  { k: 'todo',   p: 'todoPanel',   i: '🎯', n: 'Кого качать',     d: 'Сильные, но недоделанные' },
-  { k: 'mats',   p: 'matsPanel',   i: '🧱', n: 'Что фармить',     d: 'Материалы до твоих целей' },
-  { k: 'mod',    p: 'modPanel',    i: '📊', n: 'Модификаторы',    d: 'Сумма по каждому агенту' },
-  { k: 'gear',   p: 'gearPanel',   i: '⚙',  n: 'Снаряжение',      d: 'Движки и комплекты по всем' },
-  { k: 'boo',    p: 'booPanel',    i: '🤖', n: 'Банбу',          d: 'Кто что включает и кто есть у тебя' },
-  { k: 'pull',   p: 'pullPanel',   i: '🎲', n: 'Крутки',          d: 'Сколько до гаранта и вся история' },
+  // Порядок задан владельцем 08.11: от регулярных разделов к служебным.
   { k: 'banner', p: 'bannerPanel', i: '🎟', n: 'Баннеры',         d: 'Кто сейчас и кто дальше' },
   { k: 'codes',  p: 'codePanel',   i: '🎁', n: 'Промокоды',        d: 'Активные коды и что уже введено' },
+  { k: 'todo',   p: 'todoPanel',   i: '🎯', n: 'Кого качать',     d: 'Сильные, но недоделанные' },
+  { k: 'mats',   p: 'matsPanel',   i: '🧱', n: 'Что фармить',     d: 'Материалы до твоих целей' },
   { k: 'end',    p: 'endPanel',    i: '⚔',  n: 'Эндгейм',         d: 'Твои прохождения и мета' },
+  { k: 'pull',   p: 'pullPanel',   i: '🎲', n: 'Крутки',          d: 'Сколько до гаранта и вся история' },
+  { k: 'boo',    p: 'booPanel',    i: '🤖', n: 'Банбу',          d: 'Кто что включает и кто есть у тебя' },
+  { k: 'gear',   p: 'gearPanel',   i: '⚙',  n: 'Снаряжение',      d: 'Движки и комплекты по всем' },
+  { k: 'mod',    p: 'modPanel',    i: '📊', n: 'Модификаторы',    d: 'Сумма по каждому агенту' },
+  { k: 'cmp',    p: 'cmpPanel',    i: '⚖',  n: 'Сравнение',       d: 'Свой профиль против чужого' },
   { k: 'squad',  p: 'squadPanel',  i: '🖼', n: 'Состав картинкой', d: 'Трое и банбу одним PNG' },
   { k: 'hist',   p: 'histPanel',   i: '📈', n: 'История',         d: 'График и журнал изменений' },
-  { k: 'cmp',    p: 'cmpPanel',    i: '⚖',  n: 'Сравнение',       d: 'Свой профиль против чужого' },
+  // «Облако и данные» влито в импорт — отдельного пункта больше нет.
+  { k: 'enka',   p: 'enkaPanel',   i: '⟳',  n: 'Импорт из игры и облако', d: 'Аккаунт, синхронизация, бэкап' },
   { k: 'help',   p: 'helpPanel',   i: '?',  n: 'Справка',         d: 'Как всё устроено' }
 ];
 let menuCur = '';
@@ -5919,7 +5924,7 @@ function menuDraw() {
   const nav = $('menuNav');
   if (!nav) return;
   nav.innerHTML = MENU.map(m =>
-    '<button class="mmi' + (menuCur === m.k ? ' on' : '') + '" data-k="' + m.k + '">' +
+    '<button class="mmi' + (menuCur === m.k ? ' on' : '') + '" data-k="' + m.k + '" title="' + esc(m.d) + '">' +
       '<span><b>' + esc(m.n) + '</b><i>' + esc(m.d) + '</i></span></button>').join('');
   nav.querySelectorAll('.mmi').forEach(b => b.onclick = () => {
     const стр = менюСтраницей(b.dataset.k);
@@ -9111,7 +9116,7 @@ function drawSquad() {
       '<b>Состав картинкой</b>' +
       '<span>' + ids.length + ' из ' + SQ_MAX +
         (boo ? ' · банбу: ' + esc(booRu(boo.n)) : '') + '</span>' +
-      '<button id="sqBtn" class="pri"' + (ids.length ? '' : ' disabled') + '>🖼 Скачать PNG</button>' +
+      '<button id="sqBtn" class="pri"' + (ids.length ? '' : ' disabled') + '>' + PIC_ICON + ' Скачать PNG</button>' +
       (ids.length ? '<button id="sqClear" class="ghost2">очистить</button>' : '') +
     '</div>' +
     prev +
@@ -9412,7 +9417,7 @@ async function squadSave() {
   } catch (e) {
     t.set('Не вышло', (e && e.message) || String(e), 'err', 6000);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🖼 Скачать PNG'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = PIC_ICON + ' Скачать PNG'; }
   }
 }
 
@@ -10738,7 +10743,7 @@ function runTeam(list, boo) {
   if (ids.length) {
     RUN_TEAMS.push({ ids: ids, boo: (boo && boo.pic) || '' });
     btn = '<button class="rn-pic" data-rt="' + (RUN_TEAMS.length - 1) + '" ' +
-      'title="Открыть этот состав в разделе «Состав картинкой»">🖼</button>';
+      'title="Открыть этот состав в разделе «Состав картинкой»">' + PIC_ICON + '</button>';
   }
   return '<div class="rn-team">' + (list || []).map(runFace).join('') +
     (boo && boo.pic ? '<div class="rn-f rn-boo"><img src="' + esc(boo.pic) + '" alt="" loading="lazy"></div>' : '') +
