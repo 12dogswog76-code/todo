@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v291';
+const APP_VER = 'v292';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1882,15 +1882,15 @@ function agentPic(a, kind) {
 const ART_ZOOM = {
   'Claret':  { card: 1,  hero: 1.1, orig: 'top center' },
   'Кларет':  { card: 1,  hero: 1.1, orig: 'top center' },
-  // 07.11: Сигрид, Севериан и Цезарь — на артах оружие съедает кадр, фигура
-  // выходит мелкой. Растим от низа: ноги остаются у имени, голова доходит
-  // до верха панели, пустой фон сверху уходит за край.
-  'Caesar':   { card: 1, hero: 1.4,  orig: 'center bottom' },
-  'Цезарь':   { card: 1, hero: 1.4,  orig: 'center bottom' },
-  'Sigrid':   { card: 1, hero: 1.45, orig: 'center bottom' },
-  'Сигрид':   { card: 1, hero: 1.45, orig: 'center bottom' },
-  'Severian': { card: 1, hero: 1.45, orig: 'center bottom' },
-  'Севериан': { card: 1, hero: 1.45, orig: 'center bottom' },
+  // 07.11: у Сигрид, Севериана и Цезаря оружие занимает ширину кадра.
+  // Не масштабируем весь арт (на 2K это срезало голову), а заполняем им
+  // панель по высоте: голова и ноги остаются в кадре, лишнее оружие — за боками.
+  'Caesar':   { card: 1, hero: 1, cover: 1 },
+  'Цезарь':   { card: 1, hero: 1, cover: 1 },
+  'Sigrid':   { card: 1, hero: 1, cover: 1 },
+  'Сигрид':   { card: 1, hero: 1, cover: 1 },
+  'Severian': { card: 1, hero: 1, cover: 1 },
+  'Севериан': { card: 1, hero: 1, cover: 1 },
 };
 function artZoomStyle(a, kind) {
   const z = ART_ZOOM[a && a.en] || ART_ZOOM[a && a.ru];
@@ -1906,8 +1906,10 @@ function artZoomStyle(a, kind) {
 document.addEventListener('load', e => {
   const el = e.target;
   if (!el || el.tagName !== 'IMG' || el.dataset.kind !== 'hero') return;
+  const a = DB && DB.byId ? DB.byId[el.dataset.pic] : null;
+  const z = ART_ZOOM[a && a.en] || ART_ZOOM[a && a.ru];
   // 24.10: порог 1.0 — у Пироиса (1272×1200, копьё вбок) с contain фигура выходила мелкой
-  el.classList.toggle('wideart', el.naturalWidth > el.naturalHeight);
+  el.classList.toggle('wideart', el.naturalWidth > el.naturalHeight || !!(z && z.cover));
 }, true);
 // Порядок, в котором пробуем картинку: сначала webp (старые агенты), потом png
 // (новые — webp средствами Windows не записать), в конце полный арт.
@@ -2808,7 +2810,7 @@ function guideHtml(a, p, T) {
       const ph = /S(\d)/.exec(e.r || '');
       const ex = (w && EXTRA && EXTRA.engines && EXTRA.engines[w.id]) || null;
       const txt = ex ? ((ex.p && ex.p[ph ? ph[1] : '1']) || ex.desc || '') : '';
-      const cls = 'gen' + (i === 0 ? ' top' : '') + (own ? ' own' : '');
+      const cls = 'gen' + (i === 0 ? ' best' : '') + (own ? ' own' : '');
       const st = guideEngStats(w);
       if (!txt && !st) { h += '<div class="' + cls + '">' + head + '</div>'; return; }
       h += '<details class="' + cls + ' gset"><summary>' + head +
