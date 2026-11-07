@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v294';
+const APP_VER = 'v295';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -5839,8 +5839,8 @@ function drawModTable() {
     void first.offsetWidth;
     first.classList.add('blink');
     timer = setTimeout(() => first.classList.remove('blink'), 2400);
-    // прокручиваем контейнер меню, а не окно: таблица лежит внутри модалки
-    const scroller = first.closest('.mmbody') || first.closest('.panel') || null;
+    // На страницах инструментов прокручивается .mmslot; шапка остаётся снаружи.
+    const scroller = first.closest('.mmslot') || first.closest('.mmbody') || first.closest('.panel') || null;
     const top = scroller
       ? scroller.scrollTop + first.getBoundingClientRect().top -
         scroller.getBoundingClientRect().top - scroller.clientHeight / 2
@@ -6033,6 +6033,7 @@ function menuGo(k) {
   if (k === 'boo')    drawBoo();
   const body = $('menuBody');
   if (body) body.scrollTop = 0;
+  if (slot) slot.scrollTop = 0;
   zNavDraw();
 }
 // страницей — из среднего острова шапки; окном — из «☰ Инструменты»

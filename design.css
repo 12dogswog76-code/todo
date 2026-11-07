@@ -891,14 +891,12 @@ html[data-sec="zzz"] .mmwrap.page{background:transparent !important;backdrop-fil
 html[data-sec="zzz"] .mmwrap.page .mmx{display:none !important}
 html[data-sec="zzz"] .mmwrap.page .mmbox{width:min(1240px,100%) !important;background:transparent !important;border:0 !important;
   box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
-html[data-sec="zzz"] .mmwrap.page .mmbody{max-height:calc(100vh - 96px)}
-/* 07.11 (п. 10): заголовок раздела прилипает к верху (sticky уже был), но
-   был прозрачным — при прокрутке текст контента просвечивал сквозь него и
-   казалось, будто плашка уезжает. Даём полосу с блюром, как у шапки сайта. */
-html[data-sec="zzz"] .mmwrap.page .mmhead{background:rgb(13 16 21 / .88);border:0;padding:10px 14px 14px;
+html[data-sec="zzz"] .mmwrap.page .mmbody{max-height:calc(100vh - 96px);display:flex !important;flex-direction:column;overflow:hidden !important}
+/* Шапка вынесена из прокрутки: движется только содержимое .mmslot под ней. */
+html[data-sec="zzz"] .mmwrap.page .mmhead{position:static;flex:none;background:rgb(13 16 21 / .88);border:0;padding:10px 14px 14px;
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:0 0 18px 18px;z-index:6}
 html[data-sec="zzz"] .mmwrap.page .mmhead h2{font-size:30px;text-transform:none;letter-spacing:-.01em;font-weight:800}
-html[data-sec="zzz"] .mmwrap.page .mmslot{padding:0 4px 20px}
+html[data-sec="zzz"] .mmwrap.page .mmslot{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;padding:0 4px 20px}
 html[data-sec="zzz"] body.zpage #main{visibility:hidden}
 html[data-sec="zzz"] body.zpage #main *{visibility:hidden !important}
 /* блоки .sect на страницах (Эндгейм и др.) — стекло и подпись без жёлтой черты */
