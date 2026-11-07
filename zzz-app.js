@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v292';
+const APP_VER = 'v293';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1722,8 +1722,8 @@ function renderFilters() {
   let h = '<div class="ztitle"><h2>Агенты</h2><small>' + есть.length + ' из ' + DB.agents.length +
     (есть.length ? ' · готовность ' + гот + '%' : '') + '</small></div>';
   const все = !ui.el.length && !ui.pr.length && !ui.have;
-  h += '<span class="chip f-all' + (все ? ' on' : '') + '">Все<em>' + DB.agents.length + '</em></span>';
-  h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '">Есть у меня<em>' + есть.length + '</em></span>';
+  h += '<span class="chip f-all' + (все ? ' on' : '') + '"><span class="chip-label">Все</span><em>' + DB.agents.length + '</em></span>';
+  h += '<span class="chip f-have' + (ui.have ? ' on' : '') + '"><span class="chip-label">Есть у меня</span><em>' + есть.length + '</em></span>';
   h += '<span class="fsep"></span>';
   Object.keys(els).forEach(e => {
     const on = ui.el.indexOf(e) !== -1 ? ' on' : '';
@@ -1735,7 +1735,7 @@ function renderFilters() {
   Object.keys(prs).forEach(pr => {
     const on = ui.pr.indexOf(pr) !== -1 ? ' on' : '';
     h += '<span class="chip f-pr' + on + '" data-v="' + esc(pr) + '">' +
-         profIcon(pr, 16, on ? '#0b0d10' : '#8b92a3') + esc(PROF[pr] || pr) + '<em>' + сколько(a => a.prof === pr) + '</em></span>';
+         profIcon(pr, 16, on ? '#0b0d10' : '#8b92a3') + '<span class="chip-label">' + esc(PROF[pr] || pr) + '</span><em>' + сколько(a => a.prof === pr) + '</em></span>';
   });
   h += '<span class="fsep"></span>';
   // Сортировка одна и переключается как флажок: нажал — по тир-листу,
