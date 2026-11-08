@@ -7,7 +7,7 @@
 
 'use strict';
 // Номер сборки. Поднимать при каждом деплое — по нему видно, доехало обновление или нет.
-const APP_VER = 'v300';
+const APP_VER = 'v301';
 const LS = 'alexey_zzz_v1';
 const JB = 'https://api.jsonbin.io/v3/b';
 const NP = 'https://api.npoint.io';   // запасное хранилище: открыто там, где jsonbin закрыт
@@ -1891,6 +1891,11 @@ const ART_ZOOM = {
   'Сигрид':   { card: 1, hero: 1, cover: 1 },
   'Severian': { card: 1, hero: 1, cover: 1 },
   'Севериан': { card: 1, hero: 1, cover: 1 },
+  // Циссия и Янаги: древковое оружие тоже ужимало фигуру по ширине кадра.
+  'Cissia':  { card: 1, hero: 1, cover: 1 },
+  'Циссия':  { card: 1, hero: 1, cover: 1 },
+  'Yanagi':  { card: 1, hero: 1, cover: 1 },
+  'Янаги':   { card: 1, hero: 1, cover: 1 },
 };
 function artZoomStyle(a, kind) {
   const z = ART_ZOOM[a && a.en] || ART_ZOOM[a && a.ru];
