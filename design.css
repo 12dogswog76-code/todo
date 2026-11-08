@@ -643,7 +643,7 @@ html[data-sec] .dz-back{position:fixed !important;left:16px;top:22px;z-index:60;
   backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur)}
 /* 07.11 (2K): если кнопка «← Разделы/Агенты» на странице, шапка отступает
    вправо на её ширину — иначе кнопка наезжает на логотип */
-html[data-sec="zzz"] body.has-back .top{padding-left:104px}
+html[data-sec="zzz"] body.has-back .top{padding-left:0}
 html[data-sec="ef"] .dz-back{top:14px}
 /* Endfield: шапка как у всех — по ширине содержимого, логотип и версия одним островом */
 html[data-sec="ef"] .ehead .top-in{max-width:1180px !important;margin:0 auto !important;padding:0 !important}
@@ -1608,4 +1608,6 @@ html[data-sec="zzz"] .mmwrap.page .mmhead{align-self:flex-start;width:fit-conten
 /* У промокода нет растянутой подложки; сетка сама держит ровную границу наград. */
 html[data-sec="zzz"] #menuBody .crow .ccode{justify-self:start;width:auto;max-width:100%;
   background:transparent !important;border-radius:0 !important;box-shadow:none !important}
+/* На 2K кнопка возврата компактнее и не заходит на выровненный логотип. */
+@media (min-width:2500px){html[data-sec="zzz"] .dz-back{left:4px;padding:6px 7px;gap:3px;font-size:9px}}
 
