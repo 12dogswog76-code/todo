@@ -1558,7 +1558,7 @@ html[data-sec]{scrollbar-color:rgb(255 255 255 / .18) transparent}
 html[data-sec="zzz"] .mmwrap.page{overflow:hidden !important}
 html[data-sec="zzz"] .mmwrap.page .mmbox{height:100%;max-height:calc(100vh - 96px);margin:0 !important}
 html[data-sec="zzz"] .mmwrap.page .mmbody{height:100%;max-height:none}
-html[data-sec="zzz"] .mmwrap.page .mmnav{height:100%;max-height:none;overflow:hidden;padding:8px;gap:2px}
+html[data-sec="zzz"] .mmwrap.page .mmnav{height:auto;max-height:100%;align-self:flex-start;overflow:hidden;padding:8px;gap:2px}
 html[data-sec="zzz"] .mmwrap.page .mmi{padding:7px 10px}
 html[data-sec="zzz"] .mmwrap.page .mmi b{font-size:11px;line-height:1.25}
 html[data-sec="zzz"] .mmwrap.page .mmi i{display:none}
