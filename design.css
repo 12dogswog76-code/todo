@@ -1602,3 +1602,10 @@ html[data-sec="zzz"] .rn-pic{display:inline-flex;align-items:center;justify-cont
 html[data-sec="zzz"] .rn-pic svg{width:15px;height:15px;display:block}
 html[data-sec="zzz"] #sqBtn{display:inline-flex;align-items:center;gap:6px}
 
+/* 08.11 — заголовок по ширине текста, без линии на весь контент. */
+html[data-sec="zzz"] .mmwrap.page .mmhead{align-self:flex-start;width:fit-content;max-width:100%;
+  border:0 !important;border-bottom:0 !important}
+/* У промокода нет растянутой подложки; сетка сама держит ровную границу наград. */
+html[data-sec="zzz"] #menuBody .crow .ccode{justify-self:start;width:auto;max-width:100%;
+  background:transparent !important;border-radius:0 !important;box-shadow:none !important}
+
