@@ -35,6 +35,9 @@
   } catch (e) {}
   // В самой оболочке кнопка не нужна — это и есть список разделов.
   if (/\/app\.html$/.test(location.pathname)) return;
+  // В alextask.exe 2.3+ возврат вынесен в настоящую панель окна. Веб-кнопку
+  // не создаём, чтобы при масштабе 150% она не разносила шапку раздела.
+  if (window.alextaskTitlebar === true) return;
 
   let надо = приложение();
   try { надо = надо || sessionStorage.getItem(ФЛАГ) === '1'; } catch (e) {}
