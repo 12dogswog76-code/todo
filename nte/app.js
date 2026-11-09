@@ -4795,7 +4795,7 @@ function buildHtml(slug, g) {
   if (!ms.length && !ss.length && !nb.grid && !(nb.skillOrder || []).length) return '';
   const ряд = (список, звёзд) => '<ol class="pri">' + список.map((t, i) =>
     '<li' + (i < звёзд ? ' class="top"' : '') + '><u>' + (i + 1) + '</u>' +
-    esc(statEnRu(t)) + '</li>').join('') + '</ol>';
+    esc(statEnRu(t).replace(/^./, c => c.toUpperCase())) + '</li>').join('') + '</ol>';
   const пределы = ['cr', 'cd', 'atk', 'hp', 'def'].map(k => {
     const v = capOne(k);
     if (v == null) return '';

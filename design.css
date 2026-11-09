@@ -542,9 +542,12 @@ html[data-sec="nte"] #shBody .prio > *{background:transparent !important;border:
 html[data-sec="nte"] #shBody .goals > *{border-radius:14px !important;border:0 !important;background:rgb(255 255 255 / .06) !important;box-shadow:none !important;font-family:var(--dz-sys) !important}
 html[data-sec="nte"] #shBody .st{font-size:10.5px;line-height:1.35;letter-spacing:.08em;color:var(--tx2)}
 html[data-sec="nte"] #shBody .why > b{color:var(--gold,#ffd54a) !important}
-html[data-sec="nte"] #shBody .pri li{color:var(--tx2)}
+html[data-sec="nte"] #shBody .pri li{color:var(--tx2);background:transparent !important;border:0 !important;box-shadow:none !important}
 html[data-sec="nte"] #shBody .pri li.top{border-color:rgb(255 213 74 / .35) !important;color:var(--gold,#ffd54a) !important}
 html[data-sec="nte"] #shBody .pri li.top u{color:var(--gold,#ffd54a) !important}
+html[data-sec="nte"] #shBody .bld .gridb span{color:var(--gold,#ffd54a) !important;background:rgb(255 184 0 / .08);border-color:rgb(255 184 0 / .25)}
+html[data-sec="nte"] #shBody :is(.bld,#calcBox) .verdict,
+html[data-sec="nte"] #shBody :is(.bld,#calcBox) .verdict b{color:var(--gold,#ffd54a) !important}
 html[data-sec="nte"] #shBody .gsh{border-radius:999px !important;border:0 !important;background:rgb(255 255 255 / .07) !important;font-family:var(--dz-sys) !important}
 /* Endfield: карточка оператора — то же окно B, что у ZZZ и NTE (п. 18) */
 html[data-sec="ef"] #sheet.on{background:rgb(0 0 0 / .45) !important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
