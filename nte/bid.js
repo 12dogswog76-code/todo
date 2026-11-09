@@ -1,11 +1,9 @@
 // nte/bid.js — вкладка «Аукцион»: мини-игра «Раз, два, продано!» (Корабль сокровищ).
 //
 // Все числа — из таблиц игры (DataTable/BidKing в Waifus-Grace/NTE_Assets),
-// собраны в nte-bid.json. Четыре раздела:
+// собраны в nte-bid.json. Три раздела:
 //   · Витрина     — какие красные предметы выставить на поле 15×8, чтобы
 //                   получать больше ракушек или фонсов в час;
-//   · Оценка лота — сколько стоит контейнер по тому, что уже раскрыто, и
-//                   какую ставку делать в каждом раунде;
 //   · Справочник  — все 227 коллекционных предметов с ценой и размером;
 //   · Подсказки   — залы, условия площадки, помощники, устройства.
 //
@@ -24,7 +22,7 @@ const Q_RU = { red: 'красный', orange: 'золотой', purple: 'фио�
 const TYPE_RU = { antique: 'антиквариат', jewel: 'самоцветы', technology: 'техника',
                   food: 'еда', commodity: 'повседневное', superpower: 'аномалии' };
 const SIZE_RU = { few: 'крошечный', small: 'малый', middle: 'средний', big: 'больше среднего', large: 'большой' };
-const SUBS = [['show', 'Витрина'], ['lot', 'Оценка лота'], ['log', 'Журнал'], ['dir', 'Справочник'], ['tips', 'Подсказки']];
+const SUBS = [['show', 'Витрина'], ['dir', 'Справочник'], ['tips', 'Подсказки']];
 // Журнал торгов (с 27.10.2026): каждый выигранный или проигранный лот — строка
 // {t, venue, rule, bid, sold, note}. Прибыль = выручка − ставка. Ключ nte-bid-log
 // уезжает в облако вместе с остальным справочником.
@@ -47,6 +45,8 @@ const ui = Object.assign({
   venue: 'BidKing2', rule: 'BKE_Normal', known: [], rar: {}, total: '', cells: '',
   risk: 'p50', round: 1, second: ''
 }, lsGet(LS_UI, {}));
+// Разделы удалены из интерфейса: старая сохранённая вкладка не должна их открыть.
+if (ui.sub === 'lot' || ui.sub === 'log') ui.sub = 'show';
 const saveUi = () => lsSet(LS_UI, ui);
 let own = lsGet(LS_OWN, {});
 
@@ -85,9 +85,7 @@ function draw() {
     load().then(draw).catch(() => draw());
     return;
   }
-  if (ui.sub === 'lot') drawLot();
-  else if (ui.sub === 'log') drawLog();
-  else if (ui.sub === 'dir') drawDir();
+  if (ui.sub === 'dir') drawDir();
   else if (ui.sub === 'tips') drawTips();
   else drawShow();
 }
@@ -534,6 +532,12 @@ function bindEst() {
 
 // ═════ СПРАВОЧНИК ═══════════════════════════════════════════════════════════
 const SORTS = [['price', 'цена'], ['cell', 'цена за клетку'], ['shells', 'ракушки/ч'], ['fons', 'фонсы/ч'], ['size', 'размер']];
+// Силуэт из клеток повторяет представление размера предмета в игре.
+const sizeGrid = i => {
+  const label = i.w + ' × ' + i.h;
+  return '<span class="bk-size bk-' + i.q + '" style="--sw:' + i.w + ';--sh:' + i.h +
+    '" title="Размер: ' + label + '" aria-label="Размер: ' + label + '">' + '<i></i>'.repeat(i.a) + '</span>';
+};
 function drawDir() {
   let h = '<div class="cap"><b>Справочник</b><span></span><em>' + BD.items.length + ' коллекционных предметов</em></div>';
   h += '<div class="box bk-ctl">' +
@@ -565,7 +569,7 @@ function dirList() {
     '<th>размер</th><th class="num">цена</th><th class="num">за клетку</th><th class="num">рак/ч</th><th class="num">ф/ч</th></tr></thead><tbody>' +
     list.map(i => '<tr><td class="bk-dic"><div class="bk-' + i.q + '">' + icon(i, 'bk-ic') + '</div></td>' +
       '<td>' + qdot(i.q) + '<b>' + esc(i.ru) + '</b><br><span class="bk-dim">' + esc(i.en) + ' · ступень ' + i.tier + '</span></td>' +
-      '<td>' + esc(TYPE_RU[i.type] || i.type) + '</td><td>' + i.w + '×' + i.h + '</td>' +
+      '<td>' + esc(TYPE_RU[i.type] || i.type) + '</td><td class="bk-dsize">' + sizeGrid(i) + '</td>' +
       '<td class="num">' + fmt(i.price) + '</td><td class="num">' + fmt(i.price / i.a) + '</td>' +
       '<td class="num">' + (i.shellsH ? fmt(i.shellsH) : '—') + '</td><td class="num">' + (i.fonsH || '—') + '</td></tr>').join('') +
     '</tbody></table></div><div class="hint">Показано ' + list.length + '. Ракушки и фонсы в час — доход на витрине, есть только у красных.</div>';
@@ -576,16 +580,22 @@ function drawTips() {
   const rt = BD.ruleTypes;
   const types = Object.keys(rt).sort((a, b) => (a === 'BKE_Normal') - (b === 'BKE_Normal'));
   let h = '<div class="cap"><b>Залы</b><span></span><em>из таблиц игры</em></div>';
-  h += '<div class="mtab bk-t"><table class="tbl" style="margin:0"><thead><tr><th>зал</th><th class="num">вход от</th><th class="num">взнос</th>' +
-    '<th>уровни склада</th><th>размеры</th>' + types.map(t => '<th class="num">' + esc(rt[t].ru) + '</th>').join('') + '</tr></thead><tbody>' +
-    BD.venues.map(v => {
-      const tot = v.rules.reduce((s, r) => s + r[2], 0);
-      const lt = v.lv.reduce((s, l) => s + l[1], 0);
-      return '<tr><td><b>' + esc(v.ru) + '</b></td><td class="num">' + (v.need ? kfmt(v.need) : '—') + '</td><td class="num">' + (v.fee ? fmt(v.fee) : '—') + '</td>' +
-        '<td>' + v.lv.map(l => l[0] + ': ' + Math.round(l[1] / lt * 100) + '%').join(', ') + '</td>' +
-        '<td>' + v.sz.map(s => SIZE_RU[s[0]]).join(', ') + '</td>' +
-        types.map(t => { const r = v.rules.filter(x => x[1] === t)[0]; return '<td class="num">' + (r ? (Math.round(r[2] / tot * 1000) / 10).toString().replace('.', ',') + '%' : '—') + '</td>'; }).join('') + '</tr>';
-    }).join('') + '</tbody></table></div>';
+  h += '<div class="bk-venues">' + BD.venues.map(v => {
+    const tot = v.rules.reduce((s, r) => s + r[2], 0);
+    const lt = v.lv.reduce((s, l) => s + l[1], 0);
+    return '<section class="bk-venue">' +
+      '<div class="bk-vhead"><b>' + esc(v.ru) + '</b><div class="bk-vprice">' +
+        '<span>Вход от<em>' + (v.need ? kfmt(v.need) : '—') + '</em></span>' +
+        '<span>Взнос<em>' + (v.fee ? fmt(v.fee) : '—') + '</em></span></div></div>' +
+      '<div class="bk-vmeta"><div><span>Уровни склада</span><b>' +
+        v.lv.map(l => l[0] + ' — ' + Math.round(l[1] / lt * 100) + '%').join(' · ') + '</b></div>' +
+        '<div><span>Размеры предметов</span><b>' + v.sz.map(s => SIZE_RU[s[0]]).join(' · ') + '</b></div></div>' +
+      '<div class="bk-vrules">' + types.map(t => {
+        const r = v.rules.filter(x => x[1] === t)[0];
+        const pct = r ? (Math.round(r[2] / tot * 1000) / 10).toString().replace('.', ',') + '%' : '—';
+        return '<div><span>' + esc(rt[t].ru) + '</span><b>' + pct + '</b></div>';
+      }).join('') + '</div></section>';
+  }).join('') + '</div>';
   h += '<div class="hint">Вероятности условий — по таблице DT_BidKingWarehouseRuleConfig. В справке самой игры для ' +
     'Ракушечного зала вместо «Удвоения» и «Золотой лихорадки» записано «Затемнение» 7,5% и «Удвоение» 2,5% — в таблице ' +
     'Затемнения в этом зале нет совсем, верим таблице.</div>';

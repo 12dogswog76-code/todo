@@ -1704,4 +1704,29 @@ html[data-sec="nte"][data-tab="tier"] .thead > div{position:static;background:rg
   html[data-sec="nte"].dz-win[data-tab="city"] details.suit[open]{top:16px;height:calc(66.6667dvh - 32px)}
 }
 
+/* 10.11 — NTE: компактные залы аукциона и силуэты размеров предметов. */
+html[data-sec="nte"] .bk-venues{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:10px;align-items:start}
+html[data-sec="nte"] .bk-venue{min-width:0;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--pan)}
+html[data-sec="nte"] .bk-vhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+html[data-sec="nte"] .bk-vhead>b{color:var(--tx);font-size:17px;line-height:1.25}
+html[data-sec="nte"] .bk-vprice{display:flex;flex:none;gap:12px;text-align:right}
+html[data-sec="nte"] .bk-vprice span{color:var(--tx2);font-size:9px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+html[data-sec="nte"] .bk-vprice em{display:block;margin-top:3px;color:var(--gold);font-style:normal;font-size:12px;font-weight:700;letter-spacing:0;text-transform:none}
+html[data-sec="nte"] .bk-vmeta{display:grid;gap:6px;margin-top:12px;padding:10px 0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
+html[data-sec="nte"] .bk-vmeta>div{display:grid;grid-template-columns:112px minmax(0,1fr);gap:8px;align-items:start}
+html[data-sec="nte"] .bk-vmeta span{color:var(--tx2);font-size:10.5px;line-height:1.4}
+html[data-sec="nte"] .bk-vmeta b{color:var(--tx);font-size:11px;font-weight:500;line-height:1.4}
+html[data-sec="nte"] .bk-vrules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:10px}
+html[data-sec="nte"] .bk-vrules>div{display:flex;align-items:center;justify-content:space-between;gap:7px;min-width:0;padding:6px 8px;border-radius:7px;background:rgb(255 255 255 / .035)}
+html[data-sec="nte"] .bk-vrules span{min-width:0;color:var(--tx2);font-size:10.5px;line-height:1.25}
+html[data-sec="nte"] .bk-vrules b{flex:none;color:var(--gold);font-size:11.5px;white-space:nowrap}
+html[data-sec="nte"] .bk-dsize{width:72px;text-align:center !important}
+html[data-sec="nte"] .bk-size{display:inline-grid;grid-template-columns:repeat(var(--sw),8px);grid-template-rows:repeat(var(--sh),8px);gap:2px;vertical-align:middle}
+html[data-sec="nte"] .bk-size>i{display:block;width:8px;height:8px;box-sizing:border-box;border:1px solid color-mix(in srgb,var(--qc) 80%,white);border-radius:2px;background:color-mix(in srgb,var(--qc) 60%,transparent)}
+@media (max-width:600px){
+  html[data-sec="nte"] .bk-vhead{flex-direction:column}
+  html[data-sec="nte"] .bk-vprice{text-align:left}
+  html[data-sec="nte"] .bk-vrules{grid-template-columns:1fr}
+}
+
 
