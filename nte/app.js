@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v115';
+const APP_VER = 'v116';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -610,9 +610,10 @@ function drawArcs() {
             esc(a.ru) + '</b>' +
           '<i>' + esc(a.en) + '</i>' +
           (mx.total ? '<div class="wp-st">' +
-            '<span>атака <b>' + mx.total + '</b></span>' +
-            (mx.sub ? '<span>' + esc(mx.sub.ru) + ' <b>' + esc(statVal(mx.sub)) + '</b></span>' : '') +
-            '<span>ур. ' + mx.lv + ' + прорывы</span></div>' : '') +
+            '<span>Атака <b>' + mx.total + '</b></span>' +
+            (mx.sub ? '<span>' + esc(mx.sub.ru.replace(/^./, c => c.toUpperCase())) +
+              ' <b>' + esc(statVal(mx.sub)) + '</b></span>' : '') +
+            '<span>Уровень ' + mx.lv + ' + прорывы</span></div>' : '') +
         '</div>' +
         (who ? '<img class="wp-own" src="' + portrait(who) + '" title="именное оружие: ' +
           esc(who.ru) + '" alt="" loading="lazy">' : '') +
@@ -702,9 +703,9 @@ function arcDetail(a, who) {
 function arcStatHtml(a, lv) {
   const sub2 = arcSub(a, lv), bonus = arcBonusAtk(a, lv);
   const st = arcStage(a, lv);
-  return '<div class="st ok"><b>' + num(arcAtk(a, lv) + bonus) + '</b>атака на ' + lv + ' ур.</div>' +
-    (sub2 ? '<div class="st"><b>' + esc(statVal(sub2)) + '</b>' + esc(sub2.ru) + '</div>' : '') +
-    '<div class="st"><b>' + st.done.length + '</b>прорывов пройдено</div>';
+  return '<div class="st ok"><b>' + num(arcAtk(a, lv) + bonus) + '</b>Атака на ' + lv + ' ур.</div>' +
+    (sub2 ? '<div class="st"><b>' + esc(statVal(sub2)) + '</b>' + esc(sub2.ru.replace(/^./, c => c.toUpperCase())) + '</div>' : '') +
+    '<div class="st"><b>' + st.done.length + '</b>Прорывов пройдено</div>';
 }
 // Опыт в игре не насыпают числом — его дают красками, и в инвентаре ты видишь
 // именно их. Поэтому требуемый опыт переводим обратно в расходники: сначала
@@ -841,7 +842,7 @@ function dropHtml() {
     '<div class="hint" style="margin:8px 0">Основная характеристика выпадает случайно из ' +
     'этого списка. Число — значение на 20 уровне, мелким — стартовое.</div>' +
     '<div class="drops">' + rows.map(r =>
-      '<div class="drop">' + statIco(dropKey(r.p)) + '<span>' + esc(r.ru) + '</span>' +
+      '<div class="drop-stat">' + statIco(dropKey(r.p)) + '<span>' + esc(r.ru) + '</span>' +
       '<div class="dv">' + statVals(r) + '</div></div>').join('') + '</div>' +
     '</div></details>';
 }
@@ -946,8 +947,10 @@ function drawCarts() {
       '<summary>' +
         (pic ? '<img class="cart-ic" src="' + esc(pic) + '" alt="" loading="lazy">' : '') +
         '<div class="item-b">' +
-          '<b style="font-size:14px;color:var(--gold)" title="' + esc(s.en) + '">' + esc(s.name) + '</b>' +
-          (carts.length ? rarPill(carts[0].rar) : '') +
+          '<div class="suit-title">' +
+            '<b style="font-size:14px;color:var(--gold)" title="' + esc(s.en) + '">' + esc(s.name) + '</b>' +
+            (carts.length ? rarPill(carts[0].rar) : '') +
+          '</div>' +
           s.bonuses.map(b => '<div class="set-b"><i>' + b.n + '</i>' + esc(tr(b.text)) + '</div>').join('') +
         '</div>' +
       '</summary>' +

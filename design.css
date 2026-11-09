@@ -1622,3 +1622,86 @@ html[data-sec="zzz"] #menuBody .crow .ccode{justify-self:start;width:auto;max-wi
 /* На 2K кнопка возврата компактнее и не заходит на выровненный логотип. */
 @media (min-width:2500px){html[data-sec="zzz"] .dz-back{left:4px;padding:6px 7px;gap:3px;font-size:9px}}
 
+/* 10.11 — NTE: читаемые шапки предметов, таблица статов и устойчивые окна. */
+/* Редкость одинаковая в фильтре, на карточке и внутри раскрытого оружия. */
+html[data-sec="nte"][data-tab="arcs"] #filters .fb[data-f="rar"][data-v="S"],
+html[data-sec="nte"] .wp .rar.S{color:#ffb800 !important;border-color:rgb(255 184 0 / .48) !important;background:rgb(255 184 0 / .1) !important}
+html[data-sec="nte"][data-tab="arcs"] #filters .fb[data-f="rar"][data-v="A"],
+html[data-sec="nte"] .wp .rar.A{color:#b98bff !important;border-color:rgb(185 139 255 / .48) !important;background:rgb(185 139 255 / .1) !important}
+html[data-sec="nte"][data-tab="arcs"] #filters .fb[data-f="rar"][data-v="B"],
+html[data-sec="nte"] .wp .rar.B{color:#6fc0ff !important;border-color:rgb(111 192 255 / .48) !important;background:rgb(111 192 255 / .1) !important}
+html[data-sec="nte"] .wp-b > b{display:flex;align-items:center;flex-wrap:wrap;gap:7px;color:var(--tx);font-size:18px;line-height:1.3}
+html[data-sec="nte"] .wp-b > b .rar{margin:0;vertical-align:0;flex:none}
+html[data-sec="nte"] .wp-b > i{margin-top:2px;color:var(--tx2);font-size:10px;letter-spacing:.08em;line-height:1.5}
+html[data-sec="nte"] .wp-st{gap:6px;margin-top:7px}
+html[data-sec="nte"] .wp-st span{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;
+  padding:4px 10px;background:rgb(255 255 255 / .04);color:var(--tx);font-size:11px;line-height:1.2;letter-spacing:.02em;text-transform:none}
+html[data-sec="nte"] .wp-st span b{font-size:15px;line-height:1}
+html[data-sec="nte"] .wp.open .wp-h{padding:16px 18px}
+html[data-sec="nte"] .wp.open .wp-ic{width:64px;height:64px}
+html[data-sec="nte"] .wp.open .wp-b > b{font-size:22px}
+html[data-sec="nte"] .wp.open .wp-d{padding:0 18px 18px}
+html[data-sec="nte"] .wp-d .hint{color:var(--tx2);font-size:12.5px;line-height:1.55}
+html[data-sec="nte"] .wp-d .cap em{color:var(--tx2);font-size:11.5px;letter-spacing:0;text-transform:none}
+html[data-sec="nte"] .wp-d .st{flex:1 1 150px;padding:12px;text-align:center;color:var(--tx2);
+  font-size:11px;line-height:1.35;letter-spacing:.03em;text-transform:none}
+html[data-sec="nte"] .wp-d .st b{margin-bottom:6px;font-size:28px}
+
+/* Ранг картриджа стоит в первой строке рядом с названием. */
+html[data-sec="nte"] .suit-title{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+html[data-sec="nte"] .suit-title > b{margin:0 !important}
+html[data-sec="nte"] .suit-title .rpill{margin:0;vertical-align:0;flex:none}
+html[data-sec="nte"] details.suit[open] > summary{align-items:center}
+
+/* «Что может выпасть»: свой класс .drop-stat, чтобы не наследовать стили зоны загрузки .drop. */
+html[data-sec="nte"] .drops{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,390px),1fr));gap:8px}
+html[data-sec="nte"] .drop-stat{display:grid;grid-template-columns:20px minmax(100px,1fr) minmax(220px,1.5fr);
+  align-items:center;gap:8px;min-width:0;padding:10px 12px;border:1px solid var(--line-soft);border-radius:12px;
+  background:rgb(255 255 255 / .025);text-align:left}
+html[data-sec="nte"] .drop-stat > .sti{width:18px;height:18px}
+html[data-sec="nte"] .drop-stat > span{min-width:0;color:var(--tx);font-size:12px;line-height:1.35}
+html[data-sec="nte"] .drop-stat .dv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}
+html[data-sec="nte"] .drop-stat .sv{display:grid;grid-template-columns:22px minmax(0,1fr);column-gap:5px;row-gap:2px;
+  align-items:center;min-width:0;color:var(--tx2);font-size:10px}
+html[data-sec="nte"] .drop-stat .sv .rpill{grid-row:1 / 3;margin:0;padding:1px 4px;text-align:center;vertical-align:0}
+html[data-sec="nte"] .drop-stat .sv b{color:var(--tx);font:600 14px/1.1 var(--dz-sys);white-space:nowrap}
+html[data-sec="nte"] .drop-stat .sv i{grid-column:2;color:var(--tx2);font-size:10px;line-height:1.2;white-space:nowrap}
+@media (max-width:600px){
+  html[data-sec="nte"] .drop-stat{grid-template-columns:18px minmax(0,1fr)}
+  html[data-sec="nte"] .drop-stat .dv{grid-column:1 / -1;width:100%;margin-top:5px}
+}
+
+/* Липкие заголовки display:contents наезжали на строки; шапка теперь уходит со списком. */
+html[data-sec="nte"][data-tab="tier"] .thead > div{position:static;background:rgb(255 255 255 / .035)}
+
+/* Четыре игровые позиции всегда остаются колонками, варианты уплотняются внутри своей позиции. */
+@media (min-width:1001px){
+  html[data-sec="nte"][data-tab="teams"] :has(> .team){grid-template-columns:repeat(auto-fill,minmax(390px,1fr))}
+  html[data-sec="nte"][data-tab="teams"] .team{position:relative;padding:14px}
+  html[data-sec="nte"][data-tab="teams"] .team-l{position:absolute;right:14px;top:12px;font-size:15px}
+  html[data-sec="nte"][data-tab="teams"] .team-n{width:100%;padding-right:42px}
+  html[data-sec="nte"][data-tab="teams"] .team-n i{margin-top:3px}
+  html[data-sec="nte"][data-tab="teams"] .team-s{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%;min-width:0}
+  html[data-sec="nte"][data-tab="teams"] .team-s .slot{display:grid;grid-template-columns:repeat(auto-fit,minmax(30px,1fr));
+    align-items:start;gap:2px;width:100%;min-width:0;padding:4px}
+  html[data-sec="nte"][data-tab="teams"] .team-s .slot .alt{width:auto;min-width:0}
+  html[data-sec="nte"][data-tab="teams"] .team-s .slot img{width:100%;max-width:44px;height:auto;aspect-ratio:1}
+  html[data-sec="nte"][data-tab="teams"] .team-s .slot span{font-size:8.5px}
+}
+
+/* У «Города» окно имеет реальную высоту с учётом zoom: вложенные узлы прокручиваются внутри. */
+@media (min-width:1001px){
+  html[data-sec="nte"].dz-win[data-tab="city"] details.suit[open]{top:24px;height:calc(100dvh - 48px);max-height:none;
+    overflow-x:hidden !important;overflow-y:auto !important;overscroll-behavior:contain;scrollbar-gutter:stable;scroll-padding-top:90px}
+  html[data-sec="nte"].dz-win[data-tab="city"] details.suit[open] > summary{position:sticky;top:0;z-index:4;
+    background:rgb(24 18 22 / .98);box-shadow:0 1px 0 var(--dz-edge)}
+  html[data-sec="nte"].dz-win[data-tab="city"] details.suit[open] :is(.suit-in,.wide,.node-in,.anoms){min-width:0}
+}
+@media (min-width:1900px){
+  html[data-sec="nte"].dz-win[data-tab="city"] details.suit[open]{top:19px;height:calc(80dvh - 38px)}
+}
+@media (min-width:2500px){
+  html[data-sec="nte"].dz-win[data-tab="city"] details.suit[open]{top:16px;height:calc(66.6667dvh - 32px)}
+}
+
+
