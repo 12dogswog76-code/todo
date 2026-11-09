@@ -530,12 +530,21 @@ html[data-sec="nte"] #shBody .rows{border-radius:24px;padding:4px 16px;backgroun
 html[data-sec="nte"] #shBody .rows > details,html[data-sec="nte"] #shBody .rows > .row{border:0 !important;border-bottom:1px solid rgb(255 255 255 / .07) !important;border-radius:0 !important;
   background:none !important;box-shadow:none !important;margin:0 !important}
 html[data-sec="nte"] #shBody .rows > :last-child{border-bottom:0 !important}
-html[data-sec="nte"] #shBody .row{padding:10px 2px !important;font-family:var(--dz-sys) !important}
+html[data-sec="nte"] #shBody .row{padding:10px 2px !important;font-family:var(--dz-sys) !important;
+  background:transparent !important;border:0 !important;border-radius:0 !important;box-shadow:none !important}
 html[data-sec="nte"] #shBody .row > b{font:600 14px var(--dz-sys) !important}
 html[data-sec="nte"] #shBody .row .pct{font:600 13px var(--dz-mono) !important;color:var(--acc) !important}
 html[data-sec="nte"] #shBody .row .m{border-radius:999px !important;font:600 10.5px var(--dz-mono) !important}
-html[data-sec="nte"] #shBody .row.best{box-shadow:inset 3px 0 0 var(--acc) !important;padding-left:12px !important}
-html[data-sec="nte"] #shBody :is(.prio,.goals) > *{border-radius:14px !important;border:0 !important;background:rgb(255 255 255 / .06) !important;box-shadow:none !important;font-family:var(--dz-sys) !important}
+html[data-sec="nte"] #shBody .row.best{background:transparent !important;box-shadow:none !important;padding-left:2px !important}
+html[data-sec="nte"] #shBody .pick-in{background:transparent !important;border:0 !important;padding:8px 2px 12px !important}
+html[data-sec="nte"] #shBody .prio{background:transparent !important;border:0 !important;border-radius:0 !important;padding:4px 0 !important}
+html[data-sec="nte"] #shBody .prio > *{background:transparent !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;padding:0 !important}
+html[data-sec="nte"] #shBody .goals > *{border-radius:14px !important;border:0 !important;background:rgb(255 255 255 / .06) !important;box-shadow:none !important;font-family:var(--dz-sys) !important}
+html[data-sec="nte"] #shBody .st{font-size:10.5px;line-height:1.35;letter-spacing:.08em;color:var(--tx2)}
+html[data-sec="nte"] #shBody .why > b{color:var(--gold,#ffd54a) !important}
+html[data-sec="nte"] #shBody .pri li{color:var(--tx2)}
+html[data-sec="nte"] #shBody .pri li.top{border-color:rgb(255 213 74 / .35) !important;color:var(--gold,#ffd54a) !important}
+html[data-sec="nte"] #shBody .pri li.top u{color:var(--gold,#ffd54a) !important}
 html[data-sec="nte"] #shBody .gsh{border-radius:999px !important;border:0 !important;background:rgb(255 255 255 / .07) !important;font-family:var(--dz-sys) !important}
 /* Endfield: карточка оператора — то же окно B, что у ZZZ и NTE (п. 18) */
 html[data-sec="ef"] #sheet.on{background:rgb(0 0 0 / .45) !important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -669,7 +678,7 @@ html[data-sec="nte"] #toolsTabs .tb.on{background:color-mix(in srgb,var(--acc) 1
 }
 /* ── заход 4в (п. 44–50) ──────────────────────────────────────────────────── */
 /* NTE: шапка по ширине содержимого, как у ZZZ и Endfield (п. 44) */
-html[data-sec="nte"] .top > .top-in{max-width:1180px !important;margin:0 auto !important;padding:0 !important}
+html[data-sec="nte"] .top > .top-in{max-width:1180px !important;margin:0 auto !important;padding:0 18px !important}
 html[data-sec="nte"].dz-side .top > .top-in{max-width:1420px !important}
 /* «← Разделы» у края — только когда рядом с содержимым есть место; иначе в строке шапки */
 @media (max-width:1459px){
@@ -1224,8 +1233,8 @@ html[data-sec="zzz"] .card{border-radius:20px !important}
 html[data-sec="zzz"] :is(.sum > *,.panel,.infobox,.dcard,.sect){border-radius:20px !important}
 
 /* ── NTE: шапка — три острова (логотип · вкладки · инструменты) ─────────── */
-html[data-sec="nte"] .top{background:transparent !important;border:0 !important;backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;top:10px;padding:0;margin-bottom:18px}
+html[data-sec="nte"] .top{background:rgb(14 15 18 / .9) !important;border:0 !important;border-bottom:1px solid var(--dz-edge) !important;
+  backdrop-filter:blur(18px) !important;-webkit-backdrop-filter:blur(18px) !important;top:0;padding:10px 0;margin-bottom:18px}
 html[data-sec="nte"] .top-in{gap:10px;flex-wrap:nowrap}
 html[data-sec="nte"] .top-in > :is(.logo,.tabs,.tools){
   border-radius:999px;background:rgb(20 22 28 / .6) !important;border:1px solid var(--dz-edge) !important;
@@ -1262,10 +1271,9 @@ html[data-sec="nte"] .logo{white-space:nowrap}
     background:rgb(20 22 28 / .55);backdrop-filter:var(--dz-blur);-webkit-backdrop-filter:var(--dz-blur);box-shadow:var(--dz-hi),inset 0 0 0 1px var(--dz-edge)}
   html[data-sec="nte"] .grid > .card .card-n b{display:block;font:800 13.5px/1.25 var(--dz-sys);letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   html[data-sec="nte"] .grid > .card .card-n i{display:none}
-  /* стихия на плитке — светящаяся точка цвета стихии (п. 21), роль не показываем */
-  html[data-sec="nte"] .grid > .card .card-e img{display:none}
-  html[data-sec="nte"] .grid > .card .card-e::before{content:"";width:12px;height:12px;margin:5px;border-radius:50%;background:var(--el);
-    box-shadow:0 0 0 3px rgb(0 0 0 / .45),0 0 8px var(--el)}
+  /* Рядом с рангом показываем оба игровых значка: стихию и класс. */
+  html[data-sec="nte"] .grid > .card .card-e img{display:block}
+  html[data-sec="nte"] .grid > .card .card-e::before{content:none;display:none}
   html[data-sec="nte"] .grid > .card .card-p > img{object-position:top center}
 /* ── NTE: раскладки вкладок (метка data-tab ставится в app.js при отрисовке).
       Только на широком экране — телефон разбираем отдельно, после деплоя. ── */

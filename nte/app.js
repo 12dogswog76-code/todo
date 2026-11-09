@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v114';
+const APP_VER = 'v115';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -511,7 +511,7 @@ function todayHtml() {
 
   if (!пункты.length) return '';
   пункты.sort((a, b) => a.д - b.д);
-  return '<div class="cap" style="margin-top:0"><b>Что горит</b><span></span>' +
+  return '<div class="cap" style="margin-top:0"><b>Ивенты</b><span></span>' +
     '<em>сроки заканчиваются</em></div>' +
     '<div class="tds">' + пункты.map(x => x.html).join('') + '</div>';
 }
@@ -532,7 +532,9 @@ function drawEspers() {
     '<span class="fcnt">' + list.length + ' из ' + DB.agents.length + '</span>';
   bindFilters();
   const сегодня = todayHtml();
-  $('body').innerHTML = (сегодня || '') + (list.length ? '<div class="grid">' + list.map(a =>
+  $('body').innerHTML = (сегодня || '') + (list.length ?
+    '<div class="cap"><b>Эсперы</b><span></span><em>' + list.length + '</em></div>' +
+    '<div class="grid">' + list.map(a =>
     '<div class="card" data-slug="' + a.slug + '" style="' + elStyle(a.el) + ';' +
       tierStyle(a.tier) + '">' +
       '<div class="card-p">' +
