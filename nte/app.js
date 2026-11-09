@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v117';
+const APP_VER = 'v118';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -4508,7 +4508,7 @@ function showOcrBulk() {
 }
 function bindOcrBulk() {
   const c = $('close');
-  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  if (c) c.onclick = close;
   const drop = $('ocrDrop'), inp = $('ocrFiles');
   if (drop && inp) {
     drop.onclick = () => inp.click();
@@ -5138,17 +5138,17 @@ function showCmp() {
   сброситьПанель(); $('sheetIn').innerHTML = cmpHtml();
   $('sheet').classList.add('on');
   const c = $('close');
-  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  if (c) c.onclick = close;
   $('sheetIn').querySelectorAll('[data-cmp]').forEach(sel => sel.onchange = () => {
     if (sel.dataset.cmp === 'a') cmpA = sel.value; else cmpB = sel.value;
-    showCmp();
+    открытьИнструмент('cmp');
   });
 }
 function showPlan() {
   сброситьПанель(); $('sheetIn').innerHTML = planPanelHtml();
   $('sheet').classList.add('on');
   const c = $('close');
-  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  if (c) c.onclick = close;
   $('sheetIn').querySelectorAll('[data-plan-slug]').forEach(el =>
     el.onclick = () => open(el.dataset.planSlug));
 }
@@ -5177,14 +5177,17 @@ function changesHtml() {
 // Список инструментов держим в одном месте: он нужен и выпадающему меню в
 // шапке, и колонке внутри открытой панели.
 const ИНСТРУМЕНТЫ = [
-  { id: 'cloud', имя: 'облако',      под: 'синхронизация между устройствами' },
-  { id: 'plan',  имя: 'план',        под: 'материалы на всех, кого качаешь' },
-  { id: 'cmp',   имя: 'сравнить',    под: 'кого качать первым' },
-  { id: 'ready', имя: 'готовность',  под: 'все эсперы против целей гайда' },
-  { id: 'pulls', имя: 'крутки',      под: 'сколько до гаранта и хватит ли' },
-  { id: 'bak',   имя: 'мои данные',  под: 'сохранить файлом и восстановить' },
-  { id: 'stat',  имя: 'скрины',      под: 'характеристики из снимков экрана' },
-  { id: 'upd',   имя: 'обновление',  под: 'команды сбора данных и их свежесть' },
+  { id: 'cloud', имя: 'данные и облако', под: 'синхронизация, файлы и обновление' },
+  { id: 'plan',  имя: 'план',            под: 'материалы на всех, кого качаешь' },
+  { id: 'cmp',   имя: 'сравнить',        под: 'кого качать первым' },
+  { id: 'ready', имя: 'готовность',      под: 'все эсперы против целей гайда' },
+  { id: 'pulls', имя: 'крутки',          под: 'сколько до гаранта и хватит ли' },
+  { id: 'stat',  имя: 'скрины',          под: 'характеристики из снимков экрана' },
+];
+const РАЗДЕЛЫ_ДАННЫХ = [
+  { id: 'cloud', имя: 'Облако' },
+  { id: 'bak',   имя: 'Мои данные' },
+  { id: 'upd',   имя: 'Обновление' },
 ];
 
 function открытьИнструмент(t) {
@@ -5206,6 +5209,9 @@ function открытьИнструмент(t) {
 function сброситьПанель() {
   const in_ = $('sheetIn');
   if (in_) in_.classList.remove('tm');
+  $('sheet').classList.remove('tpage');
+  document.body.classList.remove('ntepage');
+  document.body.style.overflow = '';
 }
 
 function колонкаИнструментов(активный) {
@@ -5215,19 +5221,50 @@ function колонкаИнструментов(активный) {
   тело.className = 'tmbody';
   while (in_.firstChild) тело.appendChild(in_.firstChild);
 
+  // Заголовок и подвкладки остаются на месте, прокручивается только .tmslot.
+  // Как и выше, узлы именно переносятся, чтобы не потерять их обработчики.
+  const содержимое = тело.querySelector('.sh-body');
+  const заголовок = содержимое && содержимое.querySelector(':scope > .sh-title');
+  if (содержимое && заголовок) {
+    const слот = document.createElement('div');
+    слот.className = 'tmslot';
+    while (заголовок.nextSibling) слот.appendChild(заголовок.nextSibling);
+    содержимое.appendChild(слот);
+    if (РАЗДЕЛЫ_ДАННЫХ.some(р => р.id === активный)) {
+      const подвкладки = document.createElement('div');
+      подвкладки.className = 'tm-subnav';
+      РАЗДЕЛЫ_ДАННЫХ.forEach(р => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = р.id === активный ? 'on' : '';
+        b.textContent = р.имя;
+        b.onclick = () => { if (р.id !== активный) открытьИнструмент(р.id); };
+        подвкладки.appendChild(b);
+      });
+      содержимое.insertBefore(подвкладки, слот);
+    }
+  }
+
   const nav = document.createElement('nav');
   nav.className = 'tmnav';
+  const основной = РАЗДЕЛЫ_ДАННЫХ.some(р => р.id === активный) ? 'cloud' : активный;
   ИНСТРУМЕНТЫ.forEach(и => {
     const b = document.createElement('button');
-    b.className = 'tmi' + (и.id === активный ? ' on' : '');
+    b.type = 'button';
+    b.className = 'tmi' + (и.id === основной ? ' on' : '');
     b.innerHTML = esc(и.имя) + '<i>' + esc(и.под) + '</i>';
-    b.onclick = () => { if (и.id !== активный) открытьИнструмент(и.id); };
+    b.onclick = () => { if (и.id !== основной) открытьИнструмент(и.id); };
     nav.appendChild(b);
   });
 
   in_.appendChild(nav);
   in_.appendChild(тело);
   in_.classList.add('tm');
+  $('sheet').classList.add('tpage');
+  document.body.classList.add('ntepage');
+  document.body.style.overflow = 'hidden';
+  const слот = тело.querySelector('.tmslot');
+  if (слот) слот.scrollTop = 0;
 }
 
 function bindTools() {
@@ -5589,7 +5626,7 @@ function showBak() {
   сброситьПанель(); $('sheetIn').innerHTML = bakHtml();
   $('sheet').classList.add('on');
   const c = $('close');
-  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  if (c) c.onclick = close;
   const say = (t, bad) => {
     const el = $('bakSay');
     if (el) { el.textContent = t; el.style.color = bad ? '#fbbf24' : 'var(--acc)'; }
@@ -5733,13 +5770,13 @@ function showPulls() {
   сброситьПанель(); $('sheetIn').innerHTML = pullsHtml();
   $('sheet').classList.add('on');
   const c = $('close');
-  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  if (c) c.onclick = close;
   $('sheetIn').querySelectorAll('input[data-pull]').forEach(inp => inp.onchange = () => {
     const cfg = pullsCfg();
     const v = parseInt(inp.value, 10);
     cfg[inp.dataset.pull] = isFinite(v) && v > 0 ? v : 0;
     pullsSave(cfg);
-    showPulls();
+    открытьИнструмент('pulls');
   });
 }
 
@@ -5844,9 +5881,9 @@ function showReady() {
   сброситьПанель(); $('sheetIn').innerHTML = readyHtml();
   $('sheet').classList.add('on');
   const c = $('close');
-  if (c) c.onclick = () => $('sheet').classList.remove('on');
+  if (c) c.onclick = close;
   const b = $('rdyAll');
-  if (b) b.onclick = () => { readyAll = !readyAll; showReady(); };
+  if (b) b.onclick = () => { readyAll = !readyAll; открытьИнструмент('ready'); };
   $('sheetIn').querySelectorAll('.rdy[data-slug]').forEach(el =>
     el.onclick = () => open(el.dataset.slug));
 }
@@ -6097,7 +6134,7 @@ function showSync() {
     if (!id) { say('Не разобрал адрес. Нужна ссылка вида api.npoint.io/xxxxxxxx', 1); return; }
     syncCfgSave({ np: id, at: 0 });
     say('подключено, свожу отметки…');
-    syncNow(say).then(() => showSync());
+    syncNow(say).then(() => открытьИнструмент('cloud'));
   };
   if ($('syncGo')) $('syncGo').onclick = () => syncNow(say);
   if ($('syncShow')) $('syncShow').onclick = () => {
@@ -6106,11 +6143,12 @@ function showSync() {
   };
   if ($('syncOff')) $('syncOff').onclick = () => {
     syncCfgSave({});
-    showSync();
+    открытьИнструмент('cloud');
   };
 }
 function close() {
-  $('sheet').classList.remove('on');
+  $('sheet').classList.remove('on', 'tpage');
+  document.body.classList.remove('ntepage');
   document.body.style.overflow = '';
 }
 function foot(t) {
@@ -6118,7 +6156,9 @@ function foot(t) {
     '<a href="https://www.prydwen.gg/neverness-to-everness/" target="_blank" rel="noopener">prydwen.gg</a>, ' +
     '<a href="https://neverness-to-everness.fandom.com/" target="_blank" rel="noopener">вики NTE</a>.';
 }
-$('sheet').onclick = e => { if (e.target === $('sheet')) close(); };
+$('sheet').onclick = e => {
+  if (e.target === $('sheet') && !$('sheet').classList.contains('tpage')) close();
+};
 document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 $('q').oninput = () => { state.q = $('q').value; draw(); };
 
