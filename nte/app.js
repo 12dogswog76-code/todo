@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v119';
+const APP_VER = 'v120';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -299,12 +299,35 @@ const TAB_ПОД = {
   codes: 'Рабочие коды, отметки введённых', city: 'Транспорт и недвижимость', map: 'Точки и сборы на карте',
   bid: 'Аукцион «Раз, два, продано!»', mech: 'Циклы стихий и реакции'
 };
+function вернутьсяКЭсперам() {
+  close();
+  state.tab = 'espers'; state.q = '';
+  if ($('q')) $('q').value = '';
+  state.el = state.role = state.tier = state.rar = '';
+  drawTabs(); draw(); window.scrollTo({ top: 0 });
+}
+
+// Кнопка создаётся сразу при загрузке, а не после открытия конкретной панели.
+// Поэтому возврат одинаково доступен на сайте, в приложении и во всех инструментах.
+function обновитьВозврат() {
+  let назад = $('nteBack');
+  if (!назад) {
+    назад = document.createElement('button');
+    назад.id = 'nteBack'; назад.type = 'button'; назад.className = 'cloudb nte-back';
+    назад.textContent = '← Эсперы';
+    назад.title = 'Вернуться к эсперам';
+    назад.setAttribute('aria-label', 'Вернуться к эсперам');
+    const шапка = document.querySelector('.top-in');
+    if (шапка) шапка.insertBefore(назад, $('tools'));
+  }
+  назад.onclick = вернутьсяКЭсперам;
+}
+
 function drawTabs() {
   $('tabs').innerHTML = TABS.map(t =>
     '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' +
     esc(t[1]) + '</button>').join('');
-  // С 29.10.2026 (слова владельца): строки вкладок в шапке нет — разделы стоят
-  // первым блоком меню «Инструменты», на кнопке меню — где ты сейчас.
+  обновитьВозврат();
   const меню = document.querySelector('#tools .toolsm');
   let разд = $('toolsTabs');
   if (!разд && меню) {
@@ -312,28 +335,24 @@ function drawTabs() {
     разд.id = 'toolsTabs'; разд.className = 'tm-tabs';
     меню.prepend(разд);
   }
-  // пункты как у остальных инструментов: название и пояснение строкой ниже;
-  // «Эсперов» в списке нет — это стартовая страница, на неё ведёт логотип
   const пункты = TABS.filter(t => t[0] !== 'espers').map(t =>
     '<button class="tb' + (state.tab === t[0] ? ' on' : '') + '" data-t="' + t[0] + '">' + esc(t[1]) +
       '<i>' + esc(TAB_ПОД[t[0]] || '') + '</i></button>').join('');
-  if (разд) разд.innerHTML = '<u>Разделы</u>' + пункты + '<u>Инструменты</u>';
+  // Один общий список: обычные страницы и пять инструментов идут под одним
+  // заголовком, без деления на два разных «сайта» внутри меню.
+  if (разд) разд.innerHTML = '<u>Инструменты</u>' + пункты;
   if ($('toolsBtn')) $('toolsBtn').textContent = '☰ Инструменты';
-  // Левый список на страницах разделов (29.10.2026): разделы и инструменты
-  // всегда открыты рядом, как в окне инструментов ZZZ. На стартовой — нет.
   const обёртка = document.querySelector('body > .wrap');
   let бок = $('dzSide');
   if (!бок && обёртка) { бок = document.createElement('aside'); бок.id = 'dzSide'; бок.className = 'dz-side-nav'; обёртка.prepend(бок); }
   if (бок) {
     const инстр = [...document.querySelectorAll('#tools .toolsm > [data-tool]')].filter(x => x.style.display !== 'none')
       .map(x => '<button data-tool="' + x.dataset.tool + '">' + x.innerHTML + '</button>').join('');
-    бок.innerHTML = '<div class="dz-side-in"><u>Разделы</u>' + пункты + '<u>Инструменты</u>' + инстр + '</div>';
+    бок.innerHTML = '<div class="dz-side-in"><u>Инструменты</u>' + пункты + инстр + '</div>';
     бок.querySelectorAll('[data-tool]').forEach(x => x.onclick = () => открытьИнструмент(x.dataset.tool));
     document.documentElement.classList.toggle('dz-side', state.tab !== 'espers');
   }
   document.querySelectorAll('#tabs .tb, #toolsTabs .tb, #dzSide .tb').forEach(b => b.onclick = () => {
-    // фильтры сбрасываем: стихия, выбранная в списке эсперов, иначе сразу
-    // прячет половину составов на соседней вкладке
     state.tab = b.dataset.t; state.q = ''; $('q').value = '';
     state.el = state.role = state.tier = state.rar = '';
     if ($('tools')) $('tools').classList.remove('open');
@@ -5251,31 +5270,19 @@ function колонкаИнструментов(активный) {
     drawTabs(); draw(); window.scrollTo({ top: 0 });
   };
 
-  // Возврат живёт в общей шапке и на сайте, и в приложении, как кнопка
-  // «Агенты» у ZZZ. Само меню инструментов при этом остаётся на своём месте.
-  let назад = $('nteBack');
-  if (!назад) {
-    назад = document.createElement('button');
-    назад.id = 'nteBack'; назад.type = 'button'; назад.className = 'cloudb nte-back';
-    назад.textContent = '← Эсперы';
-    const шапка = document.querySelector('.top-in');
-    if (шапка) шапка.insertBefore(назад, $('tools'));
-  }
-  назад.onclick = () => открытьРаздел('espers');
+  обновитьВозврат();
 
   const nav = document.createElement('nav');
   nav.className = 'tmnav';
-  const заголовокСписка = текст => {
-    const u = document.createElement('u'); u.textContent = текст; nav.appendChild(u);
-  };
-  заголовокСписка('Разделы');
+  const заголовокНавигации = document.createElement('u');
+  заголовокНавигации.textContent = 'Инструменты';
+  nav.appendChild(заголовокНавигации);
   TABS.filter(t => t[0] !== 'espers').forEach(t => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'tmi'; b.textContent = t[1];
     b.onclick = () => открытьРаздел(t[0]);
     nav.appendChild(b);
   });
-  заголовокСписка('Инструменты');
   const основной = РАЗДЕЛЫ_ДАННЫХ.some(р => р.id === активный) ? 'cloud' : активный;
   ИНСТРУМЕНТЫ.forEach(и => {
     const b = document.createElement('button');

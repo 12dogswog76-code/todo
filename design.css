@@ -1729,24 +1729,26 @@ html[data-sec="nte"] .bk-size>i{display:block;width:8px;height:8px;box-sizing:bo
   html[data-sec="nte"] .bk-vrules{grid-template-columns:1fr}
 }
 
-/* 10.11 — NTE: инструменты открываются страницами под шапкой, как в ZZZ. */
+/* 10.11 — NTE v120: те же фон и навигация, что у обычных разделов. */
 html[data-sec="nte"] #sheet.tpage{top:60px;padding:0 18px 18px;overflow:hidden;align-items:flex-start;
-  background:#0b0d11 !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
-html[data-sec="nte"] #sheet.tpage .sheet-in.tm{display:flex;width:min(1420px,100%);max-width:none;height:100%;max-height:none;
+  background:transparent !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+html[data-sec="nte"] #sheet.tpage .sheet-in.tm{display:flex;gap:16px;width:min(1420px,100%);max-width:none;height:100%;max-height:none;
   margin:0 auto;padding:0;overflow:hidden;align-items:stretch;border:0 !important;border-radius:0 !important;
   background:transparent !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
-html[data-sec="nte"] #sheet.tpage .tmnav{width:228px;max-height:100%;padding:8px 18px 8px 4px !important;
-  overflow-y:auto;overflow-x:hidden;align-self:stretch;background:transparent !important;border:0 !important;scrollbar-width:thin}
-html[data-sec="nte"] #sheet.tpage .tmnav .tmi{padding:9px 12px !important}
-html[data-sec="nte"] #sheet.tpage .tmbody{height:100%;max-height:none;min-height:0;overflow:hidden}
+html[data-sec="nte"] #sheet.tpage .tmnav{flex:0 0 228px;width:228px;max-height:100%;padding:8px !important;
+  overflow-y:auto;overflow-x:hidden;align-self:flex-start;background:rgb(20 22 28 / .6) !important;
+  border:1px solid var(--dz-edge) !important;border-radius:22px !important;box-shadow:var(--dz-hi) !important;
+  backdrop-filter:var(--dz-blur) !important;-webkit-backdrop-filter:var(--dz-blur) !important;scrollbar-width:thin}
+html[data-sec="nte"] #sheet.tpage .tmnav .tmi{padding:8px 12px !important}
+html[data-sec="nte"] #sheet.tpage .tmbody{flex:1;height:100%;max-height:none;min-width:0;min-height:0;overflow:hidden}
 html[data-sec="nte"] #sheet.tpage .tmbody > .sh-body{display:flex;flex-direction:column;height:100%;min-width:0;min-height:0;
-  padding:0 4px 0 10px;overflow:hidden;background:none}
+  padding:0 4px 0 0;overflow:hidden;background:none}
 html[data-sec="nte"] #sheet.tpage .sh-title{flex:none;align-items:center;width:fit-content;max-width:100%;margin:0;
-  padding:10px 4px 14px;background:transparent !important;border:0 !important;box-shadow:none !important}
+  padding:4px 4px 14px;background:transparent !important;border:0 !important;box-shadow:none !important}
 html[data-sec="nte"] #sheet.tpage .sh-title h2{font-size:30px !important;line-height:1.15 !important;text-transform:none !important}
 html[data-sec="nte"] #sheet.tpage .sh-title h2 > i{display:block;margin-top:5px;font:400 13px/1.35 var(--dz-sys) !important;
   color:var(--tx2) !important;letter-spacing:normal !important;text-transform:none !important}
-html[data-sec="nte"] #sheet.tpage .sh-title > div{position:fixed;right:max(22px,calc((100vw - 1420px)/2 + 22px));top:76px}
+html[data-sec="nte"] #sheet.tpage .sh-title > div{display:none !important}
 html[data-sec="nte"] #sheet.tpage .tmslot{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;
   padding:0 8px 22px 0;overscroll-behavior:contain}
 html[data-sec="nte"] #sheet.tpage .tm-subnav{display:flex;flex:none;flex-wrap:wrap;gap:4px;width:fit-content;max-width:100%;
@@ -1757,16 +1759,17 @@ html[data-sec="nte"] #sheet.tpage .tm-subnav button:hover{background:rgb(255 255
 html[data-sec="nte"] #sheet.tpage .tm-subnav button.on{background:var(--acc) !important;color:#0b0d10 !important;font-weight:600 !important}
 html[data-sec="nte"] body.ntepage{overflow:hidden !important}
 html[data-sec="nte"] body.ntepage > .wrap{visibility:hidden !important}
+html[data-sec="nte"] body.ntepage .top > .top-in{max-width:1420px !important}
 @media(max-width:900px){
   html[data-sec="nte"] #sheet.tpage{top:106px;padding:0 10px 10px}
-  html[data-sec="nte"] #sheet.tpage .sheet-in.tm{flex-direction:column}
-  html[data-sec="nte"] #sheet.tpage .tmnav{display:flex;flex-direction:row;width:100%;max-height:58px;padding:4px 0 8px !important;
-    overflow-x:auto;overflow-y:hidden;border:0 !important}
+  html[data-sec="nte"] #sheet.tpage .sheet-in.tm{flex-direction:column;gap:8px}
+  html[data-sec="nte"] #sheet.tpage .tmnav{display:flex;flex:0 0 auto;flex-direction:row;width:100%;max-height:58px;padding:4px !important;
+    overflow-x:auto;overflow-y:hidden;border-radius:16px !important}
+  html[data-sec="nte"] #sheet.tpage .tmnav > u{display:none}
   html[data-sec="nte"] #sheet.tpage .tmnav .tmi{flex:none;white-space:nowrap}
   html[data-sec="nte"] #sheet.tpage .tmnav .tmi i{display:none}
   html[data-sec="nte"] #sheet.tpage .tmbody{flex:1;height:auto}
   html[data-sec="nte"] #sheet.tpage .tmbody > .sh-body{padding:0}
-  html[data-sec="nte"] #sheet.tpage .sh-title > div{position:static;margin-left:auto}
 }
 
 /* 10.11 — NTE v119: чистая шапка, золотые акценты и общий список разделов. */
@@ -1785,10 +1788,12 @@ html[data-sec="nte"] #sheet.tpage .tmnav > u{display:block;padding:10px 12px 5px
   font:600 11px var(--dz-sys);text-decoration:none}
 html[data-sec="nte"] #sheet.tpage .tmnav > .tmi{display:block;width:100%;margin:0;cursor:pointer}
 html[data-sec="nte"] .nte-back{display:none !important}
+html[data-sec="nte"].dz-side .top-in > .nte-back,
 html[data-sec="nte"] body.ntepage .top-in > .nte-back{display:inline-flex !important;align-items:center;justify-content:center;
   flex:none;min-height:40px;padding:8px 15px;border:1px solid var(--dz-edge) !important;border-radius:999px !important;
   background:rgb(20 22 28 / .6) !important;color:var(--tx) !important;box-shadow:var(--dz-hi) !important;
   font:500 13px var(--dz-sys) !important;white-space:nowrap;cursor:pointer}
+html[data-sec="nte"].dz-side .top-in > .nte-back:hover,
 html[data-sec="nte"] body.ntepage .top-in > .nte-back:hover{background:rgb(255 255 255 / .12) !important}
 html[data-sec="nte"] .bk-lvs{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
 html[data-sec="nte"] .bk-vmeta .bk-lv{display:inline-flex;align-items:baseline;gap:5px;padding:4px 7px;
