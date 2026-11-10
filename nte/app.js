@@ -9,17 +9,13 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v120';
+const APP_VER = 'v121';
 const $ = id => document.getElementById(id);
 
-// Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
-// EV_API и OCR_API, а они собираются на верхнем уровне скрипта. Если объявить
-// ниже по файлу, браузер падает на «Cannot access before initialization» и
-// страница остаётся пустой — const не всплывает, в отличие от function.
-// Свой домен из списка выкидываем, чтобы не звать самих себя дважды.
-const API_BASES = ['', 'https://api.alextask.ru', 'https://alextask.ru',
-                   'https://alextask-push.12dogswog76.workers.dev']
-  .filter((b, i) => i === 0 || b.indexOf('//' + location.host) < 0);
+// GitHub Pages не обслуживает /api/*: такие запросы гарантированно дают 404.
+// Рабочие входы воркера — отдельный API-домен и прямой адрес workers.dev.
+const API_BASES = ['https://api.alextask.ru',
+                   'https://alextask-push.12dogswog76.workers.dev'];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
 
