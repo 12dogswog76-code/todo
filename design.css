@@ -1769,4 +1769,31 @@ html[data-sec="nte"] body.ntepage > .wrap{visibility:hidden !important}
   html[data-sec="nte"] #sheet.tpage .sh-title > div{position:static;margin-left:auto}
 }
 
+/* 10.11 — NTE v119: чистая шапка, золотые акценты и общий список разделов. */
+html[data-sec="nte"] .top{background:transparent !important;border:0 !important;box-shadow:none !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+html[data-sec="nte"] #shBody .row .pct,
+html[data-sec="nte"] #shBody .st.st-meta b{color:var(--gold,#ffd54a) !important}
+html[data-sec="nte"] #shBody .bld .pri,
+html[data-sec="nte"] #shBody .bld .pri li,
+html[data-sec="nte"] #shBody .bld .pri li.top{background:transparent !important;border:0 !important;box-shadow:none !important}
+html[data-sec="nte"] #shBody .bld .pri li.top,
+html[data-sec="nte"] #shBody .bld .pri li.top u{color:var(--gold,#ffd54a) !important}
+html[data-sec="nte"] .dz-side-in > button > i,
+html[data-sec="nte"] #sheet.tpage .tmnav .tmi > i{display:none !important}
+html[data-sec="nte"] #sheet.tpage .tmnav > u{display:block;padding:10px 12px 5px;color:var(--tx3,#6b7280);
+  font:600 11px var(--dz-sys);text-decoration:none}
+html[data-sec="nte"] #sheet.tpage .tmnav > .tmi{display:block;width:100%;margin:0;cursor:pointer}
+html[data-sec="nte"] .nte-back{display:none !important}
+html[data-sec="nte"] body.ntepage .top-in > .nte-back{display:inline-flex !important;align-items:center;justify-content:center;
+  flex:none;min-height:40px;padding:8px 15px;border:1px solid var(--dz-edge) !important;border-radius:999px !important;
+  background:rgb(20 22 28 / .6) !important;color:var(--tx) !important;box-shadow:var(--dz-hi) !important;
+  font:500 13px var(--dz-sys) !important;white-space:nowrap;cursor:pointer}
+html[data-sec="nte"] body.ntepage .top-in > .nte-back:hover{background:rgb(255 255 255 / .12) !important}
+html[data-sec="nte"] .bk-lvs{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+html[data-sec="nte"] .bk-vmeta .bk-lv{display:inline-flex;align-items:baseline;gap:5px;padding:4px 7px;
+  border:1px solid var(--line-soft);border-radius:7px;background:rgb(255 255 255 / .035)}
+html[data-sec="nte"] .bk-vmeta .bk-lv b{color:var(--tx);font-size:12px;font-weight:650;line-height:1.2}
+html[data-sec="nte"] .bk-vmeta .bk-lv i{color:var(--gold);font-size:10px;font-style:normal;line-height:1.2;white-space:nowrap}
+
 

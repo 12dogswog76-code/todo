@@ -578,6 +578,12 @@ function dirList() {
 // ═════ ПОДСКАЗКИ ════════════════════════════════════════════════════════════
 function drawTips() {
   const rt = BD.ruleTypes;
+  // В русской локализации игры это условие пока осталось китайским.
+  if (rt.BKE_Urgency) {
+    rt.BKE_Urgency.ru = 'Цейтнот';
+    rt.BKE_Urgency.desc = 'Время ставки в каждом раунде сокращается до 20 секунд. ' +
+      'Когда время истекает, автоматический отказ от торгов не срабатывает.';
+  }
   const types = Object.keys(rt).sort((a, b) => (a === 'BKE_Normal') - (b === 'BKE_Normal'));
   let h = '<div class="cap"><b>Залы</b><span></span><em>из таблиц игры</em></div>';
   h += '<div class="bk-venues">' + BD.venues.map(v => {
@@ -587,8 +593,9 @@ function drawTips() {
       '<div class="bk-vhead"><b>' + esc(v.ru) + '</b><div class="bk-vprice">' +
         '<span>Вход от<em>' + (v.need ? kfmt(v.need) : '—') + '</em></span>' +
         '<span>Взнос<em>' + (v.fee ? fmt(v.fee) : '—') + '</em></span></div></div>' +
-      '<div class="bk-vmeta"><div><span>Уровни склада</span><b>' +
-        v.lv.map(l => l[0] + ' — ' + Math.round(l[1] / lt * 100) + '%').join(' · ') + '</b></div>' +
+      '<div class="bk-vmeta"><div><span>Уровни склада</span><div class="bk-lvs">' +
+        v.lv.map(l => '<span class="bk-lv"><b>' + l[0] + '</b><i>' +
+          Math.round(l[1] / lt * 100) + '%</i></span>').join('') + '</div></div>' +
         '<div><span>Размеры предметов</span><b>' + v.sz.map(s => SIZE_RU[s[0]]).join(' · ') + '</b></div></div>' +
       '<div class="bk-vrules">' + types.map(t => {
         const r = v.rules.filter(x => x[1] === t)[0];

@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v118';
+const APP_VER = 'v119';
 const $ = id => document.getElementById(id);
 
 // Адреса воркера. Объявление стоит в самом верху намеренно: от него зависят
@@ -4840,7 +4840,7 @@ function nowHtml(slug, g, a, cap) {
   const tiles = '<div class="stat">' +
       (a.tier ? '<div class="st"><b>' + esc(a.tier) + '</b>место в тир-листе</div>' : '') +
       (rat.awk ? '<div class="st"><b>' + esc(rat.awk) + '</b>оценка при пробуждениях</div>' : '') +
-      '<div class="st' + (inTeams.length ? ' ok' : '') + '"><b>' + inTeams.length + '</b>мета-составов</div>' +
+      '<div class="st st-meta' + (inTeams.length ? ' ok' : '') + '"><b>' + inTeams.length + '</b>мета-составов</div>' +
       (asCore ? '<div class="st" title="Составы, где он стоит первым номером: вся команда ' +
         'работает на него, остальные подают ресурс и баффы">' +
         '<b>' + asCore + '</b>из них он главный</div>' : '') +
@@ -5180,7 +5180,6 @@ const ИНСТРУМЕНТЫ = [
   { id: 'cloud', имя: 'данные и облако', под: 'синхронизация, файлы и обновление' },
   { id: 'plan',  имя: 'план',            под: 'материалы на всех, кого качаешь' },
   { id: 'cmp',   имя: 'сравнить',        под: 'кого качать первым' },
-  { id: 'ready', имя: 'готовность',      под: 'все эсперы против целей гайда' },
   { id: 'pulls', имя: 'крутки',          под: 'сколько до гаранта и хватит ли' },
   { id: 'stat',  имя: 'скрины',          под: 'характеристики из снимков экрана' },
 ];
@@ -5194,7 +5193,6 @@ function открытьИнструмент(t) {
   if (t === 'cloud') showSync();
   else if (t === 'plan') showPlan();
   else if (t === 'cmp') showCmp();
-  else if (t === 'ready') showReady();
   else if (t === 'pulls') showPulls();
   else if (t === 'bak') showBak();
   else if (t === 'stat') showOcrBulk();
@@ -5245,14 +5243,45 @@ function колонкаИнструментов(активный) {
     }
   }
 
+  const открытьРаздел = t => {
+    close();
+    state.tab = t; state.q = '';
+    if ($('q')) $('q').value = '';
+    state.el = state.role = state.tier = state.rar = '';
+    drawTabs(); draw(); window.scrollTo({ top: 0 });
+  };
+
+  // Возврат живёт в общей шапке и на сайте, и в приложении, как кнопка
+  // «Агенты» у ZZZ. Само меню инструментов при этом остаётся на своём месте.
+  let назад = $('nteBack');
+  if (!назад) {
+    назад = document.createElement('button');
+    назад.id = 'nteBack'; назад.type = 'button'; назад.className = 'cloudb nte-back';
+    назад.textContent = '← Эсперы';
+    const шапка = document.querySelector('.top-in');
+    if (шапка) шапка.insertBefore(назад, $('tools'));
+  }
+  назад.onclick = () => открытьРаздел('espers');
+
   const nav = document.createElement('nav');
   nav.className = 'tmnav';
+  const заголовокСписка = текст => {
+    const u = document.createElement('u'); u.textContent = текст; nav.appendChild(u);
+  };
+  заголовокСписка('Разделы');
+  TABS.filter(t => t[0] !== 'espers').forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tmi'; b.textContent = t[1];
+    b.onclick = () => открытьРаздел(t[0]);
+    nav.appendChild(b);
+  });
+  заголовокСписка('Инструменты');
   const основной = РАЗДЕЛЫ_ДАННЫХ.some(р => р.id === активный) ? 'cloud' : активный;
   ИНСТРУМЕНТЫ.forEach(и => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'tmi' + (и.id === основной ? ' on' : '');
-    b.innerHTML = esc(и.имя) + '<i>' + esc(и.под) + '</i>';
+    b.textContent = и.имя;
     b.onclick = () => { if (и.id !== основной) открытьИнструмент(и.id); };
     nav.appendChild(b);
   });
