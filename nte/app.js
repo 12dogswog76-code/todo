@@ -9,7 +9,7 @@
 // Загружается с defer: к моменту выполнения разметка уже разобрана, поэтому
 // обращения к элементам в конце файла безопасны.
 
-const APP_VER = 'v124';
+const APP_VER = 'v126';
 const $ = id => document.getElementById(id);
 
 // GitHub Pages не обслуживает /api/*: такие запросы гарантированно дают 404.
@@ -188,8 +188,11 @@ function statName(k, a) {
 }
 const elIcon = el => 'img/ui/el-' + String(el).toLowerCase() + '.png';
 const roleIcon = r => 'img/ui/role-' + String(r).toLowerCase() + '.webp';
-const portrait = a => 'img/espers/' + a.slug + '.png';
-const artOf = a => 'img/art/' + a.slug + '.png';
+// ?v=APP_VER обязателен: картинки кэшируются service worker'ом cache-first,
+// и заменённая под тем же именем без версии в адресе не обновится никогда
+// (так застряли заглушки elyms/exe на две недели).
+const portrait = a => 'img/espers/' + a.slug + '.png?v=' + APP_VER;
+const artOf = a => 'img/art/' + a.slug + '.png?v=' + APP_VER;
 // Обликов у эспера может быть несколько: обычный вид и купленные скины.
 // Список собирает build-nte-db.ps1 из файлов игры; здесь просто складываем
 // в один ряд, чтобы листать стрелками у арта, как в игровом гардеробе.
@@ -554,7 +557,7 @@ function drawEspers() {
       tierStyle(a.tier) + '">' +
       '<div class="card-p">' +
         // плитка F — арт в полный рост (img/art), как в черновике; портрет остаётся в карточке
-        '<img src="img/art/' + a.slug + '.png" alt="' + esc(a.ru) + '" loading="lazy">' +
+        '<img src="' + artOf(a) + '" alt="' + esc(a.ru) + '" loading="lazy">' +
         (a.tier ? '<span class="card-t">' + esc(a.tier) + '</span>' : '') +
         '<span class="card-e">' +
           (a.el ? '<img src="' + elIcon(a.el) + '" title="' + esc(EL_RU[a.el] || a.el) + '" alt="">' : '') +
