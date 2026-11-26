@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -55,4 +55,16 @@ jobs:
           path: '.'
 
       - id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      # Гонка на стороне GitHub: артефакт уже залит (его видно в логе
+      # upload-pages-artifact), а API артефактов его ещё не отдаёт —
+      # deploy-pages падает с «Found 0 artifacts». Даём API 20 секунд
+      # и пробуем ещё раз.
+      - if: steps.deployment.outcome == 'failure'
+        run: sleep 20
+
+      - id: deployment2
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
